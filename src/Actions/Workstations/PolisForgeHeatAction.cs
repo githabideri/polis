@@ -63,15 +63,16 @@ class PolisForgeHeatAction : EntityActionBase
     {
         if (isForge)
         {
-            if (forgeEntity?.Contents == null) return 0;
-            return forgeEntity.Contents.Collectible.GetTemperature(vas.Entity.Api.World, forgeEntity.Contents);
+            var workItem = forgeEntity?.WorkItemStack;
+            if (workItem == null) return 0;
+            return workItem.Collectible.GetTemperature(vas.Entity.Api.World, workItem);
         }
         return firepitEntity?.InputStackTemp ?? 0;
     }
 
     bool HasContents()
     {
-        if (isForge) return forgeEntity?.Contents != null;
+        if (isForge) return forgeEntity?.WorkItemStack != null;
         return firepitEntity != null && !firepitEntity.inputSlot.Empty;
     }
 

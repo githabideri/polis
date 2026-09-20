@@ -43,7 +43,9 @@ if [ "$VERBOSE" = true ]; then
 else
     ./scripts/check-env.sh > /dev/null || exit 1
 fi
+set -a
 source .env
+set +a
 
 # Build
 echo "Building..."

@@ -117,8 +117,9 @@ class PolisButcherEntityAction : EntityActionBase
             return;
         }
 
-        // --- Check if Harvestable (dead and not harvested) ---
-        if (!harvestBehavior.Harvestable)
+        // --- Check if harvestable (dead and not harvested) ---
+        // 1.22: IHarvestable has IsHarvested, not Harvestable
+        if (targetEntity.Alive || harvestBehavior.IsHarvested)
         {
             if (targetEntity.Alive)
             {
