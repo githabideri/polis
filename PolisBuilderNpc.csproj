@@ -1,0 +1,129 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin\$(Configuration)\Mods\polis-builder-npc</OutputPath>
+  </PropertyGroup>
+
+  <!-- Exclude local reference repos from compilation -->
+  <ItemGroup>
+    <Compile Remove="refs/**" />
+    <None Remove="refs/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FlatpakUserApi Include="$(UserProfile)\.local\share\flatpak\app\at.vintagestory.VintageStory\x86_64\stable\*\files\extra\vintagestory\VintagestoryAPI.dll" />
+    <FlatpakUserApi Include="$(HOME)/.local/share/flatpak/app/at.vintagestory.VintageStory/x86_64/stable/*/files/extra/vintagestory/VintagestoryAPI.dll" />
+    <FlatpakSystemApi Include="/var/lib/flatpak/app/at.vintagestory.VintageStory/x86_64/stable/*/files/extra/vintagestory/VintagestoryAPI.dll" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <VintageStoryDir Condition="Exists('$(VINTAGE_STORY)/VintagestoryAPI.dll')">$(VINTAGE_STORY)</VintageStoryDir>
+    <VintageStoryDir Condition="'$(VintageStoryDir)' == ''">@(FlatpakUserApi->'%(Directory)')</VintageStoryDir>
+    <VintageStoryDir Condition="'$(VintageStoryDir)' == ''">@(FlatpakSystemApi->'%(Directory)')</VintageStoryDir>
+    <VintageStoryDir Condition="'$(VintageStoryDir)' == '' and Exists('$(HOME)/.local/share/flatpak/app/at.vintagestory.VintageStory/x86_64/stable/active/files/extra/vintagestory/VintagestoryAPI.dll')">$(HOME)/.local/share/flatpak/app/at.vintagestory.VintageStory/x86_64/stable/active/files/extra/vintagestory</VintageStoryDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="VintagestoryAPI" Condition="'$(VintageStoryDir)' != ''">
+      <HintPath>$(VintageStoryDir)/VintagestoryAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VintagestoryAPI" Condition="'$(VintageStoryDir)' == ''">
+      <HintPath>..\docs\OutlawMod-src\net7.0\VintagestoryAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <Reference Include="VintagestoryLib" Condition="'$(VintageStoryDir)' != ''">
+      <HintPath>$(VintageStoryDir)/VintagestoryLib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VintagestoryLib" Condition="'$(VintageStoryDir)' == ''">
+      <HintPath>..\docs\OutlawMod-src\VintagestoryLib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <Reference Include="VSSurvivalMod" Condition="'$(VintageStoryDir)' != ''">
+      <HintPath>$(VintageStoryDir)/Mods/VSSurvivalMod.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VSSurvivalMod" Condition="'$(VintageStoryDir)' == ''">
+      <HintPath>..\docs\vssurvivalmod\bin\VSSurvivalMod.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <Reference Include="VSEssentials" Condition="'$(VintageStoryDir)' != ''">
+      <HintPath>$(VintageStoryDir)/Mods/VSEssentials.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VSEssentials" Condition="'$(VintageStoryDir)' == ''">
+      <HintPath>..\docs\OutlawMod-src\net7.0\VSEssentials.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <Reference Include="0Harmony" Condition="'$(VintageStoryDir)' != ''">
+      <HintPath>$(VintageStoryDir)/Lib/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony" Condition="'$(VintageStoryDir)' == ''">
+      <HintPath>..\docs\OutlawMod-src\net7.0\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <Reference Include="protobuf-net" Condition="'$(VintageStoryDir)' != ''">
+      <HintPath>$(VintageStoryDir)/Lib/protobuf-net.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <Reference Include="cairo-sharp" Condition="'$(VintageStoryDir)' != ''">
+      <HintPath>$(VintageStoryDir)/Lib/cairo-sharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <Reference Include="Newtonsoft.Json" Condition="'$(VintageStoryDir)' != ''">
+      <HintPath>$(VintageStoryDir)/Lib/Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json" Condition="'$(VintageStoryDir)' == ''">
+      <HintPath>..\docs\OutlawMod-src\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Screenshot capture dependencies (shipped with VS) -->
+    <Reference Include="OpenTK.Graphics" Condition="'$(VintageStoryDir)' != ''">
+      <HintPath>$(VintageStoryDir)/Lib/OpenTK.Graphics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="OpenTK.Mathematics" Condition="'$(VintageStoryDir)' != ''">
+      <HintPath>$(VintageStoryDir)/Lib/OpenTK.Mathematics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SkiaSharp" Condition="'$(VintageStoryDir)' != ''">
+      <HintPath>$(VintageStoryDir)/Lib/SkiaSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="modinfo.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="assets/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Test UI for harness -->
+  <ItemGroup>
+    <Content Include="tools/test-ui.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>tools/test-ui.html</Link>
+    </Content>
+    <Content Include="tools/webui-v2/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

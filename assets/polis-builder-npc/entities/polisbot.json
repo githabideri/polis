@@ -1,0 +1,30 @@
+{
+  "code": "polisbot",
+  "class": "EntityPolisBot",
+  "canClimb": true,
+  "eyeHeight": 1.4,
+  "hitboxSize": { "x": 0.5, "y": 1.75 },
+  "deadHitboxSize": { "x": 0.75, "y": 0.5 },
+  "client": {
+    "renderer": "Shape",
+    "shape": { "base": "game:entity/humanoid/seraph-faceless" },
+    "texture": { "base": "game:entity/humanoid/seraph-naked-hairless" },
+    "behaviors": [
+      { "code": "repulseagents" },
+      { "code": "seraphinventory" },
+      { "code": "nametag", "showtagonlywhentargeted": true },
+      { "code": "controlledphysics", "stepHeight": 1.01 },
+      { "code": "interpolateposition" }
+    ]
+  },
+  "server": {
+    "behaviors": [
+      { "code": "repulseagents" },
+      { "code": "seraphinventory" },
+      { "code": "nametag", "showtagonlywhentargeted": true },
+      { "code": "controlledphysics", "stepHeight": 1.01 },
+      { "code": "health", "currenthealth": 20, "maxhealth": 20 },
+      { "code": "deaddecay", "hoursToDecay": 96, "decayedBlock": "drycarcass-humanoid1" }
+    ]
+  }
+}

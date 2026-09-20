@@ -1,0 +1,19 @@
+# Hotkey-driven test sequence template.
+# One line per action. Lines starting with # are ignored.
+# Prefix with "KEY:" to send a raw xdotool key sequence.
+
+CHAT: [polis] hotkey test start
+WAIT: 2
+CHAT: /polis debug on
+WAIT: 1
+CHAT: /polis spawn
+EXPECT_LOG: \\[polis\\] Spawned bot
+WAIT: 1
+KEY: Alt+u
+EXPECT_LOG: \\[polis\\] CmdPossess called
+WAIT: 1
+KEY: w
+WAIT: 1
+KEY: Shift+Alt+u
+WAIT: 1
+CHAT: [polis] hotkey test end

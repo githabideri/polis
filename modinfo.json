@@ -1,0 +1,14 @@
+{
+  "type": "code",
+  "modid": "polis-builder-npc",
+  "name": "Polis",
+  "authors": [
+    "Martin Fellner"
+  ],
+  "description": "Deity RTS with possession: controllable NPC workers, /polis commands, and direct possession.",
+  "version": "0.2.0",
+  "side": "universal",
+  "dependencies": {
+    "game": "1.22.7"
+  }
+}

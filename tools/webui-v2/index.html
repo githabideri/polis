@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polis Web UI v2</title>
+    <link rel="stylesheet" href="css/main.css?v=20260302e">
+</head>
+<body>
+    <div id="app">
+        <!-- Status Bar -->
+        <header id="statusbar">
+            <div class="status-left">
+                <span class="app-title">Polis</span>
+                <span id="connection-indicator" class="indicator disconnected">Disconnected</span>
+            </div>
+            <div class="status-center">
+                <span id="world-name">-</span>
+            </div>
+            <div class="status-right">
+                <span id="selected-entity">No selection</span>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <div id="main-layout">
+            <!-- Entity Panel (Left Sidebar) -->
+            <aside id="entity-panel" class="panel">
+                <div class="panel-header">
+                    <h2>Entities</h2>
+                    <button id="refresh-entities" class="icon-btn" title="Refresh">&#x21bb;</button>
+                </div>
+                <div class="panel-content">
+                    <section class="entity-section" id="bots-section">
+                        <h3>Bots</h3>
+                        <div id="bots-list" class="entity-list">
+                            <div class="placeholder">Loading...</div>
+                        </div>
+                    </section>
+                    <section class="entity-section" id="players-section">
+                        <h3>Players</h3>
+                        <div id="players-list" class="entity-list">
+                            <div class="placeholder">Loading...</div>
+                        </div>
+                    </section>
+                </div>
+            </aside>
+
+            <!-- Main View Area -->
+            <main id="main-view">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>View</h2>
+                    </div>
+                    <div class="panel-content">
+                        <div id="screenshot-container">
+                            <iframe id="novnc-frame" src="" allow="fullscreen"></iframe>
+                            <div id="stream-controls" class="stream-controls">
+                                <label class="stream-toggle"><input type="checkbox" id="stream-enabled" checked> Stream</label>
+                                <span id="stream-status" class="stream-status">Disconnected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Context Panel -->
+                <aside id="context-panel" class="panel">
+                    <div class="panel-header">
+                        <h2>Context</h2>
+                    </div>
+                    <div class="panel-content">
+                        <div id="context-details" class="placeholder">
+                            Select an entity to view details
+                        </div>
+                        <div id="context-actions" class="action-buttons">
+                            <!-- Action buttons will be populated based on selection -->
+                        </div>
+                    </div>
+                </aside>
+            </main>
+        </div>
+
+        <!-- Command Bar -->
+        <div id="command-bar" class="panel">
+            <input type="text" id="command-input" placeholder="Type a command... (e.g., spawn, bots, status)" autocomplete="off">
+            <button id="command-submit">Run</button>
+        </div>
+
+        <!-- Event Log -->
+        <footer id="event-log" class="panel">
+            <div class="panel-header">
+                <h2>Log</h2>
+                <div class="log-controls">
+                    <button id="log-pause" class="icon-btn" title="Pause auto-scroll">&#x23f8;</button>
+                    <button id="log-clear" class="icon-btn" title="Clear log">&#x2715;</button>
+                </div>
+            </div>
+            <div id="log-entries" class="log-content">
+                <div class="log-entry info">
+                    <span class="log-time">--:--:--</span>
+                    <span class="log-msg">Web UI v2 initializing...</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script type="module" src="js/app.js?v=20260302e"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Hotkeys-only test sequence (no chat).
+# One line per action. Lines starting with # are ignored.
+# Prefix with "KEY:" to send a raw xdotool key sequence.
+# Prefix with "WAIT:" to sleep for N seconds.
+
+WAIT: 2
+# Alt+U (possess) as explicit keydown/keyup sequence
+KEY: keydown Alt_L key u keyup Alt_L
+WAIT: 1
+# Alt+N (spawn) as explicit keydown/keyup sequence
+KEY: keydown Alt_L key n keyup Alt_L
+WAIT: 1
+# Shift+Alt+U (unpossess)
+KEY: keydown Shift_L keydown Alt_L key u keyup Alt_L keyup Shift_L

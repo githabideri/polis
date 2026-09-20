@@ -1,0 +1,17 @@
+# Example command sequence for automation.
+# One command per line. Lines starting with # are ignored.
+# Prefix with "KEY:" to send a raw xdotool key sequence.
+# Prefix with "WAIT:" to sleep for N seconds.
+# Use "CHECKPOINT" and "EXPECT_LOG:" to verify commands via logs.
+
+# Chat command examples:
+# /polis debug on
+# /polis spawn
+# /polis gotolook
+# /polis stop
+# /polis list
+
+# Hotkey example (xdotool key syntax):
+# CHECKPOINT
+# KEY: keydown Alt_L key n keyup Alt_L
+# EXPECT_LOG: \\[polis\\] Spawned bot
