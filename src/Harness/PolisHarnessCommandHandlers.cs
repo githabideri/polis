@@ -58,6 +58,8 @@ public partial class PolisBuilderNpcSystem
                     return ExecuteGotoCommand(args, context);
                 case "gotolook":
                     return ExecuteGotoLookCommand(args, context);
+                case "look":
+                    return ExecuteLookCommand(args, context);
                 case "activate":
                     return ExecuteActivateCommand(args, context);
                 case "ignite":
@@ -156,7 +158,7 @@ public partial class PolisBuilderNpcSystem
                     return ExecuteViewpointScreenshotCommand(args, context);
                 default:
                     result.Ok = false;
-                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, despawn, stop, give, drop, pickup, goto, gotolook, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, break, harvest, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, animate, teleport, place, setblock, equip, scan, verify, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot";
+                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, break, harvest, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, animate, teleport, place, setblock, equip, scan, verify, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot";
                     break;
             }
         }
@@ -341,6 +343,65 @@ public partial class PolisBuilderNpcSystem
         var key = !string.IsNullOrEmpty(context?.PlayerUid) ? context.PlayerUid : "harness";
         selectedByPlayer[key] = botId;
         return new PolisTestHarness.CommandResult { Ok = true, Message = $"Selected bot #{botId}" };
+    }
+
+
+    /// <summary>
+    /// look: turn the player (or the selected/ given bot) to face a world position.
+    /// Horizontal aim only (pitch preserved unless a 4th arg is given).
+    /// Yaw convention verified 2026-09-21: forward = (sin(yaw), cos(yaw)), so
+    /// yaw = atan2(dx, dz) faces +X at yaw=pi/2 (see tests/view/aim-verify).
+    /// For players this sets the server pos AND sends PolisSetViewDirectionPacket
+    /// (client camera follows); for bots the server pos IS the rendered state.
+    /// </summary>
+    PolisTestHarness.CommandResult ExecuteLookCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 3)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: look <x> <y> <z> [pitch]" };
+        if (!double.TryParse(args[0], out var tx) || !double.TryParse(args[1], out var ty) || !double.TryParse(args[2], out var tz))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        float? pitchOverride = args.Length >= 4 && float.TryParse(args[3], out var po) ? po : (float?)null;
+
+        // player target
+        if (!string.IsNullOrEmpty(context.PlayerUid))
+        {
+            var player = sapi.World.PlayerByUid(context.PlayerUid) as IServerPlayer;
+            if (player?.Entity == null)
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "Player not found or entity not loaded" };
+            var pos = player.Entity.ServerPos;
+            var dx = (float)tx - (float)pos.X;
+            var dz = (float)tz - (float)pos.Z;
+            var yaw = (float)Math.Atan2(dx, dz);
+            var pitch = pitchOverride ?? (float)pos.Pitch;
+            player.Entity.TeleportTo(new EntityPos((double)pos.X, (double)pos.Y, (double)pos.Z, yaw, pitch));
+            serverChannel.SendPacket(new PolisSetViewDirectionPacket { Yaw = yaw, Pitch = pitch }, player);
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = $"Looking at ({tx}, {ty}, {tz}): yaw={yaw:F4} pitch={pitch:F4}",
+                Data = new { yaw, pitch, target = new { tx, ty, tz } }
+            };
+        }
+
+        // bot target (explicit botId or the player's selected bot)
+        if (TryGetHarnessBot(context, out var bot, out var berr))
+        {
+            var be = bot.Entity;
+            var bpos = be.ServerPos;
+            var bdx = (float)tx - (float)bpos.X;
+            var bdz = (float)tz - (float)bpos.Z;
+            var byaw = (float)Math.Atan2(bdx, bdz);
+            var bpitch = pitchOverride ?? (float)bpos.Pitch;
+            be.TeleportTo(new EntityPos((double)bpos.X, (double)bpos.Y, (double)bpos.Z, byaw, bpitch));
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = $"Bot {bot.Entity.EntityId} looking at ({tx}, {ty}, {tz}): yaw={byaw:F4} pitch={bpitch:F4}",
+                Data = new { yaw = byaw, pitch = bpitch, target = new { tx, ty, tz } }
+            };
+        }
+
+        return new PolisTestHarness.CommandResult { Ok = false, Message = "No player or bot in context" };
     }
 
     PolisTestHarness.CommandResult ExecuteSelectLookCommand(string[] args, PolisTestHarness.CommandContext context)

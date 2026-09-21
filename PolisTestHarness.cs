@@ -107,10 +107,42 @@ public class PolisTestHarness : IDisposable
             // Find mod directory for serving static files
             modDirectory = FindModDirectory();
 
-            listener = new HttpListener();
-            listener.Prefixes.Add($"http://localhost:{port}/");
-            listener.Prefixes.Add($"http://127.0.0.1:{port}/");
-            listener.Start();
+            // 2026-09-21: intentionally LAN-reachable (no ssh-tunnel dance) so the
+            // web UI (tools/webui-v2) works from any machine on the network.
+            // Risk accepted: private dev box; /polis/servercmd + /polis/admin/* stay
+            // loopback-gated below.
+            // Concrete interfaces only; LAN + loopback; add the Tailscale IP here
+            // when/if the CT gets one.
+            // Retries: after a restart, TIME_WAIT sockets from the previous process
+            // (harness self-connections, web UI polling) can make the first bind
+            // attempts fail with "Address already in use" for up to ~60s.
+            Exception bindError = null;
+            for (int attempt = 1; attempt <= 12; attempt++)
+            {
+                if (listener != null) { try { listener.Close(); } catch { } listener = null; }
+                var l = new HttpListener();
+                l.Prefixes.Add($"http://the game testbed:{port}/");
+                l.Prefixes.Add($"http://127.0.0.1:{port}/");
+                try
+                {
+                    l.Start();
+                    listener = l;
+                    bindError = null;
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    bindError = ex;
+                    if (attempt < 12)
+                    {
+                        sapi.Logger.Warning($"{LogPrefix} port {port} busy ({ex.Message}), retry {attempt + 1}/12 in 5s");
+                        System.Threading.Thread.Sleep(5000);
+                    }
+                }
+            }
+            if (bindError != null)
+                throw bindError;
+            sapi.Logger.Notification($"{LogPrefix} Listening on 127.0.0.1:{port} and the game testbed:{port}");
 
             cts = new CancellationTokenSource();
             broadcaster = new PolisEventBroadcaster(msg => sapi.Logger.Debug(msg));
@@ -345,7 +377,7 @@ public class PolisTestHarness : IDisposable
             }
             else if (path == "/polis/player" && request.HttpMethod == "GET")
             {
-                var uid = request.QueryString["uid"];
+                var uid = QueryValue(request, "uid");
                 if (string.IsNullOrWhiteSpace(uid))
                 {
                     tcs.SetResult(new { error = "Missing uid" });
@@ -369,7 +401,7 @@ public class PolisTestHarness : IDisposable
             }
             else if (path == "/polis/look" && request.HttpMethod == "GET")
             {
-                var uid = request.QueryString["uid"];
+                var uid = QueryValue(request, "uid");
                 float range = 48f;
                 if (float.TryParse(request.QueryString["range"], out var parsedRange))
                 {
@@ -404,7 +436,7 @@ public class PolisTestHarness : IDisposable
             }
             else if (path == "/polis/targets" && request.HttpMethod == "GET")
             {
-                var uid = request.QueryString["playerUid"] ?? request.QueryString["uid"];
+                var uid = QueryValue(request, "playerUid") ?? QueryValue(request, "uid");
                 float radius = 6f;
                 int limit = 20;
                 var mode = (request.QueryString["mode"] ?? "blocks").ToLowerInvariant();
@@ -709,7 +741,7 @@ public class PolisTestHarness : IDisposable
             else if (path == "/polis/screenshot" && request.HttpMethod == "GET")
             {
                 // Screenshot capture from player's client
-                var playerUid = request.QueryString["playerUid"] ?? request.QueryString["uid"];
+                var playerUid = QueryValue(request, "playerUid") ?? QueryValue(request, "uid");
                 var saveToFile = request.QueryString["save"] == "true";
 
                 if (requestScreenshotFunc == null)
@@ -768,7 +800,7 @@ public class PolisTestHarness : IDisposable
             else if (path == "/polis/observer-screenshot" && request.HttpMethod == "GET")
             {
                 // Observer screenshot: teleport player to viewpoint, capture, restore position
-                var playerUid = request.QueryString["playerUid"] ?? request.QueryString["uid"];
+                var playerUid = QueryValue(request, "playerUid") ?? QueryValue(request, "uid");
                 var saveToFile = request.QueryString["save"] == "true";
 
                 // Parse position/orientation
@@ -1479,6 +1511,36 @@ public class PolisTestHarness : IDisposable
     {
         var address = request?.RemoteEndPoint?.Address;
         return address != null && IPAddress.IsLoopback(address);
+    }
+
+    // HttpListener's QueryString uses form-urlencoded decoding, which turns '+'
+    // into a SPACE. VS player uids contain '+' (e.g. "d4pJ+Ty1..."), so any uid
+    // passed in a query string was silently corrupted and every uid lookup failed
+    // with "Player not found". Parse the raw query with Uri.UnescapeDataString
+    // instead (decodes %XX, keeps '+').
+    Dictionary<string, string> ParseRawQuery(HttpListenerRequest request)
+    {
+        var result = new Dictionary<string, string>();
+        var raw = request?.Url?.Query;
+        if (string.IsNullOrEmpty(raw)) return result;
+        foreach (var part in raw.TrimStart('?').Split('&'))
+        {
+            if (part.Length == 0) continue;
+            var idx = part.IndexOf('=');
+            var k = idx >= 0 ? part.Substring(0, idx) : part;
+            var v = idx >= 0 ? part.Substring(idx + 1) : "";
+            try { k = Uri.UnescapeDataString(k); } catch { }
+            try { v = Uri.UnescapeDataString(v); } catch { }
+            if (!result.ContainsKey(k)) result[k] = v;
+        }
+        return result;
+    }
+
+    string QueryValue(HttpListenerRequest request, string name)
+    {
+        var raw = ParseRawQuery(request);
+        if (raw.TryGetValue(name, out var v)) return v;
+        return request?.QueryString[name];
     }
 
     object BuildChatCommandResult(TextCommandResult result)

@@ -56,8 +56,15 @@ if [ "$DEPLOY" = true ]; then
         echo "ERROR: VSDATA not set, cannot deploy"
         exit 1
     fi
-    echo "Deploying to Mods folder..."
-    cp -r bin/Release/Mods/polis-builder-npc "$VSDATA/Mods/"
+    # 2026-09-21: VS 1.22 only loads user mods from the game directory (the
+    # $VSDATA/Mods copy is ignored by 1.22). Deploy to both, game dir authoritative.
+    echo "Deploying to game Mods folder..."
+    if [ -n "$VINTAGE_STORY" ]; then
+        cp -r bin/Release/Mods/polis-builder-npc "$VINTAGE_STORY/Mods/"
+    fi
+    if [ -n "$VSDATA" ]; then
+        cp -r bin/Release/Mods/polis-builder-npc "$VSDATA/Mods/"
+    fi
 fi
 
 echo "Done."
