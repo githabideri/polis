@@ -1,6 +1,6 @@
 # STATUS.md — the single source of state
 
-Updated: 2026-09-21 (port + live-verification day; Jev-loop v1 measured)
+Updated: 2026-09-22 (harness LAN-reachable + uid hardening + look/aim-verify; Jev-loop v3 noul-veto measured)
 Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected before end of 2026.
 
 ## Overall state
@@ -13,7 +13,8 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
 | Core loop on 1.22.7 (load → spawn → goto → verify) | **live verified** 2026-09-21 | harness :8585; short and long (100-block) gotos arrive; smoke-v1 mission **PASS** (move/give/inventory-assert/move-back) |
 | Possession on 1.22.7 | **live verified** 2026-09-21 | possess → setcontrols (bot moved 53 blocks on held forward) → unpossess; NaN seat crash found & fixed (see below) |
 | Block actions on 1.22.7 (setblock/give/mine/place) | **live verified** 2026-09-21 | place ok; natural-ground mine ok; rock mine gated by tool tier (correct) and mined with pickaxe-iron; plant/harvest codes still unresolved in 1.22 (see quirks) |
-| Jev decision loop (openjev/Laya → `/polis`) | **v1 measured** 2026-09-21 | loop runs end-to-end (~900 ms/call); **0/8 oracle match** — goal-word bias finding; see `docs/reports/2026-09-21-jev-loop-v1.md` |
+| Jev decision loop (openjev/Laya → `/polis`) | **v1/v2 measured** 2026-09-21 | v1 choice 0/8 (goal-word bias); v2 phase-split 0/8 but 8/8 confidence-gated — Laya cannot *select*, its abstention is honest; see `docs/reports/2026-09-21-jev-loop.md` |
+| Jev-loop v3 (noul veto + 27B escalation) | **measured** 2026-09-22 | policy-proposes / Laya-vetoes / 27B-escalates: faults caught 1/2, false alarms 3/6, **fault and false-alarm at the same p (0.37)** — 421M is a conservative safety net, not a precision gate; 27B with thinking off = 124 ms conservative arbiter. Verdict: v4 = 27B per-step judge + Laya obvious-yes pre-filter; see `docs/reports/2026-09-22-jev-loop-v3-noul-veto.md` |
 
 ## Open issues carried into 1.22.7 (from archive/KNOWN_ISSUES.md, unresolved)
 
