@@ -72,13 +72,17 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
 1. Green build on 1.22.7 — **done 2026-09-21**.
 2. In-game smoke test on the game testbed — **done 2026-09-21** (core loop, possession,
    block ops live-verified; smoke-v1 PASS).
-3. **Jev-loop v2** (from the v1 failure mode): phase-split state text, then
-   explicit decision rule in the instructions, then noul decomposition —
-   see `docs/reports/2026-09-21-jev-loop-v1.md`.
-4. Plant/harvest block namespace resolution in 1.22 (harvest pipeline
-   untested end-to-end; mine/place/give all verified).
-5. Movement-physics root-cause pass (the top open issue from
+3. **Jev-loop v2/v3/v4** — done 2026-09-22: v2 (phase oracle, 0/8 match,
+   8/8 gated), v3 (noul veto: conservative net, not precision),
+   v4 (27B per-step judge + Laya pre-filter: decision side works, see
+   `docs/reports/2026-09-22-jev-loop-v4-27b-judge.md`).
+4. **Bot inventory fix** (mod defect: `seraphinventory` unusable for
+   `EntityPolisBot` — `give` and mining overflow both dead) — root-caused by
+   v4; unblocks the harvest pipeline and a clean end-to-end v4 run.
+5. Plant/harvest block namespace resolution in 1.22 (harvest pipeline
+   untested end-to-end).
+6. Movement-physics root-cause pass (the top open issue from
    archive/KNOWN_ISSUES.md).
-6. Publish prep: sanitized copy for GitHub + VS mod store (exclude `ops/`
+7. Publish prep: sanitized copy for GitHub + VS mod store (exclude `ops/`
    and `archive/`); archive old `vspolis` repo + decommission Daedalus
    (a gateway container agent id `polis`).
