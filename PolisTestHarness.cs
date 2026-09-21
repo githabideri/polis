@@ -1208,9 +1208,35 @@ public class PolisTestHarness : IDisposable
     }
 
 
+    // Accepts a JSON number or a numeric string (clients are inconsistent).
+    public class FlexibleLongConverter : System.Text.Json.Serialization.JsonConverter<long?>
+    {
+        public override long? Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+        {
+            if (reader.TokenType == System.Text.Json.JsonTokenType.String)
+            {
+                var sv = reader.GetString();
+                return long.TryParse(sv, out var v) ? v : (long?)null;
+            }
+            if (reader.TokenType == System.Text.Json.JsonTokenType.Number)
+            {
+                return reader.GetInt64();
+            }
+            reader.Skip();
+            return null;
+        }
+
+        public override void Write(System.Text.Json.Utf8JsonWriter writer, long? value, System.Text.Json.JsonSerializerOptions options)
+        {
+            if (value.HasValue) writer.WriteNumberValue(value.Value);
+            else writer.WriteNullValue();
+        }
+    }
+
     public class CommandContext
     {
         public string PlayerUid { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(FlexibleLongConverter))]
         public long? BotId { get; set; }
         public bool UseLookTarget { get; set; }
         public double[] SpawnOffset { get; set; }

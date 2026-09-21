@@ -204,7 +204,8 @@ class TestRunner:
         bot_pos = setup.get("botPosition")
         if bot_pos and len(bot_pos) == 3:
             result = self._send_command("goto", [str(c) for c in bot_pos])
-            if not result.get("Ok"):
+            # goto returns {arrived, position} (no Ok field); other commands return Ok
+            if not result.get("Ok") and result.get("arrived") is not True:
                 return f"Failed to move bot to {bot_pos}: {result.get('Message', 'unknown')}"
 
             # Wait for arrival
@@ -367,7 +368,10 @@ class TestRunner:
         context = {"playerUid": self._get_player_uid()}
         bot_id = self._get_bot_id()
         if bot_id:
-            context["botId"] = bot_id
+            try:
+                context["botId"] = int(bot_id)  # harness expects a number
+            except (TypeError, ValueError):
+                context["botId"] = bot_id
 
         payload = {"cmd": cmd, "args": cmd_args}
         if context:
