@@ -10,6 +10,7 @@ import { db } from './db.js';
 import { state, SelectionType } from './state.js';
 import { layout } from './ui/layout.js';
 import { statusBar } from './ui/statusbar.js';
+import { screenshotPane } from './ui/screenshot.js';
 
 /**
  * Polling state
@@ -802,6 +803,7 @@ async function init() {
         // Initialize UI components
         layout.init();
         statusBar.init();
+        screenshotPane.init();
 
         // Set up event handlers
         setupCommandBar();
