@@ -10,8 +10,9 @@ The loop does NOT let Laya do arithmetic: near_target/near_base flags and the
 mined/completed booleans are computed here (harness data). Laya maps the
 pre-digested situation to the next action.
 
-Usage:  python3 scripts/jev-loop.py [--bot 5] [--steps 8] [--openjev the Laya noul endpoint]
+Usage:  python3 scripts/jev-loop.py [--bot 5] [--steps 8] [--openjev http://127.0.0.1:8781 (or its LAN/TS address)]
 """
+import os
 import argparse, json, sys, time, urllib.request, urllib.error
 
 def http_json(url, payload=None, timeout=30):
@@ -97,7 +98,7 @@ def main():
     ap.add_argument("--bot", type=int, default=5)
     ap.add_argument("--steps", type=int, default=8)
     ap.add_argument("--harness", default="http://127.0.0.1:8585")
-    ap.add_argument("--openjev", default="the Laya noul endpoint")
+    ap.add_argument("--openjev", default=os.environ.get("OPENJEV", "http://127.0.0.1:8781"))
     ap.add_argument("--uid", default=None)
     a = ap.parse_args()
 

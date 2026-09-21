@@ -107,21 +107,22 @@ public class PolisTestHarness : IDisposable
             // Find mod directory for serving static files
             modDirectory = FindModDirectory();
 
-            // 2026-09-21: intentionally LAN-reachable (no ssh-tunnel dance) so the
-            // web UI (tools/webui-v2) works from any machine on the network.
-            // Risk accepted: private dev box; /polis/servercmd + /polis/admin/* stay
-            // loopback-gated below.
-            // Concrete interfaces only; LAN + loopback; add the Tailscale IP here
-            // when/if the CT gets one.
+            // Bind targets: loopback always; an extra LAN/Tailscale address from
+            // POLIS_HARNESS_IP (set in .env on the testbed) makes the web UI
+            // reachable from other machines without an ssh tunnel. No
+            // wildcard prefix (it stalls .NET/Linux HttpListener in this
+            // environment) and no hardcoded IPs in source (public repo).
             // Retries: after a restart, TIME_WAIT sockets from the previous process
             // (harness self-connections, web UI polling) can make the first bind
             // attempts fail with "Address already in use" for up to ~60s.
+            var lanIp = Environment.GetEnvironmentVariable("POLIS_HARNESS_IP");
             Exception bindError = null;
             for (int attempt = 1; attempt <= 12; attempt++)
             {
                 if (listener != null) { try { listener.Close(); } catch { } listener = null; }
                 var l = new HttpListener();
-                l.Prefixes.Add($"http://the game testbed:{port}/");
+                if (!string.IsNullOrWhiteSpace(lanIp))
+                    l.Prefixes.Add($"http://{lanIp}:{port}/");
                 l.Prefixes.Add($"http://127.0.0.1:{port}/");
                 try
                 {
@@ -142,7 +143,7 @@ public class PolisTestHarness : IDisposable
             }
             if (bindError != null)
                 throw bindError;
-            sapi.Logger.Notification($"{LogPrefix} Listening on 127.0.0.1:{port} and the game testbed:{port}");
+            sapi.Logger.Notification($"{LogPrefix} Listening on 127.0.0.1:{port}" + (string.IsNullOrWhiteSpace(lanIp) ? "" : $" and {lanIp}:{port}"));
 
             cts = new CancellationTokenSource();
             broadcaster = new PolisEventBroadcaster(msg => sapi.Logger.Debug(msg));
@@ -1170,6 +1171,9 @@ public class PolisTestHarness : IDisposable
             var content = File.ReadAllBytes(fullPath);
             response.StatusCode = 200;
             response.ContentType = contentType;
+            // Dev tool: never let browsers cache the UI (stale-module confusion)
+            response.Headers.Add("Cache-Control", "no-cache, no-store, must-revalidate");
+            response.Headers.Add("Pragma", "no-cache");
             response.Headers.Add("Access-Control-Allow-Origin", "*");
             response.ContentLength64 = content.Length;
             response.OutputStream.Write(content, 0, content.Length);

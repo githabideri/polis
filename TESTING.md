@@ -14,7 +14,7 @@ Never collapse these into "works". `STATUS.md` records the level per feature.
 ## The testbed (the game testbed "polis", )
 
 - Game: `/opt/vintagestory` (native install, 1.22.7), display via
-  noVNC `http://the game testbed:6080/vnc.html`. Full ops notes: `ops/CT114-VNC.md`.
+  noVNC `http://<ct-addr>:6080/vnc.html` (see `.env` / ops notes). Full ops notes: `ops/CT114-VNC.md`.
 - The game **auto-logs in** from the cached session key
   (`/root/.config/VintagestoryData/clientsettings.json`) — no password
   typing needed; the session key must be refreshed occasionally by a human
@@ -30,8 +30,7 @@ Never collapse these into "works". `STATUS.md` records the level per feature.
 
 ## The harness
 
-The mod runs an HTTP server in-game, LAN-reachable on
-`http://the game testbed:8585` (no ssh tunnel; loopback also works).
+The mod runs an HTTP server in-game, LAN-reachable on `http://<ct-addr>:8585` (bind set via `POLIS_HARNESS_IP` in `.env`) (no ssh tunnel; loopback also works).
 `/polis/servercmd` and `/polis/admin/*` stay loopback-gated:
 
 ```sh
@@ -50,7 +49,7 @@ The mod runs an HTTP server in-game, LAN-reachable on
 - `poliscli.py` supports TOON output (`--toon`) for token-efficient agent
   consumption; env vars `POLIS_PLAYER_UID` / `POLIS_BOT_ID` drive targeting.
 - Raw HTTP + WebSocket: `docs/TESTING_HARNESS.md`.
-- Web UI (primary surface): `http://the game testbed:8585/polis/ui2/` —
+- Web UI (primary surface): `http://<ct-addr>:8585/polis/ui2/` —
   status header (Connected / World Ready), entity panels, view + step-move
   controls, noVNC live stream (VNC password once), still-image screenshot
   pane (no password — the agent-loop view).

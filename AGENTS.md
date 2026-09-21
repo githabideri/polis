@@ -22,8 +22,8 @@
    Game" or restart `vsgame`). A VNC keyboard does not work via synthetic
    events (xdotool) — drive input through noVNC only. The game auto-logs in
    via the cached session key in `/root/.config/VintagestoryData`.
-7. **Web UI is the primary interaction surface** — `http://the game testbed:8585/polis/ui2/`
-   (LAN-reachable harness; no ssh tunnel). The noVNC stream pane needs the
+7. **Web UI is the primary interaction surface** — `http://<ct-addr>:8585/polis/ui2/` (LAN-reachable via `POLIS_HARNESS_IP`;
+   no ssh tunnel). The noVNC stream pane needs the
    VNC password once per session; the still-image screenshot pane needs
    none. VNC/noVNC is oversight-only, not the control channel.
 8. **Player uids contain `+`** (e.g. `d4pJ+Ty1...`). The harness parses raw
@@ -35,7 +35,7 @@
    is actually released (TIME_WAIT from the old process's own connections
    can make a fresh bind fail for up to ~60s — the harness retries
    12x5s, but the wait makes it deterministic), then `systemctl start
-   vsgame`. Verify: `curl -s http://the game testbed:8585/polis/status`.
+   vsgame`. Verify: `curl -s http://<ct-addr>:8585/polis/status`.
 
 ## Workflow
 - Branch per feature/fix; PRs to `main`. Commit messages reference the
