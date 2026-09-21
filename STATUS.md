@@ -1,6 +1,6 @@
 # STATUS.md — the single source of state
 
-Updated: 2026-09-21 (overnight port session)
+Updated: 2026-09-21 (port + live-verification day; Jev-loop v1 measured)
 Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected before end of 2026.
 
 ## Overall state
@@ -9,10 +9,11 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
 |-------|-------|-------|
 | 1.22.7 code port | **locally verified** | net10.0, hermetic csproj, 5 API drift fixes; build: 0 errors |
 | 1.21-era feature set (bots, A*, block actions, possession) | **live verified** (previous 1.21.6 testbed) | see `archive/KNOWN_ISSUES.md` for the detailed, per-feature history |
-| CT-114 testbed (VNC + game + auto-login) | **live verified** 2026-09-20 | keyboard + clipboard input through noVNC work; see `ops/CT114-VNC.md` |
-| Core loop on 1.22.7 (load → spawn → goto → verify) | **live verified** 2026-09-21 | CT-114: mod loads (4 mods, 0 errors), harness :8585 worldReady, bot #2 spawned, `goto +10x` arrived=true, bot visible in VNC screenshot |
-| Possession + block actions (mine/harvest/place/activate) on 1.22.7 | **not yet tested** | compiles; pending live verification |
-| Jev decision loop (openjev/Laya → `/polis`) | **not started** | design target: text-grid question → typed choice → command |
+| CT-114 testbed (VNC + game + auto-login) | **live verified** 2026-09-20 | dialog-free boots since the moddata fix; see `ops/CT114-VNC.md` |
+| Core loop on 1.22.7 (load → spawn → goto → verify) | **live verified** 2026-09-21 | harness :8585; short and long (100-block) gotos arrive; smoke-v1 mission **PASS** (move/give/inventory-assert/move-back) |
+| Possession on 1.22.7 | **live verified** 2026-09-21 | possess → setcontrols (bot moved 53 blocks on held forward) → unpossess; NaN seat crash found & fixed (see below) |
+| Block actions on 1.22.7 (setblock/give/mine/place) | **live verified** 2026-09-21 | place ok; natural-ground mine ok; rock mine gated by tool tier (correct) and mined with pickaxe-iron; plant/harvest codes still unresolved in 1.22 (see quirks) |
+| Jev decision loop (openjev/Laya → `/polis`) | **v1 measured** 2026-09-21 | loop runs end-to-end (~900 ms/call); **0/8 oracle match** — goal-word bias finding; see `docs/reports/2026-09-21-jev-loop-v1.md` |
 
 ## Open issues carried into 1.22.7 (from archive/KNOWN_ISSUES.md, unresolved)
 
@@ -32,6 +33,33 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
 - HUD coordinates can be offset from server coordinates (~+256 X/Z observed
   on the old build) — use `/polis list` / F3 for absolute coords.
 
+## 1.22.7 environment gotchas found 2026-09-21 (affects any test/agent work)
+- **World migration drops player moddata (field 15).** The 1.21.6→1.22.7
+  upgrade rewrote the playerdata record and silently dropped the moddata
+  container — `createCharacter=true` was lost, so the first-run dialog
+  re-appeared on every boot and suspended the embedded server's tick
+  (all harness commands hang). Fixed by splicing the field-15 blob back into
+  the live save (backup: `Saves/*.pre-charsel.bak`); also added harness
+  routes `/polis/debug/charsel` (inspect) and `/polis/admin/moddata`
+  (set via the game's own SetModData — the dialog is unconfirmable headless).
+  Any 1.21-era world will hit this on first 1.22 boot.
+- **Collectible namespaces moved.** `survival:stone`-style codes no longer
+  resolve via the world accessors; content resolves under plain / `game:`
+  and hyphen-variant codes (`rock-granite`, `pickaxe-iron`, `packeddirt`).
+  The harness now uses a lenient resolver (as-is → stripped → `game:` →
+  `survival:`) in setblock/place/give. Plant/harvest blocks still not
+  found under any tried namespace — open.
+- **Possession NaN crash (fixed):** seat exposed a shared mutable EntityPos;
+  on first possession frame the client entity got a NaN pos and the physics
+  tick threw, killing the client. Seat now returns copies, guards NaN, and
+  the client reconciler self-heals.
+- `observer-screenshot --save` returns `filePath: null` (silent write
+  failure; base64 path works). Use VNC/noVNC screenshots for visual evidence.
+- In-game the cursor is pointer-locked (re-centered at 512,384): noVNC
+  absolute clicks don't land on UI buttons in-world. Keyboard works (ESC
+  closes dialogs; the first-run `Customize Skin` dialog could only be
+  *closed*, never *confirmed*, headless — hence the admin/moddata route).
+
 ## Known 1.22.7 harness quirks (found 2026-09-21)
 - `observer-screenshot --save` returns `filePath: null` (silent write failure;
   base64 path works). Use VNC/noVNC screenshots for visual evidence meanwhile.
@@ -40,9 +68,16 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
   dialogs; the first-run `Customize Skin` dialog completes via close/ESC).
 
 ## Next (in order)
-1. Green build on 1.22.7 — **done 2026-09-21** (see top table).
-2. In-game smoke test on the game testbed: mod loads, `/polis spawn`, `/polis goto`,
-   `/polis state` via harness; then possession.
-3. Movement-physics root-cause pass (the top open issue).
-4. Harness re-verification + first deterministic mission with pass/fail.
-5. Jev-loop v1 (Laya decision → command) pass-rate measurement.
+1. Green build on 1.22.7 — **done 2026-09-21**.
+2. In-game smoke test on the game testbed — **done 2026-09-21** (core loop, possession,
+   block ops live-verified; smoke-v1 PASS).
+3. **Jev-loop v2** (from the v1 failure mode): phase-split state text, then
+   explicit decision rule in the instructions, then noul decomposition —
+   see `docs/reports/2026-09-21-jev-loop-v1.md`.
+4. Plant/harvest block namespace resolution in 1.22 (harvest pipeline
+   untested end-to-end; mine/place/give all verified).
+5. Movement-physics root-cause pass (the top open issue from
+   archive/KNOWN_ISSUES.md).
+6. Publish prep: sanitized copy for GitHub + VS mod store (exclude `ops/`
+   and `archive/`); archive old `vspolis` repo + decommission Daedalus
+   (a gateway container agent id `polis`).
