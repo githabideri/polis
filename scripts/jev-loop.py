@@ -54,7 +54,7 @@ def jev_next_action(openjev, state_text):
         "questions": {
             "next_action": {
                 "type": "choice",
-                "instructions": "Pick the single next action the bot should perform to reach its goal.",
+                "instructions": "Pick the single action that serves the current phase of the task.",
                 "options": ["goto_target", "mine_target", "goto_base", "wait", "no match"],
             }
         }
@@ -81,13 +81,13 @@ def execute(pol, bot, action, target, base_pos, timeout=30):
         r = pol.cmd("goto", [str(t[0]), str(t[1]), str(t[2]), "true", "0.02", "true"], bot)
         if not r.get("Ok") and r.get("arrived") is not True:
             return {"ok": False, "msg": r.get("Message") or r.get("error")}
-        la = pol.wait_action(bot, "goto", prev_id=pol.state(bot).get("LastAction", {}).get("id", 0) - 1, timeout=timeout)
+        la = pol.wait_action(bot, "goto", prev_id=((pol.state(bot).get("LastAction") or {}).get("id") or 0) - 1, timeout=timeout)
         return {"ok": bool(la.get("Ok")), "msg": la.get("Msg")}
     if action == "mine_target":
         r = pol.cmd("mine", [str(target[0]), str(target[1]), str(target[2]), "true"], bot)
         if not r.get("Ok") and r.get("arrived") is not True and "mining" not in (r.get("Message") or ""):
             return {"ok": False, "msg": r.get("Message") or r.get("error")}
-        la = pol.wait_action(bot, "mine", prev_id=pol.state(bot).get("LastAction", {}).get("id", 0) - 1, timeout=timeout)
+        la = pol.wait_action(bot, "mine", prev_id=((pol.state(bot).get("LastAction") or {}).get("id") or 0) - 1, timeout=timeout)
         return {"ok": bool(la.get("Ok")), "msg": la.get("Msg")}
     time.sleep(1.5)  # wait
     return {"ok": True, "msg": "wait"}
@@ -129,16 +129,28 @@ def main():
         near_b = dist(pos, base) <= 2.5
         state = {"near_target": near_t, "near_base": near_b, "rock_mined": rock_mined}
 
+        # v2: compute the current phase deterministically; ask for the action
+        # that SERVES the phase (kills the goal-word bias measured in v1).
+        if not rock_mined and not near_t:
+            phase = "travel"
+        elif not rock_mined and near_t:
+            phase = "mine"
+        elif rock_mined and not near_b:
+            phase = "return"
+        else:
+            phase = "done"
         state_text = (
-            "goal: mine the rock at (%d, %d, %d), then return to base (%d, %d, %d)\n"
-            "bot: at (%.0f, %d, %.0f), near_target=%s, near_base=%s, rock_mined=%s\n"
+            "task: mine a rock, then return to base\n"
+            "current phase: %s\n"
+            "facts: bot at (%.0f, %d, %.0f), near_target=%s, near_base=%s, rock_mined=%s\n"
+            "phase meanings: travel=go to the rock, mine=mine it, return=go back to base, done=stay\n"
             "carrying: %s\nlast_action: %s"
         ) % (
-            target[0], target[1], target[2], base[0], base[1], base[2],
+            phase,
             pos[0], pos[1], pos[2],
             "yes" if near_t else "no", "yes" if near_b else "no",
             "yes" if rock_mined else "no",
-            ", ".join(s["Code"] for s in (st["Bot"].get("Backpack") or [])[:4]) or "empty",
+            ", ".join(b["Code"] for b in (st["Bot"].get("Backpack") or [])[:4]) or "empty",
             (st.get("LastAction") or {}).get("Msg") or "none",
         )
 
@@ -150,6 +162,9 @@ def main():
         gated = (jev["confidence"] or 0) < 0.5
 
         exec_action = jev["choice"] if jev["choice"] in ("goto_target", "mine_target", "goto_base", "wait") else "wait"
+        print("step %d: facts=%s phase=%s oracle=%-11s laya=%-11s conf=%.2f %s | exec=%s" % (
+            i + 1, state, phase, o, str(jev["choice"]), jev["confidence"] or 0,
+            "MATCH" if match else "DIFF", exec_action), flush=True)
         ex = execute(pol, a.bot, exec_action, target, base)
         if exec_action == "mine_target" and ex["ok"]:
             rock_mined = True
@@ -157,6 +172,7 @@ def main():
         rows.append({
             "step": i + 1,
             "state": state,
+            "phase": phase,
             "oracle": o,
             "laya": jev["choice"],
             "confidence": jev["confidence"],
@@ -168,9 +184,7 @@ def main():
             "laya_ms": jev["ms"],
             "tokens": jev["tokens"],
         })
-        print("step %d: facts=%s oracle=%-11s laya=%-11s conf=%.2f %s | exec=%s %s" % (
-            i + 1, state, o, str(jev["choice"]), jev["confidence"] or 0,
-            "MATCH" if match else "DIFF", exec_action, ex["msg"] or ""))
+        print("    exec=%s %s" % (ex["ok"], ex["msg"] or ""), flush=True)
         if rock_mined and near_b:
             print("goal complete at step", i + 1)
             break
@@ -180,7 +194,7 @@ def main():
     gated = sum(1 for r in rows if r["gated"])
     exec_ok = sum(1 for r in rows if r["exec_ok"])
     summary = {
-        "loop": "jev-loop-v1",
+        "loop": "jev-loop-v2",
         "model": "laya-rl-agent (421M, CPU)",
         "openjev": a.openjev,
         "bot": a.bot,
