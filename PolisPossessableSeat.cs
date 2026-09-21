@@ -88,16 +88,25 @@ public class PolisPossessableSeat : IMountableSeat
     /// Updates the seat position to match the NPC's current position.
     /// Call this from the tick handler to keep the "seat" following the NPC.
     /// </summary>
+    private static bool HasNaN(double x, double y, double z)
+    {
+        return double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z);
+    }
+
     public void UpdateSeatPosition()
     {
-        if (npcEntity?.ServerPos != null)
+        var sp = npcEntity?.ServerPos;
+        if (sp != null && !HasNaN(sp.X, sp.Y, sp.Z))
         {
-            seatPos.SetFrom(npcEntity.ServerPos);
+            seatPos.SetFrom(sp);
+            return;
         }
-        else if (npcEntity?.Pos != null)
+        var cp = npcEntity?.Pos;
+        if (cp != null && !HasNaN(cp.X, cp.Y, cp.Z))
         {
-            seatPos.SetFrom(npcEntity.Pos);
+            seatPos.SetFrom(cp);
         }
+        // else: keep last good value
     }
 
     #region IMountableSeat Implementation
@@ -186,7 +195,11 @@ public class PolisPossessableSeat : IMountableSeat
         get
         {
             UpdateSeatPosition();
-            return seatPos;
+            // Return a copy: the mount system may mutate the returned pos,
+            // and a shared instance was corrupted (NaN) and killed the client.
+            var copy = new EntityPos();
+            copy.SetFrom(seatPos);
+            return copy;
         }
     }
 

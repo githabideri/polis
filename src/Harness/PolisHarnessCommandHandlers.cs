@@ -421,8 +421,8 @@ public partial class PolisBuilderNpcSystem
         var itemCode = args[0];
         int qty = args.Length > 1 && int.TryParse(args[1], out var q) ? q : 1;
 
-        var item = sapi.World.GetItem(new AssetLocation(itemCode));
-        var block = item == null ? sapi.World.GetBlock(new AssetLocation(itemCode)) : null;
+        var item = ResolveItemLenient(sapi.World, itemCode);
+        var block = item == null ? ResolveBlockLenient(sapi.World, itemCode) : null;
 
         ItemStack stack = null;
         if (item != null)
@@ -1470,7 +1470,7 @@ public partial class PolisBuilderNpcSystem
         var face = BlockFacing.FromCode(faceCode) ?? BlockFacing.UP;
 
         // Resolve block
-        var block = sapi.World.GetBlock(new AssetLocation(code));
+        var block = ResolveBlockLenient(sapi.World, code);
         if (block == null)
         {
             return new PolisTestHarness.CommandResult { Ok = false, Message = $"Unknown block: {code}" };
@@ -1599,6 +1599,45 @@ public partial class PolisBuilderNpcSystem
         };
     }
 
+    /// <summary>
+    /// 1.22: base-game content is registered under different mod ids than the
+    /// asset folder names ("survival:..." stopped resolving; plain and "game:"
+    /// codes work). Try the given code as-is, then common re-prefixings.
+    /// </summary>
+    private static Block ResolveBlockLenient(IWorldAccessor world, string code)
+    {
+        if (string.IsNullOrWhiteSpace(code) || code.Equals("air", StringComparison.OrdinalIgnoreCase)) return null;
+        var tried = new System.Collections.Generic.List<string>();
+        string[] candidates = code.Contains(':')
+            ? new[] { code, code.Substring(code.IndexOf(':') + 1), "game:" + code.Substring(code.IndexOf(':') + 1), "survival:" + code.Substring(code.IndexOf(':') + 1) }
+            : new[] { code, "game:" + code, "survival:" + code };
+        foreach (var c in candidates)
+        {
+            if (tried.Contains(c)) continue;
+            tried.Add(c);
+            Block b = null;
+            try { b = world.BlockAccessor.GetBlock(new AssetLocation(c)); } catch { }
+            if (b == null) { try { b = world.GetBlock(new AssetLocation(c)); } catch { } }
+            if (b != null) return b;
+        }
+        return null;
+    }
+
+    private static Item ResolveItemLenient(IWorldAccessor world, string code)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return null;
+        string[] candidates = code.Contains(':')
+            ? new[] { code, code.Substring(code.IndexOf(':') + 1), "game:" + code.Substring(code.IndexOf(':') + 1), "survival:" + code.Substring(code.IndexOf(':') + 1) }
+            : new[] { code, "game:" + code, "survival:" + code };
+        foreach (var c in candidates)
+        {
+            Item it = null;
+            try { it = world.GetItem(new AssetLocation(c)); } catch { }
+            if (it != null) return it;
+        }
+        return null;
+    }
+
     PolisTestHarness.CommandResult ExecuteSetBlockCommand(string[] args, PolisTestHarness.CommandContext context)
     {
         // Usage: setblock <blockcode> <x> <y> <z>
@@ -1623,7 +1662,7 @@ public partial class PolisBuilderNpcSystem
         }
         else
         {
-            block = sapi.World.GetBlock(new AssetLocation(code));
+            block = ResolveBlockLenient(sapi.World, code);
         }
 
         if (block == null)

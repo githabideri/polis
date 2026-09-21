@@ -96,17 +96,41 @@ public class PolisClientPossessionHandler : IRenderer
 
     private void ReconcileWithServer(float dt)
     {
+        var sp = possessedNpc.ServerPos;
+        if (sp == null || double.IsNaN(sp.X) || double.IsNaN(sp.Y) || double.IsNaN(sp.Z))
+        {
+            // Server pos not available/valid on the client yet - skip reconciliation.
+            // (Lerping toward a NaN would poison the client pos forever and crash
+            //  the physics tick with ArgumentException.)
+            if (possessedNpc.Pos != null &&
+                (double.IsNaN(possessedNpc.Pos.X) || double.IsNaN(possessedNpc.Pos.Y) || double.IsNaN(possessedNpc.Pos.Z)) &&
+                sp != null)
+            {
+                // self-heal: server pos valid, render pos NaN -> snap
+                possessedNpc.Pos.SetFrom(sp);
+            }
+            return;
+        }
+
+        // Self-heal a NaN render pos (e.g. set before the first sync)
+        if (double.IsNaN(possessedNpc.Pos.X) || double.IsNaN(possessedNpc.Pos.Y) || double.IsNaN(possessedNpc.Pos.Z))
+        {
+            possessedNpc.Pos.SetFrom(sp);
+            lastServerPos = sp.XYZ.Clone();
+            return;
+        }
+
         // Initialize last server position on first call
         if (lastServerPos == null)
         {
-            lastServerPos = possessedNpc.ServerPos.XYZ.Clone();
+            lastServerPos = sp.XYZ.Clone();
         }
 
         // CHECK: If server position diverged significantly from predicted, blend
         double distSq =
-            Math.Pow(possessedNpc.ServerPos.X - possessedNpc.Pos.X, 2) +
-            Math.Pow(possessedNpc.ServerPos.Y - possessedNpc.Pos.Y, 2) +
-            Math.Pow(possessedNpc.ServerPos.Z - possessedNpc.Pos.Z, 2);
+            Math.Pow(sp.X - possessedNpc.Pos.X, 2) +
+            Math.Pow(sp.Y - possessedNpc.Pos.Y, 2) +
+            Math.Pow(sp.Z - possessedNpc.Pos.Z, 2);
 
         // DIAGNOSTIC: Log divergence (only if moving to reduce spam)
         if (distSq > 0.0001)  // Only log if there's actual movement
@@ -118,13 +142,13 @@ public class PolisClientPossessionHandler : IRenderer
         if (distSq > 0.25)
         {
             float blendFactor = 0.15f;  // Smooth blend, not instant snap
-            possessedNpc.Pos.X = GameMath.Lerp(possessedNpc.Pos.X, possessedNpc.ServerPos.X, blendFactor);
-            possessedNpc.Pos.Y = GameMath.Lerp(possessedNpc.Pos.Y, possessedNpc.ServerPos.Y, blendFactor);
-            possessedNpc.Pos.Z = GameMath.Lerp(possessedNpc.Pos.Z, possessedNpc.ServerPos.Z, blendFactor);
+            possessedNpc.Pos.X = GameMath.Lerp(possessedNpc.Pos.X, sp.X, blendFactor);
+            possessedNpc.Pos.Y = GameMath.Lerp(possessedNpc.Pos.Y, sp.Y, blendFactor);
+            possessedNpc.Pos.Z = GameMath.Lerp(possessedNpc.Pos.Z, sp.Z, blendFactor);
             capi.Logger.Notification($"[polis] Reconciling: Applied Lerp blend (distSq={distSq:F3})");
         }
 
-        lastServerPos = possessedNpc.ServerPos.XYZ.Clone();
+        lastServerPos = sp.XYZ.Clone();
     }
 
     public void Dispose() { }
