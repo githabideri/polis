@@ -1,4 +1,5 @@
 using System;
+using Vintagestory.API.Util;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -180,7 +181,21 @@ public class PolisTestHarness : IDisposable
         }
     }
 
-    private void HandleRequest(HttpListenerContext context)
+    
+        private static System.Text.Json.JsonElement? ReadJson(System.Net.HttpListenerRequest request)
+        {
+            try
+            {
+                using var reader = new System.IO.StreamReader(request.InputStream, request.ContentEncoding);
+                var text = reader.ReadToEnd();
+                if (string.IsNullOrWhiteSpace(text)) return null;
+                var doc = System.Text.Json.JsonDocument.Parse(text);
+                return doc.RootElement.Clone();
+            }
+            catch { return null; }
+        }
+
+        private void HandleRequest(HttpListenerContext context)
     {
         var request = context.Request;
         var response = context.Response;
@@ -248,6 +263,66 @@ public class PolisTestHarness : IDisposable
                     timeMs = sapi.World?.ElapsedMilliseconds ?? 0,
                     modVersion = modInfo?.Version ?? ""
                 });
+            }
+
+            else if (path == "/polis/debug/charsel" && request.HttpMethod == "GET")
+            {
+                var sp = sapi.World?.AllOnlinePlayers?.FirstOrDefault() as IServerPlayer;
+                byte[] raw = null;
+                try { raw = sp?.GetModdata("createCharacter"); } catch { }
+                bool viaHelper = false;
+                bool viaUtil = false;
+                try { viaHelper = sp?.GetModData<bool>("createCharacter", false) ?? false; } catch { }
+                try { viaUtil = SerializerUtil.Deserialize<bool>(raw, false); } catch { }
+                tcs.SetResult(new
+                {
+                    ok = true,
+                    playerUid = sp?.PlayerUID,
+                    moddataRaw = raw == null ? "NULL" : BitConverter.ToString(raw),
+                    moddataLen = raw?.Length ?? 0,
+                    viaGetModDataHelper = viaHelper,
+                    viaSerializerUtil = viaUtil
+                });
+            }
+
+            else if (path == "/polis/admin/moddata" && request.HttpMethod == "POST")
+            {
+                // Test-harness admin: set a player moddata value via the game's own
+                // SetModData (persisted on next world save). Values: "true"/"false",
+                // numeric, or plain string.
+                var req = ReadJson(request);
+                string key = null, val = null, targetUid = null;
+                if (req.HasValue)
+                {
+                    if (req.Value.TryGetProperty("key", out var k)) key = k.ValueKind == System.Text.Json.JsonValueKind.String ? k.GetString() : k.GetRawText();
+                    if (req.Value.TryGetProperty("value", out var v)) val = v.ValueKind == System.Text.Json.JsonValueKind.String ? v.GetString() : v.GetRawText();
+                    if (req.Value.TryGetProperty("uid", out var u) && u.ValueKind == System.Text.Json.JsonValueKind.String) targetUid = u.GetString();
+                }
+                if (string.IsNullOrEmpty(key) || val == null)
+                {
+                    tcs.SetResult(new { ok = false, error = "key and value are required" });
+                    return;
+                }
+                sapi.Event.EnqueueMainThreadTask(() =>
+                {
+                    var set = new System.Collections.Generic.List<string>();
+                    foreach (var pl in sapi.World?.AllOnlinePlayers ?? Array.Empty<IPlayer>())
+                    {
+                        var sp = pl as IServerPlayer;
+                        if (sp == null) continue;
+                        if (targetUid != null && sp.PlayerUID != targetUid) continue;
+                        try
+                        {
+                            if (val == "true") sp.SetModData(key, true);
+                            else if (val == "false") sp.SetModData(key, false);
+                            else if (long.TryParse(val, out var l)) sp.SetModData(key, l);
+                            else sp.SetModData(key, val);
+                            set.Add(sp.PlayerUID);
+                        }
+                        catch (Exception e) { set.Add(sp.PlayerUID + ": " + e.Message); }
+                    }
+                    tcs.SetResult(new { ok = set.Count > 0, set });
+                }, "polis-harness-moddata");
             }
             else if (path == "/polis/players" && request.HttpMethod == "GET")
             {
