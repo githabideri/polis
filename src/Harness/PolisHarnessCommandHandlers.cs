@@ -63,8 +63,6 @@ public partial class PolisBuilderNpcSystem
                     return ExecuteSetTimeCommand(args, context);
                 case "time":
                     return ExecuteTimeCommand(args, context);
-                case "timelapse":
-                    return ExecuteTimelapseCommand(args, context);
                 case "activate":
                     return ExecuteActivateCommand(args, context);
                 case "ignite":
@@ -397,29 +395,6 @@ public partial class PolisBuilderNpcSystem
                 seasonRel = cal.YearRel,
                 moonPhase = (int)cal.MoonPhaseExact
             }
-        };
-    }
-
-    // Render-only apparent time-of-day (does not advance the real clock).
-    // Timelapse is an offset in hours added to the current hour for rendering.
-    PolisTestHarness.CommandResult ExecuteTimelapseCommand(string[] args, PolisTestHarness.CommandContext context)
-    {
-        if (args.Length < 1 || !float.TryParse(args[0], out var wantHour))
-        {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = "usage: timelapse <apparentHour 0-24>; 'off' clears" };
-        }
-        var cal = sapi.World.Calendar;
-        if (args[0] == "off")
-        {
-            cal.Timelapse = 0;
-            return new PolisTestHarness.CommandResult { Ok = true, Message = "timelapse cleared (real " + cal.FullHourOfDay + "h)" };
-        }
-        float offset = wantHour - (float)cal.FullHourOfDay;
-        cal.Timelapse = offset;
-        return new PolisTestHarness.CommandResult
-        {
-            Ok = true,
-            Message = string.Format("timelapse: real {0}h -> apparent {1}h (offset {2})", cal.FullHourOfDay, wantHour, offset)
         };
     }
 

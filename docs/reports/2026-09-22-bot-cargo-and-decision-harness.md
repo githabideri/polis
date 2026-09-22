@@ -279,3 +279,37 @@ harness is self-cleaning.
   growth would need worldgen farmland or an explicit nutrient state.
 - The goto arrival **snap** (the old vspolis overshoot fix) is intact:
   after arrival the bot sits at the exact requested cell center.
+
+## 10. Lighting control for visual proof (photo-run pattern)
+
+Goal: a 6-frame elevated-angle sequence proving the harvest cycle (crop present -> bot
+harvests -> crop gone with drops -> bot returns with loot), in stable daylight.
+
+Findings:
+
+1. **Server-side `Calendar.Timelapse` does not change rendered light.** The property
+   is in *days* (the cinematic `/timelapse <speed> <days>` feature) and the client
+   overwrites it every frame from its own local value (`GameWorldCalendar.Timelapse =
+   timelapsedCurrent` in `MainRenderLoop`). Setting it from the server (a harness
+   `timelapse` command tried both raw-hour and day-fraction values) left the scene
+   unchanged; the command was removed again after the finding.
+2. **The working pattern (proven, viz8 run):** temporarily `settime 50`, poll `time`
+   until `fullHour` enters a chosen window (10-15h), then `settime 1` and shoot.
+   Full wait-to-shoot: ~3.5 real minutes. At the 2x effective speed of this world
+   (unknown second +60 modifier, see wedge report), a 3-minute shoot at `settime 1`
+   drifts ~5 in-game hours - enough to stay in daylight from a 10:00 start.
+3. **Elevated cameras (y=5-6) beat ground-level ones here**: the mine-fixture
+   geometry (2-high stone walls) repeatedly swallowed y=4 observers; elevated
+   positions are immune and give a readable wide shot of the whole fixture.
+4. **VS twilight/night skies are dramatic** (flat red gradient at dusk, star field
+   at night) - a shot that "looks wrong" is usually just night, not corruption.
+   Verify with the `time` command before blaming a broken world.
+
+Frames (this run, bot #98, world time ~10:00-13:00):
+
+- `docs/proofs/2026-09-22-harvest/viz8-01-before-story.png` - wide scene, crop visible
+- `viz8-02-before-cropclose.png` - crop close-up: green crop bush with carrot tops on the farmland
+- `viz8-04-at-crop.png` - bot at the crop (crop still present)
+- `viz8-05-after-crop-gone.png` - same camera, crop gone, dropped carrots at the spot
+- `viz8-06-return-mid.png` - post-harvest scene
+- `viz8-07-at-base-carrying.png` - bot back at base (carrots + seed in inventory, see run log)
