@@ -240,6 +240,7 @@ def run_once(a, pol, fault_phases):
         pol.marker_present(a.bot, target)), flush=True)
 
     rows, t_start, fired = [], time.time(), set()
+    prev, stall_count, last_final = None, 0, None
     for i in range(a.steps):
         st = pol.state(a.bot)
         pos = st["Bot"]["Pos"]
@@ -269,16 +270,27 @@ def run_once(a, pol, fault_phases):
                 pol.cmd("drop", [], a.bot)
                 time.sleep(1)
             proposal = "mine_target"
+        changed = []
+        if prev is not None:
+            if marker != prev["marker"]:
+                changed.append("marker %s" % ("removed" if not marker else "re-appeared"))
+            has_tool = any("pickaxe" in (c or "") for c in pol.carrying(a.bot))
+            if has_tool != prev["has_tool"]:
+                changed.append("pickaxe %s" % ("re-given" if has_tool else "dropped"))
+            if phase != prev["phase"]:
+                changed.append("phase %s -> %s" % (prev["phase"], phase))
+        since = ", ".join(changed) if changed else "no change"
         state_text = (
             "task: mine the marker block, then return to base\n"
             "current phase: %s\n"
             "facts: bot at (%.0f, %d, %.0f), near_target=%s, near_base=%s, marker_present=%s\n"
-            "carrying: %s\nlast_action: %s\nproposed action: %s"
+            "carrying: %s\nsince_last_step: %s\nlast_action: %s\nproposed action: %s"
         ) % (
             phase, pos[0], pos[1], pos[2],
             "yes" if near_t else "no", "yes" if near_b else "no",
             "yes" if marker else "no",
             ", ".join((b.get("Code") or "?") for b in (st["Bot"].get("Backpack") or [])[:4]) or "empty",
+            since,
             (st.get("LastAction") or {}).get("Msg") or "none",
             proposal,
         )
@@ -295,6 +307,16 @@ def run_once(a, pol, fault_phases):
             judge = llm_judge(a.llm, a.llm_model, state_text, proposal)
             final = judge["choice"] or proposal
         final = final if final in ACTIONS else "wait"
+
+        # Max-stall safety valve: the doubt-arbiter latches to `wait` after a
+        # visible failure (measured pass 3/4: 10-12 consecutive waits, prompt-
+        # resistant). After 2 consecutive waits, control returns to the
+        # deterministic policy - the arbiter has had its say.
+        stall_bypass = False
+        if final == "wait" and last_final == "wait":
+            stall_bypass = True
+            final = proposal
+        stall_count = stall_count + 1 if final == "wait" else 0
 
         ex = execute(pol, a.bot, final, target, base)
         # repair the tool after a tool fault so the mission can continue
@@ -320,9 +342,14 @@ def run_once(a, pol, fault_phases):
             "judge_raw": judge.get("raw") if judge else None,
             "judge_ms": judge["ms"] if judge else None,
             "executed": final, "exec_ok": ex["ok"], "exec_msg": ex["msg"],
+            "stall_bypass": stall_bypass,
             "oracle": correct, "match": match, "fault_corrected": fault_corrected,
+            "since_last_step": since,
             "state_text": state_text, "laya_ms": reflex["ms"],
         })
+        prev = {"marker": marker, "phase": phase,
+                "has_tool": any("pickaxe" in (c or "") for c in pol.carrying(a.bot))}
+        last_final = final
 
         st = pol.state(a.bot)
         if (not pol.marker_present(a.bot, target)) and dist(st["Bot"]["Pos"], base) <= 2.5:
@@ -384,6 +411,7 @@ def main():
         "injected_faults": len(faults),
         "faults_corrected": "%d/%d" % (sum(1 for r in faults if r["fault_corrected"]), len(faults)),
         "reflex_short_circuits": "%d/%d" % (n - len(judge_calls), n),
+        "stall_bypasses": sum(1 for r in all_rows if r.get("stall_bypass")),
         "judge_calls": len(judge_calls),
         "false_waits": len(false_waits),
         "judge_oracle_match": "%d/%d" % (sum(1 for r in judge_calls if r["match"]), len(judge_calls)) if judge_calls else "0/0",

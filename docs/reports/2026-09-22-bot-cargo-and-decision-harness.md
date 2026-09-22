@@ -119,3 +119,43 @@ queryable. New env flag **`POLIS_SKIP_CLAIMS=1`** (set in
 - Send the labeled set + question JSON to the openjev/llmlab side for the
   use-case catalog entry and the decision-classifiers page (their request,
   2026-09-22).
+
+## 6. Pass 6: the stall fix works (2026-09-22, second session)
+
+Two changes, both deterministic and testable:
+
+1. **Diff-based state line** — every step's state now carries
+   `since_last_step:` (marker removed / pickaxe dropped or re-given /
+   phase change / no change). The judge sees *changes*, not just
+   accumulated failure history.
+2. **Max-stall safety valve** — after two consecutive executed `wait`s,
+   control returns to the deterministic policy (`path=stall-bypass`). The
+   arbiter gets exactly two says; an infinite wait loop is structurally
+   impossible.
+
+Result (same protocol as pass 5: tau 0.35, faults travel+mine, 2 runs):
+mission **2/2**, 5 steps, **25 s** each (pass 5: 68 s — its time went to a
+45 s doomed mine attempt), **4/4 faults handled by the judge with `wait`**
+(the diff line made the judge see "pickaxe dropped" and hold the mine; the
+repair then let the reflex mine cleanly on the next step), **0
+stall-bypasses needed**, 0 false-waits. Suggested tau from the growing
+labeled set: **0.358 ≈ the applied 0.35 — the threshold has converged**.
+
+Measurement nuance recorded for the method page: `judge_oracle_match`
+reports 0/4 here, but the oracle is *phase-based* while the judge was
+*fault-aware* — all four waits were the correct action given the injected
+faults (that is what `faults_corrected` measures). A per-step oracle that
+knows about active faults is the right ground truth for fault steps; the
+phase oracle only works on clean steps.
+
+## 7. Where this leaves the loop
+
+- Clean steps: the cheap reflex carries them (6/10 at the re-derived tau);
+  the 27B is consulted only on the unsure minority (~0.2 s per call).
+- Fault steps: the 27B now handles both fault classes correctly (conservative
+  wait), and the loop self-heals (repair → next step succeeds) — the
+  positive controls pass.
+- Known residual: the judge is conservative *by prior*; with more labeled
+  data the (question, state-format) pair can be re-derived again, and the
+  fine-tune path in the method doc is the long-term route from
+  "conservative arbiter" to "fast pre-filter".
