@@ -26,7 +26,7 @@
    no ssh tunnel). The noVNC stream pane needs the
    VNC password once per session; the still-image screenshot pane needs
    none. VNC/noVNC is oversight-only, not the control channel.
-8. **Player uids contain `+`** (e.g. `d4pJ+Ty1...`). The harness parses raw
+8. **Player uids contain `+`** (e.g. `Ab3x+Yz9...`). The harness parses raw
    queries (keeps `+`), but client code should still URL-encode (`%2B`) —
    form-decoding turns `+` into a space and every uid lookup silently
    fails. This bug class cost real debugging time; check it first when a

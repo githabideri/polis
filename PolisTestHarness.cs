@@ -1518,7 +1518,7 @@ public class PolisTestHarness : IDisposable
     }
 
     // HttpListener's QueryString uses form-urlencoded decoding, which turns '+'
-    // into a SPACE. VS player uids contain '+' (e.g. "d4pJ+Ty1..."), so any uid
+    // into a SPACE. VS player uids contain '+' (e.g. "Ab3x+Yz9..."), so any uid
     // passed in a query string was silently corrupted and every uid lookup failed
     // with "Player not found". Parse the raw query with Uri.UnescapeDataString
     // instead (decodes %XX, keeps '+').
