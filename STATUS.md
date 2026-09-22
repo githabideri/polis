@@ -100,3 +100,17 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
 8. Grow the labeled corpus (a few more harvest/mine runs at varied
    taus) and hand the question JSONs + labeled sets to the llmlab side
    for the decision-classifiers page.
+9. **Movement pass** — done 2026-09-22 (report section 9): the goto freeze
+   root-caused to persisted idle-bot accumulation (19 bots; a restart
+   mid-goto wedges the traverser one-shot async search); harness now sweeps
+   bots before every run; goto has a bounded 3-phase fallback ladder (async
+   A* -> sync A* -> straight line, 15 s timeouts) instead of a silent hang.
+10. **WORLD WEDGED - recreate the testbed before any live work.** The
+    `polis-testbed-pristine` world is persistently navigation-wedged (all
+    entities fail to move; every recovery attempt failed; full incident
+    record: report section 10). Next session, first task: delete the world
+    (noVNC with a viewer connected, or stop the game and rm the Worlds/ and
+    Saves/ entries), create `polis-testbed-2` WITH THE VIEWER CONNECTED
+    (headless new-world creation hangs), set `VSGAME_WORLD`, restart,
+    re-verify spawn+goto. Rules: never restart mid-goto; sweep bots before
+    stopping the game.

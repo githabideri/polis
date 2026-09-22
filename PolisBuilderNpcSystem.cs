@@ -575,8 +575,17 @@ public partial class PolisBuilderNpcSystem : ModSystem
         PolisBuilderNpcHarmony.Unapply(sapi);
     }
 
+    float hbAccum;
     void OnTick(float dt)
     {
+        hbAccum += dt;
+        if (hbAccum >= 10f)
+        {
+            hbAccum = 0f;
+            int nullActs = 0;
+            foreach (var b in bots.Values) if (b?.Activity == null) nullActs++;
+            sapi?.Logger?.Notification($"[polis] system-tick heartbeat: bots={bots.Count} nullActivity={nullActs}");
+        }
         if (bots.Count > 0)
         {
             var toRemoveFromMemory = new List<long>();

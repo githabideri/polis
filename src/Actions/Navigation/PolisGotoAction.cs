@@ -100,6 +100,8 @@ class PolisGotoAction : EntityActionBase
         resultSent = false;
         openedDoors = new List<BlockPos>();
         currentPath = null;
+        navPhase = 0;
+        phaseElapsed = 0f;
 
         hereTarget = Target.Clone();
         astarTries = 4;
@@ -129,6 +131,7 @@ class PolisGotoAction : EntityActionBase
 
     void navTo(Vec3d target)
     {
+        phaseElapsed = 0f;
         EnumAICreatureType ct = EnumAICreatureType.Default;
         var serverAttrs = vas.Entity?.Properties?.Server?.Attributes;
         if (serverAttrs != null)
@@ -269,8 +272,55 @@ class PolisGotoAction : EntityActionBase
         }
     }
 
+    // A bounded navigation ladder. 1.22 gotcha (measured 2026-09-22): if a
+    // world is saved/reloaded with an async path search in flight, the
+    // traverser's async slot can stay wedged (NavigateTo_Async silently
+    // returns false) and every later async navigation for that entity
+    // hangs without a single callback. The ladder keeps each attempt
+    // time-boxed and degrades to a pathfinder-free straight-line walk, so
+    // a goto can never hang the mission forever.
+    const float PHASE_TIMEOUT = 15f;
+    int navPhase;         // 0: primary (async A* or straight line per Astar)
+                          // 1: sync A* retry   2: straight-line retry
+    float phaseElapsed;
+
+    float hbAccum;
+    public override void OnTick(float dt)
+    {
+        if (done || ExecutionHasFailed) return;
+        hbAccum += dt;
+        if (hbAccum >= 1f)
+        {
+            hbAccum = 0f;
+            debugLog?.Invoke($"[goto] action-tick heartbeat: phase={navPhase} elapsed={phaseElapsed:F1} target={PolisBuilderNpcSystem.FormatPos(hereTarget)}");
+        }
+        phaseElapsed += dt;
+        if (phaseElapsed < PHASE_TIMEOUT) return;
+        phaseElapsed = 0f;
+        debugLog?.Invoke($"[goto] phase {navPhase} timed out, degrading");
+        stop();
+        navPhase++;
+        if (navPhase == 1 && Astar && vas.wppathTraverser != null)
+        {
+            vas.wppathTraverser.OnFoundPath = onFoundPath;
+            vas.wppathTraverser.NavigateTo(hereTarget, WalkSpeed, 0.7f, OnDone, OnStuck, OnNoPath, false, 500, 0);
+        }
+        else if (navPhase == 2 && vas.linepathTraverser != null)
+        {
+            vas.linepathTraverser.NavigateTo(hereTarget, WalkSpeed, OnDone, OnStuck, null, 0, EnumAICreatureType.Humanoid);
+            setAnimation();
+        }
+        else
+        {
+            ExecutionHasFailed = true;
+            ReportResult(false, "stuck: all navigation modes timed out");
+            Finish();
+        }
+    }
+
     void OnNoPath()
     {
+        phaseElapsed = 0f;
         if (Astar && astarTries > 0)
         {
             astarTries--;
