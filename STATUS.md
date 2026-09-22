@@ -1,6 +1,6 @@
 # STATUS.md — the single source of state
 
-Updated: 2026-09-22 (harness LAN-reachable + uid hardening + look/aim-verify; Jev-loop v3 noul-veto measured)
+Updated: 2026-09-22 (wedge resolved + defenses; harvest pipeline with before/during/after visual proof; repo sanitized to zero machine names/IPs/PII; model A/B harness running on a CPU container; llmlab handoff delivered)
 Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected before end of 2026.
 
 ## Overall state
@@ -15,6 +15,8 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
 | Block actions on 1.22.7 (setblock/give/mine/place) | **live verified** 2026-09-21 | place ok; natural-ground mine ok; rock mine gated by tool tier (correct) and mined with pickaxe-iron; plant/harvest codes still unresolved in 1.22 (see quirks) |
 | Jev decision loop (openjev/Laya → `/polis`) | **v1/v2 measured** 2026-09-21 | v1 choice 0/8 (goal-word bias); v2 phase-split 0/8 but 8/8 confidence-gated — Laya cannot *select*, its abstention is honest; see `docs/reports/2026-09-21-jev-loop.md` |
 | Jev-loop v3 (noul veto + 27B escalation) | **measured** 2026-09-22 | policy-proposes / Laya-vetoes / 27B-escalates: faults caught 1/2, false alarms 3/6, **fault and false-alarm at the same p (0.37)** — 421M is a conservative safety net, not a precision gate; 27B with thinking off = 124 ms conservative arbiter. Verdict: v4 = 27B per-step judge + Laya obvious-yes pre-filter; see `docs/reports/2026-09-22-jev-loop-v3-noul-veto.md` |
+| Decision-harness passes 4–6 + harvest pipeline | **live verified** 2026-09-22 | pass 6: diff-based state line + stall valve → 2/2 missions, 0 stalls; harvest 2/2 (crop BEs + SeraphInventory cargo fix); 8 labeled sets in `data/`; visual proof in `docs/proofs/`; see `docs/reports/2026-09-22-bot-cargo-and-decision-harness.md` |
+| Model A/B harness (Laya vs Decider 2B vs Qwen3.5-4B) | **running** 2026-09-22 | CPU container `jevab` (4C/4G): serial resumable downloads + `ab-runner.py` (top-1, p_oracle, Brier, latency, confidence on 8 labeled sets); results land in `data/` when done; vision-Jev design: `docs/design/vision-jev-2026-09-22.md` |
 
 ## Open issues carried into 1.22.7 (from archive/KNOWN_ISSUES.md, unresolved)
 
@@ -120,5 +122,7 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
     alive-but-frozen; repro "saving and reloading a save within a
     vertical distance") in report section 11. Defenses: never restart
     mid-goto, `POLIS_PATH_PROBE=1` diagnostic, dawn-screenshot pause
-    check. Next live work: harvest-mission corpus growth, then (parked)
-    publish.
+    check. Done since: harvest pipeline + corpus growth + visual proof +
+    repo sanitization + llmlab handoff (reports/2026-09-22-polis-jev-loop-model-handoff.md).
+    Next live work: model A/B results (CPU container, overnight), then
+    (parked) publish.
