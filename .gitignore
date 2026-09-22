@@ -5,3 +5,5 @@ obj/
 .vs/
 __pycache__/
 *.pyc
+tests/world/*.vcdbs-shm
+tests/world/*.vcdbs-wal

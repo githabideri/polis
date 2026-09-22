@@ -59,7 +59,12 @@ public partial class PolisBuilderNpcSystem
                 case "gotolook":
                     return ExecuteGotoLookCommand(args, context);
                 case "look":
-                    return ExecuteLookCommand(args, context);
+                    return ExecuteLookCommand(args, context);                case "settime":
+                    return ExecuteSetTimeCommand(args, context);
+                case "time":
+                    return ExecuteTimeCommand(args, context);
+                case "timelapse":
+                    return ExecuteTimelapseCommand(args, context);
                 case "activate":
                     return ExecuteActivateCommand(args, context);
                 case "ignite":
@@ -354,6 +359,70 @@ public partial class PolisBuilderNpcSystem
     /// For players this sets the server pos AND sends PolisSetViewDirectionPacket
     /// (client camera follows); for bots the server pos IS the rendered state.
     /// </summary>
+    // World-clock control for deterministic lighting (photography, vision experiments).
+    // NOTE: IGameCalendar.SetTimeSpeedModifier sets the speed to the SUM of all modifiers
+    // (an empty set would freeze the clock), so the polis-harness modifier is never removed;
+    // restore vanilla with: settime 1.
+    PolisTestHarness.CommandResult ExecuteSetTimeCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        const float baseSpeed = 60f; // vanilla default SpeedOfTime (48-min day with CalendarSpeedMul 0.5)
+        if (args == null || args.Length < 1 || !double.TryParse(args[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var factor))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: settime <factor>  (1 = vanilla 48-min day; 10 = ~5-min day)" };
+        if (factor < 1)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "factor must be >= 1 (a lower sum than the vanilla base would freeze the clock)" };
+        var cal = sapi.World.Calendar;
+        float prev = cal.SpeedOfTime;
+        cal.SetTimeSpeedModifier("polis-harness", baseSpeed * (float)factor);
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"time speed factor set to {factor} (speed {prev} -> {cal.SpeedOfTime})"
+        };
+    }
+
+    PolisTestHarness.CommandResult ExecuteTimeCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        var cal = sapi.World.Calendar;
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = cal.PrettyDate(),
+            Data = new
+            {
+                date = cal.PrettyDate(),
+                hourOfDay = cal.HourOfDay,
+                fullHour = cal.FullHourOfDay,
+                totalDays = cal.TotalDays,
+                speedOfTime = cal.SpeedOfTime,
+                seasonRel = cal.YearRel,
+                moonPhase = (int)cal.MoonPhaseExact
+            }
+        };
+    }
+
+    // Render-only apparent time-of-day (does not advance the real clock).
+    // Timelapse is an offset in hours added to the current hour for rendering.
+    PolisTestHarness.CommandResult ExecuteTimelapseCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 1 || !float.TryParse(args[0], out var wantHour))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "usage: timelapse <apparentHour 0-24>; 'off' clears" };
+        }
+        var cal = sapi.World.Calendar;
+        if (args[0] == "off")
+        {
+            cal.Timelapse = 0;
+            return new PolisTestHarness.CommandResult { Ok = true, Message = "timelapse cleared (real " + cal.FullHourOfDay + "h)" };
+        }
+        float offset = wantHour - (float)cal.FullHourOfDay;
+        cal.Timelapse = offset;
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = string.Format("timelapse: real {0}h -> apparent {1}h (offset {2})", cal.FullHourOfDay, wantHour, offset)
+        };
+    }
+
     PolisTestHarness.CommandResult ExecuteLookCommand(string[] args, PolisTestHarness.CommandContext context)
     {
         if (args.Length < 3)
