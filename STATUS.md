@@ -100,9 +100,3 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
 8. Grow the labeled corpus (a few more harvest/mine runs at varied
    taus) and hand the question JSONs + labeled sets to the llmlab side
    for the decision-classifiers page.
-9. Movement-physics root-cause pass (the top open issue from
-   archive/KNOWN_ISSUES.md).
-10. Publish prep: sanitized copy for GitHub + VS mod store (exclude
-    `ops/` and `archive/`); archive old `vspolis` repo + decommission
-    Daedalus (a gateway container agent id `polis`). **Parked — owner decision
-    pending.**

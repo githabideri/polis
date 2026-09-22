@@ -235,3 +235,47 @@ Two saved use cases: `polis-action-noul` (mine question) and
 the canonical state). Labeled sets: `data/labeled-set-2026-09-22-*.json`
 (pass 5, pass 6, harvest 1+2, mine regression) - the calibration
 corpus for the llmlab decision-classifiers page.
+
+## 9. Movement & world-state findings (same day)
+
+### 9.1 The goto freeze: bot accumulation
+
+Mid-session, every `goto` stopped producing movement or a result
+(no LastAction, no exception in the server logs) - for reloaded and
+freshly spawned bots alike, across all three navigation modes
+(PolisAStar, VS A*, straight line). The freeze **reproduced across a
+full game restart**, which ruled out in-process accumulation.
+
+Root cause: **persisted idle-bot accumulation.** Every harness run
+spawns a bot and never despawns the previous ones; the bot entity
+class is `StoreWithChunk = true`, so each despawn-less run wrote
+another idle bot into the world. By the time the freeze appeared the
+world carried **19 idle persisted bots**. Despawning all of them
+immediately restored goto (A* and straight line, all directions); the
+decision-loop missions ran green again right after (harvest 1/1, 2
+steps, 13 s).
+
+Exact micro-mechanism not yet identified (suspect: a persisted bot
+holding an interrupted goto activity wedging the
+`wppathTraverser` job queue after reload). The operational fix is in
+the harness: `run_once` now **sweeps all persisted bots before each
+run** (`Polis.sweep_bots`) - the world stays at ~1 bot and the
+harness is self-cleaning.
+
+### 9.2 Baselines measured while diagnosing
+
+- The client renders at a steady **~1.5 FPS** in this headless
+  iGPU/Xvnc setup - that is the *normal* state (constant since world
+  load, including all the successful mission runs). The server clock
+  still runs near real time (a full in-game day ~ 10 real minutes).
+  Mission wall-times above are at this rate.
+- `setblock` does not accept `0` for air ("Unknown block: 0"); the
+  code **`air`** works and is the fixture-clearing primitive.
+- **Set-placed crops do not grow**: a `crop-carrot-1` on a set-placed
+  `farmland` stayed at stage 1 for ~7 in-game days (the farmland BE
+  immediately flips to `farmland-dry-verylow` and the crop's
+  nutrient-gated growth rate stays ~0). Set-placed mature crops
+  (stage 7) are the right fixture for the harvest mission; real
+  growth would need worldgen farmland or an explicit nutrient state.
+- The goto arrival **snap** (the old vspolis overshoot fix) is intact:
+  after arrival the bot sits at the exact requested cell center.

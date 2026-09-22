@@ -83,6 +83,19 @@ class Polis:
                 items.append(it["Code"])
         items += [x.get("Code") for x in (b.get("Backpack") or [])]
         return items
+    def sweep_bots(self, keep=None):
+        """Despawn all other bots. Persisted idle bots accumulate across
+        runs (StoreWithChunk) and a large batch of them was measured to
+        wedge the action/traverser system (goto freeze, 2026-09-22) - keep
+        the world clean between passes."""
+        d = self.get("/polis/bots")
+        raw = d.get("Data") or d
+        items = raw.get("bots") if isinstance(raw, dict) else raw
+        for b in (items or []):
+            i = b.get("id") if isinstance(b, dict) else None
+            if i is None or i == keep:
+                continue
+            self.cmd("despawn", [], i)
     def cell_blocks(self, bot, cell, pad=1):
         x, y, z = cell
         r = self.cmd("scan", [str(x - pad), "2", str(z - pad),
@@ -318,7 +331,10 @@ def setup_fixture(a, pol, mission):
 
 def run_once(a, pol, fault_phases):
     mission = a.mission
-    # fresh respawn: deterministic start, clean inventory
+    # sweep all persisted bots first (accumulated idle bots can wedge the
+    # action/traverser system - measured 2026-09-22), then fresh respawn
+    pol.sweep_bots(keep=None)
+    time.sleep(2)
     if a.bot != "auto":
         pol.cmd("despawn", [], int(a.bot))
         time.sleep(1)
