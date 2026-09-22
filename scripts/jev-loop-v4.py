@@ -1,30 +1,36 @@
 #!/usr/bin/env python3
 """
-Jev-loop v4: 27B per-step judge + Laya cheap pre-filter (2026-09-22).
+Jev-loop v4 (optimization-harness form) — polis decision loop.
 
-v3 measured that at 421M scale the noul veto is a conservative safety net,
-not a precision gate (fault and false alarm at the same p), while the 27B
-with thinking disabled answers a one-word action choice in ~124 ms. v4
-inverts the tiers:
+Two-tier decision:
+  policy proposes an action for the current phase
+    -> Laya 421M noul pre-filter (anchored yes/no, one call ~1.5-2.5 s)
+         p >= TAU_YES  -> execute the proposal (cheap path)
+         p <  TAU_YES  -> 27B doubt-arbiter (thinking off, ~0.2-0.7 s)
+                          answers the same 4-action choice; execute its
+                          answer (fallback: the proposal)
 
-  Laya noul pre-filter:
-      p >= 0.6  -> execute the policy proposal directly (cheap path)
-      p <  0.6  -> 27B judges the step (full state + proposal, thinking off)
-                   execute the 27B's choice (fallback: the proposal)
+Mission (one pass): mine the marker block, return to base.
+Success = marker block removed from the world (verified by scan) AND bot
+back at base. (1.22 note: loot from plain/cracked rock set via setblock has
+no block-entity type, so items do not drop - block removal is the
+deterministic success criterion. See report 2026-09-22.)
 
-Faults are injected at chosen steps (skip-goal, tool-drop) to measure
-whether the judge corrects what the reflex lets through.
+Positive controls (fault injection): at chosen steps a KNOWN-WRONG proposal
+is injected (skip-goal during travel; tool-drop + mine during mine) to see
+whether the tiers catch it.
 
-Also fixed vs v3: `drop` removes the HELD item (not the named one), so the
-tool fault drops the held slot and verifies; the mine action is confirmed
-by polling for the block's item in the backpack (mining is async, ~8s with
-a pickaxe), not by the "mining started" ack.
+Every step is recorded as a LABELED example (state, proposal, oracle action,
+reflex p, path, judge answer, executed, outcome) - the raw material for
+re-deriving the threshold when the model or question changes (calibration
+protocol, llmlab docs/decision-classifiers.md).
 
 Usage:
-  python3 scripts/jev-loop-v4.py [--bot 5] [--steps 8] [--faults 3,6]
+  python3 scripts/jev-loop-v4.py [--bot 5] [--steps 8] [--faults travel,mine]
+      [--repeat 1] [--tau-yes 0.6]
       [--harness http://127.0.0.1:8585] [--openjev the Laya noul endpoint]
       [--llm http://the 27B judge] [--llm-model qwen3.8-27b-dual]
-      [--tau-yes 0.6] [--out FILE.json]
+      [--out FILE.json]
 """
 import argparse, json, os, re, sys, time, urllib.request
 
@@ -46,46 +52,64 @@ class Polis:
         self.base, self.uid = base, uid
     def get(self, path, timeout=15):
         return http_json(self.base + path, None, timeout)
-    def cmd(self, cmd, args, bot, timeout=40):
+    def cmd(self, cmd, args, bot, timeout=60):
         return http_json(self.base + "/polis/command",
                          {"cmd": cmd, "args": args,
                           "context": {"botId": bot, "playerUid": self.uid}}, timeout)
-    def state(self, bot):
-        return self.get("/polis/state?botId=%d" % bot)
+    def state(self, bot, tries=10):
+        for _ in range(tries):
+            r = self.get("/polis/state?botId=%d" % bot)
+            if "Bot" in r:
+                return r
+            time.sleep(1)
+        return r
     def backpack(self, bot):
         return [b.get("Code") for b in (self.state(bot).get("Bot", {}).get("Backpack") or [])]
-    def wait_action(self, bot, name, prev_id, timeout=45):
-        t0 = time.time()
-        while time.time() - t0 < timeout:
-            la = (self.state(bot).get("LastAction") or {})
-            if la.get("Name") == name and la.get("Ok") is not None and (la.get("id") or 0) > prev_id:
-                return la
-            time.sleep(0.4)
-        return (self.state(bot).get("LastAction") or {})
+    def carrying(self, bot):
+        """All item codes on the bot: hands + cargo grid (state Backpack
+        only covers grid slots - hands are separate fields)."""
+        b = self.state(bot).get("Bot", {})
+        items = []
+        for k in ("RightHand", "LeftHand"):
+            it = b.get(k)
+            if it and it.get("Code"):
+                items.append(it["Code"])
+        items += [x.get("Code") for x in (b.get("Backpack") or [])]
+        return items
+    def marker_present(self, bot, cell):
+        x, y, z = cell
+        r = self.cmd("scan", [str(x - 1), "2", str(z - 1), str(x + 1), str(y + 2), str(z + 1)], bot)
+        blocks = (r.get("Data") or {}).get("blocks", [])
+        return any(b.get("code") in ("rock-granite", "game:rock-granite") and b.get("pos") == [x, y, z]
+                   for b in blocks)
 
 ACTIONS = ("goto_target", "mine_target", "goto_base", "wait")
 PHASE_ACTION = {"travel": "goto_target", "mine": "mine_target",
                 "return": "goto_base", "done": "wait"}
 
+LAYA_QUESTION = {
+    "type": "noul",
+    "instructions": (
+        "Answer yes only if the proposed action matches the current phase: "
+        "travel phase needs goto_target, mine phase needs mine_target, "
+        "return phase needs goto_base, done phase needs wait, and the bot "
+        "carries the tool the phase needs (mining needs a pickaxe). "
+        "No otherwise - a proposed action that contradicts the phase, "
+        "skips an unfinished step, or uses a missing tool is no."),
+}
+
 def laya_noul(openjev, state_text, proposal):
     t0 = time.time()
     r = http_json(openjev + "/v1/systemone", {
         "state": state_text,
-        "questions": {"proposal_ok": {"type": "noul",
-            "instructions": (
-                "Answer yes only if the proposed action matches the current phase: "
-                "travel phase needs goto_target, mine phase needs mine_target, "
-                "return phase needs goto_base, done phase needs wait, and the bot "
-                "carries the tool the phase needs (mining needs a pickaxe). "
-                "No otherwise - a proposed action that contradicts the phase, "
-                "skips an unfinished step, or uses a missing tool is no.")}},
+        "questions": {"proposal_ok": LAYA_QUESTION},
     }, timeout=60)
     a = ((r.get("answers") or {}).get("proposal_ok") or {})
     return {"p": a.get("noul"), "ms": int((time.time() - t0) * 1000), "error": r.get("_error")}
 
 def llm_judge(llm_url, model, state_text, proposal):
-    """The 27B judge. Thinking off (measured 2026-09-22): ~124ms, direct answer;
-    thinking on: ~6.4s and `content` occasionally truncates to null."""
+    """27B doubt-arbiter. Thinking off (measured 2026-09-22): ~124 ms,
+    direct single-word answer; thinking on: ~6.4 s and null content."""
     t0 = time.time()
     r = http_json(llm_url + "/v1/chat/completions", {
         "model": model,
@@ -100,7 +124,13 @@ def llm_judge(llm_url, model, state_text, proposal):
                 "goto_target, mine_target, goto_base, wait."},
             {"role": "user", "content":
                 state_text + "\n\nPolicy proposal: " + proposal +
-                " (the reflex was unsure). Which single action should the bot take now?"},
+                " (the reflex was unsure). Which single action should the bot take now?" +
+                "\n\nOperational rules: mining requires a pickaxe in the bot's "
+                "hands/bag - if it is proposed to mine without a pickaxe, answer "
+                "wait. If a previous mine failed but the bot now carries a "
+                "pickaxe and the marker is still present, retry mine_target. "
+                "Only answer wait when a required tool is missing or the facts "
+                "are contradictory."},
         ],
     }, timeout=120)
     ms = int((time.time() - t0) * 1000)
@@ -115,21 +145,7 @@ def llm_judge(llm_url, model, state_text, proposal):
     return {"choice": m.group(1) if m else None, "ms": ms, "raw": text[:80],
             "error": None if m else "unparseable: " + text[:60]}
 
-def rock_present(pol, bot, cell, tries=3):
-    """Scan the cell's column for the marker rock; re-place up to `tries`x."""
-    x, y, z = cell
-    for i in range(tries):
-        r = pol.cmd("scan", [str(x - 1), "2", str(z - 1), str(x + 1), str(y + 2), str(z + 1)], bot)
-        blocks = (r.get("Data") or {}).get("blocks", [])
-        if any(b.get("code") in ("rock-granite", "game:rock-granite") and b.get("pos") == [x, y, z] for b in blocks):
-            return True
-        pol.cmd("setblock", ["rock-granite", str(x), str(y), str(z)], bot)
-        time.sleep(1)
-    return False
-
-
 def adjacent_to(pol, bot, cell):
-    """Goto stops one cell short of the block (never into the block cell)."""
     x, y, z = cell
     try:
         pos = pol.state(bot)["Bot"]["Pos"]
@@ -141,61 +157,60 @@ def adjacent_to(pol, bot, cell):
         return [x + 1, y, z]
     return [x, y, z - 1] if pos[2] < z else [x, y, z + 1]
 
-
-def execute(pol, bot, action, target, base, rock_mined, timeout=45):
+def execute(pol, bot, action, target, base, timeout=45):
     if action in ("goto_target", "goto_base"):
         t = adjacent_to(pol, bot, target) if action == "goto_target" else base
         r = pol.cmd("goto", [str(t[0]), str(t[1]), str(t[2]), "true", "0.02", "true"], bot)
         if not r.get("Ok") and r.get("arrived") is not True:
             return {"ok": False, "msg": r.get("Message") or r.get("error")}
-        la = pol.wait_action(bot, "goto",
-                             prev_id=((pol.state(bot).get("LastAction") or {}).get("id") or 0) - 1,
-                             timeout=timeout)
-        return {"ok": bool(la.get("Ok")), "msg": la.get("Msg") or ""}
+        t0 = time.time()
+        while time.time() - t0 < timeout:
+            st = pol.state(bot)
+            la = st.get("LastAction") or {}
+            if la.get("Name") == "goto" and la.get("Ok") is not None:
+                return {"ok": bool(la.get("Ok")), "msg": la.get("Msg") or ""}
+            time.sleep(0.5)
+        return {"ok": False, "msg": "goto timeout"}
     if action == "mine_target":
-        if not rock_present(pol, bot, target, tries=1):
-            return {"ok": False, "msg": "marker rock missing and re-place failed"}
         r = pol.cmd("mine", [str(target[0]), str(target[1]), str(target[2]), "true"], bot)
         if not r.get("Ok") and "mining" not in (r.get("Message") or ""):
             return {"ok": False, "msg": r.get("Message") or r.get("error")}
-        # mining is async (~8s with pickaxe): confirm by the item appearing
-        # in the backpack, not by the "mining started" ack.
+        # mining is async (~8 s with a tool): success = the marker block is
+        # gone (1.22: set-placed rock yields no item drops)
         t0 = time.time()
         while time.time() - t0 < timeout:
-            if "rock-granite" in [c or "" for c in pol.backpack(bot)]:
-                return {"ok": True, "msg": "mined (item collected)"}
+            if not pol.marker_present(bot, target):
+                return {"ok": True, "msg": "marker removed"}
             time.sleep(1)
-        return {"ok": False, "msg": "mining did not complete in %ds" % timeout}
+        return {"ok": False, "msg": "marker still present after %ds" % timeout}
     time.sleep(1.5)
     return {"ok": True, "msg": "wait"}
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--bot", type=int, default=5)
-    ap.add_argument("--steps", type=int, default=8)
-    ap.add_argument("--faults", default="3,6",
-                    help="1-based steps at which to inject a known-wrong proposal")
-    ap.add_argument("--harness", default="http://127.0.0.1:8585")
-    ap.add_argument("--openjev", default=os.environ.get("OPENJEV", "the Laya noul endpoint"))
-    ap.add_argument("--llm", default=os.environ.get("POLIS_LLM", "http://the 27B judge"))
-    ap.add_argument("--llm-model", default="qwen3.8-27b-dual")
-    ap.add_argument("--tau-yes", type=float, default=0.6)
-    ap.add_argument("--uid", default=None)
-    ap.add_argument("--out", default=None)
-    a = ap.parse_args()
-    fault_steps = set(int(x) for x in a.faults.split(",") if x.strip())
+def derive_threshold(rows):
+    """From the labeled set: pick TAU that lets the most correct proposals
+    through while blocking the most faulty ones. Small-N advisory only."""
+    correct = sorted(r["p"] for r in rows if r["p"] is not None and not r["injected"])
+    faulty = sorted(r["p"] for r in rows if r["p"] is not None and r["injected"])
+    best = None
+    cands = sorted(set(correct + faulty) | {0.5, 0.6})
+    for tau in cands:
+        pass_c = sum(1 for p in correct if p >= tau) / max(len(correct), 1)
+        block_f = 1.0 - (sum(1 for p in faulty if p >= tau) / max(len(faulty), 1))
+        score = pass_c + block_f
+        if best is None or score > best[1]:
+            best = (tau, score)
+    return {
+        "correct_p": correct,
+        "faulty_p": faulty,
+        "suggested_tau": round(best[0], 3) if best else None,
+        "note": "advisory - small N; re-derive as the labeled set grows",
+    }
 
-    if a.uid is None:
-        p = http_json(a.harness + "/polis/players")
-        a.uid = ((p.get("Data") or p).get("players") or [{}])[0].get("uid")
-    pol = Polis(a.harness, a.uid)
-
-    # fresh respawn: deterministic start, clean inventory (v3 left bot 5 with
-    # a wedged 2-slot inventory that rejected give)
+def run_once(a, pol, fault_phases):
+    # fresh respawn: deterministic start, clean inventory
     if a.bot != "auto":
         pol.cmd("despawn", [], int(a.bot))
         time.sleep(1)
-        a.bot = int(a.bot)
     r = http_json(a.harness + "/polis/command",
                   {"cmd": "spawn", "args": [], "context": {"playerUid": a.uid}})
     new_id = (r.get("Data") or {}).get("id")
@@ -203,76 +218,66 @@ def main():
         a.bot = int(new_id)
     pol = Polis(a.harness, a.uid)
     st = pol.state(a.bot)
-    if "Bot" not in st:
-        print("bot %s not found after spawn: %s" % (a.bot, st)); sys.exit(1)
     bx, by, bz = [int(v) for v in st["Bot"]["Pos"]]
-    print("using fresh bot #%d at (%d, %d, %d)" % (a.bot, bx, by, bz), flush=True)
     base = (bx, by, bz)
-    target = (bx + 8, by, bz)  # ground level (a floating target stalls the pathfinder)
+    target = (bx + 8, by, bz)
     http_json(a.harness + "/polis/command",
               {"cmd": "setblock", "args": ["rock-granite"] + [str(v) for v in target],
                "context": {"botId": a.bot, "playerUid": a.uid}})
-    ok = rock_present(pol, a.bot, target)
-    print("marker rock verified at", target, "->", ok, flush=True)
-    if not ok:
-        print("WARNING: marker rock will not persist in this world state; "
-              "the loop will re-verify before every mine step", flush=True)
-    # give + VERIFY the pickaxe (v3 lesson: unverified tool state made faults
-    # ambiguous)
-    pol.cmd("give", ["pickaxe-iron", "1"], a.bot)
-    t0 = time.time()
-    while time.time() - t0 < 8 and "pickaxe-iron" not in [c or "" for c in pol.backpack(a.bot)]:
-        pol.cmd("give", ["pickaxe-iron", "1"], a.bot)
+    if not pol.marker_present(a.bot, target):
+        pol.cmd("setblock", ["rock-granite", str(target[0]), str(target[1]), str(target[2])], a.bot)
         time.sleep(1)
-    print("setup: base=%s target=%s faults=%s pickaxe=%s" % (
-        base, target, sorted(fault_steps),
-        "pickaxe-iron" in [c or "" for c in pol.backpack(a.bot)]), flush=True)
+    # verified tool (the bot's default right hand may be occupied by a
+    # profession item; give until the pickaxe is in the backpack/hands)
+    for _ in range(8):
+        pol.cmd("give", ["pickaxe-iron", "1"], a.bot)
+        if any("pickaxe" in (c or "") for c in pol.carrying(a.bot)):
+            break
+        time.sleep(1)
+    print("setup: bot #%d base=%s target=%s faults=%s pickaxe=%s marker=%s" % (
+        a.bot, base, target, sorted(fault_phases),
+        any("pickaxe" in (c or "") for c in pol.carrying(a.bot)),
+        pol.marker_present(a.bot, target)), flush=True)
 
-    rock_mined = False
-    rows, t_start = [], time.time()
+    rows, t_start, fired = [], time.time(), set()
     for i in range(a.steps):
         st = pol.state(a.bot)
         pos = st["Bot"]["Pos"]
         near_t = dist(pos, target) <= 2.5
         near_b = dist(pos, base) <= 2.5
-        if not rock_mined and not near_t:
-            phase = "travel"
-        elif not rock_mined and near_t:
-            phase = "mine"
-        elif rock_mined and not near_b:
-            phase = "return"
+        marker = pol.marker_present(a.bot, target)
+        rock_mined = not marker
+        if not rock_mined:
+            phase = "mine" if near_t else "travel"
         else:
-            phase = "done"
+            phase = "done" if near_b else "return"
         correct = PHASE_ACTION[phase]
 
-        injected = (i + 1) in fault_steps and phase != "done"
+        injected = phase in fault_phases and phase not in fired
         proposal = correct
         drop_done = False
         if injected and phase == "travel":
-            proposal = "goto_base"                       # skip the goal
+            proposal = "goto_base"
         elif injected and phase == "mine":
-            # tool fault: `drop` removes the HELD item - select the pickaxe
-            # first, then drop, then verify it is actually gone.
-            pol.cmd("select", ["pickaxe-iron"], a.bot)
-            time.sleep(0.5)
+            pol.cmd("select", [str(a.bot)], a.bot)  # ensure held slot = pickaxe? (no-op if usage differs)
             pol.cmd("drop", [], a.bot)
             t0 = time.time()
-            while time.time() - t0 < 8:
-                if "pickaxe-iron" not in [c or "" for c in pol.backpack(a.bot)]:
+            while time.time() - t0 < 10:
+                if not any("pickaxe" in (c or "") for c in pol.carrying(a.bot)):
                     drop_done = True
                     break
                 pol.cmd("drop", [], a.bot)
                 time.sleep(1)
             proposal = "mine_target"
         state_text = (
-            "task: mine a rock, then return to base\n"
+            "task: mine the marker block, then return to base\n"
             "current phase: %s\n"
-            "facts: bot at (%.0f, %d, %.0f), near_target=%s, near_base=%s, rock_mined=%s\n"
+            "facts: bot at (%.0f, %d, %.0f), near_target=%s, near_base=%s, marker_present=%s\n"
             "carrying: %s\nlast_action: %s\nproposed action: %s"
         ) % (
             phase, pos[0], pos[1], pos[2],
             "yes" if near_t else "no", "yes" if near_b else "no",
-            "yes" if rock_mined else "no",
+            "yes" if marker else "no",
             ", ".join((b.get("Code") or "?") for b in (st["Bot"].get("Backpack") or [])[:4]) or "empty",
             (st.get("LastAction") or {}).get("Msg") or "none",
             proposal,
@@ -284,32 +289,31 @@ def main():
         if reflex["error"]:
             path = "reflex-error:" + str(reflex["error"])[:30]
         elif p is not None and p >= a.tau_yes:
-            pass  # cheap path
+            pass
         else:
             path = "judge"
             judge = llm_judge(a.llm, a.llm_model, state_text, proposal)
             final = judge["choice"] or proposal
         final = final if final in ACTIONS else "wait"
 
-        ex = execute(pol, a.bot, final, target, base, rock_mined)
-        if final == "mine_target" and ex["ok"]:
-            rock_mined = True
+        ex = execute(pol, a.bot, final, target, base)
         # repair the tool after a tool fault so the mission can continue
-        if drop_done and "pickaxe-iron" not in [c or "" for c in pol.backpack(a.bot)]:
-            pol.cmd("give", ["pickaxe-iron", "1"], a.bot)
-            t0 = time.time()
-            while time.time() - t0 < 8 and "pickaxe-iron" not in [c or "" for c in pol.backpack(a.bot)]:
+        if drop_done and not any("pickaxe" in (c or "") for c in pol.carrying(a.bot)):
+            for _ in range(8):
+                pol.cmd("give", ["pickaxe-iron", "1"], a.bot)
+                if any("pickaxe" in (c or "") for c in pol.carrying(a.bot)):
+                    break
                 time.sleep(1)
 
+        if injected:
+            fired.add(phase)
         match = final == correct
         fault_corrected = injected and final != proposal
-        print("step %d: phase=%-6s prop=%-12s inj=%-5s p=%s path=%-9s judge=%-12s exec=%-12s %s oracle=%s" % (
-            i + 1, phase, proposal, str(injected).lower(),
+        print("run %d step %d: phase=%-6s prop=%-12s inj=%-5s p=%s path=%-9s judge=%-12s exec=%-12s %s oracle=%s" % (
+            a.run, i + 1, phase, proposal, str(injected).lower(),
             ("%.2f" % p) if p is not None else "?", path,
             str(judge["choice"]) if judge else "-", final,
             "OK" if ex["ok"] else "FAIL", "MATCH" if match else "DIFF"), flush=True)
-        print("    exec=%s %s | judge raw: %s" % (ex["ok"], (ex["msg"] or "")[:50],
-                                                   (judge or {}).get("raw") or (judge or {}).get("error") or "-"), flush=True)
         rows.append({
             "step": i + 1, "phase": phase, "proposal": proposal, "injected": injected,
             "p": p, "path": path, "judge_choice": judge["choice"] if judge else None,
@@ -317,39 +321,82 @@ def main():
             "judge_ms": judge["ms"] if judge else None,
             "executed": final, "exec_ok": ex["ok"], "exec_msg": ex["msg"],
             "oracle": correct, "match": match, "fault_corrected": fault_corrected,
-            "laya_ms": reflex["ms"],
+            "state_text": state_text, "laya_ms": reflex["ms"],
         })
-        if rock_mined and near_b:
-            print("goal complete at step %d" % (i + 1), flush=True)
+
+        st = pol.state(a.bot)
+        if (not pol.marker_present(a.bot, target)) and dist(st["Bot"]["Pos"], base) <= 2.5:
+            print("run %d: GOAL at step %d (%.0fs)" % (a.run, i + 1, time.time() - t_start), flush=True)
             break
 
-    n = len(rows)
-    faults = [r for r in rows if r["injected"]]
-    judge_calls = [r for r in rows if r["path"] == "judge"]
+    st = pol.state(a.bot)
+    complete = (not pol.marker_present(a.bot, target)) and dist(st["Bot"]["Pos"], base) <= 2.5
+    return rows, {
+        "mission_complete": complete,
+        "steps_to_complete": next((r["step"] for r in reversed(rows) if r["match"]), None)
+        if complete else None,
+        "total_sec": int(time.time() - t_start),
+    }
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--bot", type=int, default=5)
+    ap.add_argument("--steps", type=int, default=8)
+    ap.add_argument("--faults", default="travel,mine",
+                    help="phases whose FIRST step gets a known-wrong proposal")
+    ap.add_argument("--repeat", type=int, default=1)
+    ap.add_argument("--tau-yes", type=float, default=0.6)
+    ap.add_argument("--harness", default="http://127.0.0.1:8585")
+    ap.add_argument("--openjev", default=os.environ.get("OPENJEV", "the Laya noul endpoint"))
+    ap.add_argument("--llm", default=os.environ.get("POLIS_LLM", "http://the 27B judge"))
+    ap.add_argument("--llm-model", default="qwen3.8-27b-dual")
+    ap.add_argument("--uid", default=None)
+    ap.add_argument("--out", default=None)
+    a = ap.parse_args()
+    a.run = 0
+    fault_phases = set(x.strip() for x in a.faults.split(",") if x.strip())
+
+    if a.uid is None:
+        p = http_json(a.harness + "/polis/players")
+        a.uid = ((p.get("Data") or p).get("players") or [{}])[0].get("uid")
+    pol = Polis(a.harness, a.uid)
+
+    all_rows, all_outcomes = [], []
+    for a.run in range(1, a.repeat + 1):
+        rows, outcome = run_once(a, pol, fault_phases)
+        all_rows.extend(rows)
+        all_outcomes.append(outcome)
+
+    n = len(all_rows)
+    faults = [r for r in all_rows if r["injected"]]
+    judge_calls = [r for r in all_rows if r["path"] == "judge"]
     false_waits = [r for r in judge_calls
-                  if not r["injected"] and r["judge_choice"] == "wait" and r["oracle"] != "wait"]
+                   if not r["injected"] and r["judge_choice"] == "wait" and r["oracle"] != "wait"]
     summary = {
-        "loop": "jev-loop-v4 (27b per-step judge + laya pre-filter)",
-        "reflex": "laya-rl-agent 421M (noul pre-filter, tau_yes=%s)" % a.tau_yes,
+        "loop": "jev-loop-v4 harness (27B doubt-arbiter + Laya noul pre-filter)",
+        "reflex": "laya 421M noul, tau_yes=%s" % a.tau_yes,
         "judge": a.llm_model + " (thinking off)",
-        "bot": a.bot, "steps": n,
+        "runs": a.repeat, "bot": a.bot, "steps_total": n,
+        "mission_complete": [o["mission_complete"] for o in all_outcomes],
+        "mission_complete_rate": "%d/%d" % (sum(1 for o in all_outcomes if o["mission_complete"]), len(all_outcomes)),
+        "avg_steps_to_complete": (sum(o["steps_to_complete"] or a.steps for o in all_outcomes
+                                       if o["mission_complete"]) / max(sum(1 for o in all_outcomes if o["mission_complete"]), 1)),
         "injected_faults": len(faults),
         "faults_corrected": "%d/%d" % (sum(1 for r in faults if r["fault_corrected"]), len(faults)),
-        "reflex_short_circuits": "%d/%d (p>=tau, no 27b call)" % (n - len(judge_calls), n),
+        "reflex_short_circuits": "%d/%d" % (n - len(judge_calls), n),
         "judge_calls": len(judge_calls),
         "false_waits": len(false_waits),
-        "judge_oracle_match": "%d/%d (of judge calls)" % (
-            sum(1 for r in judge_calls if r["match"]), len(judge_calls)),
-        "exec_oracle_match": "%d/%d" % (sum(1 for r in rows if r["match"]), n),
-        "exec_success": "%d/%d" % (sum(1 for r in rows if r["exec_ok"]), n),
-        "mission_complete": rock_mined,
-        "avg_laya_ms": int(sum(r["laya_ms"] for r in rows) / max(n, 1)),
+        "judge_oracle_match": "%d/%d" % (sum(1 for r in judge_calls if r["match"]), len(judge_calls)) if judge_calls else "0/0",
+        "exec_oracle_match": "%d/%d" % (sum(1 for r in all_rows if r["match"]), n),
+        "exec_success": "%d/%d" % (sum(1 for r in all_rows if r["exec_ok"]), n),
+        "avg_laya_ms": int(sum(r["laya_ms"] for r in all_rows) / max(n, 1)),
         "avg_judge_ms": (int(sum(r["judge_ms"] for r in judge_calls) / len(judge_calls))
                          if judge_calls else None),
-        "total_sec": int(time.time() - t_start),
-        "rows": rows,
+        "threshold_derivation": derive_threshold(all_rows),
+        "laya_question": LAYA_QUESTION,
+        "rows": all_rows,
     }
-    print("\n=== JEVO LOOP v4 SUMMARY ===")
+    print("\n=== JEVO LOOP v4 SUMMARY (harness) ===")
     print(json.dumps({k: v for k, v in summary.items() if k != "rows"}, indent=1))
     if a.out:
         json.dump(summary, open(a.out, "w"), indent=1)

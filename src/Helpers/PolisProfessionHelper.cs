@@ -73,21 +73,7 @@ internal static class PolisProfessionHelper
                 return entity.LeftHandItemSlot;
             case "backpack0":
             case "backpack1":
-                var invbh = entity.GetBehavior<EntityBehaviorSeraphInventory>();
-                if (invbh?.Inventory == null)
-                {
-                    debugLog?.Invoke("[polis] profession: entity has no seraph inventory");
-                    return null;
-                }
-                int slotIndex = slotName == "backpack0"
-                    ? PolisConstants.BackpackSlotId0
-                    : PolisConstants.BackpackSlotId1;
-                if (slotIndex >= invbh.Inventory.Count)
-                {
-                    debugLog?.Invoke($"[polis] profession: slot index {slotIndex} out of range");
-                    return null;
-                }
-                return invbh.Inventory[slotIndex];
+                return PolisInventoryHelpers.BackpackSlot(entity, slotName == "backpack0" ? 0 : 1);
             default:
                 return null;
         }

@@ -146,7 +146,7 @@ class PolisButcherEntityAction : EntityActionBase
             return;
         }
 
-        var invbh = agent.GetBehavior<EntityBehaviorSeraphInventory>();
+        var invbh = PolisInventoryHelpers.BotCargo(agent);
         if (invbh == null)
         {
             debugLog?.Invoke("[butcher] failed: bot has no inventory behavior");
@@ -156,7 +156,7 @@ class PolisButcherEntityAction : EntityActionBase
             return;
         }
 
-        var toolSlot = invbh.Inventory[15]; // Right hand (slot 15)
+        var toolSlot = invbh[0]; // Right hand (cargo slot 0)
         if (toolSlot?.Itemstack?.Collectible?.Tool != EnumTool.Knife)
         {
             debugLog?.Invoke("[butcher] failed: knife required in right hand");

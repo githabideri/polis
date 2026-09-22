@@ -274,13 +274,13 @@ class PolisKnapAction : EntityActionBase
             return agent.LeftHandItemSlot;
         }
 
-        // Check seraph inventory (backpacks)
-        var invbh = agent.GetBehavior<EntityBehaviorSeraphInventory>();
-        if (invbh?.Inventory != null)
+        // Check cargo
+        var inv = PolisInventoryHelpers.BotCargo(agent);
+        if (inv != null)
         {
-            for (int i = 0; i < invbh.Inventory.Count; i++)
+            for (int i = 0; i < inv.Count; i++)
             {
-                var slot = invbh.Inventory[i];
+                var slot = inv[i];
                 if (slot?.Itemstack != null && ingredient.SatisfiesAsIngredient(slot.Itemstack))
                 {
                     return slot;

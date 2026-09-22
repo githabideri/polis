@@ -1568,7 +1568,7 @@ public partial class PolisBuilderNpcSystem
         var selection = ResolveSelection(contextPlayer, clickedPos, face);
 
         // Check claims on target position (where block will be placed)
-        if (sapi.World.Claims != null && !sapi.World.Claims.TryAccess(contextPlayer, targetPos, EnumBlockAccessFlags.BuildOrBreak))
+        if (!SkipClaims && sapi.World.Claims != null && !sapi.World.Claims.TryAccess(contextPlayer, targetPos, EnumBlockAccessFlags.BuildOrBreak))
         {
             if (debugEnabled) sapi.Logger.Debug($"[polis] Place claims check failed at {targetPos}");
             return new PolisTestHarness.CommandResult { Ok = false, Message = "Access denied." };
@@ -1786,17 +1786,11 @@ public partial class PolisBuilderNpcSystem
                 break;
             case "backpack0":
             case "backpack1":
-                var invbh = bot.Entity.GetBehavior<EntityBehaviorSeraphInventory>();
-                if (invbh?.Inventory == null)
+                slot = PolisInventoryHelpers.BackpackSlot(bot.Entity, slotName == "backpack0" ? 0 : 1);
+                if (slot == null)
                 {
                     return new PolisTestHarness.CommandResult { Ok = false, Message = "Bot has no seraph inventory" };
                 }
-                int slotIndex = slotName == "backpack0" ? PolisConstants.BackpackSlotId0 : PolisConstants.BackpackSlotId1;
-                if (slotIndex >= invbh.Inventory.Count)
-                {
-                    return new PolisTestHarness.CommandResult { Ok = false, Message = $"Invalid slot index {slotIndex}" };
-                }
-                slot = invbh.Inventory[slotIndex];
                 break;
             default:
                 return new PolisTestHarness.CommandResult { Ok = false, Message = $"Unknown slot: {slotName}. Use: lefthand, righthand, backpack0, backpack1" };
@@ -3029,14 +3023,14 @@ public partial class PolisBuilderNpcSystem
 
         if (!hasClayInHand)
         {
-            // Check seraph inventory (backpacks)
+            // Check cargo
             bool hasClayInInventory = false;
-            var invbh = agent?.GetBehavior<EntityBehaviorSeraphInventory>();
-            if (invbh?.Inventory != null)
+            var inv = PolisInventoryHelpers.BotCargo(agent);
+            if (inv != null)
             {
-                for (int i = 0; i < invbh.Inventory.Count; i++)
+                for (int i = 0; i < inv.Count; i++)
                 {
-                    var slot = invbh.Inventory[i];
+                    var slot = inv[i];
                     if (slot?.Itemstack?.Collectible?.Code?.Path?.StartsWith("clay-") == true)
                     {
                         hasClayInInventory = true;
@@ -3224,13 +3218,13 @@ public partial class PolisBuilderNpcSystem
             return true;
         }
 
-        // Check seraph inventory (backpacks)
-        var invbh = agent.GetBehavior<EntityBehaviorSeraphInventory>();
-        if (invbh?.Inventory != null)
+        // Check cargo
+        var inv = PolisInventoryHelpers.BotCargo(agent);
+        if (inv != null)
         {
-            for (int i = 0; i < invbh.Inventory.Count; i++)
+            for (int i = 0; i < inv.Count; i++)
             {
-                var slot = invbh.Inventory[i];
+                var slot = inv[i];
                 if (slot?.Itemstack != null && ingredient.SatisfiesAsIngredient(slot.Itemstack))
                 {
                     return true;

@@ -1049,40 +1049,33 @@ public partial class PolisBuilderNpcSystem : ModSystem
         var rightStack = entity.RightHandItemSlot?.Itemstack;
         var leftStack = entity.LeftHandItemSlot?.Itemstack;
 
-        // Query backpack slots (17 and 18 are backpack equipment slots)
+        // Query all non-empty cargo grid slots (2..15)
         PolisTestHarness.TestStateResult.SlotInfo[] backpackInfo = null;
-        var invbh = entity.GetBehavior<EntityBehaviorSeraphInventory>();
-        if (invbh?.Inventory != null && invbh.Inventory.Count > 18)
+        var invbh = PolisInventoryHelpers.BotCargo(entity);
+        if (invbh != null && invbh.Count > PolisConstants.CargoBackpackSlot1)
         {
             var slots = new List<PolisTestHarness.TestStateResult.SlotInfo>();
-            var backpack0 = invbh.Inventory[17];
-            var backpack1 = invbh.Inventory[18];
-
-            if (backpack0?.Itemstack?.StackSize > 0)
+            for (int i = PolisConstants.CargoBackpackSlot0; i < invbh.Count; i++)
             {
-                slots.Add(new PolisTestHarness.TestStateResult.SlotInfo
+                var gslot = invbh[i];
+                if (gslot?.Itemstack?.StackSize > 0)
                 {
-                    Code = backpack0.Itemstack.Collectible?.Code?.ToString(),
-                    Qty = backpack0.Itemstack.StackSize
-                });
-            }
-            if (backpack1?.Itemstack?.StackSize > 0)
-            {
-                slots.Add(new PolisTestHarness.TestStateResult.SlotInfo
-                {
-                    Code = backpack1.Itemstack.Collectible?.Code?.ToString(),
-                    Qty = backpack1.Itemstack.StackSize
-                });
+                    slots.Add(new PolisTestHarness.TestStateResult.SlotInfo
+                    {
+                        Code = gslot.Itemstack.Collectible?.Code?.ToString(),
+                        Qty = gslot.Itemstack.StackSize
+                    });
+                }
             }
             if (slots.Count > 0) backpackInfo = slots.ToArray();
         }
 
         // Query backpack contents (items inside equipped backpacks)
         PolisTestHarness.TestStateResult.SlotInfo[][] backpackContentsInfo = null;
-        if (invbh?.Inventory != null && invbh.Inventory.Count > 18)
+        if (invbh != null && invbh.Count > PolisConstants.CargoBackpackSlot1)
         {
             var contentsList = new List<PolisTestHarness.TestStateResult.SlotInfo[]>();
-            ItemSlot[] bagSlots = { invbh.Inventory[17], invbh.Inventory[18] };
+            ItemSlot[] bagSlots = { invbh[PolisConstants.CargoBackpackSlot0], invbh[PolisConstants.CargoBackpackSlot1] };
 
             for (int bagIndex = 0; bagIndex < bagSlots.Length; bagIndex++)
             {
@@ -1092,7 +1085,7 @@ public partial class PolisBuilderNpcSystem : ModSystem
                 var bag = bagSlot.Itemstack.Collectible?.GetCollectibleInterface<IHeldBag>();
                 if (bag == null) continue;
 
-                var contents = bag.GetOrCreateSlots(bagSlot.Itemstack, invbh.Inventory, bagIndex, entity.World);
+                var contents = bag.GetOrCreateSlots(bagSlot.Itemstack, invbh, bagIndex, entity.World);
                 if (contents == null) continue;
 
                 var slotInfos = contents
@@ -2137,17 +2130,11 @@ public partial class PolisBuilderNpcSystem : ModSystem
                 break;
             case "backpack0":
             case "backpack1":
-                var invbh = bot.Entity.GetBehavior<EntityBehaviorSeraphInventory>();
-                if (invbh?.Inventory == null)
+                slot = PolisInventoryHelpers.BackpackSlot(bot.Entity, slotName == "backpack0" ? 0 : 1);
+                if (slot == null)
                 {
                     return TextCommandResult.Error("Bot has no seraph inventory");
                 }
-                int slotIndex = slotName == "backpack0" ? PolisConstants.BackpackSlotId0 : PolisConstants.BackpackSlotId1;
-                if (slotIndex >= invbh.Inventory.Count)
-                {
-                    return TextCommandResult.Error($"Invalid slot index {slotIndex}");
-                }
-                slot = invbh.Inventory[slotIndex];
                 break;
             default:
                 return TextCommandResult.Error($"Unknown slot: {slotName}");
@@ -2637,6 +2624,14 @@ public partial class PolisBuilderNpcSystem : ModSystem
         };
     }
 
+    /// <summary>
+    /// Test-world escape hatch: POLIS_SKIP_CLAIMS=1 disables all claim
+    /// access checks. Only for dedicated single-player test worlds where
+    /// the harness drives every block operation.
+    /// </summary>
+    internal static bool SkipClaims =>
+        Environment.GetEnvironmentVariable("POLIS_SKIP_CLAIMS") == "1";
+
     bool TryValidateBlockTarget(
         IServerPlayer player,
         BotState bot,
@@ -2672,7 +2667,7 @@ public partial class PolisBuilderNpcSystem : ModSystem
 
         var targetPos = selection.Position;
         var claimPos = accessPos ?? targetPos;
-        if (sapi.World.Claims != null && !sapi.World.Claims.TryAccess(player, claimPos, access))
+        if (!SkipClaims && sapi.World.Claims != null && !sapi.World.Claims.TryAccess(player, claimPos, access))
         {
             debugLog?.Invoke($"[validate] failed: claims access={access} pos={claimPos}");
             error = TextCommandResult.Error("Access denied.");

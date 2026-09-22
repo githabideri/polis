@@ -8,6 +8,21 @@ namespace PolisBuilderNpc.Helpers;
 
 internal static class PolisInventoryHelpers
 {
+    /// <summary>
+    /// The bot's cargo inventory: 16 generic slots created on EntityPolisBot
+    /// ([0]=right hand, [1]=left hand, [2..15]=grid). 1.22 turned the seraph
+    /// behavior into an equipment-only inventory, so all bot cargo goes
+    /// through this seam.
+    /// </summary>
+    internal static InventoryBase BotCargo(EntityAgent agent)
+        => (agent as EntityPolisBot)?.Cargo;
+
+    internal static ItemSlot BackpackSlot(EntityAgent agent, int which)
+    {
+        var inv = BotCargo(agent);
+        int idx = which == 0 ? PolisConstants.CargoBackpackSlot0 : PolisConstants.CargoBackpackSlot1;
+        return inv != null && idx < inv.Count ? inv[idx] : null;
+    }
 
     internal static bool TryInsertIntoBotInventory(EntityAgent agent, ItemStack stack, out int moved, out string reason, Action<string> debugLog = null)
     {
@@ -26,10 +41,10 @@ internal static class PolisInventoryHelpers
             return false;
         }
 
-        var invbh = agent.GetBehavior<EntityBehaviorSeraphInventory>();
-        if (invbh?.Inventory == null)
+        var cargo = BotCargo(agent);
+        if (cargo == null || cargo.Count == 0)
         {
-            reason = "seraph inventory missing";
+            reason = "cargo inventory missing";
             return false;
         }
 
@@ -43,13 +58,12 @@ internal static class PolisInventoryHelpers
 
         if (!dummy.Empty)
         {
-            moved += TryPutIntoBackpacks(agent.World, invbh.Inventory, dummy);
+            moved += TryPutIntoCargoGrid(agent.World, cargo, dummy);
         }
 
         if (moved > 0)
         {
-            invbh.storeInv();
-            debugLog?.Invoke($"[inventory] inserted {moved}x {stack.Collectible?.Code?.ToString() ?? "item"} into bot inventory");
+            debugLog?.Invoke($"[inventory] inserted {moved}x {stack.Collectible?.Code?.ToString() ?? "item"} into bot cargo");
             return true;
         }
 
@@ -65,7 +79,7 @@ internal static class PolisInventoryHelpers
 
     /// <summary>
     /// Finds the first inventory slot containing the specified block.
-    /// Searches RightHand, LeftHand, then backpack contents.
+    /// Searches RightHand, LeftHand, cargo grid slots, then carried-bag contents.
     /// </summary>
     internal static ItemSlot FindBlockInInventory(EntityAgent agent, Block block, Action<string> debugLog = null)
     {
@@ -88,17 +102,27 @@ internal static class PolisInventoryHelpers
             return agent.LeftHandItemSlot;
         }
 
-        // Check backpacks
-        var invbh = agent.GetBehavior<EntityBehaviorSeraphInventory>();
-        if (invbh?.Inventory == null || invbh.Inventory.Count <= PolisConstants.BackpackSlotId1)
+        var cargo = BotCargo(agent);
+        if (cargo == null)
         {
             return null;
         }
 
-        ItemSlot[] bagSlots = { invbh.Inventory[PolisConstants.BackpackSlotId0], invbh.Inventory[PolisConstants.BackpackSlotId1] };
-        for (int bagIndex = 0; bagIndex < bagSlots.Length; bagIndex++)
+        // Check cargo grid slots
+        for (int i = 0; i < cargo.Count; i++)
         {
-            var bagSlot = bagSlots[bagIndex];
+            var slot = cargo[i];
+            if (slot?.Itemstack?.Collectible is Block gridBlock && gridBlock.Code.Equals(block.Code))
+            {
+                debugLog?.Invoke($"[inventory] found {block.Code} in cargo slot {i}");
+                return slot;
+            }
+        }
+
+        // Check carried bags
+        for (int bagIndex = 0; bagIndex < cargo.Count; bagIndex++)
+        {
+            var bagSlot = cargo[bagIndex];
             if (bagSlot?.Itemstack == null)
             {
                 continue;
@@ -110,7 +134,7 @@ internal static class PolisInventoryHelpers
                 continue;
             }
 
-            var contents = bag.GetOrCreateSlots(bagSlot.Itemstack, invbh.Inventory, bagIndex, agent.World);
+            var contents = bag.GetOrCreateSlots(bagSlot.Itemstack, cargo, bagIndex, agent.World);
             if (contents == null)
             {
                 continue;
@@ -120,7 +144,7 @@ internal static class PolisInventoryHelpers
             {
                 if (contentSlot?.Itemstack?.Collectible is Block bagBlock && bagBlock.Code.Equals(block.Code))
                 {
-                    debugLog?.Invoke($"[inventory] found {block.Code} in backpack {bagIndex}");
+                    debugLog?.Invoke($"[inventory] found {block.Code} in bag slot {bagIndex}");
                     return contentSlot;
                 }
             }
@@ -129,31 +153,27 @@ internal static class PolisInventoryHelpers
         return null;
     }
 
-    private static int TryPutIntoBackpacks(IWorldAccessor world, InventoryBase inv, ItemSlot sourceSlot)
+    /// <summary>
+    /// Pushes a stack into free cargo grid slots, then into carried-bag
+    /// contents if still remaining.
+    /// </summary>
+    private static int TryPutIntoCargoGrid(IWorldAccessor world, InventoryBase inv, ItemSlot sourceSlot)
     {
         if (world == null || inv == null || sourceSlot == null || sourceSlot.Empty)
         {
             return 0;
         }
 
-        if (inv.Count <= PolisConstants.BackpackSlotId1)
-        {
-            return 0;
-        }
-
-        var backpack0 = inv[PolisConstants.BackpackSlotId0];
-        var backpack1 = inv[PolisConstants.BackpackSlotId1];
         int moved = 0;
 
-        bool isBagItem = sourceSlot.Itemstack?.Collectible?.GetCollectibleInterface<IHeldBag>() != null;
-
-        if (isBagItem)
+        // 1) direct grid slots (skip the hand slots, handled by the caller)
+        for (int i = 0; i < inv.Count && !sourceSlot.Empty; i++)
         {
-            moved += TryPutIntoSlot(world, sourceSlot, backpack0, true);
-            if (!sourceSlot.Empty)
+            if (i <= 1)
             {
-                moved += TryPutIntoSlot(world, sourceSlot, backpack1, true);
+                continue;
             }
+            moved += TryPutIntoSlot(world, sourceSlot, inv[i], true);
         }
 
         if (sourceSlot.Empty)
@@ -161,15 +181,10 @@ internal static class PolisInventoryHelpers
             return moved;
         }
 
-        ItemSlot[] bagSlots = { backpack0, backpack1 };
-        for (int bagIndex = 0; bagIndex < bagSlots.Length; bagIndex++)
+        // 2) carried bags
+        for (int bagIndex = 0; bagIndex < inv.Count && !sourceSlot.Empty; bagIndex++)
         {
-            if (sourceSlot.Empty)
-            {
-                break;
-            }
-
-            var bagSlot = bagSlots[bagIndex];
+            var bagSlot = inv[bagIndex];
             if (bagSlot?.Itemstack == null)
             {
                 continue;

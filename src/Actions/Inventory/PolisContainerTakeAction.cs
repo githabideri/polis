@@ -115,8 +115,7 @@ public class PolisContainerTakeAction : EntityActionBase
         }
 
         // Bot inventory check
-        var invbh = agent.GetBehavior<EntityBehaviorSeraphInventory>();
-        if (invbh?.Inventory == null)
+        if (PolisInventoryHelpers.BotCargo(agent) == null)
         {
             Fail("bot has no seraph inventory");
             return;

@@ -96,7 +96,7 @@ class PolisMineBlockAction : EntityActionBase
         if (resistance <= 0)
         {
             // Instant break (air, water, etc.) - just break it
-            world.BlockAccessor.BreakBlock(targetPos, player, 1.0f);
+            BreakBlockAsBot(world, targetPos);
             debugLog?.Invoke($"[mine] instant break: {block.Code} (resistance=0)");
             if (autoCollectDrops)
             {
@@ -110,14 +110,14 @@ class PolisMineBlockAction : EntityActionBase
         }
 
         // --- Tool Validation ---
-        var invbh = agent?.GetBehavior<EntityBehaviorSeraphInventory>();
+        var invbh = PolisInventoryHelpers.BotCargo(agent);
         if (invbh == null)
         {
             Fail("Bot has no inventory behavior");
             return;
         }
 
-        toolSlot = invbh.Inventory[15]; // Right hand
+        toolSlot = invbh[0]; // Right hand (cargo slot 0)
         if (toolSlot?.Itemstack?.Collectible == null)
         {
             // No tool - use bare hands (ToolTier = 0, slow speed)
@@ -217,7 +217,7 @@ class PolisMineBlockAction : EntityActionBase
         if (progress >= resistance)
         {
             // Break the block
-            world.BlockAccessor.BreakBlock(targetPos, player, 1.0f);
+            BreakBlockAsBot(world, targetPos);
 
             // Tool durability (TODO: implement in later step)
             // if (toolSlot?.Itemstack != null)
@@ -272,6 +272,43 @@ class PolisMineBlockAction : EntityActionBase
             vas.Entity.AnimManager.StopAnimation(activeAnimation);
             activeAnimation = null;
         }
+    }
+
+    /// <summary>
+    /// Breaks a block as the bot and routes the loot to the bot's cargo.
+    /// 1.22: IBlockAccessor.BreakBlock only has an IPlayer overload and its
+    /// loot goes to the player's inventory (TryGiveItemstack, ground
+    /// fallback). The bot is the one actually doing the mining, so compute
+    /// the drops ourselves from the block's loot definition (the same
+    /// BlockDropItemStack source the game uses), hand them to the bot, and
+    /// spawn overflow on the ground for autocollect.
+    /// </summary>
+    void BreakBlockAsBot(IWorldAccessor world, BlockPos pos)
+    {
+        var block = world.BlockAccessor.GetBlock(pos);
+        if (block == null || block.Id == 0)
+        {
+            return;
+        }
+
+        // 1.22: GetDrops() is the virtual loot source (rock blocks override
+        // it with per-type drops; the plain Drops field is empty for them).
+        var drops = block.GetDrops(world, pos, null, 1.0f) ?? Array.Empty<ItemStack>();
+
+        world.BlockAccessor.SetBlock(0, pos); // 0 = air
+
+        var agent = vas.Entity as EntityAgent;
+        foreach (var stack in drops)
+        {
+            bool inserted = agent != null
+                && PolisInventoryHelpers.TryInsertIntoBotInventory(agent, stack, out _, out _, debugLog);
+            if (!inserted)
+            {
+                world.SpawnItemEntity(stack, pos.ToVec3d().AddCopy(0.5f, 0.2f, 0.5f), null);
+            }
+        }
+
+        debugLog?.Invoke($"[mine] break as bot: {block.Code}, {drops.Length} drop(s)");
     }
 
     void CollectDrops(IWorldAccessor world)

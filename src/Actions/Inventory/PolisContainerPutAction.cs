@@ -118,8 +118,7 @@ public class PolisContainerPutAction : EntityActionBase
         }
 
         // Bot inventory check
-        var invbh = agent.GetBehavior<EntityBehaviorSeraphInventory>();
-        if (invbh?.Inventory == null)
+        if (PolisInventoryHelpers.BotCargo(agent) == null)
         {
             Fail("bot has no seraph inventory");
             return;
@@ -227,7 +226,7 @@ public class PolisContainerPutAction : EntityActionBase
 
         // Mark bot inventory dirty
         sourceSlot.MarkDirty();
-        invbh.storeInv();
+        PolisInventoryHelpers.StoreSeraphInventory(agent);
 
         debugLog?.Invoke($"[containerput] success: transferred {totalMoved}x {itemCode} from bot to container");
         Succeed($"transferred {totalMoved} items from bot to container");

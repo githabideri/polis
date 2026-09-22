@@ -52,4 +52,10 @@ public static class PolisConstants
     // Inventory slots
     public const int BackpackSlotId0 = 17;
     public const int BackpackSlotId1 = 18;
+
+    // Cargo inventory (EntityPolisBot.Cargo, 1.22): [0]=right hand, [1]=left
+    // hand, [2..15]=grid; slots 2/3 are reported as "backpack0"/"backpack1".
+    public const int CargoSlots = 16;
+    public const int CargoBackpackSlot0 = 2;
+    public const int CargoBackpackSlot1 = 3;
 }
