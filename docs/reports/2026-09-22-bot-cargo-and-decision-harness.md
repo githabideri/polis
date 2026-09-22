@@ -313,3 +313,43 @@ Frames (this run, bot #98, world time ~10:00-13:00):
 - `viz8-05-after-crop-gone.png` - same camera, crop gone, dropped carrots at the spot
 - `viz8-06-return-mid.png` - post-harvest scene
 - `viz8-07-at-base-carrying.png` - bot back at base (carrots + seed in inventory, see run log)
+
+## 11. First model A/B: Laya is a mine-specialist (2026-09-22 evening)
+
+The A/B harness (`ab-runner.py`, 8 labeled sets merged into one 41-row corpus:
+27 mine + 14 harvest, each row a choice question with the observed action as
+oracle) produced its first completed model run: **Laya 421M**.
+
+| | top-1 | mean p_oracle |
+|---|---|---|
+| mine (27 rows) | **63.0%** | 0.386 |
+| harvest (14 rows) | **0.0%** | 0.238 |
+| overall (41) | 41.5% | 0.335 |
+
+Brier 0.641 (poorly calibrated); confidence: correct 0.481 vs wrong 0.378 —
+a gap exists but the bands overlap, consistent with pass-5 findings. Latency
+10.4 s/question (429 s wall for 41 rows) on the 4-core CPU box — two orders of
+magnitude above the live loop's 1–2 s decision cadence.
+
+Two independent, both disqualifying for the live-loop role:
+
+1. **Domain shift, not just error.** Laya was trained in our loop on
+   mine-format state text; it has never seen harvest-format states. 0/14 is
+   the expected result for a 421M model outside its training distribution,
+   and 63% inside it. One classifier per state schema — or training on the
+   merged corpus — is what a general-purpose Jev needs.
+2. **Latency.** Even where it is right, 10 s/decision on small-CPU hardware
+   puts Laya out of the live loop. Its honest role stays the one v3 measured:
+   a conservative off-line/low-rate safety net, not the per-step decider.
+
+**Hosting note (sanitized).** The 2B (Decider, gated-delta-net architecture)
+and 4B (Qwen3.5-4B as the SemIf base) models do not fit the 4-core/4G box:
+bf16 weights alone exceed its memory cap, and Decider's GDR kernels are
+triton-only (GPU). They run on the 2x24G box instead, CPU bf16 with 64G RAM;
+for Decider the `fla` import is suppressed so transformers takes its
+pure-torch reference GDR path. Same corpus, same runner, same metrics — the
+accuracy comparison stays valid; latency is recorded per box, which is the
+deployment-relevant number anyway.
+
+Results land here as `data/ab-<model>-2026-09-22.json` (plus per-row
+`*.rows.json` sidecars with full probability vectors) as each run completes.
