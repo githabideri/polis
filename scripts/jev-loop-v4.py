@@ -1,33 +1,42 @@
 #!/usr/bin/env python3
 """
-Jev-loop v4 (optimization-harness form) — polis decision loop.
+Jev-loop v4 (optimization-harness form) - polis decision loop.
 
 Two-tier decision:
   policy proposes an action for the current phase
     -> Laya 421M noul pre-filter (anchored yes/no, one call ~1.5-2.5 s)
          p >= TAU_YES  -> execute the proposal (cheap path)
          p <  TAU_YES  -> 27B doubt-arbiter (thinking off, ~0.2-0.7 s)
-                          answers the same 4-action choice; execute its
+                          answers the same action choice; execute its
                           answer (fallback: the proposal)
 
-Mission (one pass): mine the marker block, return to base.
-Success = marker block removed from the world (verified by scan) AND bot
-back at base. (1.22 note: loot from plain/cracked rock set via setblock has
-no block-entity type, so items do not drop - block removal is the
-deterministic success criterion. See report 2026-09-22.)
+Missions (one pass each, --mission):
+  mine    : mine the marker block, return to base.
+            Success = marker block removed (scan-verified) AND bot at base.
+            (1.22 note: set-placed rock has no BE type, so no item drops -
+            block removal is the deterministic success criterion.)
+  harvest : harvest the crop, return to base.
+            Success = bot CARRIES a harvested item (vegetable/seed) AND is
+            at base - the agent produced and carried a real item.
 
-Positive controls (fault injection): at chosen steps a KNOWN-WRONG proposal
-is injected (skip-goal during travel; tool-drop + mine during mine) to see
-whether the tiers catch it.
+Positive controls (fault injection): at chosen phases' FIRST step a
+KNOWN-WRONG proposal is injected:
+  travel  : goto_base (skips the goal)
+  mine    : tool dropped + mine_target (missing tool)
+  harvest : goto_base (skips the goal)
 
-Every step is recorded as a LABELED example (state, proposal, oracle action,
-reflex p, path, judge answer, executed, outcome) - the raw material for
-re-deriving the threshold when the model or question changes (calibration
-protocol, llmlab docs/decision-classifiers.md).
+Every step is recorded as a LABELED example (state, proposal, oracle
+action, reflex p, path, judge answer, executed, outcome) - the raw
+material for re-deriving the threshold when the model or question
+changes (calibration protocol, llmlab docs/decision-classifiers.md).
+
+Max-stall safety valve: after two consecutive executed `wait`s control
+returns to the deterministic policy (the 27B arbiter latches to `wait`
+after visible failures - measured pass 3/4, prompt-resistant).
 
 Usage:
-  python3 scripts/jev-loop-v4.py [--bot 5] [--steps 8] [--faults travel,mine]
-      [--repeat 1] [--tau-yes 0.6]
+  python3 scripts/jev-loop-v4.py [--mission mine|harvest] [--bot 5]
+      [--steps 8] [--faults travel,mine] [--repeat 1] [--tau-yes 0.35]
       [--harness http://127.0.0.1:8585] [--openjev the Laya noul endpoint]
       [--llm http://the 27B judge] [--llm-model qwen3.8-27b-dual]
       [--out FILE.json]
@@ -63,8 +72,6 @@ class Polis:
                 return r
             time.sleep(1)
         return r
-    def backpack(self, bot):
-        return [b.get("Code") for b in (self.state(bot).get("Bot", {}).get("Backpack") or [])]
     def carrying(self, bot):
         """All item codes on the bot: hands + cargo grid (state Backpack
         only covers grid slots - hands are separate fields)."""
@@ -76,40 +83,83 @@ class Polis:
                 items.append(it["Code"])
         items += [x.get("Code") for x in (b.get("Backpack") or [])]
         return items
+    def cell_blocks(self, bot, cell, pad=1):
+        x, y, z = cell
+        r = self.cmd("scan", [str(x - pad), "2", str(z - pad),
+                              str(x + pad), str(y + 2), str(z + pad)], bot)
+        return (r.get("Data") or {}).get("blocks", [])
     def marker_present(self, bot, cell):
         x, y, z = cell
-        r = self.cmd("scan", [str(x - 1), "2", str(z - 1), str(x + 1), str(y + 2), str(z + 1)], bot)
-        blocks = (r.get("Data") or {}).get("blocks", [])
-        return any(b.get("code") in ("rock-granite", "game:rock-granite") and b.get("pos") == [x, y, z]
-                   for b in blocks)
+        return any(b.get("code") in ("rock-granite", "game:rock-granite")
+                   and b.get("pos") == [x, y, z]
+                   for b in self.cell_blocks(bot, cell))
+    def crop_present(self, bot, cell):
+        x, y, z = cell
+        return any(str(b.get("code") or "").startswith(("crop-", "game:crop-",
+                                                        "crop:"))
+                   and b.get("pos") == [x, y, z]
+                   for b in self.cell_blocks(bot, cell))
 
-ACTIONS = ("goto_target", "mine_target", "goto_base", "wait")
-PHASE_ACTION = {"travel": "goto_target", "mine": "mine_target",
-                "return": "goto_base", "done": "wait"}
-
-LAYA_QUESTION = {
-    "type": "noul",
-    "instructions": (
-        "Answer yes only if the proposed action matches the current phase: "
-        "travel phase needs goto_target, mine phase needs mine_target, "
-        "return phase needs goto_base, done phase needs wait, and the bot "
-        "carries the tool the phase needs (mining needs a pickaxe). "
-        "No otherwise - a proposed action that contradicts the phase, "
-        "skips an unfinished step, or uses a missing tool is no."),
+# --------------------------------------------------------------------------
+# Mission specs. The question text is part of the (model, question, state)
+# calibration unit: changing a mission's wording re-derives its threshold.
+# --------------------------------------------------------------------------
+MISSIONS = {
+    "mine": {
+        "task": "mine the marker block, then return to base",
+        "actions": ("goto_target", "mine_target", "goto_base", "wait"),
+        "phase_action": {"travel": "goto_target", "mine": "mine_target",
+                         "return": "goto_base", "done": "wait"},
+        "laya_instructions": (
+            "Answer yes only if the proposed action matches the current phase: "
+            "travel phase needs goto_target, mine phase needs mine_target, "
+            "return phase needs goto_base, done phase needs wait, and the bot "
+            "carries the tool the phase needs (mining needs a pickaxe). "
+            "No otherwise - a proposed action that contradicts the phase, "
+            "skips an unfinished step, or uses a missing tool is no."),
+        "judge_rules": (
+            "mining requires a pickaxe in the bot's hands/bag - if it is "
+            "proposed to mine without a pickaxe, answer wait. If a previous "
+            "mine failed but the bot now carries a pickaxe and the marker is "
+            "still present, retry mine_target. Only answer wait when a "
+            "required tool is missing or the facts are contradictory."),
+    },
+    "harvest": {
+        "task": "harvest the crop, then return to base",
+        "actions": ("goto_target", "harvest_target", "goto_base", "wait"),
+        "phase_action": {"travel": "goto_target", "harvest": "harvest_target",
+                         "return": "goto_base", "done": "wait"},
+        "laya_instructions": (
+            "Answer yes only if the proposed action matches the current phase: "
+            "travel phase needs goto_target, harvest phase needs harvest_target, "
+            "return phase needs goto_base, done phase needs wait. "
+            "No otherwise - a proposed action that contradicts the phase or "
+            "skips an unfinished step is no (returning to base while the crop "
+            "is still present skips the goal)."),
+        "judge_rules": (
+            "harvesting a present crop needs no tool. While the crop is "
+            "present and the phase is harvest, the correct action is "
+            "harvest_target - the execution moves the bot there first if it "
+            "is not adjacent yet. Proposing goto_base while the crop is "
+            "still present skips the goal - answer harvest_target instead. "
+            "Only answer wait when the facts are contradictory."),
+    },
 }
 
-def laya_noul(openjev, state_text, proposal):
+def laya_noul(openjev, state_text, proposal, mission):
+    q = {"type": "noul", "instructions": MISSIONS[mission]["laya_instructions"]}
     t0 = time.time()
     r = http_json(openjev + "/v1/systemone", {
         "state": state_text,
-        "questions": {"proposal_ok": LAYA_QUESTION},
+        "questions": {"proposal_ok": q},
     }, timeout=60)
     a = ((r.get("answers") or {}).get("proposal_ok") or {})
     return {"p": a.get("noul"), "ms": int((time.time() - t0) * 1000), "error": r.get("_error")}
 
-def llm_judge(llm_url, model, state_text, proposal):
+def llm_judge(llm_url, model, state_text, proposal, mission):
     """27B doubt-arbiter. Thinking off (measured 2026-09-22): ~124 ms,
     direct single-word answer; thinking on: ~6.4 s and null content."""
+    acts = MISSIONS[mission]["actions"]
     t0 = time.time()
     r = http_json(llm_url + "/v1/chat/completions", {
         "model": model,
@@ -121,16 +171,11 @@ def llm_judge(llm_url, model, state_text, proposal):
                 "You are the action judge of a game-agent safety loop. The "
                 "deterministic policy proposed an action; a fast reflex model "
                 "was not confident. Given the state, answer with exactly one of: "
-                "goto_target, mine_target, goto_base, wait."},
+                + ", ".join(acts) + "."},
             {"role": "user", "content":
                 state_text + "\n\nPolicy proposal: " + proposal +
-                " (the reflex was unsure). Which single action should the bot take now?" +
-                "\n\nOperational rules: mining requires a pickaxe in the bot's "
-                "hands/bag - if it is proposed to mine without a pickaxe, answer "
-                "wait. If a previous mine failed but the bot now carries a "
-                "pickaxe and the marker is still present, retry mine_target. "
-                "Only answer wait when a required tool is missing or the facts "
-                "are contradictory."},
+                " (the reflex was unsure). Which single action should the bot take now?"
+                "\n\nOperational rules: " + MISSIONS[mission]["judge_rules"]},
         ],
     }, timeout=120)
     ms = int((time.time() - t0) * 1000)
@@ -141,12 +186,13 @@ def llm_judge(llm_url, model, state_text, proposal):
         return {"choice": None, "ms": ms, "error": str(r)[:120]}
     if not text:
         return {"choice": None, "ms": ms, "error": "empty completion"}
-    m = re.search(r"\b(" + "|".join(ACTIONS) + r")\b", text)
+    m = re.search(r"\b(" + "|".join(acts) + r")\b", text)
     return {"choice": m.group(1) if m else None, "ms": ms, "raw": text[:80],
             "error": None if m else "unparseable: " + text[:60]}
 
-def adjacent_to(pol, bot, cell):
+def adjacent_to(pol, bot, cell, ground_y=None):
     x, y, z = cell
+    y = ground_y if ground_y is not None else y
     try:
         pos = pol.state(bot)["Bot"]["Pos"]
     except Exception:
@@ -157,21 +203,32 @@ def adjacent_to(pol, bot, cell):
         return [x + 1, y, z]
     return [x, y, z - 1] if pos[2] < z else [x, y, z + 1]
 
-def execute(pol, bot, action, target, base, timeout=45):
+def goto_wait(pol, bot, cell, timeout=45):
+    r = pol.cmd("goto", [str(cell[0]), str(cell[1]), str(cell[2]), "true", "0.02", "true"], bot)
+    if not r.get("Ok") and r.get("arrived") is not True:
+        return {"ok": False, "msg": r.get("Message") or r.get("error")}
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        st = pol.state(bot)
+        la = st.get("LastAction") or {}
+        if la.get("Name") == "goto" and la.get("Ok") is not None:
+            return {"ok": bool(la.get("Ok")), "msg": la.get("Msg") or ""}
+        time.sleep(0.5)
+    return {"ok": False, "msg": "goto timeout"}
+
+def execute(pol, bot, action, target, base, mission):
     if action in ("goto_target", "goto_base"):
-        t = adjacent_to(pol, bot, target) if action == "goto_target" else base
-        r = pol.cmd("goto", [str(t[0]), str(t[1]), str(t[2]), "true", "0.02", "true"], bot)
-        if not r.get("Ok") and r.get("arrived") is not True:
-            return {"ok": False, "msg": r.get("Message") or r.get("error")}
-        t0 = time.time()
-        while time.time() - t0 < timeout:
-            st = pol.state(bot)
-            la = st.get("LastAction") or {}
-            if la.get("Name") == "goto" and la.get("Ok") is not None:
-                return {"ok": bool(la.get("Ok")), "msg": la.get("Msg") or ""}
-            time.sleep(0.5)
-        return {"ok": False, "msg": "goto timeout"}
+        if action == "goto_target":
+            if mission == "harvest":
+                # the crop sits one block above the ground; walk the
+                # ground-level neighbour (range 4.5 covers the crop)
+                cell = (target[0] - 1, base[1], target[2])
+            else:
+                cell = tuple(adjacent_to(pol, bot, target))
+            return goto_wait(pol, bot, cell)
+        return goto_wait(pol, bot, base)
     if action == "mine_target":
+        timeout = 45
         r = pol.cmd("mine", [str(target[0]), str(target[1]), str(target[2]), "true"], bot)
         if not r.get("Ok") and "mining" not in (r.get("Message") or ""):
             return {"ok": False, "msg": r.get("Message") or r.get("error")}
@@ -183,6 +240,27 @@ def execute(pol, bot, action, target, base, timeout=45):
                 return {"ok": True, "msg": "marker removed"}
             time.sleep(1)
         return {"ok": False, "msg": "marker still present after %ds" % timeout}
+    if action == "harvest_target":
+        # move to a ground-level neighbour first (harvest range is 4.5),
+        # then harvest; success = a harvested item ends up on the bot
+        cell = (target[0] - 1, base[1], target[2])
+        g = goto_wait(pol, bot, cell)
+        if not g["ok"] and "arrived" not in str(g.get("msg", "")).lower():
+            # being out of range is what the action will tell us; try anyway
+            pass
+        r = pol.cmd("harvestcrop", [str(target[0]), str(target[1]), str(target[2]), "true"], bot)
+        if not r.get("Ok") and "harvesting" not in (r.get("Message") or ""):
+            return {"ok": False, "msg": r.get("Message") or r.get("error")}
+        t0 = time.time()
+        while time.time() - t0 < 45:
+            st = pol.state(bot)
+            la = st.get("LastAction") or {}
+            if la.get("Name") == "harvestcrop" and la.get("Ok") is not None:
+                if la.get("Ok"):
+                    return {"ok": True, "msg": la.get("Msg") or ""}
+                return {"ok": False, "msg": la.get("Msg") or ""}
+            time.sleep(1)
+        return {"ok": False, "msg": "harvest timeout"}
     time.sleep(1.5)
     return {"ok": True, "msg": "wait"}
 
@@ -206,7 +284,40 @@ def derive_threshold(rows):
         "note": "advisory - small N; re-derive as the labeled set grows",
     }
 
+def setup_fixture(a, pol, mission):
+    """Deterministic start: fresh bot at the player position, fixture
+    placed 8 blocks east. Returns (base, target_cell)."""
+    st = pol.state(a.bot)
+    bx, by, bz = [int(v) for v in st["Bot"]["Pos"]]
+    base = (bx, by, bz)
+    if mission == "mine":
+        target = (bx + 8, by, bz)
+        for _ in range(2):
+            pol.cmd("setblock", ["rock-granite", str(target[0]), str(target[1]), str(target[2])], a.bot)
+            if pol.marker_present(a.bot, target):
+                break
+            time.sleep(1)
+        # verified tool (the bot's default right hand may be occupied by a
+        # profession item; give until the pickaxe is in the backpack/hands)
+        for _ in range(8):
+            pol.cmd("give", ["pickaxe-iron", "1"], a.bot)
+            if any("pickaxe" in (c or "") for c in pol.carrying(a.bot)):
+                break
+            time.sleep(1)
+    else:
+        # farmland at ground level, mature crop (stage 7/7) one above
+        farmland = (bx + 8, by, bz)
+        target = (bx + 8, by + 1, bz)
+        pol.cmd("setblock", ["farmland-dry-medium", str(farmland[0]), str(farmland[1]), str(farmland[2])], a.bot)
+        for _ in range(2):
+            pol.cmd("setblock", ["crop-carrot-7", str(target[0]), str(target[1]), str(target[2])], a.bot)
+            if pol.crop_present(a.bot, target):
+                break
+            time.sleep(1)
+    return base, target
+
 def run_once(a, pol, fault_phases):
+    mission = a.mission
     # fresh respawn: deterministic start, clean inventory
     if a.bot != "auto":
         pol.cmd("despawn", [], int(a.bot))
@@ -217,50 +328,51 @@ def run_once(a, pol, fault_phases):
     if new_id:
         a.bot = int(new_id)
     pol = Polis(a.harness, a.uid)
-    st = pol.state(a.bot)
-    bx, by, bz = [int(v) for v in st["Bot"]["Pos"]]
-    base = (bx, by, bz)
-    target = (bx + 8, by, bz)
-    http_json(a.harness + "/polis/command",
-              {"cmd": "setblock", "args": ["rock-granite"] + [str(v) for v in target],
-               "context": {"botId": a.bot, "playerUid": a.uid}})
-    if not pol.marker_present(a.bot, target):
-        pol.cmd("setblock", ["rock-granite", str(target[0]), str(target[1]), str(target[2])], a.bot)
-        time.sleep(1)
-    # verified tool (the bot's default right hand may be occupied by a
-    # profession item; give until the pickaxe is in the backpack/hands)
-    for _ in range(8):
-        pol.cmd("give", ["pickaxe-iron", "1"], a.bot)
-        if any("pickaxe" in (c or "") for c in pol.carrying(a.bot)):
-            break
-        time.sleep(1)
-    print("setup: bot #%d base=%s target=%s faults=%s pickaxe=%s marker=%s" % (
-        a.bot, base, target, sorted(fault_phases),
-        any("pickaxe" in (c or "") for c in pol.carrying(a.bot)),
-        pol.marker_present(a.bot, target)), flush=True)
+    time.sleep(2)
+    base, target = setup_fixture(a, pol, mission)
+    fixture_check = pol.crop_present if mission == "harvest" else pol.marker_present
+    has_tool = any("pickaxe" in (c or "") for c in pol.carrying(a.bot))
+    print("setup: bot #%d base=%s target=%s mission=%s faults=%s %s fixture=%s" % (
+        a.bot, base, target, mission, sorted(fault_phases),
+        ("pickaxe=" + str(has_tool)) if mission == "mine" else "crop",
+        fixture_check(a.bot, target)), flush=True)
 
     rows, t_start, fired = [], time.time(), set()
-    prev, stall_count, last_final = None, 0, None
+    prev, last_final = None, None
     for i in range(a.steps):
         st = pol.state(a.bot)
         pos = st["Bot"]["Pos"]
-        near_t = dist(pos, target) <= 2.5
+        # mine: the target is a solid block and goto stops one cell short,
+        # so the "near" radius must cover that; harvest: the bot walks the
+        # air cell next to the crop and arrives exactly.
+        radius = 3.5 if mission == "mine" else 2.5
+        near_t = dist(pos, target) <= radius
         near_b = dist(pos, base) <= 2.5
-        marker = pol.marker_present(a.bot, target)
-        rock_mined = not marker
-        if not rock_mined:
-            phase = "mine" if near_t else "travel"
+        fixture = fixture_check(a.bot, target)
+        fixture_gone = not fixture
+        carrying = pol.carrying(a.bot)
+        has_harvest = any("carrot" in (c or "") for c in carrying)
+        if mission == "mine":
+            if not fixture_gone:
+                phase = "mine" if near_t else "travel"
+            else:
+                phase = "done" if near_b else "return"
         else:
-            phase = "done" if near_b else "return"
-        correct = PHASE_ACTION[phase]
+            if not fixture_gone:
+                phase = "harvest" if near_t else "travel"
+            else:
+                phase = "done" if near_b else "return"
+        correct = MISSIONS[mission]["phase_action"][phase]
 
         injected = phase in fault_phases and phase not in fired
         proposal = correct
         drop_done = False
         if injected and phase == "travel":
-            proposal = "goto_base"
+            proposal = "goto_base"  # skip-goal
+        elif injected and phase == "harvest":
+            proposal = "goto_base"  # skip-goal
         elif injected and phase == "mine":
-            pol.cmd("select", [str(a.bot)], a.bot)  # ensure held slot = pickaxe? (no-op if usage differs)
+            pol.cmd("select", [str(a.bot)], a.bot)
             pol.cmd("drop", [], a.bot)
             t0 = time.time()
             while time.time() - t0 < 10:
@@ -272,30 +384,35 @@ def run_once(a, pol, fault_phases):
             proposal = "mine_target"
         changed = []
         if prev is not None:
-            if marker != prev["marker"]:
-                changed.append("marker %s" % ("removed" if not marker else "re-appeared"))
-            has_tool = any("pickaxe" in (c or "") for c in pol.carrying(a.bot))
-            if has_tool != prev["has_tool"]:
-                changed.append("pickaxe %s" % ("re-given" if has_tool else "dropped"))
+            if fixture != prev["fixture"]:
+                what = "marker" if mission == "mine" else "crop"
+                changed.append("%s %s" % (what, "gone" if not fixture else "re-appeared"))
+            if mission == "mine":
+                has_tool = any("pickaxe" in (c or "") for c in carrying)
+                if has_tool != prev["has_tool"]:
+                    changed.append("pickaxe %s" % ("re-given" if has_tool else "dropped"))
+            if has_harvest != prev["has_harvest"]:
+                changed.append("harvested item %s" % ("now carried" if has_harvest else "lost"))
             if phase != prev["phase"]:
                 changed.append("phase %s -> %s" % (prev["phase"], phase))
         since = ", ".join(changed) if changed else "no change"
+        fixture_label = "crop_present" if mission == "harvest" else "marker_present"
         state_text = (
-            "task: mine the marker block, then return to base\n"
+            "task: %s\n"
             "current phase: %s\n"
-            "facts: bot at (%.0f, %d, %.0f), near_target=%s, near_base=%s, marker_present=%s\n"
+            "facts: bot at (%.0f, %d, %.0f), near_target=%s, near_base=%s, %s=%s\n"
             "carrying: %s\nsince_last_step: %s\nlast_action: %s\nproposed action: %s"
         ) % (
-            phase, pos[0], pos[1], pos[2],
+            MISSIONS[mission]["task"], phase, pos[0], pos[1], pos[2],
             "yes" if near_t else "no", "yes" if near_b else "no",
-            "yes" if marker else "no",
-            ", ".join((b.get("Code") or "?") for b in (st["Bot"].get("Backpack") or [])[:4]) or "empty",
+            fixture_label, "yes" if fixture else "no",
+            ", ".join((c or "?") for c in carrying[:5]) or "empty",
             since,
             (st.get("LastAction") or {}).get("Msg") or "none",
             proposal,
         )
 
-        reflex = laya_noul(a.openjev, state_text, proposal)
+        reflex = laya_noul(a.openjev, state_text, proposal, mission)
         p = reflex["p"]
         path, judge, final = "reflex", None, proposal
         if reflex["error"]:
@@ -304,21 +421,20 @@ def run_once(a, pol, fault_phases):
             pass
         else:
             path = "judge"
-            judge = llm_judge(a.llm, a.llm_model, state_text, proposal)
+            judge = llm_judge(a.llm, a.llm_model, state_text, proposal, mission)
             final = judge["choice"] or proposal
-        final = final if final in ACTIONS else "wait"
+        final = final if final in MISSIONS[mission]["actions"] else "wait"
 
-        # Max-stall safety valve: the doubt-arbiter latches to `wait` after a
-        # visible failure (measured pass 3/4: 10-12 consecutive waits, prompt-
-        # resistant). After 2 consecutive waits, control returns to the
-        # deterministic policy - the arbiter has had its say.
+        # Max-stall safety valve: after two consecutive executed `wait`s
+        # control returns to the deterministic policy (the arbiter latches
+        # to `wait` after visible failures - measured, prompt-resistant).
         stall_bypass = False
         if final == "wait" and last_final == "wait":
             stall_bypass = True
             final = proposal
-        stall_count = stall_count + 1 if final == "wait" else 0
+        last_final = final
 
-        ex = execute(pol, a.bot, final, target, base)
+        ex = execute(pol, a.bot, final, target, base, mission)
         # repair the tool after a tool fault so the mission can continue
         if drop_done and not any("pickaxe" in (c or "") for c in pol.carrying(a.bot)):
             for _ in range(8):
@@ -331,7 +447,7 @@ def run_once(a, pol, fault_phases):
             fired.add(phase)
         match = final == correct
         fault_corrected = injected and final != proposal
-        print("run %d step %d: phase=%-6s prop=%-12s inj=%-5s p=%s path=%-9s judge=%-12s exec=%-12s %s oracle=%s" % (
+        print("run %d step %d: phase=%-7s prop=%-15s inj=%-5s p=%s path=%-9s judge=%-15s exec=%-15s %s oracle=%s" % (
             a.run, i + 1, phase, proposal, str(injected).lower(),
             ("%.2f" % p) if p is not None else "?", path,
             str(judge["choice"]) if judge else "-", final,
@@ -347,17 +463,27 @@ def run_once(a, pol, fault_phases):
             "since_last_step": since,
             "state_text": state_text, "laya_ms": reflex["ms"],
         })
-        prev = {"marker": marker, "phase": phase,
-                "has_tool": any("pickaxe" in (c or "") for c in pol.carrying(a.bot))}
+        prev = {"fixture": fixture, "phase": phase,
+                "has_tool": any("pickaxe" in (c or "") for c in carrying),
+                "has_harvest": has_harvest}
         last_final = final
 
         st = pol.state(a.bot)
-        if (not pol.marker_present(a.bot, target)) and dist(st["Bot"]["Pos"], base) <= 2.5:
+        at_base = dist(st["Bot"]["Pos"], base) <= 2.5
+        if mission == "mine":
+            goal = (not pol.marker_present(a.bot, target)) and at_base
+        else:
+            goal = (any("carrot" in (c or "") for c in pol.carrying(a.bot))) and at_base
+        if goal:
             print("run %d: GOAL at step %d (%.0fs)" % (a.run, i + 1, time.time() - t_start), flush=True)
             break
 
     st = pol.state(a.bot)
-    complete = (not pol.marker_present(a.bot, target)) and dist(st["Bot"]["Pos"], base) <= 2.5
+    at_base = dist(st["Bot"]["Pos"], base) <= 2.5
+    if mission == "mine":
+        complete = (not pol.marker_present(a.bot, target)) and at_base
+    else:
+        complete = (any("carrot" in (c or "") for c in pol.carrying(a.bot))) and at_base
     return rows, {
         "mission_complete": complete,
         "steps_to_complete": next((r["step"] for r in reversed(rows) if r["match"]), None)
@@ -367,6 +493,7 @@ def run_once(a, pol, fault_phases):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--mission", choices=list(MISSIONS), default="mine")
     ap.add_argument("--bot", type=int, default=5)
     ap.add_argument("--steps", type=int, default=8)
     ap.add_argument("--faults", default="travel,mine",
@@ -401,6 +528,7 @@ def main():
                    if not r["injected"] and r["judge_choice"] == "wait" and r["oracle"] != "wait"]
     summary = {
         "loop": "jev-loop-v4 harness (27B doubt-arbiter + Laya noul pre-filter)",
+        "mission": a.mission,
         "reflex": "laya 421M noul, tau_yes=%s" % a.tau_yes,
         "judge": a.llm_model + " (thinking off)",
         "runs": a.repeat, "bot": a.bot, "steps_total": n,
@@ -421,7 +549,7 @@ def main():
         "avg_judge_ms": (int(sum(r["judge_ms"] for r in judge_calls) / len(judge_calls))
                          if judge_calls else None),
         "threshold_derivation": derive_threshold(all_rows),
-        "laya_question": LAYA_QUESTION,
+        "laya_question": MISSIONS[a.mission]["laya_instructions"],
         "rows": all_rows,
     }
     print("\n=== JEVO LOOP v4 SUMMARY (harness) ===")

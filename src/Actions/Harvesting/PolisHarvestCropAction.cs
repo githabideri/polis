@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
@@ -143,9 +144,12 @@ class PolisHarvestCropAction : EntityActionBase
             return;
         }
 
-        // --- Claims Check ---
-        var accessResult = world.Claims.TestAccess(player, cropPos, EnumBlockAccessFlags.BuildOrBreak);
-        if (accessResult != EnumWorldAccessResponse.Granted)
+        // --- Claims Check (POLIS_SKIP_CLAIMS bypass for the test world) ---
+        bool skipClaims = Environment.GetEnvironmentVariable("POLIS_SKIP_CLAIMS") == "1";
+        if (!skipClaims
+            && world.Claims != null
+            && world.Claims.TestAccess(player, cropPos, EnumBlockAccessFlags.BuildOrBreak)
+                != EnumWorldAccessResponse.Granted)
         {
             debugLog?.Invoke($"[harvestcrop] failed: no permission to break block (claims)");
             ReportResult(false, "no permission to break block (claims)");
@@ -154,10 +158,30 @@ class PolisHarvestCropAction : EntityActionBase
             return;
         }
 
-        // --- Execute Harvest (instant break) ---
+        // --- Execute Harvest (break as the bot) ---
+        // 1.22: BreakBlock() only has a player overload and its loot routes
+        // to the player's inventory manager. Break the crop directly and
+        // route GetDrops() into the bot's cargo (overflow -> ground).
         harvestedCropCode = cropBlock.Code?.ToString() ?? "unknown";
-        world.BlockAccessor.BreakBlock(cropPos, player, 1.0f);
-        debugLog?.Invoke($"[harvestcrop] harvested: {harvestedCropCode}");
+        var drops = cropBlock.GetDrops(world, cropPos, null, 1.0f) ?? Array.Empty<ItemStack>();
+        world.BlockAccessor.SetBlock(0, cropPos); // air
+        var agent = vas.Entity as EntityAgent;
+        int collected = 0;
+        var overflow = new List<ItemStack>();
+        foreach (var stack in drops)
+        {
+            if (agent != null
+                && PolisInventoryHelpers.TryInsertIntoBotInventory(agent, stack, out _, out _, debugLog))
+            {
+                collected += stack.StackSize;
+            }
+            else
+            {
+                overflow.Add(stack);
+                world.SpawnItemEntity(stack, cropPos.ToVec3d().AddCopy(0.5f, 0.2f, 0.5f), null);
+            }
+        }
+        debugLog?.Invoke($"[harvestcrop] harvested: {harvestedCropCode}, collected {collected}, overflow {overflow.Count}");
 
         // --- Auto-collect Drops (with delay) ---
         if (autoCollectDrops)
@@ -168,7 +192,7 @@ class PolisHarvestCropAction : EntityActionBase
             return; // Don't mark done, use OnTick
         }
 
-        ReportResult(true, $"harvested {harvestedCropCode}");
+        ReportResult(true, $"harvested {harvestedCropCode}, collected {collected}");
         done = true;
     }
 
