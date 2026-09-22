@@ -608,7 +608,7 @@ public partial class PolisBuilderNpcSystem : ModSystem
                     }
                     else if (pathProbeTask == null)
                     {
-                        var pl = sapi?.World?.PlayerByUid("d4pJ+Ty1RgaBHrQgQEV8z27E") as IServerPlayer;
+                        var pl = sapi?.World?.AllOnlinePlayers?.FirstOrDefault();
                         if (pl?.Entity != null && pl.Entity.Alive)
                         {
                             var sp = pl.Entity.Pos.AsBlockPos;

@@ -23,8 +23,8 @@ Question design follows the measured openjev rules (usage.md s3):
 Usage:
   python3 scripts/jev-loop-v3.py [--bot 5] [--steps 8] [--faults 3,6]
       [--harness http://127.0.0.1:8585]
-      [--openjev the Laya noul endpoint]
-      [--llm http://the 27B judge] [--llm-model qwen3.8-27b-dual]
+      [--openjev http://openjev-host:8781]
+      [--llm http://llm-host:8080] [--llm-model qwen3.8-27b-dual]
       [--tau-yes 0.6] [--tau-no 0.4] [--out FILE.json]
 """
 import argparse, json, os, re, sys, time, urllib.request
@@ -157,8 +157,8 @@ def main():
     ap.add_argument("--faults", default="3,6",
                     help="1-based steps at which to inject a known-wrong proposal")
     ap.add_argument("--harness", default="http://127.0.0.1:8585")
-    ap.add_argument("--openjev", default=os.environ.get("OPENJEV", "the Laya noul endpoint"))
-    ap.add_argument("--llm", default=os.environ.get("POLIS_LLM", "http://the 27B judge"))
+    ap.add_argument("--openjev", default=os.environ.get("OPENJEV", "http://openjev-host:8781"))
+    ap.add_argument("--llm", default=os.environ.get("POLIS_LLM", "http://llm-host:8080"))
     ap.add_argument("--llm-model", default="qwen3.8-27b-dual")
     ap.add_argument("--tau-yes", type=float, default=0.6)
     ap.add_argument("--tau-no", type=float, default=0.4)

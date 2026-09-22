@@ -11,7 +11,7 @@ Tested the new `animate` command and verified action commands (mine, harvest, ha
 ## Environment
 
 - Harness: http://localhost:8585 - READY
-- Player UID: d4pJ+Ty1RgaBHrQgQEV8z27E
+- Player UID: REDACTED-UID
 - Bot ID: 482
 
 ## Animate Command Tests

@@ -33,7 +33,7 @@ planned around it (colony management, jobs, economy).
 source .env          # VINTAGE_STORY=/opt/vintagestory/extra/vintagestory, VSDATA=...
 ./build.sh           # dotnet build -> bin/Release/Mods/polis-builder-npc
 ./build.sh --deploy  # + copy into the game's Mods dir
-systemctl restart vsgame   # then connect via noVNC (see ops/CT114-VNC.md)
+systemctl restart vsgame   # then connect via noVNC (see ops/the game container-VNC.md)
 ```
 
 ## Version shim law

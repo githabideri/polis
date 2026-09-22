@@ -6,8 +6,8 @@ Snapshot taken during live test run.
 - Additional samples: 2026-01-13 (block selection, context goto, error response, bot LOS activate, interact command, inventory give/drop/pickup)
 - Commit: c1bae34
 - Mod version: 0.1.0
-- Player: the player
-- Player UID (URL-encode `+` as `%2B` in query params): d4pJ+Ty1RgaBHrQgQEV8z27E
+- Player: player
+- Player UID (URL-encode `+` as `%2B` in query params): REDACTED-UID
 
 ## Endpoints
 
@@ -36,8 +36,8 @@ Response:
   "ok": true,
   "players": [
     {
-      "uid": "d4pJ+Ty1RgaBHrQgQEV8z27E",
-      "name": "the player",
+      "uid": "REDACTED-UID",
+      "name": "player",
       "pos": [
         228.69818115234375,
         3.00006103515625,
@@ -56,12 +56,12 @@ Response:
 }
 ```
 
-### GET /polis/player?uid=d4pJ%2BTy1RgaBHrQgQEV8z27E
+### GET /polis/player?uid=REDACTED-UID
 Response:
 ```json
 {
-  "uid": "d4pJ+Ty1RgaBHrQgQEV8z27E",
-  "name": "the player",
+  "uid": "REDACTED-UID",
+  "name": "player",
   "pos": [
     228.69818115234375,
     3.00006103515625,
@@ -78,7 +78,7 @@ Response:
 }
 ```
 
-### GET /polis/look?uid=d4pJ%2BTy1RgaBHrQgQEV8z27E
+### GET /polis/look?uid=REDACTED-UID
 Response:
 ```json
 {
@@ -134,7 +134,7 @@ Example (block hit):
 }
 ```
 
-### GET /polis/targets?playerUid=d4pJ%2BTy1RgaBHrQgQEV8z27E&radius=6&limit=10&mode=blocks
+### GET /polis/targets?playerUid=REDACTED-UID&radius=6&limit=10&mode=blocks
 Response:
 ```json
 {
@@ -169,7 +169,7 @@ Response:
 }
 ```
 
-### GET /polis/targets?playerUid=d4pJ%2BTy1RgaBHrQgQEV8z27E&radius=6&limit=10&mode=entities
+### GET /polis/targets?playerUid=REDACTED-UID&radius=6&limit=10&mode=entities
 Response:
 ```json
 {
@@ -197,7 +197,7 @@ Response:
 }
 ```
 
-### GET /polis/targets?playerUid=d4pJ%2BTy1RgaBHrQgQEV8z27E&radius=6&limit=200&mode=blocks (chair/door/chest nearby)
+### GET /polis/targets?playerUid=REDACTED-UID&radius=6&limit=200&mode=blocks (chair/door/chest nearby)
 Response (trimmed to relevant entries):
 ```json
 {
@@ -401,7 +401,7 @@ Response (trimmed to relevant entries):
 }
 ```
 
-### GET /polis/targets?playerUid=d4pJ%2BTy1RgaBHrQgQEV8z27E&radius=6&limit=20&mode=blocks&requireEntityClass=true&codeContains=chest,door
+### GET /polis/targets?playerUid=REDACTED-UID&radius=6&limit=20&mode=blocks&requireEntityClass=true&codeContains=chest,door
 Response:
 ```json
 {
@@ -531,7 +531,7 @@ Response:
 }
 ```
 
-### GET /polis/targets?playerUid=d4pJ%2BTy1RgaBHrQgQEV8z27E&radius=8&limit=50&mode=entities (corpse nearby)
+### GET /polis/targets?playerUid=REDACTED-UID&radius=8&limit=50&mode=entities (corpse nearby)
 Response (trimmed):
 ```json
 {
@@ -642,7 +642,7 @@ Response:
 }
 ```
 
-### GET /polis/look?uid=d4pJ%2BTy1RgaBHrQgQEV8z27E (chair aim)
+### GET /polis/look?uid=REDACTED-UID (chair aim)
 Response:
 ```json
 {
@@ -1025,7 +1025,7 @@ Request:
 {
   "cmd": "spawn",
   "context": {
-    "playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E",
+    "playerUid": "REDACTED-UID",
     "spawnOffset": [0, 0, 2]
   }
 }
@@ -1087,7 +1087,7 @@ Request:
 {
   "cmd": "selectlook",
   "context": {
-    "playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"
+    "playerUid": "REDACTED-UID"
   }
 }
 ```
@@ -1240,7 +1240,7 @@ Request:
 {
   "cmd": "goto",
   "context": {
-    "playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E",
+    "playerUid": "REDACTED-UID",
     "gotoOffset": [0, 0, 2]
   }
 }
@@ -1260,7 +1260,7 @@ Request:
 {
   "cmd": "gotolook",
   "context": {
-    "playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"
+    "playerUid": "REDACTED-UID"
   }
 }
 ```
@@ -1442,7 +1442,7 @@ Request:
 ```json
 {
   "cmd": "/weather set clearsky",
-  "playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"
+  "playerUid": "REDACTED-UID"
 }
 ```
 Response:
@@ -1461,7 +1461,7 @@ Request:
 ```json
 {
   "cmd": "/time",
-  "playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"
+  "playerUid": "REDACTED-UID"
 }
 ```
 Response:
@@ -1479,8 +1479,8 @@ Response:
 Request:
 ```json
 {
-  "cmd": "/player the player entity",
-  "playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"
+  "cmd": "/player player entity",
+  "playerUid": "REDACTED-UID"
 }
 ```
 Response:
@@ -1688,7 +1688,7 @@ Response:
 }
 ```
 
-### GET /polis/targets?playerUid=d4pJ%2BTy1RgaBHrQgQEV8z27E&radius=12&limit=200&mode=blocks&q=lantern
+### GET /polis/targets?playerUid=REDACTED-UID&radius=12&limit=200&mode=blocks&q=lantern
 Response:
 ```json
 {
@@ -1726,7 +1726,7 @@ Response:
 }
 ```
 
-### GET /polis/targets?playerUid=d4pJ%2BTy1RgaBHrQgQEV8z27E&radius=12&limit=200&mode=blocks&q=barrel
+### GET /polis/targets?playerUid=REDACTED-UID&radius=12&limit=200&mode=blocks&q=barrel
 Response:
 ```json
 {
@@ -1765,7 +1765,7 @@ Response:
 }
 ```
 
-### GET /polis/targets?playerUid=d4pJ%2BTy1RgaBHrQgQEV8z27E&radius=12&limit=200&mode=blocks&q=gate
+### GET /polis/targets?playerUid=REDACTED-UID&radius=12&limit=200&mode=blocks&q=gate
 Response:
 ```json
 {
@@ -1800,7 +1800,7 @@ Response:
 }
 ```
 
-### GET /polis/targets?playerUid=d4pJ%2BTy1RgaBHrQgQEV8z27E&radius=12&limit=200&mode=blocks&q=groundstorage
+### GET /polis/targets?playerUid=REDACTED-UID&radius=12&limit=200&mode=blocks&q=groundstorage
 Response:
 ```json
 {

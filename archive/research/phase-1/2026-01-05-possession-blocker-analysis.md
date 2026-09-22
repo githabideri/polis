@@ -25,11 +25,11 @@ The possession system has **partial functionality**:
 1. **Server-Side Mounting:**
    ```
    [polis] CmdPossess called
-   [polis] CmdPossess: Player the player
+   [polis] CmdPossess: Player player
    [polis] CmdPossess: Bot 103 selected
    [polis] CmdPossess: Creating seat
    [polis] CmdPossess: Attempting TryMount
-   [polis] OnPossessionStart: Player the player -> Bot 103
+   [polis] OnPossessionStart: Player player -> Bot 103
    [polis] CmdPossess: TryMount SUCCESS
    ```
 

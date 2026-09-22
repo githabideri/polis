@@ -15,7 +15,7 @@
 | Harness | Running (http://localhost:8585) |
 | World Ready | Yes |
 | Mod Version | 0.1.0 |
-| Player | the player (uid: d4pJ+Ty1RgaBHrQgQEV8z27E) |
+| Player | player (uid: REDACTED-UID) |
 
 ---
 
@@ -47,7 +47,7 @@
 {
   "cmd": "harvest",
   "args": ["216", "3", "263"],
-  "context": {"playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"}
+  "context": {"playerUid": "REDACTED-UID"}
 }
 ```
 
@@ -80,7 +80,7 @@
 {
   "cmd": "harvest",
   "args": ["216", "3", "265", "true"],
-  "context": {"playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"}
+  "context": {"playerUid": "REDACTED-UID"}
 }
 ```
 
@@ -115,7 +115,7 @@
 {
   "cmd": "harvest",
   "args": ["216", "3", "263"],
-  "context": {"playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"}
+  "context": {"playerUid": "REDACTED-UID"}
 }
 ```
 
@@ -149,7 +149,7 @@
 {
   "cmd": "harvest",
   "args": ["220", "3", "268"],
-  "context": {"playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"}
+  "context": {"playerUid": "REDACTED-UID"}
 }
 ```
 
@@ -183,7 +183,7 @@
 {
   "cmd": "harvest",
   "args": ["216", "3", "269", "true"],
-  "context": {"playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"}
+  "context": {"playerUid": "REDACTED-UID"}
 }
 ```
 
@@ -217,7 +217,7 @@
 {
   "cmd": "harvest",
   "args": ["216", "3", "263", "false", "false"],
-  "context": {"playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"}
+  "context": {"playerUid": "REDACTED-UID"}
 }
 ```
 
@@ -249,7 +249,7 @@
 {
   "cmd": "harvest",
   "args": ["229", "3", "274"],
-  "context": {"playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"}
+  "context": {"playerUid": "REDACTED-UID"}
 }
 ```
 
@@ -290,7 +290,7 @@
 {
   "cmd": "harvest",
   "args": ["218", "3", "269"],
-  "context": {"playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"}
+  "context": {"playerUid": "REDACTED-UID"}
 }
 ```
 
@@ -353,7 +353,7 @@
 {
   "cmd": "harvest",
   "args": ["45759", "111", "53853"],
-  "context": {"playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"}
+  "context": {"playerUid": "REDACTED-UID"}
 }
 ```
 

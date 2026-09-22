@@ -5,7 +5,7 @@ We validated the HTTP harness against live gameplay because bots were spawning b
 
 ## Evidence (logs + harness)
 - Server log shows player placed around 230,3,267:
-  - `Placing the player at 230.080078125 3.00006103515625 267.67401123046875`
+  - `Placing player at 230.080078125 3.00006103515625 267.67401123046875`
 - Harness bot list shows bot coords near 228,3,260:
   - `/polis/bots` includes bot #160 at `228.2622, 3.0001, 260.3043`.
 - Player-reported HUD coords were around `-28, 3, 2` while server-side was ~`230, 3, 260`.

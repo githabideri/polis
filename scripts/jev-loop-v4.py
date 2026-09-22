@@ -37,8 +37,8 @@ after visible failures - measured pass 3/4, prompt-resistant).
 Usage:
   python3 scripts/jev-loop-v4.py [--mission mine|harvest] [--bot 5]
       [--steps 8] [--faults travel,mine] [--repeat 1] [--tau-yes 0.35]
-      [--harness http://127.0.0.1:8585] [--openjev the Laya noul endpoint]
-      [--llm http://the 27B judge] [--llm-model qwen3.8-27b-dual]
+      [--harness http://127.0.0.1:8585] [--openjev http://openjev-host:8781]
+      [--llm http://llm-host:8080] [--llm-model qwen3.8-27b-dual]
       [--out FILE.json]
 """
 import argparse, json, os, re, sys, time, urllib.request
@@ -517,8 +517,8 @@ def main():
     ap.add_argument("--repeat", type=int, default=1)
     ap.add_argument("--tau-yes", type=float, default=0.6)
     ap.add_argument("--harness", default="http://127.0.0.1:8585")
-    ap.add_argument("--openjev", default=os.environ.get("OPENJEV", "the Laya noul endpoint"))
-    ap.add_argument("--llm", default=os.environ.get("POLIS_LLM", "http://the 27B judge"))
+    ap.add_argument("--openjev", default=os.environ.get("OPENJEV", "http://openjev-host:8781"))
+    ap.add_argument("--llm", default=os.environ.get("POLIS_LLM", "http://llm-host:8080"))
     ap.add_argument("--llm-model", default="qwen3.8-27b-dual")
     ap.add_argument("--uid", default=None)
     ap.add_argument("--out", default=None)

@@ -7,7 +7,7 @@
 ## Environment
 
 - Harness: http://localhost:8585 - READY
-- Player UID: d4pJ+Ty1RgaBHrQgQEV8z27E
+- Player UID: REDACTED-UID
 - Bot ID: 519
 - Game started via vsctl
 

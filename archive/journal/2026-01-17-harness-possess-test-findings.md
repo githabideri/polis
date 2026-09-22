@@ -14,7 +14,7 @@ First test of newly added HTTP harness commands: `possess`, `unpossess`, `setcon
 
 | Command | Result | Response |
 |---------|--------|----------|
-| `possess` | ✅ Pass | "Player the player now possessing bot 365" |
+| `possess` | ✅ Pass | "Player player now possessing bot 365" |
 | `setcontrols` (forward=true) | ✅ Pass | Controls set correctly |
 | `setcontrols` (all false) | ✅ Pass | Movement stopped |
 | `unpossess` | ✅ Pass | "Exited possession mode" |

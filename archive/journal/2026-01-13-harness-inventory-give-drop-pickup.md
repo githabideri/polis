@@ -4,7 +4,7 @@
 - Build: `agent/codex/bot-inventory-sync`
 - World: `test-lands`
 - Harness: HTTP `localhost:8585`
-- Player: `the player`
+- Player: `player`
 
 **Goal**
 Validate that the new slot-based inventory insertion works end-to-end via the harness

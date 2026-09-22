@@ -305,7 +305,7 @@ The mod includes a screenshot capture system for LLM/VLM vision and debug loggin
 curl http://localhost:8585/polis/players | jq '.players[0].uid'
 
 # Capture screenshot (URL-encode the UID)
-curl "http://localhost:8585/polis/screenshot?playerUid=d4pJ%2BTy1RgaBHrQgQEV8z27E"
+curl "http://localhost:8585/polis/screenshot?playerUid=REDACTED-UID"
 
 # Save to file
 curl -s "http://localhost:8585/polis/screenshot?playerUid=..." | jq -r '.base64' | base64 -d > screenshot.png

@@ -1,6 +1,6 @@
 # Jev-loop v4: 27B per-step judge + Laya pre-filter — measurement & the inventory blocker
 
-Date: 2026-09-22 · Environment: the game testbed (the game testbed:8585), Laya 421M (openjev the Laya noul endpoint), Qwen3.8-27B dual-3090 (the 27B judge, thinking OFF)
+Date: 2026-09-22 · Environment: the game container (<polis-container-ip>:8585), Laya 421M (openjev openjev-host:8781), Qwen3.8-27B dual-3090 (llm-host:8080, thinking OFF)
 
 ## Architecture
 

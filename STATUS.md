@@ -9,7 +9,7 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
 |-------|-------|-------|
 | 1.22.7 code port | **locally verified** | net10.0, hermetic csproj, 5 API drift fixes; build: 0 errors |
 | 1.21-era feature set (bots, A*, block actions, possession) | **live verified** (previous 1.21.6 testbed) | see `archive/KNOWN_ISSUES.md` for the detailed, per-feature history |
-| CT-114 testbed (VNC + game + auto-login) | **live verified** 2026-09-20 | dialog-free boots since the moddata fix; see `ops/CT114-VNC.md` |
+| CT-114 testbed (VNC + game + auto-login) | **live verified** 2026-09-20 | dialog-free boots since the moddata fix; see `ops/the game container-VNC.md` |
 | Core loop on 1.22.7 (load → spawn → goto → verify) | **live verified** 2026-09-21 | harness :8585; short and long (100-block) gotos arrive; smoke-v1 mission **PASS** (move/give/inventory-assert/move-back) |
 | Possession on 1.22.7 | **live verified** 2026-09-21 | possess → setcontrols (bot moved 53 blocks on held forward) → unpossess; NaN seat crash found & fixed (see below) |
 | Block actions on 1.22.7 (setblock/give/mine/place) | **live verified** 2026-09-21 | place ok; natural-ground mine ok; rock mine gated by tool tier (correct) and mined with pickaxe-iron; plant/harvest codes still unresolved in 1.22 (see quirks) |
@@ -70,7 +70,7 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
 
 ## Next (in order)
 1. Green build on 1.22.7 — **done 2026-09-21**.
-2. In-game smoke test on the game testbed — **done 2026-09-21** (core loop, possession,
+2. In-game smoke test on the game container — **done 2026-09-21** (core loop, possession,
    block ops live-verified; smoke-v1 PASS).
 3. **Jev-loop v2/v3/v4** — done 2026-09-22: v2 (phase oracle, 0/8 match,
    8/8 gated), v3 (noul veto: conservative net, not precision),

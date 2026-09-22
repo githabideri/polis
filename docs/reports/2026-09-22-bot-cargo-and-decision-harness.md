@@ -1,6 +1,6 @@
 # Bot cargo inventory, 1.22 loot routing, and the decision-loop harness
 
-Date: 2026-09-22 · Environment: the game testbed (VS 1.22.7, world polis-testbed-pristine), openjev Laya 421M, Qwen3.8-27B (thinking off)
+Date: 2026-09-22 · Environment: the game container (VS 1.22.7, world polis-testbed-pristine), openjev Laya 421M, Qwen3.8-27B (thinking off)
 
 ## 1. The bot inventory fix (mod change)
 

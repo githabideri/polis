@@ -11,13 +11,13 @@
    only `.env` values (no machine-specific paths hardcoded in csproj or
    scripts).
 4. **Sanitization for public mirror:** never commit internal hostnames
-   (`*.`), LAN IPs, passwords, tokens, or ops detail anywhere
+   (`*.home.example`), LAN IPs, passwords, tokens, or ops detail anywhere
    except `ops/` (private-only) and this repo's private remote. The public
    mirror script excludes `ops/` and `archive/` journal material.
 5. **Verification vocabulary — use it exactly:** `implemented` / `locally
    verified` (unit/build) / `live verified` (in-game) / `remotely verified`
    (production). Never collapse these into "works".
-6. **Game testbed (the game testbed):** see `ops/CT114-VNC.md`. Never restart Xvnc
+6. **Game testbed (the game container):** see `ops/the game container-VNC.md`. Never restart Xvnc
    while the game runs (the game auto-pauses; resume via noVNC "Back to
    Game" or restart `vsgame`). A VNC keyboard does not work via synthetic
    events (xdotool) — drive input through noVNC only. The game auto-logs in

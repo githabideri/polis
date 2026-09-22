@@ -11,10 +11,10 @@
 
 Never collapse these into "works". `STATUS.md` records the level per feature.
 
-## The testbed (the game testbed "polis", )
+## The testbed (the game container "polis", the PVE host)
 
 - Game: `/opt/vintagestory` (native install, 1.22.7), display via
-  noVNC `http://<ct-addr>:6080/vnc.html` (see `.env` / ops notes). Full ops notes: `ops/CT114-VNC.md`.
+  noVNC `http://<ct-addr>:6080/vnc.html` (see `.env` / ops notes). Full ops notes: `ops/the game container-VNC.md`.
 - The game **auto-logs in** from the cached session key
   (`/root/.config/VintagestoryData/clientsettings.json`) — no password
   typing needed; the session key must be refreshed occasionally by a human

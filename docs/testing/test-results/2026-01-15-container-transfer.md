@@ -6,7 +6,7 @@
 
 ## Environment
 - Harness: http://localhost:8585 - READY
-- Player UID: d4pJ+Ty1RgaBHrQgQEV8z27E
+- Player UID: REDACTED-UID
 - Bot ID: 331
 - Container: game:chest-east at [224, 3, 270]
 - Movement target: east of container at [225, 3, 270]

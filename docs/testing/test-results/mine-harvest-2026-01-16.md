@@ -5,7 +5,7 @@
 
 ## Environment
 - Harness URL: http://localhost:8585
-- Player UID: d4pJ+Ty1RgaBHrQgQEV8z27E
+- Player UID: REDACTED-UID
 - Bot ID: 400
 
 ## Results

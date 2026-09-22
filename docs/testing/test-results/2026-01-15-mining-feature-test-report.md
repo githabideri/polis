@@ -34,7 +34,7 @@ The mining feature implementation is functionally solid with proper tier restric
 **Mod:** polis-builder-npc
 **Harness Port:** 8585
 **Bot Used:** #320 → #334 (respawned due to ownership issues)
-**Player:** the player (uid: d4pJ+Ty1RgaBHrQgQEV8z27E)
+**Player:** player (uid: REDACTED-UID)
 **Test Blocks:** Lignite, granite, bauxite, limonite, soil
 
 ---
@@ -54,7 +54,7 @@ The mining feature implementation is functionally solid with proper tier restric
 **Execution:**
 ```bash
 Command: mine 218 3 263 false
-Context: {"playerUid":"d4pJ+Ty1RgaBHrQgQEV8z27E"}
+Context: {"playerUid":"REDACTED-UID"}
 Response: Ok: true, "Bot #334 mining game:ore-lignite-chalk at (218, 3, 263), est 8.0s"
 Estimated Time: 8.0s
 Actual Time: ~10s (waited 10s before pickup)
@@ -309,7 +309,7 @@ Bot #320 ownership issues prevented mining operations
 **Resolution:**
 - Despawned old bot (#320)
 - Spawned new bot (#334) with player context
-- Required context: `{"playerUid": "d4pJ+Ty1RgaBHrQgQEV8z27E"}`
+- Required context: `{"playerUid": "REDACTED-UID"}`
 
 **Lesson Learned:**
 - Bots must be spawned with `context.playerUid` to establish ownership
@@ -996,7 +996,7 @@ curl -s "http://localhost:8585/polis/command" -H "Content-Type: application/json
 - **Test Date:** 2026-01-15
 - **Test Duration:** ~45 minutes
 - **Bot Count:** 1 (#334)
-- **Player:** the player
+- **Player:** player
 
 ### Coordinates Used
 
