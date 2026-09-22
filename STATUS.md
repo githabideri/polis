@@ -76,13 +76,24 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
    8/8 gated), v3 (noul veto: conservative net, not precision),
    v4 (27B per-step judge + Laya pre-filter: decision side works, see
    `docs/reports/2026-09-22-jev-loop-v4-27b-judge.md`).
-4. **Bot inventory fix** (mod defect: `seraphinventory` unusable for
-   `EntityPolisBot` — `give` and mining overflow both dead) — root-caused by
-   v4; unblocks the harvest pipeline and a clean end-to-end v4 run.
-5. Plant/harvest block namespace resolution in 1.22 (harvest pipeline
-   untested end-to-end).
-6. Movement-physics root-cause pass (the top open issue from
+4. **Bot inventory + 1.22 loot routing** — done 2026-09-22: 16-slot cargo
+   on `EntityPolisBot`; mine breaks as the bot and routes `GetDrops` into
+   the cargo; set-placed rocks yield no item drops, so the mission's
+   success criterion is marker removal (scan-verified); `POLIS_SKIP_CLAIMS`
+   test-world bypass — `docs/reports/2026-09-22-bot-cargo-and-decision-harness.md`.
+5. **Decision loop as optimization harness** — done 2026-09-22:
+   `scripts/jev-loop-v4.py` (labeled set, mission outcome, phase-relative
+   faults, threshold re-derivation). Five passes measured: mission complete
+   2/2 at the re-derived tau; the doubt-arbiter stall (failure evidence
+   sticks) is a robust, prompt-resistant finding for the method record.
+6. **Doubt-arbiter stall fix**: failure-cleared state signal / max-stall
+   policy / diff-based judge input — then a 6th harness pass under the same
+   labeled protocol for a clean comparison.
+7. Plant/harvest pipeline: crop blocks have the same setblock-without-BE-
+   state problem as the rock types; the mine action's loot pattern is the
+   template.
+8. Movement-physics root-cause pass (the top open issue from
    archive/KNOWN_ISSUES.md).
-7. Publish prep: sanitized copy for GitHub + VS mod store (exclude `ops/`
+9. Publish prep: sanitized copy for GitHub + VS mod store (exclude `ops/`
    and `archive/`); archive old `vspolis` repo + decommission Daedalus
-   (a gateway container agent id `polis`).
+   (a gateway container agent id `polis`). **Parked — owner decision pending.**
