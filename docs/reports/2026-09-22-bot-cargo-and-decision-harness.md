@@ -159,3 +159,79 @@ phase oracle only works on clean steps.
   data the (question, state-format) pair can be re-derived again, and the
   fine-tune path in the method doc is the long-term route from
   "conservative arbiter" to "fast pre-filter".
+
+## 8. Harvest pipeline + second mission (same day, second session)
+
+### 8.1 The 1.22 crop system (decompiled/asset survey)
+
+- Crops are one block code **`crop`** with variant groups `type`
+  (carrot, cabbage, wheat, rye, onion, … 17 types) and `stage` (1..7);
+  mature = stage 7 (`crop-carrot-7`). Growth is time-based (carrot:
+  ~1.03 months over 7 stages, nutrient-gated via the farmland BE).
+- Farmland: code **`farmland`**, variants `state` (dry/moist) x
+  `fertility` (verylow..high), BE `BlockEntityFarmland` (soil
+  nutrition); a crop sits in the cell **above** the farmland.
+- Drops are declared in the block JSON `dropsByType`: mature carrot =
+  ~1x `seeds-carrot` + ~11x `vegetable-carrot` (stage 6: ~3 carrots).
+  `BlockCrop.GetDrops` honors this - so the same break-as-bot pattern
+  as the mine action works for harvest.
+
+### 8.2 The harvest action fix (mod)
+
+`PolisHarvestCropAction` (maturity-gated via `farmland.HasRipeCrop()`)
+used the player-only `BreakBlock` - the same 1.22 loot-routing bug as
+mine. It now breaks the crop as the bot: `GetDrops` -> bot cargo,
+overflow to ground, `SetBlock(0)`. `POLIS_SKIP_CLAIMS` bypass added to
+its claims check. Live-verified: bot harvested `crop-carrot-7` and
+ended up carrying **11x vegetable-carrot + 1x seeds-carrot** in its own
+inventory.
+
+### 8.3 The harness is now mission-parameterized
+
+`jev-loop-v4.py --mission {mine,harvest}`. The harvest mission:
+fixture = farmland + mature crop 8 blocks east; phases travel ->
+harvest -> return; **success = the bot carries a harvested item AND is
+back at base** - the agent *produced and carried a real in-game item*.
+The `harvest_target` execution moves the bot to the ground-level cell
+next to the crop (harvest range 4.5) and then harvests.
+
+Measured (two 2-run passes, faults = skip-goal at travel + harvest):
+mission **2/2 complete in 2 steps / 13 s per run**, 0 false-waits, 0
+stalls, **2/2 faults handled - by the 27B jumping straight to
+`harvest_target`** (its execution absorbs the missing travel step).
+Laya p's on the new question are remarkably stable: skip-goal ~0.21,
+correct ~0.41-0.47 (noul is effectively deterministic at this
+temperature). Suggested tau 0.408 re-derives cleanly.
+
+### 8.4 Findings for the method record
+
+1. **The oracle measures fidelity, not optimality.** The judge's
+   `harvest_target` on a `travel`-phase skip-fault is *better* than the
+   oracle (`goto_target`): fewer steps, same goal. The labeled set
+   should record "better-than-oracle" as its own class - an
+   oracle-match metric alone would score the judge's best answer as
+   wrong.
+2. **Mission-level success is the right top metric.** Both mine (marker
+   removed) and harvest (item carried home) missions complete under
+   fault injection, with self-repair where the tiers let a fault
+   through. The loop is now a *useful* game process, not just a
+   decision benchmark: it moves, works, and brings produce home.
+3. **p-band overlap is mission- and wording-specific.** Mine: correct
+   0.46-0.79 vs faulty 0.36-0.47 at the re-derived tau (overlapping -
+   faults self-repair; at high tau the judge tier catches 4/4).
+   Harvest: clean separation (0.21 vs 0.41+) - the 4-action set with
+   the crop fact gives the small model something concrete to latch on.
+   Question design (which facts are in the state text, how many
+   actions) is a first-class lever on separability.
+4. **File-rewrite gotcha (harness ops)**: a rewritten script's
+   `if __name__ == "__main__":` guard lost its trailing `__` in
+   transit - valid Python that silently never runs `main()` (exit 0,
+   no output). Verify the guard after any whole-file rewrite.
+
+### 8.5 Openjev catalog
+
+Two saved use cases: `polis-action-noul` (mine question) and
+`polis-harvest-noul` (harvest question, measured skip-goal p~0.22 on
+the canonical state). Labeled sets: `data/labeled-set-2026-09-22-*.json`
+(pass 5, pass 6, harvest 1+2, mine regression) - the calibration
+corpus for the llmlab decision-classifiers page.

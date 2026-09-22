@@ -86,14 +86,23 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
    faults, threshold re-derivation). Five passes measured: mission complete
    2/2 at the re-derived tau; the doubt-arbiter stall (failure evidence
    sticks) is a robust, prompt-resistant finding for the method record.
-6. **Doubt-arbiter stall fix**: failure-cleared state signal / max-stall
-   policy / diff-based judge input — then a 6th harness pass under the same
-   labeled protocol for a clean comparison.
-7. Plant/harvest pipeline: crop blocks have the same setblock-without-BE-
-   state problem as the rock types; the mine action's loot pattern is the
-   template.
-8. Movement-physics root-cause pass (the top open issue from
+6. **Doubt-arbiter stall fix** — done 2026-09-22 (pass 6): diff-based
+   `since_last_step` state line + max-stall valve (2 waits -> policy
+   resumes). Mission 2/2 in 25 s, 4/4 faults handled by the judge, 0
+   stalls; threshold converged (suggested 0.358 ~ applied 0.35).
+7. **Harvest pipeline + second mission** — done 2026-09-22: 1.22 crop
+   system (farmland + `crop` variants, stage 7 = mature), harvest action
+   breaks as the bot and routes drops to the cargo; harness is
+   mission-parameterized (`--mission mine|harvest`); harvest mission
+   complete 2/2 in 2 steps / 13 s, bot carries 11x carrot + seed home;
+   openjev use cases `polis-action-noul` + `polis-harvest-noul`; labeled
+   corpus in `data/`.
+8. Grow the labeled corpus (a few more harvest/mine runs at varied
+   taus) and hand the question JSONs + labeled sets to the llmlab side
+   for the decision-classifiers page.
+9. Movement-physics root-cause pass (the top open issue from
    archive/KNOWN_ISSUES.md).
-9. Publish prep: sanitized copy for GitHub + VS mod store (exclude `ops/`
-   and `archive/`); archive old `vspolis` repo + decommission Daedalus
-   (a gateway container agent id `polis`). **Parked — owner decision pending.**
+10. Publish prep: sanitized copy for GitHub + VS mod store (exclude
+    `ops/` and `archive/`); archive old `vspolis` repo + decommission
+    Daedalus (a gateway container agent id `polis`). **Parked — owner decision
+    pending.**
