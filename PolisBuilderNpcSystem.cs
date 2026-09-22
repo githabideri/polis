@@ -576,6 +576,10 @@ public partial class PolisBuilderNpcSystem : ModSystem
     }
 
     float hbAccum;
+    PathfinderTask pathProbeTask;
+    int pathProbeAgeSec;
+    bool pathProbeDone;
+
     void OnTick(float dt)
     {
         hbAccum += dt;
@@ -585,6 +589,42 @@ public partial class PolisBuilderNpcSystem : ModSystem
             int nullActs = 0;
             foreach (var b in bots.Values) if (b?.Activity == null) nullActs++;
             sapi?.Logger?.Notification($"[polis] system-tick heartbeat: bots={bots.Count} nullActivity={nullActs}");
+
+            // Pathfinder-thread liveness probe (diagnostic; enable with POLIS_PATH_PROBE=1)
+            if (Environment.GetEnvironmentVariable("POLIS_PATH_PROBE") == "1")
+            try
+            {
+                var pfa = sapi?.World?.Api?.ModLoader?.GetModSystem<Vintagestory.Essentials.PathfindingAsync>(true);
+                if (pfa != null)
+                {
+                    string extra = "";
+                    if (pathProbeTask != null && !pathProbeDone)
+                    {
+                        pathProbeAgeSec += 10;
+                        extra = " probe[finished=" + pathProbeTask.Finished
+                            + " wp=" + (pathProbeTask.waypoints == null ? "null" : pathProbeTask.waypoints.Count.ToString())
+                            + " age=" + pathProbeAgeSec + "s]";
+                        if (pathProbeTask.Finished) pathProbeDone = true;
+                    }
+                    else if (pathProbeTask == null)
+                    {
+                        var pl = sapi?.World?.PlayerByUid("d4pJ+Ty1RgaBHrQgQEV8z27E") as IServerPlayer;
+                        if (pl?.Entity != null && pl.Entity.Alive)
+                        {
+                            var sp = pl.Entity.Pos.AsBlockPos;
+                            var tp = new BlockPos(sp.X + 3, sp.Y, sp.Z);
+                            pathProbeTask = new PathfinderTask(sp, tp, 0f, 12, 0.6f, pl.Entity.CollisionBox, 999);
+                            pfa.EnqueuePathfinderTask(pathProbeTask);
+                            sapi?.Logger?.Notification($"[polis] pathprobe armed: {sp} -> {tp}");
+                        }
+                    }
+                    sapi?.Logger?.Notification($"[polis] pathfinder: queue={pfa.PathfinderTasks.Count}{extra}");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                sapi?.Logger?.Notification("[polis] pathprobe error: " + ex.Message);
+            }
         }
         if (bots.Count > 0)
         {

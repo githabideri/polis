@@ -105,7 +105,7 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
    mid-goto wedges the traverser one-shot async search); harness now sweeps
    bots before every run; goto has a bounded 3-phase fallback ladder (async
    A* -> sync A* -> straight line, 15 s timeouts) instead of a silent hang.
-10. **WORLD WEDGED - recreate the testbed before any live work.** The
+10. ~~WORLD WEDGED~~ - resolved 09-22 morning (see item 11 and report section 11). The
     `polis-testbed-pristine` world is persistently navigation-wedged (all
     entities fail to move; every recovery attempt failed; full incident
     record: report section 10). Next session, first task: delete the world
@@ -114,3 +114,11 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
     (headless new-world creation hangs), set `VSGAME_WORLD`, restart,
     re-verify spawn+goto. Rules: never restart mid-goto; sweep bots before
     stopping the game.
+11. **Wedge RESOLVED 09-22 morning** (supersedes item 10): world
+    healthy again, full mine mission green. Root-cause trace + external
+    corroboration (open vanilla VS issues #5334/#5422/#5875: entities
+    alive-but-frozen; repro "saving and reloading a save within a
+    vertical distance") in report section 11. Defenses: never restart
+    mid-goto, `POLIS_PATH_PROBE=1` diagnostic, dawn-screenshot pause
+    check. Next live work: harvest-mission corpus growth, then (parked)
+    publish.
