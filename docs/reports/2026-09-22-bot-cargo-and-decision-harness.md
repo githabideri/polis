@@ -431,3 +431,79 @@ error concentrated in one systematic direction. SemIf 4B: verdict withheld
 design ("better-than-oracle" rows exist), this measures choice-type
 questions only (the live noul gate is a different question type), and all
 latency here is CPU-reference.
+
+## 13. Quantized GGUF readout: what 8-bit costs, what 4-bit breaks (2026-09-24, second session)
+
+The bf16 A/B in §12 was torch-on-CPU: 18.4 s/row for the 2B — fine for a 41-row
+batch, useless for a per-step reflex. The Decider authors ship an FP8 production
+path and claim quantization "changes accuracy and calibration by less than the
+evaluation noise" (their B300 numbers: eager 18.9 ms, CUDA-graphed 3.2 ms p50).
+This session measures that claim on our hardware with our corpus, and makes the
+first *valid* 4B measurement.
+
+**Method.** Decider 2B safetensors → GGUF with llama.cpp main (2026-09-24):
+`Q8_0` (2.0 GB, near-lossless reference) and `Q4_K_M` (1.27 GB). One conversion
+gotcha: the converter assumes Qwen3.5 checkpoints carry MTP draft tensors and
+writes 25 blocks even when the file has 24 layers and none — Decider's
+checkpoint (fine-tuned from the 2B base) has no MTP tensors, so the conversion
+needs `--no-mtp`. Readout runs in-process through the C library (the server's
+HTTP logprob path is post-sampling in this version, unusable for the pre-softmax
+letter logits): identical prompt construction to the torch path
+(`decider.prompt.build`, state_first, same slots), full-vocab logit row at the
+last prompt position, `softmax(logits/1.3)` over the ≤16 letter tokens.
+Tokenization verified token-for-token against the reference tokenizer
+(0 mismatches across all rows). SemIf 4B ran through its own `llamacpp_backend`
+on the unsloth `UD-Q4_K_XL` GGUF (2.9 GB), T=1 native readout. 4 threads,
+i5-8500T (the CPU batch box, ).
+
+**Decider 2B, same 41 rows:**
+
+| weights | top-1 | mean p(oracle) | Brier | conf right/wrong | ms/row |
+|---|---|---|---|---|---|
+| bf16 torch (§12, reference) | 0.7073 | 0.6554 | 0.4262 | 0.870 / 0.136 | 18 390 |
+| Q8_0 (2.0 GB) | **0.7073** | 0.6576 | 0.4199 | 0.872 / **0.746** | 3 566 |
+| Q4_K_M (1.27 GB) | 0.5366 | 0.5449 | 0.5804 | 0.900 / 0.627 | 4 077 |
+
+- **Q8_0 is numerically indistinguishable from bf16**: Δtop-1 = 0,
+  Δp(oracle) = +0.002, ΔBrier = −0.006, while running 5.2× faster. The
+  authors' "within evaluation noise" claim holds on CPU at 8-bit. One real
+  side effect: on the 12 systematically-wrong rows (§12's `goto_base` travel
+  bias) Q8 makes the *wrong* choice confidently (0.746) where bf16 was flat
+  (0.136). Top-1 and Brier are untouched, so any threshold-on-p(oracle)
+  decision is unaffected — but "model confidence in its choice" is not a
+  stable signal across quantizations.
+- **Q4_K_M degrades this readout**: top-1 −17 pp (mine 0.81 → 0.56),
+  p(oracle) 0.655 → 0.545, Brier 0.43 → 0.58. The letter-logit contrast this
+  use case depends on is more quantization-sensitive than text generation
+  (where 4-bit is fine). **8-bit is the quantization floor; 4-bit is ruled
+  out** for the Decider readout (matches the authors' FP8-only production
+  choice).
+- 4-bit also didn't help latency (4.1 vs 3.6 s/row) — no reason to take the
+  accuracy hit even if it had.
+
+**SemIf 4B, first valid measurement.** The §12 bf16-torch run was degenerate
+(p(oracle) = 0.000, Brier 1.0) — that turned out to be an artifact of that
+specific runtime path (bf16 gated-delta-net on CPU), not the model. The
+llama.cpp GGUF path (fp32-accumulated) produces a healthy readout:
+**allowed_token_mass 0.993** (99.3 % of the vocabulary softmax mass lands on
+the four letter answer slots — the frozen 4B genuinely answers in-slot),
+p(oracle) 0.298, conf right 0.544 vs wrong 0.535. The judgment itself is weak:
+top-1 **0.463** (chance = 0.25; Decider 2B fine-tuned = 0.707), p(oracle) 0.298
+vs 0.658. The §12 conclusion stands, now with the 4B leg actually measured:
+**the 2B task-tuned model beats the 2×-larger frozen base** on this readout,
+exactly the Jev premise (small tuned model + narrow question beats big
+untuned one). Latency: 12.2 s/row on 4C — the 4B is not a reflex candidate
+on this hardware anyway.
+
+**Latency verdict (4C, i5-8500T).** Q8_0 2B: 3.6 s/row (5.2× faster than
+bf16-torch) — still short of a per-step reflex, but within reach of the
+next tier on the deployment menu (a 5600X 6C/12T box should roughly halve
+again; the 3060/FP8 path should be 10–30 ms). The CPU-4C box remains the
+reference/measurement machine; the deployment box is still an open decision
+(§12's menu stands: 4C → 12T → 3060).
+
+**Artifacts** (`data/`): `ab-decider-q8-2026-09-24.json{,.rows.json}`,
+`ab-decider-q4-2026-09-24.json{,.rows.json}` (gguf-runner summaries),
+`semif4b-q4.jsonl` (cli output) + `semif4b-q4-summary.json{,.rows,.extra}.json`
+(semif-post). Toolchain: `scripts/jevab/gguf-runner.py`,
+`scripts/jevab/semif-post.py` (committed with the A/B toolchain).

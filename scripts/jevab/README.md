@@ -68,3 +68,42 @@ Host-side `hf download` writes them; completion markers
   produced results: HF weight downloads stalled and the host was reinstalled
   2026-09-23 (the toolchain was recovered from the old rpool, now imported
   read-only as `oldrpool` on the 5600X host).
+
+## GGUF / llama.cpp path (2026-09-24, 2nd session) — quantization floor + valid 4B
+
+`gguf-runner.py` runs the Decider readout over a GGUF checkpoint in-process
+through the llama.cpp C library (not the HTTP server: its logprob output is
+post-sampling in current versions and cannot yield the pre-softmax letter
+logits). Same prompt construction as the torch path (`decider.prompt.build`,
+state_first, trailing slot), full-vocab logit row at the last prompt position,
+`softmax(logits/1.3)` over the letter tokens. Tokenization is verified
+token-for-token against the reference tokenizer before scoring (0 mismatches
+observed). Output schema mirrors `ab-runner.py`.
+
+`semif-post.py` maps the SemIf cli JSONL output (`--mode direct --backend
+llamacpp`) onto the corpus oracle labels and emits the same summary schema.
+
+| artifact | build | notes |
+|---|---|---|
+| Decider `Q8_0` (2.0 GB) | `convert_hf_to_gguf.py <hf-dir> --no-mtp --outtype f16` then `llama-quantize f16 Q8_0` | **`--no-mtp` is required**: the Qwen3.5 converter assumes MTP draft tensors and writes 25 blocks for this 24-layer, MTP-less fine-tune; without the flag the GGUF fails to load ("tensor blk.24.attn_norm.weight not found"). bf16-equivalent accuracy (report §13). |
+| Decider `Q4_K_M` (1.27 GB) | same chain, `llama-quantize f16 Q4_K_M` | degrades the readout (top-1 0.537) — do not deploy. |
+| 4B `UD-Q4_K_XL` (2.9 GB) | prebuilt, `unsloth/Qwen3.5-4B-GGUF` on HF | SemIf's own `llamacpp_backend` (n_gpu_layers=0, per-sequence state save/restore for the hybrid linear attention). |
+
+Current llama.cpp main (2026-09-24) supports the Qwen3.5 hybrid
+(gated-delta-net + MTP) natively (`src/models/qwen35.cpp`); the converter's
+`--outtype auto` (dynamic ~15 bpw) is *not* loadable by the older llama.cpp
+bundled in `llama-cpp-python 0.3.35` — build f16→Q8/Q4 explicitly.
+
+**`llama-cpp-python` offline build** (the CT's PyPI access is flaky; no
+prebuilt wheels exist for this package): fetch the sdist + its build deps
+(scikit-build-core, pathspec, filelock, ninja, diskcache, jinja2, markupsafe,
+pyproject-metadata, packaging) as files on a machine with good network,
+`pip install --no-index --no-deps <wheels>` into each venv, then
+`pip install --no-index --no-deps --no-build-isolation llama_cpp_python-*.tar.gz`
+(the sdist vendors the llama.cpp source; no fetch at build time; the 0.3.35
+vendor has `qwen35.cpp`).
+
+**Gotcha: stale rootfs bind.** On the night of 2026-09-24 the running CT
+started seeing a divergent, reduced view of `/var/jevab` while the host-side
+just the container's mount out of sync (the PVE config/subvol themselves were
+this CT, check the host-side subvol first; the data is safe.

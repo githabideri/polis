@@ -1,0 +1,33 @@
+{
+ "corpus": "corpus/data/*.json",
+ "rows": 41,
+ "models": {
+  "decider-Q4_K_M": {
+   "model": "decider-Q4_K_M",
+   "rows": 41,
+   "acc_top1": 0.5366,
+   "mean_p_oracle": 0.5449,
+   "brier": 0.5804,
+   "mean_ms": 4077.4,
+   "conf_correct": 0.8998,
+   "conf_wrong": 0.6265,
+   "by_mission": {
+    "mine": {
+     "n": 27,
+     "acc_top1": 0.5556,
+     "mean_p_oracle": 0.5638
+    },
+    "harvest": {
+     "n": 14,
+     "acc_top1": 0.5,
+     "mean_p_oracle": 0.5086
+    }
+   },
+   "rows_total": 41,
+   "rows_ok": 41,
+   "tokenize_mismatches": 0,
+   "wall_s": 167.3,
+   "gguf": "decider-2b-Q4_K_M.gguf"
+  }
+ }
+}

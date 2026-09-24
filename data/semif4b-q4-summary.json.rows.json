@@ -1,0 +1,863 @@
+[
+ {
+  "set": "labeled-set-2026-09-22-harvest-tau-0.25.json",
+  "mission": "harvest",
+  "step": 1,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.563147416352808,
+   "harvest_target": 0.08043817551762554,
+   "goto_base": 0.093511065788514,
+   "wait": 0.2629033423410524
+  },
+  "choice": "goto_target",
+  "ms": 12169.019858003594,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest-tau-0.25.json",
+  "mission": "harvest",
+  "step": 2,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "probs": {
+   "goto_target": 0.5015084313494816,
+   "harvest_target": 0.07173585915967606,
+   "goto_base": 0.06209571208951948,
+   "wait": 0.3646599974013227
+  },
+  "choice": "goto_target",
+  "ms": 13535.542808007449,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest-tau-0.41.json",
+  "mission": "harvest",
+  "step": 1,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.563147416352808,
+   "harvest_target": 0.08043817551762554,
+   "goto_base": 0.093511065788514,
+   "wait": 0.2629033423410524
+  },
+  "choice": "goto_target",
+  "ms": 11363.068689941429,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest-tau-0.41.json",
+  "mission": "harvest",
+  "step": 2,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "probs": {
+   "goto_target": 0.5218542300539184,
+   "harvest_target": 0.06564707034942996,
+   "goto_base": 0.06663534507800675,
+   "wait": 0.3458633545186449
+  },
+  "choice": "goto_target",
+  "ms": 13859.594507026486,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest-tau-0.6.json",
+  "mission": "harvest",
+  "step": 1,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.514436074129709,
+   "harvest_target": 0.09971086397133394,
+   "goto_base": 0.10275248191815853,
+   "wait": 0.28310057998079846
+  },
+  "choice": "goto_target",
+  "ms": 12837.778280954808,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest-tau-0.6.json",
+  "mission": "harvest",
+  "step": 2,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "probs": {
+   "goto_target": 0.5218542300539184,
+   "harvest_target": 0.06564707034942996,
+   "goto_base": 0.06663534507800675,
+   "wait": 0.3458633545186449
+  },
+  "choice": "goto_target",
+  "ms": 13005.791933042929,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest1.json",
+  "mission": "harvest",
+  "step": 1,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.563147416352808,
+   "harvest_target": 0.08043817551762554,
+   "goto_base": 0.093511065788514,
+   "wait": 0.2629033423410524
+  },
+  "choice": "goto_target",
+  "ms": 12095.818690024316,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest1.json",
+  "mission": "harvest",
+  "step": 2,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "probs": {
+   "goto_target": 0.5582984079890636,
+   "harvest_target": 0.06576001096098315,
+   "goto_base": 0.06427872065697221,
+   "wait": 0.311662860392981
+  },
+  "choice": "goto_target",
+  "ms": 13550.790669047274,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest1.json",
+  "mission": "harvest",
+  "step": 1,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.563147416352808,
+   "harvest_target": 0.08043817551762554,
+   "goto_base": 0.093511065788514,
+   "wait": 0.2629033423410524
+  },
+  "choice": "goto_target",
+  "ms": 11838.683563983068,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest1.json",
+  "mission": "harvest",
+  "step": 2,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "probs": {
+   "goto_target": 0.5582984079890636,
+   "harvest_target": 0.06576001096098315,
+   "goto_base": 0.06427872065697221,
+   "wait": 0.311662860392981
+  },
+  "choice": "goto_target",
+  "ms": 13872.023020987399,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest2.json",
+  "mission": "harvest",
+  "step": 1,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.563147416352808,
+   "harvest_target": 0.08043817551762554,
+   "goto_base": 0.093511065788514,
+   "wait": 0.2629033423410524
+  },
+  "choice": "goto_target",
+  "ms": 11818.578307051212,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest2.json",
+  "mission": "harvest",
+  "step": 2,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "probs": {
+   "goto_target": 0.5582984079890636,
+   "harvest_target": 0.06576001096098315,
+   "goto_base": 0.06427872065697221,
+   "wait": 0.311662860392981
+  },
+  "choice": "goto_target",
+  "ms": 13768.494644085877,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest2.json",
+  "mission": "harvest",
+  "step": 1,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.563147416352808,
+   "harvest_target": 0.08043817551762554,
+   "goto_base": 0.093511065788514,
+   "wait": 0.2629033423410524
+  },
+  "choice": "goto_target",
+  "ms": 11498.302359017543,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest2.json",
+  "mission": "harvest",
+  "step": 2,
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "probs": {
+   "goto_target": 0.5582984079890636,
+   "harvest_target": 0.06576001096098315,
+   "goto_base": 0.06427872065697221,
+   "wait": 0.311662860392981
+  },
+  "choice": "goto_target",
+  "ms": 13709.51702806633,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "mission": "mine",
+  "step": 1,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.5486645890573032,
+   "mine_target": 0.08752309185035473,
+   "goto_base": 0.10349312697584634,
+   "wait": 0.2603191921164958
+  },
+  "choice": "goto_target",
+  "ms": 11912.090281955898,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "mission": "mine",
+  "step": 2,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.5362218449107583,
+   "mine_target": 0.11594841307379701,
+   "goto_base": 0.10930702008986234,
+   "wait": 0.2385227219255823
+  },
+  "choice": "goto_target",
+  "ms": 11921.75578896422,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "mission": "mine",
+  "step": 3,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.5362218449107583,
+   "mine_target": 0.11594841307379701,
+   "goto_base": 0.10930702008986234,
+   "wait": 0.2385227219255823
+  },
+  "choice": "goto_target",
+  "ms": 12274.37697397545,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "mission": "mine",
+  "step": 4,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.5079371171373729,
+   "mine_target": 0.0968040262946964,
+   "goto_base": 0.11491728804773044,
+   "wait": 0.28034156852020026
+  },
+  "choice": "goto_target",
+  "ms": 11874.42748900503,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "mission": "mine",
+  "step": 5,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.5060801239331626,
+   "mine_target": 0.10153370737791484,
+   "goto_base": 0.11780767276009878,
+   "wait": 0.2745784959288238
+  },
+  "choice": "goto_target",
+  "ms": 13107.99556702841,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "mission": "mine",
+  "step": 6,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.5337335002625964,
+   "mine_target": 0.08888621375747602,
+   "goto_base": 0.10146517190690746,
+   "wait": 0.27591511407302016
+  },
+  "choice": "goto_target",
+  "ms": 12584.989294060506,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "mission": "mine",
+  "step": 7,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "probs": {
+   "goto_target": 0.43239174171587413,
+   "mine_target": 0.14790447652889568,
+   "goto_base": 0.11512925653974856,
+   "wait": 0.30457452521548156
+  },
+  "choice": "goto_target",
+  "ms": 12406.780082033947,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "mission": "mine",
+  "step": 1,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.497585408830437,
+   "mine_target": 0.1050161974298216,
+   "goto_base": 0.10804599134983027,
+   "wait": 0.28935240238991106
+  },
+  "choice": "goto_target",
+  "ms": 11576.807698002085,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "mission": "mine",
+  "step": 2,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.5846313193034224,
+   "mine_target": 0.10535579222114612,
+   "goto_base": 0.10349336479765223,
+   "wait": 0.2065195236777792
+  },
+  "choice": "goto_target",
+  "ms": 11166.022179066204,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "mission": "mine",
+  "step": 3,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.6020603825277133,
+   "mine_target": 0.08701787763459265,
+   "goto_base": 0.1141010986681339,
+   "wait": 0.19682064116956013
+  },
+  "choice": "goto_target",
+  "ms": 12411.446128971875,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "mission": "mine",
+  "step": 4,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.5555257169493144,
+   "mine_target": 0.09031474644649182,
+   "goto_base": 0.12386945857438846,
+   "wait": 0.23029007802980536
+  },
+  "choice": "goto_target",
+  "ms": 11619.475790997967,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "mission": "mine",
+  "step": 5,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "probs": {
+   "goto_target": 0.4984862835031031,
+   "mine_target": 0.11740554622911087,
+   "goto_base": 0.11115500488472599,
+   "wait": 0.27295316538305997
+  },
+  "choice": "goto_target",
+  "ms": 11059.832665952854,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "mission": "mine",
+  "step": 1,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.5290911670868507,
+   "mine_target": 0.08597613582930444,
+   "goto_base": 0.1112374089866851,
+   "wait": 0.2736952880971598
+  },
+  "choice": "goto_target",
+  "ms": 11526.878342963755,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "mission": "mine",
+  "step": 2,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.5846313193034224,
+   "mine_target": 0.10535579222114612,
+   "goto_base": 0.10349336479765223,
+   "wait": 0.2065195236777792
+  },
+  "choice": "goto_target",
+  "ms": 11023.400465026498,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "mission": "mine",
+  "step": 3,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.6020603825277133,
+   "mine_target": 0.08701787763459265,
+   "goto_base": 0.1141010986681339,
+   "wait": 0.19682064116956013
+  },
+  "choice": "goto_target",
+  "ms": 12427.389709977433,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "mission": "mine",
+  "step": 4,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.5699761285996511,
+   "mine_target": 0.08075766364989939,
+   "goto_base": 0.11454489830282961,
+   "wait": 0.23472130944761996
+  },
+  "choice": "goto_target",
+  "ms": 12572.46012892574,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "mission": "mine",
+  "step": 5,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "probs": {
+   "goto_target": 0.4985784275344628,
+   "mine_target": 0.12445871305315463,
+   "goto_base": 0.12346920648987762,
+   "wait": 0.25349365292250486
+  },
+  "choice": "goto_target",
+  "ms": 11228.578556911089,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "mission": "mine",
+  "step": 1,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.4983294730404124,
+   "mine_target": 0.09129194726792947,
+   "goto_base": 0.11387869765275396,
+   "wait": 0.2964998820389042
+  },
+  "choice": "goto_target",
+  "ms": 11914.15848606266,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "mission": "mine",
+  "step": 2,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.5567826784083347,
+   "mine_target": 0.09591224133084997,
+   "goto_base": 0.09905048458835496,
+   "wait": 0.24825459567246042
+  },
+  "choice": "goto_target",
+  "ms": 11784.31504603941,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "mission": "mine",
+  "step": 3,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.5496310685369814,
+   "mine_target": 0.07834628839565912,
+   "goto_base": 0.13947568772904453,
+   "wait": 0.23254695533831493
+  },
+  "choice": "goto_target",
+  "ms": 12100.153621984646,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "mission": "mine",
+  "step": 4,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.535894663598173,
+   "mine_target": 0.09221443503498249,
+   "goto_base": 0.13376365304936447,
+   "wait": 0.23812724831748003
+  },
+  "choice": "goto_target",
+  "ms": 12307.374088093638,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "mission": "mine",
+  "step": 5,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "probs": {
+   "goto_target": 0.5081779462138731,
+   "mine_target": 0.11213807281509061,
+   "goto_base": 0.1024252999908449,
+   "wait": 0.27725868098019146
+  },
+  "choice": "goto_target",
+  "ms": 11750.045633991249,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "mission": "mine",
+  "step": 1,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.4983294730404124,
+   "mine_target": 0.09129194726792947,
+   "goto_base": 0.11387869765275396,
+   "wait": 0.2964998820389042
+  },
+  "choice": "goto_target",
+  "ms": 12043.818991980515,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "mission": "mine",
+  "step": 2,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "probs": {
+   "goto_target": 0.5652195060897801,
+   "mine_target": 0.10631347258736774,
+   "goto_base": 0.1144517120046422,
+   "wait": 0.2140153093182099
+  },
+  "choice": "goto_target",
+  "ms": 11209.458865923807,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "mission": "mine",
+  "step": 3,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.5496310685369814,
+   "mine_target": 0.07834628839565912,
+   "goto_base": 0.13947568772904453,
+   "wait": 0.23254695533831493
+  },
+  "choice": "goto_target",
+  "ms": 12177.786584943533,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "mission": "mine",
+  "step": 4,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.535894663598173,
+   "mine_target": 0.09221443503498249,
+   "goto_base": 0.13376365304936447,
+   "wait": 0.23812724831748003
+  },
+  "choice": "goto_target",
+  "ms": 12324.189163045958,
+  "note": ""
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "mission": "mine",
+  "step": 5,
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "probs": {
+   "goto_target": 0.5036615048902383,
+   "mine_target": 0.11289166658905558,
+   "goto_base": 0.10509101544311782,
+   "wait": 0.2783558130775883
+  },
+  "choice": "goto_target",
+  "ms": 11950.976061052643,
+  "note": ""
+ }
+]

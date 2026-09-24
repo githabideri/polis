@@ -1,0 +1,34 @@
+{
+ "corpus": "corpus/data/*.json",
+ "rows": 41,
+ "models": {
+  "semif4b-q4": {
+   "model": "semif4b-q4",
+   "rows": 41,
+   "acc_top1": 0.4634,
+   "mean_p_oracle": 0.2981,
+   "brier": 0.7879,
+   "mean_ms": 12223.9,
+   "conf_correct": 0.5441,
+   "conf_wrong": 0.5346,
+   "by_mission": {
+    "mine": {
+     "n": 27,
+     "acc_top1": 0.4444,
+     "mean_p_oracle": 0.2918
+    },
+    "harvest": {
+     "n": 14,
+     "acc_top1": 0.5,
+     "mean_p_oracle": 0.3104
+    }
+   },
+   "rows_total": 41,
+   "rows_ok": 41,
+   "mean_allowed_token_mass": 0.9925715471660485,
+   "mean_input_tokens": 211.90243902439025,
+   "readout": "semif direct, llamacpp GGUF, T=1 native",
+   "gguf": "Qwen3.5-4B-UD-Q4_K_XL.gguf"
+  }
+ }
+}

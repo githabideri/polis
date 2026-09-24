@@ -1,0 +1,289 @@
+[
+ {
+  "id": "labeled-set-2026-09-22-harvest-tau-0.25.json#1",
+  "allowed_token_mass": 0.994520692241318,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.173661359003745,
+  "prompt_tokens": 204
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest-tau-0.25.json#2",
+  "allowed_token_mass": 0.9966936417355173,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 13.541065527009778,
+  "prompt_tokens": 244
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest-tau-0.41.json#1",
+  "allowed_token_mass": 0.994520692241318,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.366961961030029,
+  "prompt_tokens": 204
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest-tau-0.41.json#2",
+  "allowed_token_mass": 0.9966505570035841,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 13.86434777197428,
+  "prompt_tokens": 237
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest-tau-0.6.json#1",
+  "allowed_token_mass": 0.992778201341608,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.841718854033388,
+  "prompt_tokens": 204
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest-tau-0.6.json#2",
+  "allowed_token_mass": 0.9966505570035841,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 13.01047330594156,
+  "prompt_tokens": 237
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest1.json#1",
+  "allowed_token_mass": 0.994520692241318,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.100062533980235,
+  "prompt_tokens": 204
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest1.json#2",
+  "allowed_token_mass": 0.9963219781009961,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 13.556334767956287,
+  "prompt_tokens": 237
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest1.json#1",
+  "allowed_token_mass": 0.994520692241318,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.842836152063683,
+  "prompt_tokens": 204
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest1.json#2",
+  "allowed_token_mass": 0.9963219781009961,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 13.877210519975051,
+  "prompt_tokens": 237
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest2.json#1",
+  "allowed_token_mass": 0.994520692241318,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.82300445297733,
+  "prompt_tokens": 204
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest2.json#2",
+  "allowed_token_mass": 0.9963219781009961,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 13.773255708045326,
+  "prompt_tokens": 237
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest2.json#1",
+  "allowed_token_mass": 0.994520692241318,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.502652285038494,
+  "prompt_tokens": 204
+ },
+ {
+  "id": "labeled-set-2026-09-22-harvest2.json#2",
+  "allowed_token_mass": 0.9963219781009961,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 13.714786724071018,
+  "prompt_tokens": 237
+ },
+ {
+  "id": "labeled-set-2026-09-22-mine-regress.json#1",
+  "allowed_token_mass": 0.9923207564401479,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.916833212017082,
+  "prompt_tokens": 212
+ },
+ {
+  "id": "labeled-set-2026-09-22-mine-regress.json#2",
+  "allowed_token_mass": 0.9925980330197176,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.926226107985713,
+  "prompt_tokens": 212
+ },
+ {
+  "id": "labeled-set-2026-09-22-mine-regress.json#3",
+  "allowed_token_mass": 0.9925980330197176,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.278708384023048,
+  "prompt_tokens": 212
+ },
+ {
+  "id": "labeled-set-2026-09-22-mine-regress.json#4",
+  "allowed_token_mass": 0.9894275411226857,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.878784975036979,
+  "prompt_tokens": 212
+ },
+ {
+  "id": "labeled-set-2026-09-22-mine-regress.json#5",
+  "allowed_token_mass": 0.9924297047185257,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 13.112658548983745,
+  "prompt_tokens": 214
+ },
+ {
+  "id": "labeled-set-2026-09-22-mine-regress.json#6",
+  "allowed_token_mass": 0.9908156263930062,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.589284764020704,
+  "prompt_tokens": 219
+ },
+ {
+  "id": "labeled-set-2026-09-22-mine-regress.json#7",
+  "allowed_token_mass": 0.9929274479589748,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.419540476985276,
+  "prompt_tokens": 225
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass5.json#1",
+  "allowed_token_mass": 0.9915183403797899,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.580999332945794,
+  "prompt_tokens": 198
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass5.json#2",
+  "allowed_token_mass": 0.9888399541717977,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.170744206057861,
+  "prompt_tokens": 198
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass5.json#3",
+  "allowed_token_mass": 0.989507501442706,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.416236910969019,
+  "prompt_tokens": 198
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass5.json#4",
+  "allowed_token_mass": 0.9883601896810108,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.623572899028659,
+  "prompt_tokens": 205
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass5.json#5",
+  "allowed_token_mass": 0.990030363980469,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.064196004997939,
+  "prompt_tokens": 199
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass5.json#1",
+  "allowed_token_mass": 0.9922516978253356,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.531148027046584,
+  "prompt_tokens": 198
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass5.json#2",
+  "allowed_token_mass": 0.9888399541717977,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.029345348011702,
+  "prompt_tokens": 198
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass5.json#3",
+  "allowed_token_mass": 0.989507501442706,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.432942921994254,
+  "prompt_tokens": 198
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass5.json#4",
+  "allowed_token_mass": 0.9891903675202581,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.5807084729895,
+  "prompt_tokens": 205
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass5.json#5",
+  "allowed_token_mass": 0.9913597013324025,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.233291176962666,
+  "prompt_tokens": 199
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass6.json#1",
+  "allowed_token_mass": 0.9917573028852339,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.918460292974487,
+  "prompt_tokens": 205
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass6.json#2",
+  "allowed_token_mass": 0.9902058724329156,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.803718348965049,
+  "prompt_tokens": 205
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass6.json#3",
+  "allowed_token_mass": 0.9925405544678059,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.106016780948266,
+  "prompt_tokens": 211
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass6.json#4",
+  "allowed_token_mass": 0.9910319657663466,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.312236997066066,
+  "prompt_tokens": 214
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass6.json#5",
+  "allowed_token_mass": 0.9924558627224047,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.761861370992847,
+  "prompt_tokens": 211
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass6.json#1",
+  "allowed_token_mass": 0.9917573028852339,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.048244796926156,
+  "prompt_tokens": 205
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass6.json#2",
+  "allowed_token_mass": 0.9902364291301041,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.213626683107577,
+  "prompt_tokens": 205
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass6.json#3",
+  "allowed_token_mass": 0.9925405544678059,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.182078628917225,
+  "prompt_tokens": 211
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass6.json#4",
+  "allowed_token_mass": 0.9910319657663466,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 12.328846630989574,
+  "prompt_tokens": 214
+ },
+ {
+  "id": "labeled-set-2026-09-22-pass6.json#5",
+  "allowed_token_mass": 0.9941678857265497,
+  "full_vocab_argmax_id": 32,
+  "total_seconds": 11.955983667983674,
+  "prompt_tokens": 211
+ }
+]
