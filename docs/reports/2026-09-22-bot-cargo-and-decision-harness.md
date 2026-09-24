@@ -507,3 +507,68 @@ reference/measurement machine; the deployment box is still an open decision
 `semif4b-q4.jsonl` (cli output) + `semif4b-q4-summary.json{,.rows,.extra}.json`
 (semif-post). Toolchain: `scripts/jevab/gguf-runner.py`,
 `scripts/jevab/semif-post.py` (committed with the A/B toolchain).
+
+## 14. Deployment: the Decider on the the 12 GB 3060 (2026-09-25) — the reflex is real
+
+**Placement decision (owner):** the Decider runs on the **the 12 GB 3060** —
+the llama-mux card of the Freistadt GPU server. The 3090 pair is explicitly out
+(it is the production 27B vLLM TP2), llama-backup's 3060 is the box the user
+does not want touched, and the 5600X 12T would only buy another ~2× over the
+measured CPU number — the 3060 is the only menu entry that actually hits the
+reflex target. (The earlier "the 3060 host = Pascal cards, excluded" note was wrong:
+those cards belong to the pascal VM; the 3060 host's own GPU is the 3060.)
+
+**Wiring.** `decider-2b-Q8_0.gguf` (2.01 GB) on the card's shared model store;
+a no-MTP section (the fine-tune has no MTP draft — the preset's global MTP
+settings are overridden) + a mux entry as the third model on the card, sibling
+of the 35B on the mainline router. The mux's `ensure_loaded` was extended (v2.5)
+to evict *same-port* siblings (35B ↔ Decider; together they don't fit the 12 GB
+card): loading one evicts the other, load ≈ 6 s, evict ≈ 4 s. The card is in
+the inference hub (`hub_model_*{server="the 3060 host",model="qwen35-decider-2b"}` —
+real engine metrics, no synthesis), so Prometheus/Grafana pick it up without
+new scrape targets. It is **exclusive with the 35B**: whatever is resident,
+the other's next request pays the ~10–60 s switch. The Decider is the resident
+model right now (OpenClaw/Dolly's 35B must be re-loaded from the hub).
+
+**The HTTP readout protocol (the non-obvious part).** The 925e1179
+llama-server's OAI `top_logprobs` body key only feeds the *chat* path; on
+`/v1/completions` the raw **`n_probs`** body key must be sent. With
+`logprobs:true, n_probs:8192, max_tokens:1` the server returns the raw
+**full-vocabulary T=1 softmax** for the slot (partial-sort over the whole
+row, no temperature, no sampler filtering). The Decider's T=1.3 option readout
+is recovered exactly:
+
+    p_T(i) = p_1(i)^(1/1.3) / Σ_j p_1(j)^(1/1.3)     (over the option letters)
+
+(the partition-function constant cancels in the ratio). Client:
+`scripts/jevab/decider-http-client.py` (imports `decider_readout()`; the live
+loop on the game testbed should call it directly per step). The Decider's tokenizer +
+`decider` package (text files only, 23 KB) are vendored at
+`models/decider-2b/`; the GGUF lives on host model stores, never in git.
+
+**Validation (41/41 corpus rows, 2026-09-25):** the HTTP/CUDA path reproduces
+the C-API/CPU Q8 reference run (report §13) — per-row Δp(oracle) 0.001–0.03
+(one outlier 0.086), top-1 identical on every row; summary
+conf_correct/conf_wrong 0.861/0.134 vs 0.856/0.141. I.e. **Q8 on the GPU is
+the same Q8 floor on the CPU** — float32/kernel noise, not a new variable.
+The one outlier (Δ 0.086, `mine-regress#4`, both runs chose correctly) had the
+CUDA path ~0.09 *less* confident in the oracle than the CPU path; the other 40
+rows are within 0.036 — no systematic direction between the two paths.
+
+**Latency (the answer to §13's open question).** ~**290 ms/row end-to-end**
+from a tailnet client (RTT + ~70–100 ms prefill for the 130-token harness
+prompt) — **~12× faster than the 4-core CPU Q8 run and 4× inside the ≪1 s
+reflex target.** The Decider is now a credible per-step reflex: at 1 decision
+per game-step the GPU cost is a few percent of one frame's budget.
+
+**Status of the two-tier loop.** The decision side of v4 (27B per-step judge +
+Laya obvious-yes pre-filter) is measured (report §7–11); the *reflex* layer is
+now the Decider. Wiring v5 = Decider readout (this script) as the per-step
+action chooser with its p(oracle) as the confidence, Laya's noul as the cheap
+veto (the Laya box), and the 27B (the 27B box) as the escalation judge on
+low-confidence/negative-veto — the design in the 2026-09-22 handoff, with the
+reflex finally fast enough to matter. Open: corpus world variety (the 29%
+travel-phase bias in the Decider's errors says the training data was weak
+exactly where its failure mode is), new actions (`give`, `place`), and the
+resident-model etiquette on the 3060 (a running Polis mission and heavy
+OpenClaw use on the same card ping-pong the switch).
