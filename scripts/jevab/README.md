@@ -46,6 +46,14 @@ Host-side `hf download` writes them; completion markers
 
 ## Operational notes
 
+- **The `weights/` entries must be real symlinks, not directories.** The 2026-09-22
+  session left plain directories there; `ln -sfn target weights/x` then *adds a
+  symlink inside* the existing directory instead of replacing it, and model
+  loading fails with FileNotFoundError on the (empty) old dir. Rebuild recipe:
+  `mv weights/x weights/x.old && ln -s /models/jevab/x weights/x`.
+- The CT must be **restarted after adding the `mp0` mount** (PVE applies `mp*`
+  at container start; a bind taken while the host dir was mid-replacement goes
+  stale and the container sees a frozen dir view).
 - `systemctl start jevab2` runs the supervisor; the old 4-model
   `jevab-supervisor` unit is stopped+disabled (superseded; its 2026-09-22
   skip placeholders are kept in `results/skipped-2026-09-22/`).
