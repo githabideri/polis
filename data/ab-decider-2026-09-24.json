@@ -1,0 +1,30 @@
+{
+ "corpus": "corpus/data/*.json",
+ "rows": null,
+ "models": {
+  "decider": {
+   "model": "decider",
+   "rows": 41,
+   "acc_top1": 0.7073,
+   "mean_p_oracle": 0.6554,
+   "brier": 0.4262,
+   "mean_ms": 18390.3,
+   "conf_correct": 0.8702,
+   "conf_wrong": 0.7561,
+   "by_mission": {
+    "mine": {
+     "n": 27,
+     "acc_top1": 0.8148,
+     "mean_p_oracle": 0.7117
+    },
+    "harvest": {
+     "n": 14,
+     "acc_top1": 0.5,
+     "mean_p_oracle": 0.5468
+    }
+   },
+   "wall_s": 762.2
+  }
+ },
+ "rows_detail": "decider.json.rows.json"
+}

@@ -1,0 +1,863 @@
+[
+ {
+  "set": "labeled-set-2026-09-22-harvest-tau-0.25.json",
+  "step": 1,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512010, 3, 512029), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.14383183419704437,
+   "harvest_target": 0.04994649067521095,
+   "goto_base": 0.7738184332847595,
+   "wait": 0.03240329772233963
+  },
+  "ms": 22657.059852033854
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest-tau-0.25.json",
+  "step": 2,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512017, 3, 512029), near_target=yes, near_base=no, crop_present=no\ncarrying: game:seeds-carrot, game:vegetable-carrot, game:linensack, game:pickaxe-iron\nsince_last_step: crop gone, harvested item now carried, phase travel -> return\nlast_action: harvested game:crop-carrot-7 with collection\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.03279239684343338,
+   "harvest_target": 0.006095218472182751,
+   "goto_base": 0.949164092540741,
+   "wait": 0.01194821298122406
+  },
+  "ms": 20076.204792014323
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest-tau-0.41.json",
+  "step": 1,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512010, 3, 512029), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.14383183419704437,
+   "harvest_target": 0.04994649067521095,
+   "goto_base": 0.7738184332847595,
+   "wait": 0.03240329772233963
+  },
+  "ms": 20019.755365909077
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest-tau-0.41.json",
+  "step": 2,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512017, 3, 512029), near_target=yes, near_base=no, crop_present=no\ncarrying: game:seeds-carrot, game:vegetable-carrot, game:linensack\nsince_last_step: crop gone, harvested item now carried, phase travel -> return\nlast_action: harvested game:crop-carrot-7 with collection\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.03281926363706589,
+   "harvest_target": 0.00528087979182601,
+   "goto_base": 0.9499417543411255,
+   "wait": 0.011958002112805843
+  },
+  "ms": 18774.435557075776
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest-tau-0.6.json",
+  "step": 1,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512010, 3, 512030), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.14344695210456848,
+   "harvest_target": 0.04747466370463371,
+   "goto_base": 0.7717478275299072,
+   "wait": 0.03733055293560028
+  },
+  "ms": 18757.19139201101
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest-tau-0.6.json",
+  "step": 2,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512017, 3, 512029), near_target=yes, near_base=no, crop_present=no\ncarrying: game:seeds-carrot, game:vegetable-carrot, game:linensack\nsince_last_step: crop gone, harvested item now carried, phase travel -> return\nlast_action: harvested game:crop-carrot-7 with collection\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.03281926363706589,
+   "harvest_target": 0.00528087979182601,
+   "goto_base": 0.9499417543411255,
+   "wait": 0.011958002112805843
+  },
+  "ms": 22829.873841954395
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest1.json",
+  "step": 1,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512010, 3, 512029), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.14383183419704437,
+   "harvest_target": 0.04994649067521095,
+   "goto_base": 0.7738184332847595,
+   "wait": 0.03240329772233963
+  },
+  "ms": 18908.791127963923
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest1.json",
+  "step": 2,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512016, 3, 512028), near_target=yes, near_base=no, crop_present=no\ncarrying: game:seeds-carrot, game:vegetable-carrot, game:linensack\nsince_last_step: crop gone, harvested item now carried, phase travel -> return\nlast_action: harvested game:crop-carrot-7 with collection\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.03281926363706589,
+   "harvest_target": 0.00528087979182601,
+   "goto_base": 0.9499417543411255,
+   "wait": 0.011958002112805843
+  },
+  "ms": 19844.427275005728
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest1.json",
+  "step": 1,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512010, 3, 512029), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.14383183419704437,
+   "harvest_target": 0.04994649067521095,
+   "goto_base": 0.7738184332847595,
+   "wait": 0.03240329772233963
+  },
+  "ms": 20272.16072694864
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest1.json",
+  "step": 2,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512016, 3, 512028), near_target=yes, near_base=no, crop_present=no\ncarrying: game:seeds-carrot, game:vegetable-carrot, game:linensack\nsince_last_step: crop gone, harvested item now carried, phase travel -> return\nlast_action: harvested game:crop-carrot-7 with collection\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.03281926363706589,
+   "harvest_target": 0.00528087979182601,
+   "goto_base": 0.9499417543411255,
+   "wait": 0.011958002112805843
+  },
+  "ms": 19851.50708607398
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest2.json",
+  "step": 1,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512010, 3, 512029), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.14383183419704437,
+   "harvest_target": 0.04994649067521095,
+   "goto_base": 0.7738184332847595,
+   "wait": 0.03240329772233963
+  },
+  "ms": 18842.56180806551
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest2.json",
+  "step": 2,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512016, 3, 512028), near_target=yes, near_base=no, crop_present=no\ncarrying: game:seeds-carrot, game:vegetable-carrot, game:linensack\nsince_last_step: crop gone, harvested item now carried, phase travel -> return\nlast_action: harvested game:crop-carrot-7 with collection\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.03281926363706589,
+   "harvest_target": 0.00528087979182601,
+   "goto_base": 0.9499417543411255,
+   "wait": 0.011958002112805843
+  },
+  "ms": 21040.961001999676
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest2.json",
+  "step": 1,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512010, 3, 512029), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.14383183419704437,
+   "harvest_target": 0.04994649067521095,
+   "goto_base": 0.7738184332847595,
+   "wait": 0.03240329772233963
+  },
+  "ms": 18151.776146958582
+ },
+ {
+  "set": "labeled-set-2026-09-22-harvest2.json",
+  "step": 2,
+  "mission": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512016, 3, 512028), near_target=yes, near_base=no, crop_present=no\ncarrying: game:seeds-carrot, game:vegetable-carrot, game:linensack\nsince_last_step: crop gone, harvested item now carried, phase travel -> return\nlast_action: harvested game:crop-carrot-7 with collection\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.03281926363706589,
+   "harvest_target": 0.00528087979182601,
+   "goto_base": 0.9499417543411255,
+   "wait": 0.011958002112805843
+  },
+  "ms": 17938.446565065533
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "step": 1,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512010, 3, 512029), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.1261628419160843,
+   "mine_target": 0.05571592226624489,
+   "goto_base": 0.7472652196884155,
+   "wait": 0.07085602730512619
+  },
+  "ms": 18943.773888982832
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "step": 2,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512010, 3, 512029), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.4803105890750885,
+   "mine_target": 0.39628177881240845,
+   "goto_base": 0.0892767682671547,
+   "wait": 0.03413088247179985
+  },
+  "ms": 18881.970147020184
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "step": 3,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512010, 3, 512029), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.4803105890750885,
+   "mine_target": 0.39628177881240845,
+   "goto_base": 0.0892767682671547,
+   "wait": 0.03413088247179985
+  },
+  "ms": 18480.55212094914
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "step": 4,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512013, 3, 512029), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.6381786465644836,
+   "mine_target": 0.22161148488521576,
+   "goto_base": 0.12446223199367523,
+   "wait": 0.015747709199786186
+  },
+  "ms": 19076.179758063518
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "step": 5,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 4, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nsince_last_step: phase travel -> mine\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.018077319487929344,
+   "mine_target": 0.9316577315330505,
+   "goto_base": 0.018077319487929344,
+   "wait": 0.0321875736117363
+  },
+  "ms": 18952.89229392074
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "step": 6,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512018, 4, 512030), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.020607292652130127,
+   "mine_target": 0.9194011688232422,
+   "goto_base": 0.011030293069779873,
+   "wait": 0.04896128922700882
+  },
+  "ms": 19167.009063996375
+ },
+ {
+  "set": "labeled-set-2026-09-22-mine-regress.json",
+  "step": 7,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512018, 3, 512030), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:stone-granite, game:linensack\nsince_last_step: marker gone, phase mine -> return\nlast_action: mining started\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.022341053932905197,
+   "mine_target": 0.006400818936526775,
+   "goto_base": 0.94996577501297,
+   "wait": 0.02129238098859787
+  },
+  "ms": 19137.131083989516
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "step": 1,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512009, 3, 512028), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:linensack\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.11734273284673691,
+   "mine_target": 0.0518207922577858,
+   "goto_base": 0.7292541861534119,
+   "wait": 0.10158227384090424
+  },
+  "ms": 13451.708844047971
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "step": 2,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512009, 3, 512028), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:linensack\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.7154173851013184,
+   "mine_target": 0.19534935057163239,
+   "goto_base": 0.06783626228570938,
+   "wait": 0.021397000178694725
+  },
+  "ms": 12911.750730942003
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "step": 3,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 3, 512028), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.028868846595287323,
+   "mine_target": 0.9199334383010864,
+   "goto_base": 0.01784982718527317,
+   "wait": 0.03334786742925644
+  },
+  "ms": 15224.289022036828
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "step": 4,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512017, 3, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.028258293867111206,
+   "mine_target": 0.9004775881767273,
+   "goto_base": 0.01587052457034588,
+   "wait": 0.05539357289671898
+  },
+  "ms": 18686.122626066208
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "step": 5,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512016, 3, 512029), near_target=yes, near_base=no, marker_present=no\ncarrying: game:linensack\nlast_action: mining started\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.020467527210712433,
+   "mine_target": 0.006773859262466431,
+   "goto_base": 0.958139955997467,
+   "wait": 0.014618697576224804
+  },
+  "ms": 13424.980056937784
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "step": 1,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512009, 3, 512029), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:linensack\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.1164628267288208,
+   "mine_target": 0.05396530404686928,
+   "goto_base": 0.7237858176231384,
+   "wait": 0.10578607767820358
+  },
+  "ms": 12928.170549916103
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "step": 2,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512009, 3, 512028), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:linensack\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.7154173851013184,
+   "mine_target": 0.19534935057163239,
+   "goto_base": 0.06783626228570938,
+   "wait": 0.021397000178694725
+  },
+  "ms": 14311.642096959986
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "step": 3,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 3, 512028), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.028868846595287323,
+   "mine_target": 0.9199334383010864,
+   "goto_base": 0.01784982718527317,
+   "wait": 0.03334786742925644
+  },
+  "ms": 19594.898847979493
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "step": 4,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 3, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.028402529656887054,
+   "mine_target": 0.9050738215446472,
+   "goto_base": 0.015951531007885933,
+   "wait": 0.05057212710380554
+  },
+  "ms": 20581.50074398145
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass5.json",
+  "step": 5,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512017, 3, 512029), near_target=yes, near_base=no, marker_present=no\ncarrying: game:linensack\nlast_action: mining started\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.02144535444676876,
+   "mine_target": 0.006446804851293564,
+   "goto_base": 0.9567906856536865,
+   "wait": 0.015317097306251526
+  },
+  "ms": 13002.408177941106
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "step": 1,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512010, 3, 512029), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.13548973202705383,
+   "mine_target": 0.05179830640554428,
+   "goto_base": 0.7289377450942993,
+   "wait": 0.08377432823181152
+  },
+  "ms": 17919.974772026762
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "step": 2,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512009, 3, 512028), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.7859104871749878,
+   "mine_target": 0.12052316218614578,
+   "goto_base": 0.0676887184381485,
+   "wait": 0.025877676904201508
+  },
+  "ms": 19569.44529095199
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "step": 3,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 3, 512028), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: pickaxe dropped, phase travel -> mine\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.02399704046547413,
+   "mine_target": 0.9268366098403931,
+   "goto_base": 0.015568327158689499,
+   "wait": 0.033598076552152634
+  },
+  "ms": 18675.389053998515
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "step": 4,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 3, 512028), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: dropped 1x game:pickaxe-iron\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.021901164203882217,
+   "mine_target": 0.9312611818313599,
+   "goto_base": 0.009671968407928944,
+   "wait": 0.037165671586990356
+  },
+  "ms": 18193.62302403897
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "step": 5,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512017, 3, 512028), near_target=yes, near_base=no, marker_present=no\ncarrying: game:linensack\nsince_last_step: marker removed, phase mine -> return\nlast_action: mining started\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.019418055191636086,
+   "mine_target": 0.006426525767892599,
+   "goto_base": 0.953781008720398,
+   "wait": 0.020374413579702377
+  },
+  "ms": 20700.431565986946
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "step": 1,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512010, 3, 512029), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.13548973202705383,
+   "mine_target": 0.05179830640554428,
+   "goto_base": 0.7289377450942993,
+   "wait": 0.08377432823181152
+  },
+  "ms": 17349.06116500497
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "step": 2,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512009, 3, 512029), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.7812727689743042,
+   "mine_target": 0.12571293115615845,
+   "goto_base": 0.06728928536176682,
+   "wait": 0.025724969804286957
+  },
+  "ms": 19775.23823606316
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "step": 3,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 3, 512028), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: pickaxe dropped, phase travel -> mine\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.02399704046547413,
+   "mine_target": 0.9268366098403931,
+   "goto_base": 0.015568327158689499,
+   "wait": 0.033598076552152634
+  },
+  "ms": 18640.656862058677
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "step": 4,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 3, 512028), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: dropped 1x game:pickaxe-iron\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.021901164203882217,
+   "mine_target": 0.9312611818313599,
+   "goto_base": 0.009671968407928944,
+   "wait": 0.037165671586990356
+  },
+  "ms": 19473.819773993455
+ },
+ {
+  "set": "labeled-set-2026-09-22-pass6.json",
+  "step": 5,
+  "mission": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512016, 3, 512028), near_target=yes, near_base=no, marker_present=no\ncarrying: game:linensack\nsince_last_step: marker removed, phase mine -> return\nlast_action: mining started\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.01771293580532074,
+   "mine_target": 0.005862206220626831,
+   "goto_base": 0.9578394889831543,
+   "wait": 0.018585314974188805
+  },
+  "ms": 18981.86010599602
+ }
+]

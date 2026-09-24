@@ -1,0 +1,30 @@
+{
+ "corpus": "corpus/data/*.json",
+ "rows": null,
+ "models": {
+  "semif": {
+   "model": "semif",
+   "rows": 41,
+   "acc_top1": 0.4634,
+   "mean_p_oracle": 0.0,
+   "brier": 1.0,
+   "mean_ms": 46382.9,
+   "conf_correct": 0.0,
+   "conf_wrong": 0.0,
+   "by_mission": {
+    "mine": {
+     "n": 27,
+     "acc_top1": 0.4444,
+     "mean_p_oracle": 0.0
+    },
+    "harvest": {
+     "n": 14,
+     "acc_top1": 0.5,
+     "mean_p_oracle": 0.0
+    }
+   },
+   "wall_s": 1908.7
+  }
+ },
+ "rows_detail": "semif.json.rows.json"
+}

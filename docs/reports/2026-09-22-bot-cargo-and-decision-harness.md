@@ -353,3 +353,81 @@ deployment-relevant number anyway.
 
 Results land here as `data/ab-<model>-2026-09-22.json` (plus per-row
 `*.rows.json` sidecars with full probability vectors) as each run completes.
+
+## 12. Decider 2B vs SemIf 4B on the same 41-row corpus (2026-09-24)
+
+The two candidates the 2026-09-20 "Open Jev" analysis picked — **Decider 2B**
+(`Mapika/decider-2b`, gated-delta-net 2B) and **SemIf 4B** (`Qwen/Qwen3.5-4B`
+as a frozen base with a letter-slot logit readout, `TheoLeeCJ/SemIf`) — were
+run on the identical 41-row merged corpus (27 mine + 14 harvest, §11) as
+choice questions over the mission action set.
+
+**Hosting.** The 2026-09-22/23 attempt on the 27B box (2x3090 box) never produced
+results: HF weight downloads stalled all night, and the host was reinstalled
+2026-09-23 (the toolchain was recovered from the old rpool, imported
+read-only as `oldrpool` on the 5600X host). The runs were re-homed on **the CPU batch box
+"jevab" (, 4-core i5-8500T, 16 G after the 2026-09-24 bump — the 4 G
+cgroup was the original disqualifier)** with weights on the host's shared
+model store `/models/jevab/`. the 27B box stays production vLLM; bench work no
+longer sits on a prod inference box. Both models ran CPU bf16 on the
+transformers **pure-torch reference** gated-delta-net path (no
+`causal_conv1d`/`flash-linear-attention` kernels installed) — so the latency
+numbers below are reference-path numbers, not deployment numbers. Harness,
+runner and environment: `scripts/jevab/` (committed 2026-09-24; the
+durability bug of the 324 attempt — toolchain only on an ephemeral CT — is
+fixed by keeping it in the repo).
+
+**Results** (`data/ab-decider-2026-09-24.json`, `data/ab-semif-2026-09-24.json`,
+per-row `*.rows.json` sidecars):
+
+| model | top-1 | p(oracle) mean | Brier | conf. correct | conf. wrong | p(oracle)>0.5: correct / wrong | wall (4C) |
+|---|---|---|---|---|---|---|---|
+| Laya 421M (09-22) | 0.415 | 0.335 | 0.641 | 0.517 | 0.341 | 25/27 · 0/14 | 429 s |
+| **Decider 2B** | **0.707** | **0.655** | **0.426** | **0.870** | **0.136** | **27/29 · 0/12** | 762 s |
+| SemIf 4B | 0.463 | **0.000** | **1.000** | 0.000 | 0.000 | 0/19 · 0/22 | 1909 s |
+
+By mission (Decider): mine top-1 0.815 (p_or 0.712), harvest 0.500 (p_or 0.547)
+— vs Laya's 0.630 / 0.000.
+
+**Reading.**
+
+1. **Decider 2B fixes the p-band overlap problem.** That overlap (Laya:
+   confident on both correct and wrong answers, §11 and the doubt-arbiter
+   analysis) was what disqualified the 421M reflex for the
+   concrete-observable regime. Decider separates cleanly: p(oracle) > 0.5 on
+   27/29 correct rows and **0/12** wrong rows; mean p(oracle) 0.870 correct
+   vs 0.136 wrong. Its remaining 12 errors are not noise — they are **one
+   systematic bias**: `goto_base` chosen where the oracle is `goto_target`
+   (travel-phase rows, p(oracle) ≈ 0.13 throughout). A single fixable habit
+   (base-preference in the travel phase), the kind of thing a prompt/label
+   tweak or a small fine-tune targets — not a capacity wall.
+2. **Harvest sensitivity survived** (0% → 50%), at roughly the same level as
+   the mine improvement — the 2B generalizes across the two state schemas,
+   which a 421M fine-tune could not.
+3. **SemIf 4B is not a measurement.** p(oracle) = exactly 0.000 on all 41
+   rows (Brier 1.0, all probability mass collapsed onto a single
+   argmax action, `goto_target`, even on the 27 mine rows the small models
+   handle). The letter-slot readout produced a degenerate distribution on
+   this stack — most plausibly a mismatch between the readout and this
+   model/tokenizer build (or bf16-CPU collapse of the reference
+   gated-delta-net path), not "the 4B is bad". We **cannot claim the 4B is
+   worse than the 2B** on this evidence. Harness follow-up: pin the
+   transformers version to the SemIf development era, verify the
+   letter-slot mapping against Qwen3.5's tokenizer, and run one fp32 probe
+   before re-judging.
+4. **Latency is the deployment question, not the accuracy question.**
+   Reference-path CPU: Decider 18.4 s/question on the 4-core i5-8500T (the
+   09-22 handoff's "10.4 s" Laya figure was the same story — choice-type
+   questions, small CPU; the live loop's noul questions run ~1.1 s on the
+   2-core openjev box). For a per-step reflex the 2B needs the fast kernels
+   (`fla`/`causal_conv1d`) on a GPU or a quantized GGUF on CPU; that
+   latency measurement is the next step (the 12 GB 3060, campaign handoff) before
+   anyone calls the 2B "the Jev".
+
+**Verdict (accuracy-only, 41 rows):** Decider 2B is the Jev candidate —
+clearly better than Laya 421M on every axis that mattered, with its residual
+error concentrated in one systematic direction. SemIf 4B: verdict withheld
+(harness, not model). Caveats carried forward: oracle labels are coarse by
+design ("better-than-oracle" rows exist), this measures choice-type
+questions only (the live noul gate is a different question type), and all
+latency here is CPU-reference.
