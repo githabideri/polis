@@ -1,0 +1,11 @@
+[Unit]
+Description=jevab A/B supervisor v2 (decider 2B + semif 4B, CPU)
+After=network-online.target local-fs.target
+
+[Service]
+WorkingDirectory=/var/jevab
+ExecStart=/bin/bash /var/jevab/supervisor2.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
