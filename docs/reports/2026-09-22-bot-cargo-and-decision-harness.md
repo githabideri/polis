@@ -809,6 +809,48 @@ expected. Note the (model, question, state-text) calibration unit
 changed (new `items:` line, new option list) — the tau defaults are
 advisory pending re-derivation on the next batch of dual-p rows.
 
+### Threshold stress test on the broad corpus (2026-09-25, third dual-p pass)
+
+Item (e) — re-deriving the taus on the new calibration unit (the 7-option
+`items:`-bearing state text) — was done by generating the dual readouts
+*offline* instead of waiting for live rows (live missions collapse to 2
+steps and produced only 4 dual-p rows in 6 runs). `scripts/jevab/
+dualp-runner.py` ran all 169 corpus rows (123 original + 46 added
+`give_tool`-while-carrying variants; 151 carry both readouts — the 18
+build-mission rows have no Laya question by design) through Laya noul
+(the Laya box) and the Decider (the 3060 card, fast path): **84 correct-side**
+(proposal = oracle) vs **67 faulty-side** (26 goto_base skip-goal, 46
+give_tool-while-carrying, 1 mine_target).
+
+The result is a *negative* one, and it is the useful one:
+
+- **No gate separates on this corpus.** Every Youden point has negative
+  margins on both sides: Laya p (correct 0.260–0.780 vs faulty
+  0.183–0.764, J=0.167), Decider p among Laya-passing (0.013–0.954 vs
+  0.027–0.905, J=0.364), Laya p among doubly-confident (0.351–0.780 vs
+  0.358–0.764, J=0.218). The 09-22/09-25 tau derivations looked clean
+  because they ran on *narrow* live distributions (policy proposals on
+  active missions), where the two populations barely mix.
+- **At the current defaults (0.35/0.50/0.40) the stress corpus
+  short-circuits 47/151 rows, of which 20 are faulty** (Wilson 95% UB
+  19.6%) — 13 goto_base skip-goals (Laya p up to 0.764 — no Laya
+  threshold catches them, correct rows reach 0.780) and 7
+  give_tool-while-carrying. Both leak families are exactly the two known
+  weak points: the Decider's travel-phase bias and the spontaneous-
+  substitution gap.
+- **Consequence for the defaults:** the tau values were left *where
+  they are*. Chasing the Youden points (e.g. tau_dec 0.907, tau_strong
+  0.747) would be an artifact of the overlap — they "separate" by
+  killing the short-circuit benefit (correct SC 10/39, 20/55) rather
+  than by finding a boundary. On this corpus the gates' function is
+  **load control** (47% of rows skip the 27B; the live narrow
+  distribution short-circuits more), and *safety is carried by the 27B
+  catching what leaks plus the last-resort deterministic repair* — which
+  is the architecture's design, not a compromise. The lever for the two
+  leak families is the tiers themselves: world-variety corpus growth +
+  the gentle fine-tune (boundary smoothing; see the llmlab addendum's
+  in-context-boundary literature), not threshold tuning.
+
 ### Next (in order)
 
 (a) **done** — tailnet node approved, fast decider path live on the the 3060 host
@@ -819,8 +861,12 @@ rate; (c) **done** — substitution-form 27B tool rule (v5f run);
 (d) **in progress** — corpus growth: give_tool grid (**done**), 7-option
 corpus (**done**, 123 rows) — next: world variety (distances, target
 types, night/day) and missions that actually produce ground items (the
-pickup phase is live-wired but unexercised); (e) re-derive the taus on
-the new calibration unit; (f) gentle fine-tune (r 4-8, lr 1-3e-5,
+pickup phase is live-wired but unexercised); (e) **done** — tau
+re-derivation on the new calibration unit ran as an offline stress test
+on 151 dual-p rows: no gate separates (all Youden points negative-margin);
+defaults left at 0.35/0.50/0.40 by decision — gates do load control, the
+judge + last-resort repair do safety (see the stress-test section above);
+(f) gentle fine-tune (r 4-8, lr 1-3e-5,
 early-stop) once the corpus is several times larger — the aggressive
 r16 attempt collapsed the model (76% → 29% holdout); (g) `place_block`
 build mission end-to-end (execute() exists).
