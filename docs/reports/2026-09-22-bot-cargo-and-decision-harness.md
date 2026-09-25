@@ -647,10 +647,21 @@ correct action *proposed* to endorse it.
    `mine_target` proposal even when told "never mine_target without a
    pickaxe". The fix is a substitution-form rule ("no pickaxe in inventory
    ⇒ answer give_tool"), not a stronger warning.
-3. **The Decider generalizes healthily to a new 5th option** (`give_tool`
-   added to the mine action set): p 0.23 — low, uncalibrated, no mass
-   distortion — while its trained actions keep 0.90-0.95 confidence.
-   5 options cost nothing in the readout (letter slots, max 255).
+3. **The Decider generalizes to a new 5th option as a detector, not a selector.**
+   30 labeled rows built around the live no-tool states
+   (`scripts/jevab/gen-give-tool-rows.py`, `data/give-tool-rows-2026-09-25.json`):
+   with-pickaxe controls stay at 0.921–0.926 (no 5-option drift in the
+   trained readout); p(give_tool) separates cleanly by state — 0.255 (no
+   tool, give_tool proposed), 0.060 (no tool, mine proposed), 0.009
+   (with tool) — but the *choice* is mine_target on 30/30: the trained
+   phase action owns the argmax, the new option only gets probability
+   mass. Loop consequence: a proposed `give_tool` reads 0.255 < tau_dec
+   0.5, so the Decider correctly raises doubt and the 27B endorses it
+   (the self-repair path); but a proposed tool-less `mine_target` reads
+   0.843 — *confirmed* — so the Decider does not flag the 27B's own
+   failure mode. B-type rows are the Laya-veto + last-resort-repair
+   regime (exactly how v5e completed); fine-tuning on the generated
+   A/B rows is the path to make the 2B a give_tool selector.
 4. **Live Laya noul sits lower than its corpus band**: 0.21-0.48 across
    these runs (vs up to ~0.9 in the 09-22 sets). Mostly below tau-strong
    0.6, so with the strong-gate the 27B is the actual decider on most

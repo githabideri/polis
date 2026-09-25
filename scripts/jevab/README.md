@@ -135,4 +135,19 @@ naive gate would trust). It also carries the **`give_tool` action**
 (oracle = phase tool missing; self-repair verified live) and a
 `place_block` execute path (not yet in a prompt set). Run data:
 `data/v5-*-2026-09-25*.json`; full account in report §15.
+
+- **`gen-give-tool-rows.py`** — builds the `give_tool` labeled grid (5-option
+  readout) around the live no-tool states: 12 A-rows (no tool,
+  `give_tool` proposed → oracle `give_tool`), 12 B-rows (no tool,
+  `mine_target` proposed → oracle `give_tool` — the 27B's own failure
+  mode), 6 C-controls (with pickaxe → oracle `mine_target`). Measured on
+  the CPU batch box (`data/give-tool-rows-2026-09-25.json`, report §15 finding 3):
+  controls unshifted (0.921-0.926); p(`give_tool`) 0.255 / 0.060 / 0.009
+  across A/B/C — the 2B **detects** the no-tool state but never **selects**
+  `give_tool` (0/30 choice; the trained phase action owns the argmax).
+  A-rows read below tau_dec (doubt → 27B endorses: the self-repair path);
+  B-rows read 0.843 *confirmed* (the Decider does not flag its own tier's
+  failure mode — that is the Laya-veto + last-resort-repair regime).
+  The generated A/B rows are the fine-tune input to make the 2B a
+  `give_tool` selector.
 `../botview.py` is the one-command live overview (follow + JSONL sidecar).

@@ -1,0 +1,662 @@
+[
+ {
+  "id": "A00",
+  "type": "A",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: pickaxe dropped\nlast_action: Tool required: block needs tier 2\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.05620388314127922,
+   "mine_target": 0.5308908820152283,
+   "goto_base": 0.023123852908611298,
+   "wait": 0.12787789106369019,
+   "give_tool": 0.2619035243988037
+  },
+  "choice": "mine_target",
+  "ms": 3530
+ },
+ {
+  "id": "B00",
+  "type": "B",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: pickaxe dropped\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.026036735624074936,
+   "mine_target": 0.7935568690299988,
+   "goto_base": 0.013785880990326405,
+   "wait": 0.07346872985363007,
+   "give_tool": 0.09315183013677597
+  },
+  "choice": "mine_target",
+  "ms": 3310
+ },
+ {
+  "id": "A01",
+  "type": "A",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.04279853031039238,
+   "mine_target": 0.575823962688446,
+   "goto_base": 0.01566089317202568,
+   "wait": 0.12367419898509979,
+   "give_tool": 0.2420424073934555
+  },
+  "choice": "mine_target",
+  "ms": 2974
+ },
+ {
+  "id": "B01",
+  "type": "B",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.021266357973217964,
+   "mine_target": 0.8784506320953369,
+   "goto_base": 0.010575586929917336,
+   "wait": 0.06106431409716606,
+   "give_tool": 0.028643080964684486
+  },
+  "choice": "mine_target",
+  "ms": 3687
+ },
+ {
+  "id": "A02",
+  "type": "A",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:rock-granite\nsince_last_step: pickaxe dropped\nlast_action: Tool required: block needs tier 2\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.05123811587691307,
+   "mine_target": 0.4954613149166107,
+   "goto_base": 0.023079808801412582,
+   "wait": 0.1313188523054123,
+   "give_tool": 0.29890182614326477
+  },
+  "choice": "mine_target",
+  "ms": 3783
+ },
+ {
+  "id": "B02",
+  "type": "B",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:rock-granite\nsince_last_step: pickaxe dropped\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.024958649650216103,
+   "mine_target": 0.7926638126373291,
+   "goto_base": 0.014034906402230263,
+   "wait": 0.06975322961807251,
+   "give_tool": 0.09858938306570053
+  },
+  "choice": "mine_target",
+  "ms": 3482
+ },
+ {
+  "id": "A03",
+  "type": "A",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:rock-granite\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.041746705770492554,
+   "mine_target": 0.5645768642425537,
+   "goto_base": 0.015228698961436749,
+   "wait": 0.1262812316417694,
+   "give_tool": 0.2521665096282959
+  },
+  "choice": "mine_target",
+  "ms": 3551
+ },
+ {
+  "id": "B03",
+  "type": "B",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:rock-granite\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.018233882263302803,
+   "mine_target": 0.8970678448677063,
+   "goto_base": 0.009516921825706959,
+   "wait": 0.051303621381521225,
+   "give_tool": 0.023877743631601334
+  },
+  "choice": "mine_target",
+  "ms": 3273
+ },
+ {
+  "id": "A04",
+  "type": "A",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 4, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: pickaxe dropped\nlast_action: Tool required: block needs tier 2\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.054275233298540115,
+   "mine_target": 0.5380510687828064,
+   "goto_base": 0.023088496178388596,
+   "wait": 0.12493931502103806,
+   "give_tool": 0.2596459686756134
+  },
+  "choice": "mine_target",
+  "ms": 3775
+ },
+ {
+  "id": "B04",
+  "type": "B",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 4, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: pickaxe dropped\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.026644431054592133,
+   "mine_target": 0.801392674446106,
+   "goto_base": 0.014399949461221695,
+   "wait": 0.0686694085597992,
+   "give_tool": 0.08889350295066833
+  },
+  "choice": "mine_target",
+  "ms": 3565
+ },
+ {
+  "id": "A05",
+  "type": "A",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 4, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.04227590188384056,
+   "mine_target": 0.5752128958702087,
+   "goto_base": 0.01550290547311306,
+   "wait": 0.11531002074480057,
+   "give_tool": 0.25169825553894043
+  },
+  "choice": "mine_target",
+  "ms": 3165
+ },
+ {
+  "id": "B05",
+  "type": "B",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 4, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.020034292712807655,
+   "mine_target": 0.879951536655426,
+   "goto_base": 0.01032500434666872,
+   "wait": 0.05945446342229843,
+   "give_tool": 0.03023463301360607
+  },
+  "choice": "mine_target",
+  "ms": 3309
+ },
+ {
+  "id": "A06",
+  "type": "A",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 4, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:rock-granite\nsince_last_step: pickaxe dropped\nlast_action: Tool required: block needs tier 2\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.05333053693175316,
+   "mine_target": 0.5002047419548035,
+   "goto_base": 0.024329103529453278,
+   "wait": 0.13326086103916168,
+   "give_tool": 0.28887471556663513
+  },
+  "choice": "mine_target",
+  "ms": 3601
+ },
+ {
+  "id": "B06",
+  "type": "B",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 4, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:rock-granite\nsince_last_step: pickaxe dropped\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.025798499584197998,
+   "mine_target": 0.7906883955001831,
+   "goto_base": 0.014505598694086075,
+   "wait": 0.07290657609701157,
+   "give_tool": 0.09610085189342499
+  },
+  "choice": "mine_target",
+  "ms": 3579
+ },
+ {
+  "id": "A07",
+  "type": "A",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 4, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:rock-granite\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.041034240275621414,
+   "mine_target": 0.6116015911102295,
+   "goto_base": 0.01595192402601242,
+   "wait": 0.12292259186506271,
+   "give_tool": 0.20848970115184784
+  },
+  "choice": "mine_target",
+  "ms": 3725
+ },
+ {
+  "id": "B07",
+  "type": "B",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 4, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:rock-granite\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.019011586904525757,
+   "mine_target": 0.8914089798927307,
+   "goto_base": 0.010061357170343399,
+   "wait": 0.053228333592414856,
+   "give_tool": 0.02628973312675953
+  },
+  "choice": "mine_target",
+  "ms": 2979
+ },
+ {
+  "id": "A08",
+  "type": "A",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512005, 3, 512015), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: pickaxe dropped\nlast_action: Tool required: block needs tier 2\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.06152349337935448,
+   "mine_target": 0.5413038730621338,
+   "goto_base": 0.023758539929986,
+   "wait": 0.12983040511608124,
+   "give_tool": 0.24358367919921875
+  },
+  "choice": "mine_target",
+  "ms": 3368
+ },
+ {
+  "id": "B08",
+  "type": "B",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512005, 3, 512015), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: pickaxe dropped\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.025952905416488647,
+   "mine_target": 0.8057341575622559,
+   "goto_base": 0.01358687411993742,
+   "wait": 0.06609755009412766,
+   "give_tool": 0.08862841874361038
+  },
+  "choice": "mine_target",
+  "ms": 3469
+ },
+ {
+  "id": "A09",
+  "type": "A",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512005, 3, 512015), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.04277385026216507,
+   "mine_target": 0.5853805541992188,
+   "goto_base": 0.01529647596180439,
+   "wait": 0.11315464228391647,
+   "give_tool": 0.24339449405670166
+  },
+  "choice": "mine_target",
+  "ms": 3397
+ },
+ {
+  "id": "B09",
+  "type": "B",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512005, 3, 512015), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.02034371718764305,
+   "mine_target": 0.8829342126846313,
+   "goto_base": 0.010516091249883175,
+   "wait": 0.05899098515510559,
+   "give_tool": 0.027215000241994858
+  },
+  "choice": "mine_target",
+  "ms": 2860
+ },
+ {
+  "id": "A10",
+  "type": "A",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512005, 3, 512015), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:rock-granite\nsince_last_step: pickaxe dropped\nlast_action: Tool required: block needs tier 2\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.04893441125750542,
+   "mine_target": 0.4962606132030487,
+   "goto_base": 0.023198572918772697,
+   "wait": 0.12587939202785492,
+   "give_tool": 0.3057270348072052
+  },
+  "choice": "mine_target",
+  "ms": 3675
+ },
+ {
+  "id": "B10",
+  "type": "B",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512005, 3, 512015), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:rock-granite\nsince_last_step: pickaxe dropped\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.025651106610894203,
+   "mine_target": 0.8019991517066956,
+   "goto_base": 0.012887498363852501,
+   "wait": 0.0653868317604065,
+   "give_tool": 0.09407538920640945
+  },
+  "choice": "mine_target",
+  "ms": 3876
+ },
+ {
+  "id": "A11",
+  "type": "A",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512005, 3, 512015), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:rock-granite\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.04528023675084114,
+   "mine_target": 0.6077212691307068,
+   "goto_base": 0.016275331377983093,
+   "wait": 0.12579499185085297,
+   "give_tool": 0.2049281746149063
+  },
+  "choice": "mine_target",
+  "ms": 3151
+ },
+ {
+  "id": "B11",
+  "type": "B",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512005, 3, 512015), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:rock-granite\nsince_last_step: no change\nlast_action: Tool required: block needs tier 2\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "give_tool",
+  "probs": {
+   "goto_target": 0.018220143392682076,
+   "mine_target": 0.8988170027732849,
+   "goto_base": 0.009402499534189701,
+   "wait": 0.05048147961497307,
+   "give_tool": 0.023078756406903267
+  },
+  "choice": "mine_target",
+  "ms": 3867
+ },
+ {
+  "id": "C00",
+  "type": "C",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nsince_last_step: phase travel -> mine\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.0154835544526577,
+   "mine_target": 0.9259352684020996,
+   "goto_base": 0.015728188678622246,
+   "wait": 0.03379012644290924,
+   "give_tool": 0.009062906727194786
+  },
+  "choice": "mine_target",
+  "ms": 3191
+ },
+ {
+  "id": "C01",
+  "type": "C",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nsince_last_step: phase travel -> mine\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.0154835544526577,
+   "mine_target": 0.9259352684020996,
+   "goto_base": 0.015728188678622246,
+   "wait": 0.03379012644290924,
+   "give_tool": 0.009062906727194786
+  },
+  "choice": "mine_target",
+  "ms": 3248
+ },
+ {
+  "id": "C02",
+  "type": "C",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:rock-granite\nsince_last_step: phase travel -> mine\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.016043877229094505,
+   "mine_target": 0.9208033680915833,
+   "goto_base": 0.017034469172358513,
+   "wait": 0.03566892445087433,
+   "give_tool": 0.010449363850057125
+  },
+  "choice": "mine_target",
+  "ms": 3456
+ },
+ {
+  "id": "C03",
+  "type": "C",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:rock-granite\nsince_last_step: phase travel -> mine\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.016043877229094505,
+   "mine_target": 0.9208033680915833,
+   "goto_base": 0.017034469172358513,
+   "wait": 0.03566892445087433,
+   "give_tool": 0.010449363850057125
+  },
+  "choice": "mine_target",
+  "ms": 3720
+ },
+ {
+  "id": "C04",
+  "type": "C",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 4, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nsince_last_step: phase travel -> mine\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.016331199556589127,
+   "mine_target": 0.9241690039634705,
+   "goto_base": 0.01736406609416008,
+   "wait": 0.03324570134282112,
+   "give_tool": 0.008889972232282162
+  },
+  "choice": "mine_target",
+  "ms": 3614
+ },
+ {
+  "id": "C05",
+  "type": "C",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 4, 512029), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nsince_last_step: phase travel -> mine\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "goto_base",
+   "wait",
+   "give_tool"
+  ],
+  "oracle": "mine_target",
+  "probs": {
+   "goto_target": 0.016331199556589127,
+   "mine_target": 0.9241690039634705,
+   "goto_base": 0.01736406609416008,
+   "wait": 0.03324570134282112,
+   "give_tool": 0.008889972232282162
+  },
+  "choice": "mine_target",
+  "ms": 3624
+ }
+]
