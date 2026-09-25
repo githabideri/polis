@@ -738,16 +738,89 @@ no 27B call — the two small tiers doing their designed job. After each
 window the card is switched back to the 35B resident (the mux
 `/models/load` evicts the decider automatically).
 
+### 7-option rollout and the fine-tune experiment (2026-09-25, the 3060 host window)
+
+The reflex vocabulary was extended to seven options —
+`goto_target`, `mine_target`/`harvest_target`, **`pickup_item`**,
+**`place_block`**, `give_tool`, `goto_base`, `wait` — with a `pickup`
+phase inserted between the work phase and return (fast-skipped when
+nothing is on the ground, which is the fixture reality: set-placed rock
+yields no drops; the harvest crop is auto-collected). Design rule behind
+the shape: the fine-tuned 2B covers the *reflex* primitives (frequent,
+sub-second), the long tail of the mod's ~20 action implementations
+(workstations, inventory, entities) routes through the 27B judge tier —
+no fine-tune needed there.
+
+The labeled corpus for the new options was assembled in two parts:
+60 generated grid rows (`gen-pickup-place-rows.py`, A/B contrast +
+controls per family) plus everything already labeled, remapped into the
+7-option format (`remap-7opt-rows.py`): the 41-row A/B corpus, the
+30-row give_tool grid, the v5 live rows, and the v1-v4 live sets —
+**123 rows after dedupe** (25 give_tool, 36 pickup, 12 place_block,
+49 goto/mine), related records grouped for the split.
+
+**The fine-tune itself was a negative result.** A LoRA on top of the
+Decider checkpoint (r16/α32, "all-linear", 16.8M trainable = 0.89% of
+1.9B, lr 1e-4, 4 epochs, 102 train / 21 grouped holdout, 3060) drove the
+train loss 0.43 → 0.06 while the holdout sat flat at 0.190 top-1 for all
+four epochs. A per-row probe explained why: **the base model (no
+adapter) scores 76% top-1 on the very same holdout** — the fine-tune
+collapsed to answering `give_tool` with p≈1.0 on most rows (the largest
+oracle class). Diagnosis: 16.8M free parameters against 102 short rows
+is a degenerate regime — the adapter memorized the training rows and
+overwrote the letter behaviour instead of refining it.
+
+**The base model needs less help than expected.** On the full 123-row
+grid, the unmodified Decider (bf16, 7-option prompt) scores **76/123
+(61.8%)**, and the production **Q8 scores the identical 76/123** —
+quantization-neutral for 7-option selection. Per family (Q8):
+
+| family | rows | top-1 | mean p(oracle) | reading |
+|---|---|---|---|---|
+| give_tool A (no tool, propose give) | 12 | 10/12 | 0.464 | **detector → selector by adding the option** (5-option era: 0/12) |
+| give_tool B (no tool, propose mine) | 12 | 0/12 | 0.053 | substitution gap — by design, covered upstream |
+| with-tool controls | 2 | 2/2 | 0.928 | clean |
+| build (place_block) | 18 | 12/18 | 0.637 | selects 6/6 when proposed; 0/6 substitution; controls clean |
+| pickup (mine+harvest) | 42 | 24/42 | ~0.43 | A-rows selected, B-rows not — same split |
+| mine (old corpus + live) | 30 | 24/30 | 0.694 | the known travel-phase bias survives the re-prompt |
+| harvest (live) | 7 | 4/7 | 0.604 | mixed, small N |
+
+Two consequences. First, the original "detector, not selector" finding
+refined further: **listing an option in the prompt makes the 2B select
+it** — the earlier grid measured detection (mass) because the model's
+policy prior preferred the phase-matching action; with the option
+explicit it overcomes that prior 10/12 times. Second, the fine-tune
+decision (per the jev-designer rule: last, and only on evidence) is now
+evidence-based: **defer it.** What the loop still can't do —
+*spontaneously substituting* a proposed action (the 0/24 B-rows) and the
+travel-phase bias — is a harder conditional that wants a much larger,
+world-varied corpus before another training attempt, and any next
+attempt must be gentle (r 4-8, lr 1-3e-5, early-stop, holdout covering
+the new families) to avoid the measured collapse.
+
+**Live 7-option missions** (the 3060 host-card decider via the fast path,
+the game testbed): mine — goal in 2 steps/42 s, injected skip-goal fault
+corrected (judge jumped to mine_target, goal-first), return step
+short-circuited (Laya 0.43 + Decider 0.91); harvest — goal in 2
+steps/26 s, fault corrected (judge → harvest_target), both steps via
+judge (Laya 0.38/0.39, just under the advisory tau-strong 0.40). No
+pickup phase was exercised live (no ground items in either fixture), as
+expected. Note the (model, question, state-text) calibration unit
+changed (new `items:` line, new option list) — the tau defaults are
+advisory pending re-derivation on the next batch of dual-p rows.
+
 ### Next (in order)
 
 (a) **done** — tailnet node approved, fast decider path live on the the 3060 host
 card (~286 ms/row, first short-circuit observed); (b) **done overnight:**
 `tau-strong` re-derived to 0.40 and `tau-yes` to 0.35 (see finding 4);
 re-run the four missions at the new defaults to measure the short-circuit
-rate; (c) substitution-form 27B tool rule;
-(d) corpus growth: `give_tool` labeled rows (**done** — 30-row grid,
-report finding 3; the 2B detects but does not select, so the A/B rows
-are the fine-tune input) + world variety (distances, target types,
-night/day) against the travel-phase bias; (e) action batch 2:
-`place_block` into a prompt set (6 options — re-convert/eval the GGUF
-letter mapping before trusting it).
+rate; (c) **done** — substitution-form 27B tool rule (v5f run);
+(d) **in progress** — corpus growth: give_tool grid (**done**), 7-option
+corpus (**done**, 123 rows) — next: world variety (distances, target
+types, night/day) and missions that actually produce ground items (the
+pickup phase is live-wired but unexercised); (e) re-derive the taus on
+the new calibration unit; (f) gentle fine-tune (r 4-8, lr 1-3e-5,
+early-stop) once the corpus is several times larger — the aggressive
+r16 attempt collapsed the model (76% → 29% holdout); (g) `place_block`
+build mission end-to-end (execute() exists).
