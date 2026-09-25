@@ -851,6 +851,57 @@ The result is a *negative* one, and it is the useful one:
   the gentle fine-tune (boundary smoothing; see the llmlab addendum's
   in-context-boundary literature), not threshold tuning.
 
+### Pickup phase exercised live + two loop fixes + world-variety corpus (2026-09-25, late afternoon)
+
+Three things landed in this block:
+
+**1. The pickup phase is now verified end-to-end in the live loop.**
+`harvestcrop` turns out to insert the main crop directly into the bot's
+backpack (only overflow/hand items would ever reach the ground), and
+mine drops likewise go to the inventory first with non-deterministic
+ground overflow — so neither mission produced ground items on its own.
+The working mechanism is a world event: `--drop-after-mine` gives the
+bot a stone-granite after the mine and drops it at the mine site.
+Measured (3-tier, dist 12): step 1 injected skip-goal → Laya 0.35 +
+Decider 0.80 → judge → `mine_target` (fault corrected); **step 2:
+phase=pickup, Laya 0.58 ≥ tau-strong + Decider 0.73 ≥ tau-dec → the
+first short-circuit ever on a pickup-phase row** (oracle MATCH); step 3
+return → GOAL in 3 steps / 27 s. (`--drop-after-harvest` exists but is
+inert by the above — kept for the case a harvest does overflow.)
+
+**2. Two real loop bugs, both found the hard way.**
+(a) *The 3-tier gate was silently degradable:* the Decider tier only
+activated when `--decider` was set, so passing only `--decider-fast`
++ `--prompt` (the documented fast-path invocation) fell through to the
+Laya-only branch (`path=reflex`, `pdec=None` on every row) — four
+earlier live runs of the day were actually 2-tier. Fixed: `--decider-fast`
+now self-suffices (CPU fallback engages only if `--decider` is also
+given). (b) *The mine action had no approach step:* with the 27B's
+goal-first `mine_target` proposed from 12+ blocks away (the injected
+skip-goal had just sent the bot the wrong way), the mine failed
+out-of-range and the loop repeated the same failing action 8 times
+until step budget ran out. Fixed: `mine_target` execute() now gootos the
+target cell first (goto stops one cell short of the solid block —
+exactly in range), matching the judge rule's "the execution moves the
+bot there first" for the mine action too.
+
+**3. World-variety corpus growth: the travel bias is largely gone.**
+`gen-world-variety-rows.py` generated 240 rows varying what the state
+text can express without changing its format: distance 3–30 blocks
+(both axes, near flags from the real radii), carrying sets, items-line
+distractors, phase-consistent since/last-action variants (35% travel —
+the under-represented regime). Merged + deduped corpus: **363 rows**
+(`data/ft-rows-v2-2026-09-25.json`). Base Decider Q8 on the card,
+full grid: **top-1 261/363 = 71.9%** (was 76/123 = 61.8%); **travel
+family 71/85 = 84%** (the old mine-travel slice was 24/30); return
+100%, harvest 75%, pickup 75%, done 79%, mine 68%, build 67%;
+p(oracle) on the 306 correct-side rows: mean 0.640, 214 above 0.5.
+The standing 0/12 on the **B (substitution) family** is unchanged —
+the one residual the tiers can't learn in-context and the gentle
+fine-tune / judge tier is for. The corpus is now ~3× the size of the
+first fine-tune attempt's input, so the deferred gentle fine-tune
+(r 4–8, lr 1–3e-5, p-oracle-plateau early-stop) is unblocked.
+
 ### Next (in order)
 
 (a) **done** — tailnet node approved, fast decider path live on the the 3060 host
@@ -858,15 +909,16 @@ card (~286 ms/row, first short-circuit observed); (b) **done overnight:**
 `tau-strong` re-derived to 0.40 and `tau-yes` to 0.35 (see finding 4);
 re-run the four missions at the new defaults to measure the short-circuit
 rate; (c) **done** — substitution-form 27B tool rule (v5f run);
-(d) **in progress** — corpus growth: give_tool grid (**done**), 7-option
-corpus (**done**, 123 rows) — next: world variety (distances, target
-types, night/day) and missions that actually produce ground items (the
-pickup phase is live-wired but unexercised); (e) **done** — tau
+(d) **done** — corpus growth: give_tool grid (**done**), 7-option
+corpus (**done**, 123 rows), world-variety batch (**done**, +240 → 363
+rows; base top-1 61.8% → 71.9%, travel 84%); (e) **done** — pickup
+phase verified live (`--drop-after-mine` world event; first pickup-phase
+short-circuit: Laya 0.58 + Decider 0.73, GOAL 3 steps/27 s); (f) **done** — tau
 re-derivation on the new calibration unit ran as an offline stress test
 on 151 dual-p rows: no gate separates (all Youden points negative-margin);
 defaults left at 0.35/0.50/0.40 by decision — gates do load control, the
 judge + last-resort repair do safety (see the stress-test section above);
-(f) gentle fine-tune (r 4-8, lr 1-3e-5,
-early-stop) once the corpus is several times larger — the aggressive
-r16 attempt collapsed the model (76% → 29% holdout); (g) `place_block`
+(g) **unblocked** — gentle fine-tune (r 4-8, lr 1-3e-5, p-oracle-plateau
+early-stop) on the 363-row corpus (261/363 base, travel 84%, B-family
+0/12 the known target); (h) `place_block`
 build mission end-to-end (execute() exists).

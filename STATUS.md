@@ -1,6 +1,6 @@
 # STATUS.md — the single source of state
 
-Updated: 2026-09-25 (6th session, afternoon — **7-option reflex vocabulary live**: `pickup_item` + `place_block` added to the Decider's option set (7 per mission, same letter positions), pickup phase live-wired in v5; corpus grown to **123 labeled rows** (60 generated pickup/place grid rows + all prior rows remapped: 41 A/B corpus, 30 give_tool grid, v5/v1-v4 live). **Fine-tune experiment on the the 12 GB 3060: negative result** — aggressive LoRA (r16/0.89% params, lr 1e-4, 4 epochs) collapsed the model (holdout top-1 76% base → 29% adapter, degenerate `give_tool` one-answer at p≈1.0); the base model needs less help than expected: it selects the new options **by reading the option list in the prompt** — 76/123 on the full grid, production Q8 identical (quantization-neutral), give_tool 10/12 (the 5-option era measured 0/12 — adding the option flipped detector→selector), place_block 6/6 when proposed; the 0/24 remainder is the documented spontaneous-substitution gap (upper tiers cover it). **Fine-tune deferred** pending corpus growth; gentle recipe recorded (r 4-8, lr 1-3e-5, early-stop). Live 7-option missions: mine 2 steps/42 s (fault corrected, return short-circuited), harvest 2 steps/26 s (fault corrected). Predecessor: 5th session (morning — tailnet approved, fast decider path 286 ms/row, first live short-circuit, 4 more labeled runs, detector-not-selector refinement on the 30-row give_tool grid; 4th session — overnight v5 three-tier loop, strong-gate, tau-strong re-derived to 0.40, give_tool as 5th action; 3rd session — Decider on the 3060 host, report §14; 2nd session — quantization floor 8-bit, first valid SemIf 4B measurement)
+Updated: 2026-09-25 (7th–8th pass, ~14:00–17:00 CEST — **tau stress test done** (151 offline dual-p rows: no gate separates on the broad corpus — defaults kept at 0.35/0.50/0.40 by decision: gates = load control, 27B + last-resort repair = safety); **pickup phase verified live** (mine drops go to the inventory first, so the `--drop-after-mine` world event gives+drops a stone-granite at the mine site; first pickup-phase short-circuit: Laya 0.58 + Decider 0.73, GOAL 3 steps/27 s); **two loop bugs found + fixed** (the 3-tier gate silently ran Laya-only when only `--decider-fast` was passed; `mine_target` had no approach step — a goal-first mine from 12+ blocks away failed out-of-range and repeated until step budget, now gootos first); **world-variety corpus growth**: +240 rows → 363, base Decider Q8 top-1 61.8% → 71.9%, travel family 84% (the standing bias largely gone), B-substitution still 0/12 — the deferred gentle fine-tune is unblocked. Predecessor: 6th session (afternoon — 7-option reflex vocabulary live — `pickup_item` + `place_block` added to the Decider's option set (7 per mission, same letter positions), pickup phase live-wired in v5; corpus grown to **123 labeled rows** (60 generated pickup/place grid rows + all prior rows remapped: 41 A/B corpus, 30 give_tool grid, v5/v1-v4 live). **Fine-tune experiment on the the 12 GB 3060: negative result** — aggressive LoRA (r16/0.89% params, lr 1e-4, 4 epochs) collapsed the model (holdout top-1 76% base → 29% adapter, degenerate `give_tool` one-answer at p≈1.0); the base model needs less help than expected: it selects the new options **by reading the option list in the prompt** — 76/123 on the full grid, production Q8 identical (quantization-neutral), give_tool 10/12 (the 5-option era measured 0/12 — adding the option flipped detector→selector), place_block 6/6 when proposed; the 0/24 remainder is the documented spontaneous-substitution gap (upper tiers cover it). **Fine-tune deferred** pending corpus growth; gentle recipe recorded (r 4-8, lr 1-3e-5, early-stop). Live 7-option missions: mine 2 steps/42 s (fault corrected, return short-circuited), harvest 2 steps/26 s (fault corrected). Predecessor: 5th session (morning — tailnet approved, fast decider path 286 ms/row, first live short-circuit, 4 more labeled runs, detector-not-selector refinement on the 30-row give_tool grid; 4th session — overnight v5 three-tier loop, strong-gate, tau-strong re-derived to 0.40, give_tool as 5th action; 3rd session — Decider on the 3060 host, report §14; 2nd session — quantization floor 8-bit, first valid SemIf 4B measurement)
 Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected before end of 2026.
 
 ## Overall state
@@ -160,10 +160,24 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
     27B + last-resort repair carry safety; chasing Youden points would
     kill the SC benefit (10/39 correct) without a real boundary. The
     leak families are tier-quality problems (report §15 stress-test
-    section); (b)
-    world variety: target types, night/day, further distances — against
-    the surviving 29% travel-phase bias (mine family 24/30); (c)
-    missions that actually produce ground items (the pickup phase is
-    live-wired but unexercised — the mine fixture drops nothing,
-    harvest auto-collects); (d) `place_block` build mission end-to-end
-    (execute() exists); (e) gentle fine-tune once the corpus grows.
+    section); (b) **done** — world-variety corpus growth: `gen-world-variety-
+    rows.py` generated 240 rows (distance 3-30, carrying, items
+    distractors, phase-consistent since/last) → 363-row merged corpus;
+    base Decider Q8 re-measured on the full grid: **top-1 61.8% → 71.9%
+    (261/363), travel family 84%** (was the 24/30 bias), return 100%,
+    B-substitution still 0/12 (the known in-context gap the gentle
+    fine-tune / judge tier targets); (c) **done** — pickup phase verified
+    live: mine drops insert into the inventory first, so the working
+    mechanism is the `--drop-after-mine` world event (give+drop a
+    stone-granite at the mine site); first pickup-phase short-circuit
+    (Laya 0.58 + Decider 0.73, GOAL 3 steps/27 s). **Two loop bugs found
+    + fixed along the way:** the 3-tier gate silently degraded to Laya-only
+    when only `--decider-fast` was passed (Decider tier gated on
+    `--decider`; now self-sufficient), and `mine_target` had no approach
+    step so a goal-first mine from 12+ blocks away failed out-of-range
+    and repeated 8× until step-budget (now gootos the target first).
+    `--drop-after-harvest` exists but is inert (harvestcrop puts the crop
+    in the backpack directly). (d) `place_block` build mission
+    end-to-end (execute() exists); (e) **unblocked** — gentle fine-tune
+    (r 4-8, lr 1-3e-5, p-oracle-plateau early-stop) on the 363-row
+    corpus (B-family 0/12 is the target).

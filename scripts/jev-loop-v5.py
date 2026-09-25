@@ -299,7 +299,7 @@ def goto_wait(pol, bot, cell, timeout=45):
         time.sleep(0.5)
     return {"ok": False, "msg": "goto timeout"}
 
-def execute(pol, bot, action, target, base, mission):
+def execute(pol, bot, action, target, base, mission, autocollect=True):
     if action in ("goto_target", "goto_base"):
         if action == "goto_target":
             if mission == "harvest":
@@ -312,11 +312,21 @@ def execute(pol, bot, action, target, base, mission):
         return goto_wait(pol, bot, base)
     if action == "mine_target":
         timeout = 45
-        r = pol.cmd("mine", [str(target[0]), str(target[1]), str(target[2]), "true"], bot)
+        # approach first: the 27B's judge rule says the execution moves the
+        # bot to the target (goal-first), and the 09-25 pickup3 run showed
+        # the mine FATAL-loops out-of-range when the bot is 12+ blocks away
+        # (goto stops one cell short of the solid block - exactly in range)
+        g = goto_wait(pol, bot, target)
+        if not g["ok"] and "arrived" not in str(g.get("msg", "")).lower():
+            pass  # being out of range is what the action will tell us
+        r = pol.cmd("mine", [str(target[0]), str(target[1]), str(target[2]), "true" if autocollect else "false"], bot)
         if not r.get("Ok") and "mining" not in (r.get("Message") or ""):
             return {"ok": False, "msg": r.get("Message") or r.get("error")}
         # mining is async (~8 s with a tool): success = the marker block is
-        # gone (1.22: set-placed rock yields no item drops)
+        # gone (1.22: set-placed rock yields no *usable* drops, but the v4
+        # run observed the block dropping itself as an item entity - which
+        # is exactly what makes the pickup phase reachable without
+        # autocollect)
         t0 = time.time()
         while time.time() - t0 < timeout:
             if not pol.marker_present(bot, target):
@@ -331,7 +341,7 @@ def execute(pol, bot, action, target, base, mission):
         if not g["ok"] and "arrived" not in str(g.get("msg", "")).lower():
             # being out of range is what the action will tell us; try anyway
             pass
-        r = pol.cmd("harvestcrop", [str(target[0]), str(target[1]), str(target[2]), "true"], bot)
+        r = pol.cmd("harvestcrop", [str(target[0]), str(target[1]), str(target[2]), "true" if autocollect else "false"], bot)
         if not r.get("Ok") and "harvesting" not in (r.get("Message") or ""):
             return {"ok": False, "msg": r.get("Message") or r.get("error")}
         t0 = time.time()
@@ -582,13 +592,13 @@ def run_once(a, pol, fault_phases):
             path = ("reflex-err:" + str(reflex["error"])[:16]) if reflex["error"] else "judge"
             judge = llm_judge(a.llm, a.llm_model, state_text, proposal, mission)
             final = judge["choice"] or proposal
-        elif a.decider:
-            if a.decider_fast and (a.prompt or a.decider):
+        elif a.decider or a.decider_fast:
+            if a.decider_fast:
                 dref = decider_readout_fast(a.prompt or a.decider,
                                             a.decider_fast,
                                             a.decider_fast_model, state_text,
                                             MISSIONS[mission]["actions"])
-                if dref["error"]:
+                if dref["error"] and a.decider:
                     dref = decider_readout(a.decider, state_text,
                                            MISSIONS[mission]["actions"])  # CPU fallback
             else:
@@ -622,7 +632,30 @@ def run_once(a, pol, fault_phases):
             final = proposal
         last_final = final
 
-        ex = execute(pol, a.bot, final, target, base, mission)
+        ex = execute(pol, a.bot, final, target, base, mission,
+                     autocollect=not a.no_autocollect)
+        if (a.drop_after_harvest and mission == "harvest"
+                and final == "harvest_target" and ex["ok"]):
+            # world event: the harvest's item(s) are dropped at the crop
+            # site, so the next state has ground items and the bot empty -
+            # the pickup phase becomes mandatory before return.
+            time.sleep(1)
+            pol.cmd("drop", [], a.bot)
+            time.sleep(1)
+        elif (a.drop_after_mine and mission == "mine"
+                and final == "mine_target" and ex["ok"]):
+            # world event: mine drops go to the inventory first, so if none
+            # landed on the ground, make one appear (give -> hand -> drop at
+            # the mine site) so the pickup phase is reachable.
+            time.sleep(1)
+            st2 = pol.state(a.bot)
+            gi = [i for i in (st2.get("Items") or [])
+                  if (i.get("Dist") or 99) <= 5]
+            if not gi:
+                pol.cmd("give", ["stone-granite", "1"], a.bot)
+                time.sleep(0.5)
+                pol.cmd("drop", [], a.bot)
+                time.sleep(0.5)
         # Last-resort tool repair (two strikes): the loop's own tiers get the
         # first chance to choose give_tool; only after two consecutive failed
         # mine attempts without a pickaxe does the deterministic repair fire
@@ -710,6 +743,25 @@ def main():
                     help="fixture distance in blocks east of the player (world "
                          "variety: the 29%% travel-phase bias says longer "
                          "travels are the under-represented regime)")
+    ap.add_argument("--no-autocollect", action="store_true",
+                    help="mine/harvest: run the mine/harvest action without "
+                         "autocollect so the drops land on the ground - the "
+                         "pickup phase becomes reachable (a set-placed "
+                         "rock-granite drops itself as an item entity; the "
+                         "harvest path is covered by --drop-after-harvest "
+                         "instead, since harvestcrop inserts the main crop "
+                         "into the backpack directly)")
+    ap.add_argument("--drop-after-harvest", action="store_true",
+                    help="harvest only: after a successful harvest, drop the "
+                         "carried items (polis drop) so they land on the "
+                         "ground - the pickup phase then becomes mandatory "
+                         "before the mission can finish")
+    ap.add_argument("--drop-after-mine", action="store_true",
+                    help="mine only: after a successful mine, if no ground item "
+                         "appeared (mine drops insert into the inventory first; "
+                         "ground overflow is non-deterministic), give + drop a "
+                         "stone-granite at the mine site so the pickup phase "
+                         "becomes reachable")
     ap.add_argument("--faults", default="travel,mine",
                     help="phases whose FIRST step gets a known-wrong proposal")
     ap.add_argument("--repeat", type=int, default=1)
@@ -728,7 +780,8 @@ def main():
                          "and goes straight to the 27B. Derived 2026-09-22 from the labeled set: "
                          "faulty yes 0.29-0.32 vs correct yes 0.36-0.39 (gap 0.32-0.36).")
     ap.add_argument("--decider", default=os.environ.get("POLIS_DECIDER", ""),
-                    help="decider-service.py /readout base URL (empty = v4 behavior)")
+                    help="decider-service.py /readout base URL (CPU fallback for the "
+                         "fast path; with only --decider-fast it may stay empty)")
     ap.add_argument("--decider-fast", default=os.environ.get("POLIS_DECIDER_FAST", ""),
                     help="GPU card base URL for the fast path (llama-mux llama-server); inference there, prompt from --prompt")
     ap.add_argument("--prompt", default=os.environ.get("POLIS_PROMPT", ""),
@@ -769,6 +822,9 @@ def main():
         "reflex": "decider 2B choice, tau_dec=%s" % a.tau_dec,
         "reflex2": "laya 421M noul, tau_yes=%s tau_strong=%s" % (a.tau_yes, a.tau_strong),
         "judge": a.llm_model + " (thinking off)",
+        "world": "dist=%d%s%s%s" % (a.dist, ", no-autocollect" if a.no_autocollect else "",
+                                    ", drop-after-harvest" if a.drop_after_harvest else "",
+                                    ", drop-after-mine" if a.drop_after_mine else ""),
         "runs": a.repeat, "bot": a.bot, "steps_total": n,
         "mission_complete": [o["mission_complete"] for o in all_outcomes],
         "mission_complete_rate": "%d/%d" % (sum(1 for o in all_outcomes if o["mission_complete"]), len(all_outcomes)),
