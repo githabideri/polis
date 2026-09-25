@@ -146,11 +146,15 @@ MISSIONS = {
             "needs. No otherwise - a proposed action that contradicts the "
             "phase, skips an unfinished step, or uses a missing tool is no."),
         "judge_rules": (
-            "The bot can only mine with a pickaxe in its hands/bag. If the "
-            "bot does NOT carry a pickaxe, the correct action is give_tool "
-            "(never mine_target). Once it carries a pickaxe and the marker "
-            "is still present, mine_target is correct. Only answer wait when "
-            "the facts are contradictory."),
+            "Decide in this order. (1) First check the bot's inventory: if "
+            "it does NOT contain a pickaxe, answer give_tool - never "
+            "mine_target, even if a mine attempt just failed and even if "
+            "mine_target is the proposed action. A failed mine with no "
+            "pickaxe in the inventory means the tool was lost; retrying "
+            "mine is wrong. (2) If a pickaxe IS in the inventory and the "
+            "marker is still present, answer mine_target (retrying after a "
+            "failed mine is correct in that case). (3) Otherwise follow the "
+            "phase. Only answer wait when the facts are contradictory."),
     },
     "harvest": {
         "task": "harvest the crop, then return to base",
@@ -345,14 +349,14 @@ def derive_threshold(rows):
         "note": "advisory - small N; re-derive as the labeled set grows",
     }
 
-def setup_fixture(a, pol, mission):
-    """Deterministic start: fresh bot at the player position, fixture
-    placed 8 blocks east. Returns (base, target_cell)."""
+def setup_fixture(a, pol, mission, dist=8):
+    """Deterministic start: fresh bot at the player position, fixture placed
+    `dist` blocks east. Returns (base, target_cell)."""
     st = pol.state(a.bot)
     bx, by, bz = [int(v) for v in st["Bot"]["Pos"]]
     base = (bx, by, bz)
     if mission == "mine":
-        target = (bx + 8, by, bz)
+        target = (bx + dist, by, bz)
         for _ in range(2):
             pol.cmd("setblock", ["rock-granite", str(target[0]), str(target[1]), str(target[2])], a.bot)
             if pol.marker_present(a.bot, target):
@@ -367,8 +371,8 @@ def setup_fixture(a, pol, mission):
             time.sleep(1)
     else:
         # farmland at ground level, mature crop (stage 7/7) one above
-        farmland = (bx + 8, by, bz)
-        target = (bx + 8, by + 1, bz)
+        farmland = (bx + dist, by, bz)
+        target = (bx + dist, by + 1, bz)
         pol.cmd("setblock", ["farmland-dry-medium", str(farmland[0]), str(farmland[1]), str(farmland[2])], a.bot)
         for _ in range(2):
             pol.cmd("setblock", ["crop-carrot-7", str(target[0]), str(target[1]), str(target[2])], a.bot)
@@ -393,7 +397,7 @@ def run_once(a, pol, fault_phases):
         a.bot = int(new_id)
     pol = Polis(a.harness, a.uid)
     time.sleep(2)
-    base, target = setup_fixture(a, pol, mission)
+    base, target = setup_fixture(a, pol, mission, a.dist)
     fixture_check = pol.crop_present if mission == "harvest" else pol.marker_present
     has_tool = any("pickaxe" in (c or "") for c in pol.carrying(a.bot))
     print("setup: bot #%d base=%s target=%s mission=%s faults=%s %s fixture=%s" % (
@@ -621,6 +625,10 @@ def main():
     ap.add_argument("--mission", choices=list(MISSIONS), default="mine")
     ap.add_argument("--bot", type=int, default=5)
     ap.add_argument("--steps", type=int, default=8)
+    ap.add_argument("--dist", type=int, default=8,
+                    help="fixture distance in blocks east of the player (world "
+                         "variety: the 29%% travel-phase bias says longer "
+                         "travels are the under-represented regime)")
     ap.add_argument("--faults", default="travel,mine",
                     help="phases whose FIRST step gets a known-wrong proposal")
     ap.add_argument("--repeat", type=int, default=1)
@@ -641,8 +649,10 @@ def main():
     ap.add_argument("--decider", default=os.environ.get("POLIS_DECIDER", ""),
                     help="decider-service.py /readout base URL (empty = v4 behavior)")
     ap.add_argument("--harness", default="http://127.0.0.1:8585")
-    ap.add_argument("--openjev", default=os.environ.get("OPENJEV", "http://openjev-host:8781"))
-    ap.add_argument("--llm", default=os.environ.get("POLIS_LLM", "http://llm-host:8080"))
+    ap.add_argument("--openjev", default=os.environ.get("OPENJEV", "the Laya noul endpoint"),
+                    help="Laya noul endpoint (openjev the Laya box on the  LAN)")
+    ap.add_argument("--llm", default=os.environ.get("POLIS_LLM", "http://the 27B judge"),
+                    help="27B doubt-arbiter endpoint (vLLM the 27B box on the 5600X host)")
     ap.add_argument("--llm-model", default="qwen3.8-27b-dual")
     ap.add_argument("--uid", default=None)
     ap.add_argument("--out", default=None)

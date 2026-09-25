@@ -616,6 +616,8 @@ card (the 3060 model mux) at ~290 ms/row — one env var, no code change.
 | v5b | mine | 4 | 76 s | travel-skip, tool-drop | travel caught by the 27B; tool-drop: 27B repeated mine_target (exec FAIL), loop re-proposed **give_tool** at step 3 — Decider 0.23 (doubt) -> 27B endorsed it -> pickaxe re-given -> mine OK -> GOAL |
 | v5c | harvest | 2 | 16 s | travel-skip | Laya 0.21 (no) -> **27B jumped straight to `harvest_target`** (the action auto-walks) -> crop harvested -> return -> GOAL; fault corrected 1/1 |
 | v5d | mine (5 options) | 2 | 12 s | (travel) | 27B again goal-first: `mine_target` from base in one action -> GOAL; mine-phase fault never reached |
+| v5f | mine (imperial tool rule) | 2 | 11 s | (mine — never fired) | Laya 0.31 (no) -> 27B goal-jump `mine_target` from base -> GOAL; the strengthened substitution-form rule text did not change the goal-first behavior |
+| v5g | mine, **24-block fixture** | 2 | 25 s | travel-skip | fault injected (goto_base, Laya 0.26 no) -> 27B goal-jump `mine_target`; the traverser walked the full 24 blocks inside the action; GOAL — long gotos hold at this distance |
 
 Plus a dedicated tool-fault run (v5e): travel OK -> mine-phase drop -> 27B
 repeats the tool-less `mine_target` against its own explicit tool rule
@@ -626,11 +628,20 @@ correct action *proposed* to endorse it.
 
 ### Findings
 
-1. **The 27B is goal-first, not phase-first.** Because actions include
+1. **The 27B is goal-first, not phase-first — and it is the dominant live pattern.** Because actions include
    their own approach (goto is part of mine/harvest execution), the arbiter
-   routinely completes a whole mission in one action — phase-oracle match
-   under-counts it (v5c/v5d). Mission completion is the true metric; the
-   phase oracle stays conservative by construction.
+   completes the whole mission in one action; on the follow-up runs this
+   happened on *every* 27B contact (five of the last six runs: the mine
+   fixture was consumed in step 1, from base, 24 blocks away — 25 s wall
+   including the walk). Consequence: the mission collapses to two steps
+   (act, return) and the injected phase faults often never fire, because
+   the phase they belong to is skipped. Mission completion is the true
+   metric; the phase oracle stays conservative by construction. (Also
+   found the same night: with *both* model tiers unreachable — the
+   defaults were unresolvable placeholder hosts — the loop ran on policy
+   alone and still completed the mine mission in 5 steps, the give_tool
+   oracle proposal doing the repair. The deterministic policy is the
+   floor, not the failure mode.)
 2. **The 27B's tool rule is conditional, not substitutive.** It endorses a
    proposed `give_tool` but does not proactively replace a tool-less
    `mine_target` proposal even when told "never mine_target without a
@@ -658,6 +669,20 @@ correct action *proposed* to endorse it.
    the strong-gate routes that exact consensus to the 27B, which answers
    goto_target. The §12/§14 "gate on p(oracle), never on argmax confidence"
    rule is what makes this catch possible.
+6. **Action granularity sets which tier does the work.** With
+   self-approaching actions the mine/harvest missions are 2-step
+   (act, return); "travel" is at most one step (or zero, when the 27B
+   jumps). The small tiers therefore mostly see *veto* opportunities
+   (a proposed skip-goal) and *return/done* confirmations — exactly the
+   decisions the 421M noul question was built for — while goal selection
+   goes to the 27B. The Decider's corpus-measured strength (phase
+   selection, 70.7%) has little live surface on this action set; its
+   live role is the calibrated p(proposal) that feeds the strong-gate.
+   If the loop ever needs the small tiers to *drive* (not just veto),
+   the action set has to be decomposed (goto and mine as separate
+   actions) — that trades steps and latency for small-tier utilization.
+   On the current substrate (27B at 272 ms) the coarse action set is the
+   better deal.
 
 ### Infrastructure notes (same night)
 
