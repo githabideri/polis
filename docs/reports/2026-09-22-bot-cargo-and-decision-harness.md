@@ -572,3 +572,112 @@ travel-phase bias in the Decider's errors says the training data was weak
 exactly where its failure mode is), new actions (`give`, `place`), and the
 resident-model etiquette on the 3060 (a running Polis mission and heavy
 OpenClaw use on the same card ping-pong the switch).
+
+## 15. v5: the live three-tier loop (2026-09-25 overnight) — the cascade runs for real
+
+`scripts/jev-loop-v5.py` puts the §14 Decider into the live loop and
+re-orders the tiers cheapest-first:
+
+    policy proposes an action for the current phase
+      -> 1) Laya 421M noul pre-filter (anchored yes/no, ~1.3-1.5 s)
+             p < tau_yes (0.35)        -> straight to the 27B
+             p >= tau_yes              -> 2) Decider-2B choice readout
+                  p(proposal) < tau_dec (0.5)      -> 27B (doubt)
+                  p(proposal) >= tau_dec:
+                       Laya p >= tau_strong (0.6)  -> execute the proposal
+                       Laya p <  tau_strong        -> 27B (borderline doubt)
+      -> 3) 27B doubt-arbiter (thinking off, 272 ms measured) answers the
+             same choice; fallback: the proposal. Stall valve unchanged.
+
+The **strong-gate** is the load-bearing addition. In the first v5 run the
+injected skip-goal fault passed *both* small tiers in consensus: Laya yes
+at 0.37 (barely over 0.35) and the Decider's known travel-phase bias at
+p(goto_base)=0.76 — two "no doubt" signals, one confidently wrong decision,
+and the 27B never got to look. Making the 27B run on *borderline* consensus
+(as well as on disagreement) closes that hole while keeping short-circuits
+for genuinely confident steps. Every step is still labeled (both p's, the
+path, the judge answer, executed, oracle) — the threshold re-derivation
+protocol applies to tau_dec and tau_strong alike.
+
+The Decider endpoint for these runs was **the CPU batch box** (the A/B box):
+`scripts/jevab/decider-service.py` is a thin HTTP wrapper over the
+validated in-process llama.cpp Q8 readout (same code path as `gguf-runner.py`,
+one model load, requests serialized). Four corpus rows replayed through it
+returned **bit-identical** p(oracle) to the batch file (0.1512, 0.9484,
+0.9477, ...) — deterministic CPU inference; cost ~3-4 s/row on 4 cores.
+Once the game testbed's tailnet node is approved the same client points at the the 3060 host
+card (the 3060 model mux) at ~290 ms/row — one env var, no code change.
+
+### Run results (the game testbed, fixture 8 blocks east of the player)
+
+| run | mission | steps | wall | injected fault | outcome |
+|---|---|---|---|---|---|
+| v5a | mine | 6 | 81 s | travel-skip | not corrected (the 0.37/0.76 consensus hole; run that motivated the strong-gate) |
+| v5b | mine | 4 | 76 s | travel-skip, tool-drop | travel caught by the 27B; tool-drop: 27B repeated mine_target (exec FAIL), loop re-proposed **give_tool** at step 3 — Decider 0.23 (doubt) -> 27B endorsed it -> pickaxe re-given -> mine OK -> GOAL |
+| v5c | harvest | 2 | 16 s | travel-skip | Laya 0.21 (no) -> **27B jumped straight to `harvest_target`** (the action auto-walks) -> crop harvested -> return -> GOAL; fault corrected 1/1 |
+| v5d | mine (5 options) | 2 | 12 s | (travel) | 27B again goal-first: `mine_target` from base in one action -> GOAL; mine-phase fault never reached |
+
+Plus a dedicated tool-fault run (v5e): travel OK -> mine-phase drop -> 27B
+repeats the tool-less `mine_target` against its own explicit tool rule
+(exec FAIL) -> next step's proposal is `give_tool`: Laya 0.48, Decider
+0.23 (doubt), **27B answers give_tool, exec OK** -> mine with the tool ->
+GOAL in 5 steps / 76 s. The loop self-repairs; the arbiter just needs the
+correct action *proposed* to endorse it.
+
+### Findings
+
+1. **The 27B is goal-first, not phase-first.** Because actions include
+   their own approach (goto is part of mine/harvest execution), the arbiter
+   routinely completes a whole mission in one action — phase-oracle match
+   under-counts it (v5c/v5d). Mission completion is the true metric; the
+   phase oracle stays conservative by construction.
+2. **The 27B's tool rule is conditional, not substitutive.** It endorses a
+   proposed `give_tool` but does not proactively replace a tool-less
+   `mine_target` proposal even when told "never mine_target without a
+   pickaxe". The fix is a substitution-form rule ("no pickaxe in inventory
+   ⇒ answer give_tool"), not a stronger warning.
+3. **The Decider generalizes healthily to a new 5th option** (`give_tool`
+   added to the mine action set): p 0.23 — low, uncalibrated, no mass
+   distortion — while its trained actions keep 0.90-0.95 confidence.
+   5 options cost nothing in the readout (letter slots, max 255).
+4. **Live Laya noul sits lower than its corpus band**: 0.21-0.48 across
+   these runs (vs up to ~0.9 in the 09-22 sets). Mostly below tau-strong
+   0.6, so with the strong-gate the 27B is the actual decider on most
+   steps. At 272 ms that is acceptable; the short-circuit rate — the point
+   of the two small tiers — rises when tau-strong is re-derived from
+   labeled Laya rows (offline, from the existing sets).
+5. **The travel bias is live and caught by design**: the Decider's
+   p(goto_base)~0.76 for the injected skip passes a borderline Laya yes;
+   the strong-gate routes that exact consensus to the 27B, which answers
+   goto_target. The §12/§14 "gate on p(oracle), never on argmax confidence"
+   rule is what makes this catch possible.
+
+### Infrastructure notes (same night)
+
+- **the CPU batch box**: the stale-rootfs-bind anomaly recurred (the CT-side
+  it (third occurrence — this is the pattern, not a one-off).
+  `decider.service` (the live readout) and `jevab2` (batch supervisor) are
+  both active. The Q8 GGUF lives at `/var/jevab/weights/decider-2b-Q8_0.gguf`
+  (conversion output, CT rootfs); the safetensors stay in `/models/jevab/`.
+  trixie repo is stale at 1.90.6 — the bookworm pool .deb is the working
+  source; the Debian tailscaled unit also needs `/etc/default/tailscaled`,
+  its EnvironmentFile has no `-`). The node `polis` is **registered in the
+  tailnet** (the testnet address, `--accept-routes=false` per the 09-17
+  invariants); the one pending step is a user click on the login URL
+  (it regenerates on every `tailscale up` re-run — the current one is in
+- **`scripts/botview.py`**: one-command live overview (player/bots/zones/
+  last events in one line; `--follow N` streams ticks with move detection
+  and appends a JSONL sidecar to `data/botview.jsonl`; optional single
+  `--screenshot`).
+
+### Next (in order)
+
+(a) user approves the tailnet node -> repoint `--decider` to the the 3060 card
+(one env var; expect ~290 ms/row instead of 3-4 s); (b) re-derive
+`tau-strong` from the labeled Laya rows and re-run the four missions to
+measure the short-circuit rate; (c) substitution-form 27B tool rule;
+(d) corpus growth: `give_tool` labeled rows (cheap now — the Decider
+serves live on the CPU batch box) + world variety (distances, target types, night/day)
+against the travel-phase bias; (e) action batch 2: `place_block` into a
+prompt set (6 options — re-convert/eval the GGUF letter mapping before
+trusting it).

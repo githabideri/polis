@@ -16,6 +16,7 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
 | Jev-loop v3 (noul veto + 27B escalation) | **measured** 2026-09-22 | policy-proposes / Laya-vetoes / 27B-escalates: faults caught 1/2, false alarms 3/6, **fault and false-alarm at the same p (0.37)** — 421M is a conservative safety net, not a precision gate; 27B with thinking off = 124 ms conservative arbiter. Verdict: v4 = 27B per-step judge + Laya obvious-yes pre-filter; see `docs/reports/2026-09-22-jev-loop-v3-noul-veto.md` |
 | Decision-harness passes 4–6 + harvest pipeline | **live verified** 2026-09-22 | pass 6: diff-based state line + stall valve → 2/2 missions, 0 stalls; harvest 2/2 (crop BEs + SeraphInventory cargo fix); 8 labeled sets in `data/`; visual proof in `docs/proofs/`; see `docs/reports/2026-09-22-bot-cargo-and-decision-harness.md` |
 | Model A/B harness (Laya vs Decider 2B vs Qwen3.5-4B) | **Verdict: Decider 2B candidate; quantization floor 8-bit** 2026-09-24 | 41-row merged corpus, `scripts/jevab/` (runner + supervisor + env; runs on the CPU batch box,  4C/16G, weights on the host's `/models/jevab` shared store; the 27B box stays prod vLLM). **Decider 2B: top-1 70.7%** (mine 81.5% / harvest 50.0%), p(oracle) 0.870 correct vs 0.136 wrong, p>0.5 on 27/29 correct & 0/12 wrong — the p-band overlap that disqualified Laya is fixed; all 12 errors are one `goto_base`-over-`goto_target` travel-phase bias. **Quantized GGUF (2nd session): Q8_0 = bf16-equivalent** (Δtop-1 0, Δp(oracle) +0.002, 3.6 s/row 4C) — 8-bit is the quantization floor; **Q4_K_M breaks the readout** (top-1 0.537, p(oracle) 0.545, Brier 0.58). Side effect: Q8 makes the systematic wrong choice confidently (conf_wrong 0.136→0.746) without moving top-1/Brier. **Laya 421M (09-22): 41.5%** (mine 63% / harvest 0%). **SemIf 4B: first valid measurement (GGUF path)** — §12's bf16-CPU degeneracy (p(oracle)≡0) was a runtime artifact; the llama.cpp readout is healthy (allowed_token_mass 0.993) but the frozen base judges weakly: top-1 **46.3%**, p(oracle) 0.298, 12.2 s/row 4C → 2B task-tuned beats the larger frozen model, as the Jev premise predicts. Vision-Jev design: `docs/design/vision-jev-2026-09-22.md` |
+| **Jev-loop v5 (live three-tier cascade)** | **measured** 2026-09-25 (overnight) | `scripts/jev-loop-v5.py` on the game testbed: Laya noul (1.3–1.5 s) → Decider-2B readout (3–4 s on the CPU batch box's 4C; ~0.3 s via the the 3060 card once the tailnet path is up) → 27B doubt-arbiter (272 ms, thinking off). Strong-gate (tau-strong 0.6) puts the 27B on any borderline consensus. Four mission runs: **harvest 2/2 steps in 16 s** (27B jumped straight to `harvest_target` — goal-first), **mine 4–5 steps / 76–81 s** across three fault-injected runs; faults: travel-skip caught by the 27B after a Laya-yes/Decider-0.76 consensus (the borderline hole), tool-drop self-repaired by the loop *choosing* `give_tool` at step 3 (27B endorses a proposed give_tool but repeats a tool-less mine_target against its own rule). `give_tool` is a first-class 5th action (healthy uncalibrated generalization: p 0.23 vs 0.90–0.94 on trained actions); `place_block` execute() ready. `botview.py` = one-command live overview + JSONL sidecar. Report §15; run data `data/v5-*-2026-09-25*.json` |
 
 ## Open issues carried into 1.22.7 (from archive/KNOWN_ISSUES.md, unresolved)
 
@@ -123,3 +124,20 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
     mid-goto, `POLIS_PATH_PROBE=1` diagnostic, dawn-screenshot pause
     check. Done since: harvest pipeline + corpus growth + visual proof +
     repo sanitization + llmlab handoff (reports/2026-09-22-polis-jev-loop-model-handoff.md).
+12. **v5 live loop — done 2026-09-25 (overnight, report §15)**: three-tier
+    cascade measured on the game testbed (harvest 2/16 s, mine 4–5/76–81 s,
+    faults handled, `give_tool` action live, botview live). **Remaining on the v5 line:**
+    (a) **user click**: approve the game testbed's tailnet node (login URL in the game testbed
+    the testnet address) → then repoint v5's `--decider` from the CPU batch box (3–4 s CPU)
+    to the the 3060 card over the tailnet (the 3060 model mux, ~290 ms) — one
+    env var, no code change; (b) re-derive `tau-strong` from the labeled
+    Laya-noul rows (live distribution sits 0.21–0.48, mostly below 0.6,
+    so the 27B decides most steps until then — fine at 272 ms, but the
+    short-circuit rate is the point of the two small tiers); (c) substitution-form
+    27B tool rule ("no pickaxe in inventory ⇒ never mine_target, answer
+    give_tool") — it endorses proposed give_tool but does not proactively
+    replace a tool-less mine proposal; (d) corpus growth: `give_tool`
+    labeled rows (the the CPU batch box A/B pipeline now serves live, so labeling is
+    cheap) + world variety (distances, target types, night/day) against the
+    Decider's 29% travel-phase bias; (e) action batch 2: put `place_block`
+    in a prompt set (6 options — re-convert/eval before trusting).

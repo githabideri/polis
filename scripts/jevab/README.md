@@ -107,3 +107,32 @@ vendor has `qwen35.cpp`).
 started seeing a divergent, reduced view of `/var/jevab` while the host-side
 just the container's mount out of sync (the PVE config/subvol themselves were
 this CT, check the host-side subvol first; the data is safe.
+
+## Live service + v5 client (2026-09-25, 3rd/4th sessions)
+
+Two more scripts round out the deployment path:
+
+- **`decider-service.py`** — thin HTTP wrapper over the *same* in-process
+  llama.cpp Q8 readout as `gguf-runner.py` (one model load, requests
+  serialized, `/health` + `/readout` with the `decider_readout()` schema).
+  Runs as `decider.service` on the CPU batch box:8091 (CPU, ~3-4 s/row on 4 cores).
+  Validated **bit-identical** to the batch results (four replayed corpus
+  rows, e.g. p(oracle) 0.1512/0.9484). This is the interim endpoint while
+  the tailnet path to the the 3060 card (0.3 s/row, report §14) is pending the
+  the game testbed node approval.
+- **`decider-http-client.py`** — the the 3060 host-card client (report §14):
+  `/v1/completions` with `n_probs` over the letter slots, T=1.3 recovered
+  from the T=1 wire distribution, `ensure_loaded` on the mux. Importable
+  (`decider_readout()`) or standalone CLI. Used by `../jev-loop-v5.py`.
+
+`../jev-loop-v5.py` (same tree) is the live three-tier loop built on these:
+Laya noul pre-filter -> Decider choice confirm -> 27B doubt-arbiter with a
+**strong-gate** (the 27B runs on *any* doubt: Laya no, decider under
+tau_dec, or a merely-borderline Laya under tau_strong — the last clause
+closes the consensus hole the first run exposed: Laya 0.37-yes + Decider
+0.76 on an injected skip-goal, both below any "confident enough" bar a
+naive gate would trust). It also carries the **`give_tool` action**
+(oracle = phase tool missing; self-repair verified live) and a
+`place_block` execute path (not yet in a prompt set). Run data:
+`data/v5-*-2026-09-25*.json`; full account in report §15.
+`../botview.py` is the one-command live overview (follow + JSONL sidecar).

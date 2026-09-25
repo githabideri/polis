@@ -1,0 +1,91 @@
+{
+ "loop": "jev-loop-v5 harness (Decider-2B choice reflex + Laya noul + 27B doubt-arbiter)",
+ "mission": "mine",
+ "reflex": "decider 2B choice, tau_dec=0.5",
+ "reflex2": "laya 421M noul, tau_yes=0.35 tau_strong=0.6",
+ "judge": "qwen3.8-27b-dual (thinking off)",
+ "runs": 1,
+ "bot": 106,
+ "steps_total": 2,
+ "mission_complete": [
+  true
+ ],
+ "mission_complete_rate": "1/1",
+ "avg_steps_to_complete": 2.0,
+ "injected_faults": 1,
+ "faults_corrected": "1/1",
+ "reflex_short_circuits": "0/2",
+ "decider_confirms": "0/2",
+ "avg_decider_ms": null,
+ "stall_bypasses": 0,
+ "judge_calls": 2,
+ "false_waits": 0,
+ "judge_oracle_match": "1/2",
+ "exec_oracle_match": "1/2",
+ "exec_success": "2/2",
+ "avg_laya_ms": 1434,
+ "avg_judge_ms": 272,
+ "threshold_derivation": {
+  "correct_p": [
+   0.3413
+  ],
+  "faulty_p": [
+   0.2597
+  ],
+  "suggested_tau": 0.341,
+  "note": "advisory - small N; re-derive as the labeled set grows"
+ },
+ "laya_question": "Answer yes only if the proposed action matches the current phase: travel phase needs goto_target, mine phase needs mine_target, return phase needs goto_base, done phase needs wait, and the bot carries the tool the phase needs (mining needs a pickaxe). give_tool is correct only when the bot lacks the tool its phase needs. No otherwise - a proposed action that contradicts the phase, skips an unfinished step, or uses a missing tool is no.",
+ "rows": [
+  {
+   "step": 1,
+   "phase": "travel",
+   "proposal": "goto_base",
+   "injected": true,
+   "p": 0.2597,
+   "p_decider": null,
+   "decider_choice": null,
+   "decider_ms": null,
+   "path": "judge",
+   "judge_choice": "mine_target",
+   "judge_raw": "mine_target",
+   "judge_ms": 270,
+   "executed": "mine_target",
+   "exec_ok": true,
+   "exec_msg": "marker removed",
+   "stall_bypass": false,
+   "oracle": "goto_target",
+   "match": false,
+   "fault_corrected": true,
+   "last_resort_repair": false,
+   "since_last_step": "no change",
+   "state_text": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512022), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+   "laya_ms": 1374
+  },
+  {
+   "step": 2,
+   "phase": "return",
+   "proposal": "goto_base",
+   "injected": false,
+   "p": 0.3413,
+   "p_decider": null,
+   "decider_choice": null,
+   "decider_ms": null,
+   "path": "judge",
+   "judge_choice": "goto_base",
+   "judge_raw": "goto_base",
+   "judge_ms": 274,
+   "executed": "goto_base",
+   "exec_ok": true,
+   "exec_msg": "done",
+   "stall_bypass": false,
+   "oracle": "goto_base",
+   "match": true,
+   "fault_corrected": false,
+   "last_resort_repair": false,
+   "since_last_step": "marker gone, phase travel -> return",
+   "state_text": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:stone-granite, game:linensack\nsince_last_step: marker gone, phase travel -> return\nlast_action: mining started\nproposed action: goto_base",
+   "laya_ms": 1495
+  }
+ ]
+}
