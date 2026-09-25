@@ -975,12 +975,19 @@ default to the FT model; the base id stays available for A/B. The 35B is
 the restored resident (courtesy end state).
 
 Deployment lessons learned the hard way, this box, this night:
-1. **The CT's `/mnt/models` and the host's `/vmpool/models` are two
-   different ext4 filesystems** that both report themselves as
-   `/dev/mapper/pve-models` (identical size; divergent file timestamps
-   prove it). The router reads the CT-side one. Writes to the "same"
-   volume from the host are invisible to the CT. Verify by writing a
-   marker from each side.
+1. **Why the file "vanished": it never got there — and a timezone trap
+   almost made it a mystery.** The CT's `/mnt/models` *is* the host's
+   `/vmpool/models` (one 60G thin LV, bind-mounted via `mp0`; marker
+   writes pass both ways). The "divergent" timestamps that suggested two
+   filesystems were the CT's UTC clock vs the host's CEST — the same
+   instant, two displays. The real cause of the load failure was a
+   silently failed file transfer of the fresh GGUF. The write-permission
+   wall is the **unprivileged CT**: CT-internal root (host uid 100000)
+   can't write host-root-owned dirs (they look `nobody:nogroup` in-CT),
+   so the new model got a fresh dir created from inside the CT —
+   `/mnt/models/decider-2b-ft/`. Lesson: verify copies by reading them
+   back, and remember the 2 h clock offset when comparing `ls` output
+   across this box's two sides.
 2. **`pkill -x llama-server` kills the router systemd service** (it *is*
    a llama-server process). Use `systemctl stop/start llama-server`.
 3. **The mux's `_switching` dict can wedge**: a failed switch leaves the
