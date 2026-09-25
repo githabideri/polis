@@ -627,10 +627,17 @@ def main():
     ap.add_argument("--tau-dec", type=float, default=0.5,
                     help="Decider reflex gate on p(proposal); corpus: correct "
                          "rows >=0.66, systematic errors <0.5")
-    ap.add_argument("--tau-strong", type=float, default=0.6,
-                    help="Laya confidence above which the 27B is skipped on a "
-                         "decider-confirmed step (below it, consensus is doubt)")
-    ap.add_argument("--tau-yes", type=float, default=0.6)
+    ap.add_argument("--tau-strong", type=float, default=0.40,
+                    help="27B on borderline consensus: even a decider-confirm is escalated "
+                         "when Laya's noul p is below this (default 0.40, re-derived 2026-09-25 "
+                         "overnight from the 15 dual-p rows: false-yes ceiling 0.371 vs correct "
+                         "floor 0.400 - thin gap, advisory until the labeled set grows). "
+                         "Closes the consensus hole: Laya yes + decider-confirm can still be "
+                         "a confidently-wrong pair (the travel bias at 0.37/0.76).")
+    ap.add_argument("--tau-yes", type=float, default=0.35,
+                    help="Laya-noul confidence below which a proposed action is NOT trusted "
+                         "and goes straight to the 27B. Derived 2026-09-22 from the labeled set: "
+                         "faulty yes 0.29-0.32 vs correct yes 0.36-0.39 (gap 0.32-0.36).")
     ap.add_argument("--decider", default=os.environ.get("POLIS_DECIDER", ""),
                     help="decider-service.py /readout base URL (empty = v4 behavior)")
     ap.add_argument("--harness", default="http://127.0.0.1:8585")

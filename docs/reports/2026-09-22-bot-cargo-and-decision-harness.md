@@ -643,9 +643,16 @@ correct action *proposed* to endorse it.
 4. **Live Laya noul sits lower than its corpus band**: 0.21-0.48 across
    these runs (vs up to ~0.9 in the 09-22 sets). Mostly below tau-strong
    0.6, so with the strong-gate the 27B is the actual decider on most
-   steps. At 272 ms that is acceptable; the short-circuit rate — the point
-   of the two small tiers — rises when tau-strong is re-derived from
-   labeled Laya rows (offline, from the existing sets).
+   steps. At 272 ms that is acceptable. **Re-derived overnight from the
+   21 dual-p rows** (15 carrying both Laya-noul and Decider readings):
+   the false-yes cap is 0.371 (the injected skip-goal, twice — the
+   Decider's travel bias at 0.76 confirmed it, so both p's looked
+   "confident") vs the correct floor 0.400. `--tau-strong` now defaults
+   to **0.40** (advisory: a thin 0.029 gap on N=15): short-circuits 9/15
+   vs 4/15 at 0.6 with **zero short-circuit errors** on the data, while
+   every 0.371 false consensus still escalates. `--tau-yes` default
+   likewise set to its 09-22 derived 0.35 (faulty 0.29-0.32 vs correct
+   0.36-0.39).
 5. **The travel bias is live and caught by design**: the Decider's
    p(goto_base)~0.76 for the injected skip passes a borderline Laya yes;
    the strong-gate routes that exact consensus to the 27B, which answers
@@ -673,9 +680,10 @@ correct action *proposed* to endorse it.
 ### Next (in order)
 
 (a) user approves the tailnet node -> repoint `--decider` to the the 3060 card
-(one env var; expect ~290 ms/row instead of 3-4 s); (b) re-derive
-`tau-strong` from the labeled Laya rows and re-run the four missions to
-measure the short-circuit rate; (c) substitution-form 27B tool rule;
+(one env var; expect ~290 ms/row instead of 3-4 s); (b) **done overnight:**
+`tau-strong` re-derived to 0.40 and `tau-yes` to 0.35 (see finding 4);
+re-run the four missions at the new defaults to measure the short-circuit
+rate; (c) substitution-form 27B tool rule;
 (d) corpus growth: `give_tool` labeled rows (cheap now — the Decider
 serves live on the CPU batch box) + world variety (distances, target types, night/day)
 against the travel-phase bias; (e) action batch 2: `place_block` into a
