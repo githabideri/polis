@@ -1635,13 +1635,16 @@ public partial class PolisBuilderNpcSystem
             {
                 // Offset in X direction (east/west)
                 double offsetX = dx >= 0 ? 1.0 : -1.0;
-                movePos = new Vec3d(targetPos.X + 0.5 + offsetX, clickedPos.Y, targetPos.Z + 0.5);
+                // 2026-09-26: stand at TARGET level, not clicked level - the clicked
+                // cell is the solid surface block; a goto target inside it has no
+                // path (measured: bot stayed at spawn, place failed 8.59 > 4.50).
+                movePos = new Vec3d(targetPos.X + 0.5 + offsetX, targetPos.Y, targetPos.Z + 0.5);
             }
             else
             {
                 // Offset in Z direction (north/south)
                 double offsetZ = dz >= 0 ? 1.0 : -1.0;
-                movePos = new Vec3d(targetPos.X + 0.5, clickedPos.Y, targetPos.Z + 0.5 + offsetZ);
+                movePos = new Vec3d(targetPos.X + 0.5, targetPos.Y, targetPos.Z + 0.5 + offsetZ);
             }
         }
         else
