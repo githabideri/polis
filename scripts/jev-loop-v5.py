@@ -786,7 +786,9 @@ def main():
                     help="GPU card base URL for the fast path (llama-mux llama-server); inference there, prompt from --prompt")
     ap.add_argument("--prompt", default=os.environ.get("POLIS_PROMPT", ""),
                     help="decider-service base URL for /prompt (fast path); falls back to --decider's service")
-    ap.add_argument("--decider-fast-model", default="qwen35-decider-2b")
+    ap.add_argument("--decider-fast-model", default="qwen35-decider-2b-ft",
+                    help="reflex model id on the card (FT = 2026-09-25 LoRA "
+                         "fine-tune; use qwen35-decider-2b for the base model)")
     ap.add_argument("--harness", default="http://127.0.0.1:8585")
     ap.add_argument("--openjev", default=os.environ.get("OPENJEV", "the Laya noul endpoint"),
                     help="Laya noul endpoint (openjev the Laya box on the  LAN)")

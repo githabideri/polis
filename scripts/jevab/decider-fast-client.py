@@ -23,7 +23,7 @@ card inference ~70-100 ms), vs ~3-4 s for the the CPU batch box in-process reado
 
 Usage (CLI):
   decider-fast-client.py --prompt the CPU batch box's prompt endpoint \
-      --card http://the 3060 model mux --model qwen35-decider-2b \
+      --card http://the 3060 model mux --model qwen35-decider-2b-ft \
       --state-file /path/state.txt --options goto_target,mine_target,...
 
 Importable:
@@ -90,7 +90,8 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--prompt", required=True, help="decider-service base URL")
     ap.add_argument("--card", required=True, help="llama-server/mux base URL")
-    ap.add_argument("--model", default="qwen35-decider-2b")
+    ap.add_argument("--model", default="qwen35-decider-2b-ft",
+                    help="model id on the card; base model: qwen35-decider-2b")
     ap.add_argument("--state-file", required=True)
     ap.add_argument("--options", required=True, help="comma-separated")
     ap.add_argument("--timeout", type=float, default=60.0)

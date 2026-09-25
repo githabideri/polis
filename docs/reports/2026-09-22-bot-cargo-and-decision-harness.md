@@ -918,7 +918,104 @@ re-derivation on the new calibration unit ran as an offline stress test
 on 151 dual-p rows: no gate separates (all Youden points negative-margin);
 defaults left at 0.35/0.50/0.40 by decision — gates do load control, the
 judge + last-resort repair do safety (see the stress-test section above);
-(g) **unblocked** — gentle fine-tune (r 4-8, lr 1-3e-5, p-oracle-plateau
-early-stop) on the 363-row corpus (261/363 base, travel 84%, B-family
-0/12 the known target); (h) `place_block`
+(g) **done** — gentle fine-tune (r8/α16, lr 2e-5, val-world plateau
+early-stop): adopted as `qwen35-decider-2b-ft` (see §16); (h) `place_block`
 build mission end-to-end (execute() exists).
+
+## 16. The gentle fine-tune (2026-09-25, 9th pass): the 2B learned to read the world, not the proposal
+
+Recipe (the 12 GB 3060, the 3060 model container, `loftune.py`): LoRA r8/α16 (8.4M params = 0.44%),
+lr 2e-5, batch 4 / grad-accum 2, 512 seq, 12-epoch cap with patience-3
+early-stop on an **external** val world (96 rows, seed 20260926, distances
+5-35, extended distractor vocabulary, zero state overlap with the 363-row
+training corpus, seed 20260925). This is the anti-collapse recipe from the
+6th pass: the aggressive r16/lr 2e-4 run locked the base model onto a
+single token (76% → 29%); this one plateaus where it should.
+
+Training: loss 0.4974 (ep1) → 0.0544 (ep3); val top-1 0.823 → 0.844 at
+epoch 3 (best); val p_oracle plateaued by epoch 4 → early stop at 6.
+Deterministic replay reproduced the curve (ep1 0.4973/0.823/0.566), so the
+adapter is reproducible bit-for-bit.
+
+Measurement: both models converted to Q8_0 (`--no-mtp` — see below) and run
+through standalone `llama-server` instances on the card (8181 FT / 8182
+base), measured from the game testbed over the tailnet with the same
+`dualp-runner` readout (letter-subset softmax over the 8192-token top set).
+Same card, same pipeline, only the weights differ.
+
+| set | BASE Q8 | FT (r8) |
+|---|---|---|
+| val world (96, unseen) | **70/96 (72.9%)** | **96/96 (100%)** |
+| training (363) | **262/363 (72.2%)** | **362/363 (99.7%)** |
+| B-family (give_tool while carrying, 12) | 0/12 | **12/12** |
+| distractor-proposal rows — model falls for the natural-but-wrong proposal | 14/14 val, 55/57 train | **0/14 val, 1/57 train** |
+| p(oracle) on correct rows | 0.707 val / 0.721 train | **0.999+ / 0.995** |
+
+The striking cell is not the 100% — it is the distractor row. The corpus
+rows carry a "proposed action" line; in 57 train rows (and 14 val rows) the
+proposed action is the *natural but wrong* one for the state. The base
+model followed the proposal 55/57 times — for it, the readout was
+effectively "parrot the proposal, mostly right because most proposals are
+right." The fine-tune reversed that: it reads the phase/facts line and
+overrides the proposal (1/57 fall-through). And val ≥ train (100% vs
+99.7%) with zero overlap: rule acquisition, not memorization. p_oracle on
+correct rows went from a flat ~0.71 to a step-function ~1.0 — the cascade
+gate now has something sharp to threshold on.
+
+Adoption (the discipline from the 6th pass, applied): val improves
+(70→96, B 0→12) ✓, training does not degrade (262→362) ✓, live fixture
+checks out ✓ — mine d12 with `--drop-after-mine`: 1/1 complete in 3
+steps, injected fault corrected 1/1, 1 reflex short-circuit, 2 judge
+calls; harvest d12: 1/1 in 2 steps, fault corrected 1/1. **Adopted.**
+Deployed as a *second* model id `qwen35-decider-2b-ft` (new preset
+section; the GGUF lives in `/mnt/models/decider-2b-ft/` because the old
+`decider-2b/` dir is nobody-owned and the CT cannot write it — see below).
+`jev-loop-v5.py --decider-fast-model` and `decider-fast-client.py --model`
+default to the FT model; the base id stays available for A/B. The 35B is
+the restored resident (courtesy end state).
+
+Deployment lessons learned the hard way, this box, this night:
+1. **The CT's `/mnt/models` and the host's `/vmpool/models` are two
+   different ext4 filesystems** that both report themselves as
+   `/dev/mapper/pve-models` (identical size; divergent file timestamps
+   prove it). The router reads the CT-side one. Writes to the "same"
+   volume from the host are invisible to the CT. Verify by writing a
+   marker from each side.
+2. **`pkill -x llama-server` kills the router systemd service** (it *is*
+   a llama-server process). Use `systemctl stop/start llama-server`.
+3. **The mux's `_switching` dict can wedge**: a failed switch leaves the
+   model flagged "switching" with a silently polling background thread;
+   subsequent loads return 202 forever with zero log output. Remedy:
+   `systemctl restart llama-mux` (empty dict), then re-issue.
+4. **The 35B child can hang holding 11.7 GB after an unload** (router says
+   unloaded, VRAM never drains, mux `wait_gpu_free` times out at 180 s).
+   Kill the child by its ephemeral port (`--port 56675` in its argv);
+   the mux then switches in ~6 s.
+5. **Converting this model family requires `--no-mtp`**: without it the
+   MTP block produces a `blk.24.attn_norm` mismatch / file-bounds
+   corruption in the GGUF. And the merged HF dir must not contain
+   `adapter_config.json` (a stray copy made transformers re-apply the
+   LoRA on top of the merged weights).
+
+Residual risk, stated plainly: the FT model's p≈1.0 means it is
+confident on everything it has seen structurally. An *out-of-vocabulary*
+world state (new block type, new mission family) will get a confident
+guess rather than a low-confidence abstinence. The gate/judge/last-resort
+layers still exist and the SC path only *saves* work when confidence is
+high, but the calibration story is "sharp inside the learned distribution,
+unknown outside" — the live-fixture fault-corrected runs are the first
+data point for that tail.
+
+### Next (in order)
+
+1. **R1 real-world blocks**: same pinned missions against *real* block
+   types (granite ore, real trees/crops) in a generated world — the first
+   out-of-vocabulary test for the FT decider; watch what p_oracle does on
+   states it has never seen structurally.
+2. **Build mission** (`place_block` end-to-end) — closes the 7-option
+   vocabulary; the FT model already scores place_block rows in the corpus.
+3. **Monitoring**: decider readout latency + SC rate as a Grafana panel
+   (the mux exposes per-model metrics; the v5 JSON carries the SC counts).
+4. **Corpus growth for the tail**: out-of-vocabulary state families
+   (new block types, multi-item carries) to give the *next* fine-tune a
+   calibration signal for abstention instead of confident guessing.

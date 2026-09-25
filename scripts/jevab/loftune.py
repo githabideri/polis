@@ -117,19 +117,45 @@ def main():
     ap.add_argument("--model", required=True)
     ap.add_argument("--rows", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--epochs", type=int, default=4)
-    ap.add_argument("--lr", type=float, default=1e-4)
+    ap.add_argument("--epochs", type=int, default=12)
+    ap.add_argument("--lr", type=float, default=2e-5)
     ap.add_argument("--batch", type=int, default=4)
     ap.add_argument("--grad-accum", type=int, default=2)
     ap.add_argument("--seq", type=int, default=512)
-    ap.add_argument("--r", type=int, default=16)
-    ap.add_argument("--alpha", type=int, default=32)
+    ap.add_argument("--r", type=int, default=8)
+    ap.add_argument("--alpha", type=int, default=16)
     ap.add_argument("--seed", type=int, default=20260925)
     ap.add_argument("--holdout-frac", type=float, default=0.2)
+    ap.add_argument("--val-rows", default=None,
+                    help="separate validation world (generated with a "
+                         "different seed/ranges). When given: train on ALL "
+                         "--rows, evaluate/early-stop on this file instead "
+                         "of the internal holdout. THE overfitting guard: "
+                         "adoption requires the val world to improve too.")
+    ap.add_argument("--patience", type=int, default=3,
+                    help="early-stop: stop after this many epochs without a "
+                         ">=0.01 improvement of val mean_p_oracle (the "
+                         "memory-law lock-in tripwire)")
+    ap.add_argument("--merge-only", action="store_true",
+                    help="skip training; load the adapter from --out, merge "
+                         "into the base, write --out-merged")
     ap.add_argument("--merge", action="store_true",
                     help="merge the adapter into a full HF checkpoint at --out-merged")
     ap.add_argument("--out-merged", default=None)
     a = ap.parse_args()
+
+    if a.merge_only:
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+        from peft import PeftModel
+        base = AutoModelForCausalLM.from_pretrained(
+            a.model, torch_dtype=torch.bfloat16)
+        full = PeftModel.from_pretrained(base, a.out).merge_and_unload()
+        outm = a.out_merged or (a.out + "-merged")
+        full.save_pretrained(outm)
+        tok = AutoTokenizer.from_pretrained(a.out)
+        tok.save_pretrained(outm)
+        print("merged checkpoint:", outm, flush=True)
+        return
 
     torch.manual_seed(a.seed)
     random.seed(a.seed)
@@ -154,20 +180,30 @@ def main():
     model.print_trainable_parameters()
     model.gradient_checkpointing_enable()
 
-    # grouped 80/20 split: (family, oracle) groups stay together
-    groups = defaultdict(list)
-    for i, r in enumerate(rows):
-        groups[(r.get("family") or r.get("mission") or "?", r["oracle"])].append(i)
-    gkeys = sorted(groups)
-    random.shuffle(gkeys)
-    hold = int(len(gkeys) * a.holdout_frac)
-    hold_groups = set(gkeys[:hold])
-    train_idx = [i for g in gkeys for i in groups[g] if g not in hold_groups]
-    hold_idx = [i for g in hold_groups for i in groups[g]]
-    print("groups: %d; train %d / holdout %d" % (
-        len(gkeys), len(train_idx), len(hold_idx)), flush=True)
+    # split: with --val-rows the whole --rows file trains and the external
+    # validation world scores; otherwise grouped 80/20 as before
+    if a.val_rows:
+        val = json.load(open(a.val_rows))
+        val = [r for r in val if r["oracle"] in r["options"]]
+        train_idx, hold_idx = list(range(len(rows))), [i for i in range(len(val))]
+        val_rows = val
+        print("training on ALL %d rows; external val world: %d rows" %
+              (len(rows), len(val)), flush=True)
+    else:
+        val_rows = None
+        groups = defaultdict(list)
+        for i, r in enumerate(rows):
+            groups[(r.get("family") or r.get("mission") or "?", r["oracle"])].append(i)
+        gkeys = sorted(groups)
+        random.shuffle(gkeys)
+        hold = int(len(gkeys) * a.holdout_frac)
+        hold_groups = set(gkeys[:hold])
+        train_idx = [i for g in gkeys for i in groups[g] if g not in hold_groups]
+        hold_idx = [i for g in hold_groups for i in groups[g]]
+        print("groups: %d; train %d / holdout %d" %
+              (len(gkeys), len(train_idx), len(hold_idx)), flush=True)
     tr, te = Rows([rows[i] for i in train_idx], tok, a.seq), \
-        Rows([rows[i] for i in hold_idx], tok, a.seq)
+        Rows([val_rows[i] if val_rows else rows[i] for i in hold_idx], tok, a.seq)
 
     opt = torch.optim.AdamW(
         [p for p in model.parameters() if p.requires_grad], lr=a.lr,
@@ -183,7 +219,8 @@ def main():
 
     dev = "cuda:0"
     micro = [tr[i] for i in range(len(tr))]
-    best = {"top1": 0.0}
+    best = {"top1": 0.0, "mean_p_oracle": 0.0}
+    stale = 0
     for ep in range(1, a.epochs + 1):
         random.shuffle(micro)
         model.train()
@@ -208,17 +245,26 @@ def main():
         with torch.no_grad():
             ev = evaluate(model, te, tok, dev)
         el = run_loss / max(steps, 1)
-        print("epoch %d: loss %.4f  holdout top1 %.3f  mean_p_oracle %.3f  (%.0fs)"
+        print("epoch %d: loss %.4f  val top1 %.3f  val mean_p_oracle %.3f  (%.0fs)"
               % (ep, el, ev["top1"], ev["mean_p_oracle"], time.time() - t0),
               flush=True)
-        if ev["top1"] >= best["top1"]:
+        # selection + early-stop on val mean_p_oracle (memory-law tripwire:
+        # lock-in begins as per-row p crosses 0.5 while top-1 may still look fine)
+        if ev["mean_p_oracle"] > best["mean_p_oracle"] + 0.01:
             best = ev
             best["epoch"] = ep
+            stale = 0
             unmerged = model if hasattr(model, "base_model") else model
             unmerged.save_pretrained(a.out)
             tok.save_pretrained(a.out)
-        # restore best at the end if the last epoch was worse
-    print("best holdout: top1 %.3f p_oracle %.3f (epoch %s)" % (
+        else:
+            stale += 1
+            if stale >= a.patience:
+                print("early stop at epoch %d (no val p_oracle improvement "
+                      "for %d epochs)" % (ep, stale), flush=True)
+                break
+        # (the best adapter is already on disk from the epoch that set it)
+    print("best val: top1 %.3f p_oracle %.3f (epoch %s)" % (
         best["top1"], best["mean_p_oracle"], best.get("epoch")), flush=True)
 
     if a.merge:
