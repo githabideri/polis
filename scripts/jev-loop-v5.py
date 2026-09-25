@@ -134,16 +134,20 @@ class Polis:
 MISSIONS = {
     "mine": {
         "task": "mine the marker block, then return to base",
-        "actions": ("goto_target", "mine_target", "goto_base", "give_tool", "wait"),
+        "actions": ("goto_target", "mine_target", "pickup_item", "place_block",
+                    "give_tool", "goto_base", "wait"),
         "phase_action": {"travel": "goto_target", "mine": "mine_target",
-                         "return": "goto_base", "done": "wait"},
+                         "pickup": "pickup_item", "return": "goto_base",
+                         "done": "wait"},
         "laya_instructions": (
             "Answer yes only if the proposed action matches the current phase: "
             "travel phase needs goto_target, mine phase needs mine_target, "
-            "return phase needs goto_base, done phase needs wait, and the bot "
-            "carries the tool the phase needs (mining needs a pickaxe). "
-            "give_tool is correct only when the bot lacks the tool its phase "
-            "needs. No otherwise - a proposed action that contradicts the "
+            "pickup phase needs pickup_item (while an item is still on the "
+            "ground), return phase needs goto_base, done phase needs wait, and "
+            "the bot carries the tool the phase needs (mining needs a "
+            "pickaxe). give_tool is correct only when the bot lacks the tool "
+            "its phase needs. place_block is never correct for this mining "
+            "task. No otherwise - a proposed action that contradicts the "
             "phase, skips an unfinished step, or uses a missing tool is no."),
         "judge_rules": (
             "Decide in this order. (1) First check the bot's inventory: if "
@@ -153,28 +157,40 @@ MISSIONS = {
             "pickaxe in the inventory means the tool was lost; retrying "
             "mine is wrong. (2) If a pickaxe IS in the inventory and the "
             "marker is still present, answer mine_target (retrying after a "
-            "failed mine is correct in that case). (3) Otherwise follow the "
-            "phase. Only answer wait when the facts are contradictory."),
+            "failed mine is correct in that case). (3) If the marker is gone "
+            "and the items line lists a ground item the bot is not carrying "
+            "yet, answer pickup_item. (4) place_block is only correct for "
+            "build tasks - never for this mining task. (5) Otherwise follow "
+            "the phase. Only answer wait when the facts are contradictory."),
     },
     "harvest": {
         "task": "harvest the crop, then return to base",
-        "actions": ("goto_target", "harvest_target", "goto_base", "wait"),
+        "actions": ("goto_target", "harvest_target", "pickup_item", "place_block",
+                    "give_tool", "goto_base", "wait"),
         "phase_action": {"travel": "goto_target", "harvest": "harvest_target",
-                         "return": "goto_base", "done": "wait"},
+                         "pickup": "pickup_item", "return": "goto_base",
+                         "done": "wait"},
         "laya_instructions": (
             "Answer yes only if the proposed action matches the current phase: "
-            "travel phase needs goto_target, harvest phase needs harvest_target, "
-            "return phase needs goto_base, done phase needs wait. "
-            "No otherwise - a proposed action that contradicts the phase or "
-            "skips an unfinished step is no (returning to base while the crop "
-            "is still present skips the goal)."),
+            "travel phase needs goto_target, harvest phase needs "
+            "harvest_target, pickup phase needs pickup_item (while a "
+            "harvested item is still on the ground), return phase needs "
+            "goto_base, done phase needs wait. place_block is never correct "
+            "for this harvesting task. No otherwise - a proposed action that "
+            "contradicts the phase or skips an unfinished step is no "
+            "(returning to base while the crop is still present skips the "
+            "goal)."),
         "judge_rules": (
             "harvesting a present crop needs no tool. While the crop is "
             "present and the phase is harvest, the correct action is "
             "harvest_target - the execution moves the bot there first if it "
-            "is not adjacent yet. Proposing goto_base while the crop is "
-            "still present skips the goal - answer harvest_target instead. "
-            "Only answer wait when the facts are contradictory."),
+            "is not adjacent yet. If the crop is gone and the items line "
+            "lists a ground item the bot is not carrying yet, answer "
+            "pickup_item. Proposing goto_base while the crop is still "
+            "present skips the goal - answer harvest_target instead. "
+            "place_block is only correct for build tasks - never for this "
+            "harvesting task. Only answer wait when the facts are "
+            "contradictory."),
     },
 }
 
@@ -336,6 +352,24 @@ def execute(pol, bot, action, target, base, mission):
                 return {"ok": True, "msg": "pickaxe given"}
             time.sleep(1)
         return {"ok": False, "msg": "pickaxe not carried after 8 gives"}
+    if action == "pickup_item":
+        # nearest ground item (harness: goto+pickup sequence); success = the
+        # pickup action reports, or the ground-item list shrinks
+        st0 = pol.state(bot)
+        n0 = len(st0.get("Items") or [])
+        r = pol.cmd("pickup", [], bot)
+        if not r.get("Ok") and "No item entity found" not in (r.get("Message") or ""):
+            return {"ok": False, "msg": r.get("Message") or r.get("error") or "pickup refused"}
+        t0 = time.time()
+        while time.time() - t0 < 30:
+            st = pol.state(bot)
+            la = st.get("LastAction") or {}
+            if la.get("Name") == "pickup" and la.get("Ok") is not None:
+                return {"ok": bool(la.get("Ok")), "msg": la.get("Msg") or ""}
+            if len(st.get("Items") or []) < n0:
+                return {"ok": True, "msg": "ground item removed"}
+            time.sleep(1)
+        return {"ok": False, "msg": "pickup timeout"}
     if action == "place_block":
         # setblock at the target cell (the fixture's marker block type)
         if mission == "harvest":
@@ -441,14 +475,23 @@ def run_once(a, pol, fault_phases):
         fixture_gone = not fixture
         carrying = pol.carrying(a.bot)
         has_harvest = any("carrot" in (c or "") for c in carrying)
+        # ground items within pickup reach (harness state Items, radius 5)
+        ground_items = [i.get("Code") for i in (st.get("Items") or [])
+                        if (i.get("Dist") or 99) <= 5]
+        need_pickup = fixture_gone and not near_b and bool(ground_items) \
+            and (mission == "mine" or not has_harvest)
         if mission == "mine":
             if not fixture_gone:
                 phase = "mine" if near_t else "travel"
+            elif need_pickup:
+                phase = "pickup"
             else:
                 phase = "done" if near_b else "return"
         else:
             if not fixture_gone:
                 phase = "harvest" if near_t else "travel"
+            elif need_pickup:
+                phase = "pickup"
             else:
                 phase = "done" if near_b else "return"
         # Inject a known-wrong proposal at the FIRST step of chosen phases,
@@ -475,6 +518,8 @@ def run_once(a, pol, fault_phases):
         # a bot without a pickaxe must get one (give_tool) before it can mine.
         if mission == "mine" and phase == "mine" and not has_tool:
             correct = "give_tool"
+        elif phase == "pickup":
+            correct = "pickup_item"
         else:
             correct = MISSIONS[mission]["phase_action"][phase]
 
@@ -494,20 +539,25 @@ def run_once(a, pol, fault_phases):
                     changed.append("pickaxe %s" % ("re-given" if has_tool else "dropped"))
             if has_harvest != prev["has_harvest"]:
                 changed.append("harvested item %s" % ("now carried" if has_harvest else "lost"))
+            if bool(ground_items) != prev["has_items"]:
+                changed.append("ground item %s" % ("appeared" if ground_items else "picked up"))
             if phase != prev["phase"]:
                 changed.append("phase %s -> %s" % (prev["phase"], phase))
         since = ", ".join(changed) if changed else "no change"
         fixture_label = "crop_present" if mission == "harvest" else "marker_present"
+        items_line = ", ".join(ground_items[:3]) or "none"
         state_text = (
             "task: %s\n"
             "current phase: %s\n"
             "facts: bot at (%.0f, %d, %.0f), near_target=%s, near_base=%s, %s=%s\n"
-            "carrying: %s\nsince_last_step: %s\nlast_action: %s\nproposed action: %s"
+            "carrying: %s\nitems: %s\n"
+            "since_last_step: %s\nlast_action: %s\nproposed action: %s"
         ) % (
             MISSIONS[mission]["task"], phase, pos[0], pos[1], pos[2],
             "yes" if near_t else "no", "yes" if near_b else "no",
             fixture_label, "yes" if fixture else "no",
             ", ".join((c or "?") for c in carrying[:5]) or "empty",
+            items_line,
             since,
             (st.get("LastAction") or {}).get("Msg") or "none",
             proposal,
@@ -619,11 +669,13 @@ def run_once(a, pol, fault_phases):
             "oracle": correct, "match": match, "fault_corrected": fault_corrected,
             "last_resort_repair": last_resort,
             "since_last_step": since,
+            "options": list(MISSIONS[mission]["actions"]),
+            "items": ground_items,
             "state_text": state_text, "laya_ms": reflex_ms,
         })
         prev = {"fixture": fixture, "phase": phase,
                 "has_tool": any("pickaxe" in (c or "") for c in carrying),
-                "has_harvest": has_harvest}
+                "has_harvest": has_harvest, "has_items": bool(ground_items)}
         last_final = final
 
         st = pol.state(a.bot)

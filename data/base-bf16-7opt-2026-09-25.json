@@ -1,0 +1,2093 @@
+[
+ {
+  "id": "pickup-92",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.016845703125,
+  "probs": [
+   0.002,
+   0.001,
+   0.017,
+   0.0,
+   0.001,
+   0.977,
+   0.002
+  ]
+ },
+ {
+  "id": "pickup-82",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.8984375,
+  "probs": [
+   0.029,
+   0.002,
+   0.898,
+   0.002,
+   0.006,
+   0.054,
+   0.007
+  ]
+ },
+ {
+  "id": "pickup-93",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.016845703125,
+  "probs": [
+   0.002,
+   0.001,
+   0.017,
+   0.0,
+   0.001,
+   0.977,
+   0.002
+  ]
+ },
+ {
+  "id": "pickup-83",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.89453125,
+  "probs": [
+   0.019,
+   0.003,
+   0.895,
+   0.003,
+   0.014,
+   0.047,
+   0.021
+  ]
+ },
+ {
+  "id": "pickup-84",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.9140625,
+  "probs": [
+   0.016,
+   0.002,
+   0.914,
+   0.002,
+   0.007,
+   0.049,
+   0.01
+  ]
+ },
+ {
+  "id": "pickup-88",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.017822265625,
+  "probs": [
+   0.002,
+   0.001,
+   0.018,
+   0.0,
+   0.001,
+   0.977,
+   0.002
+  ]
+ },
+ {
+  "id": "pickup-89",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.01397705078125,
+  "probs": [
+   0.002,
+   0.001,
+   0.014,
+   0.0,
+   0.001,
+   0.98,
+   0.002
+  ]
+ },
+ {
+  "id": "pickup-85",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.8984375,
+  "probs": [
+   0.029,
+   0.003,
+   0.898,
+   0.002,
+   0.009,
+   0.045,
+   0.014
+  ]
+ },
+ {
+  "id": "pickup-86",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.91015625,
+  "probs": [
+   0.017,
+   0.002,
+   0.91,
+   0.002,
+   0.008,
+   0.051,
+   0.01
+  ]
+ },
+ {
+  "id": "pickup-90",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.017822265625,
+  "probs": [
+   0.002,
+   0.001,
+   0.018,
+   0.0,
+   0.001,
+   0.977,
+   0.002
+  ]
+ },
+ {
+  "id": "pickup-91",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.016845703125,
+  "probs": [
+   0.002,
+   0.001,
+   0.017,
+   0.0,
+   0.001,
+   0.977,
+   0.002
+  ]
+ },
+ {
+  "id": "pickup-87",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.91015625,
+  "probs": [
+   0.017,
+   0.003,
+   0.91,
+   0.003,
+   0.011,
+   0.04,
+   0.016
+  ]
+ },
+ {
+  "id": "v5-113",
+  "family": "harvest",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.97265625,
+  "probs": [
+   0.016,
+   0.001,
+   0.007,
+   0.0,
+   0.001,
+   0.973,
+   0.002
+  ]
+ },
+ {
+  "id": "ab-4",
+  "family": "harvest",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.9765625,
+  "probs": [
+   0.016,
+   0.001,
+   0.006,
+   0.0,
+   0.001,
+   0.977,
+   0.001
+  ]
+ },
+ {
+  "id": "ab-2",
+  "family": "harvest",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.9765625,
+  "probs": [
+   0.016,
+   0.001,
+   0.006,
+   0.0,
+   0.001,
+   0.977,
+   0.001
+  ]
+ },
+ {
+  "id": "ab-1",
+  "family": "harvest",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.9765625,
+  "probs": [
+   0.015,
+   0.001,
+   0.004,
+   0.0,
+   0.001,
+   0.977,
+   0.001
+  ]
+ },
+ {
+  "id": "v5-112",
+  "family": "harvest",
+  "oracle": "goto_target",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.1015625,
+  "probs": [
+   0.102,
+   0.023,
+   0.014,
+   0.003,
+   0.003,
+   0.848,
+   0.008
+  ]
+ },
+ {
+  "id": "ab-0",
+  "family": "harvest",
+  "oracle": "goto_target",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.11376953125,
+  "probs": [
+   0.114,
+   0.021,
+   0.012,
+   0.003,
+   0.003,
+   0.84,
+   0.006
+  ]
+ },
+ {
+  "id": "ab-3",
+  "family": "harvest",
+  "oracle": "goto_target",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.10791015625,
+  "probs": [
+   0.108,
+   0.019,
+   0.012,
+   0.002,
+   0.003,
+   0.848,
+   0.006
+  ]
+ },
+ {
+  "id": "give-44",
+  "family": "A",
+  "oracle": "give_tool",
+  "top1": "give_tool",
+  "correct": 1,
+  "p_oracle": 0.515625,
+  "probs": [
+   0.01,
+   0.426,
+   0.011,
+   0.017,
+   0.516,
+   0.004,
+   0.018
+  ]
+ },
+ {
+  "id": "give-45",
+  "family": "B",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.00738525390625,
+  "probs": [
+   0.005,
+   0.965,
+   0.007,
+   0.005,
+   0.007,
+   0.002,
+   0.007
+  ]
+ },
+ {
+  "id": "give-42",
+  "family": "A",
+  "oracle": "give_tool",
+  "top1": "give_tool",
+  "correct": 1,
+  "p_oracle": 0.546875,
+  "probs": [
+   0.016,
+   0.352,
+   0.033,
+   0.02,
+   0.547,
+   0.006,
+   0.027
+  ]
+ },
+ {
+  "id": "give-43",
+  "family": "B",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.05322265625,
+  "probs": [
+   0.008,
+   0.887,
+   0.028,
+   0.01,
+   0.053,
+   0.003,
+   0.011
+  ]
+ },
+ {
+  "id": "give-48",
+  "family": "A",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.435546875,
+  "probs": [
+   0.01,
+   0.494,
+   0.016,
+   0.017,
+   0.436,
+   0.004,
+   0.025
+  ]
+ },
+ {
+  "id": "give-49",
+  "family": "B",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.005767822265625,
+  "probs": [
+   0.005,
+   0.969,
+   0.006,
+   0.004,
+   0.006,
+   0.002,
+   0.007
+  ]
+ },
+ {
+  "id": "give-46",
+  "family": "A",
+  "oracle": "give_tool",
+  "top1": "give_tool",
+  "correct": 1,
+  "p_oracle": 0.5859375,
+  "probs": [
+   0.014,
+   0.312,
+   0.037,
+   0.017,
+   0.586,
+   0.006,
+   0.029
+  ]
+ },
+ {
+  "id": "give-47",
+  "family": "B",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.0595703125,
+  "probs": [
+   0.008,
+   0.875,
+   0.032,
+   0.009,
+   0.06,
+   0.003,
+   0.013
+  ]
+ },
+ {
+  "id": "give-28",
+  "family": "A",
+  "oracle": "give_tool",
+  "top1": "give_tool",
+  "correct": 1,
+  "p_oracle": 0.5,
+  "probs": [
+   0.01,
+   0.441,
+   0.011,
+   0.017,
+   0.5,
+   0.004,
+   0.018
+  ]
+ },
+ {
+  "id": "give-29",
+  "family": "B",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.007354736328125,
+  "probs": [
+   0.005,
+   0.965,
+   0.007,
+   0.005,
+   0.007,
+   0.002,
+   0.008
+  ]
+ },
+ {
+  "id": "give-26",
+  "family": "A",
+  "oracle": "give_tool",
+  "top1": "give_tool",
+  "correct": 1,
+  "p_oracle": 0.53125,
+  "probs": [
+   0.015,
+   0.365,
+   0.032,
+   0.021,
+   0.531,
+   0.006,
+   0.028
+  ]
+ },
+ {
+  "id": "give-27",
+  "family": "B",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.050048828125,
+  "probs": [
+   0.007,
+   0.891,
+   0.029,
+   0.01,
+   0.05,
+   0.003,
+   0.012
+  ]
+ },
+ {
+  "id": "give-32",
+  "family": "A",
+  "oracle": "give_tool",
+  "top1": "give_tool",
+  "correct": 1,
+  "p_oracle": 0.48046875,
+  "probs": [
+   0.01,
+   0.451,
+   0.016,
+   0.017,
+   0.48,
+   0.004,
+   0.021
+  ]
+ },
+ {
+  "id": "give-33",
+  "family": "B",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.006134033203125,
+  "probs": [
+   0.005,
+   0.969,
+   0.006,
+   0.004,
+   0.006,
+   0.002,
+   0.007
+  ]
+ },
+ {
+  "id": "give-30",
+  "family": "A",
+  "oracle": "give_tool",
+  "top1": "give_tool",
+  "correct": 1,
+  "p_oracle": 0.59375,
+  "probs": [
+   0.014,
+   0.299,
+   0.038,
+   0.017,
+   0.594,
+   0.006,
+   0.03
+  ]
+ },
+ {
+  "id": "give-31",
+  "family": "B",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.0703125,
+  "probs": [
+   0.007,
+   0.859,
+   0.033,
+   0.01,
+   0.07,
+   0.003,
+   0.016
+  ]
+ },
+ {
+  "id": "v5-116",
+  "family": "mine",
+  "oracle": "mine_target",
+  "top1": "mine_target",
+  "correct": 1,
+  "p_oracle": 0.9765625,
+  "probs": [
+   0.004,
+   0.977,
+   0.005,
+   0.002,
+   0.004,
+   0.001,
+   0.005
+  ]
+ },
+ {
+  "id": "v5-121",
+  "family": "mine",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.0013885498046875,
+  "probs": [
+   0.003,
+   0.98,
+   0.008,
+   0.003,
+   0.001,
+   0.002,
+   0.002
+  ]
+ },
+ {
+  "id": "give-50",
+  "family": "C",
+  "oracle": "mine_target",
+  "top1": "mine_target",
+  "correct": 1,
+  "p_oracle": 0.98046875,
+  "probs": [
+   0.003,
+   0.98,
+   0.008,
+   0.003,
+   0.001,
+   0.002,
+   0.002
+  ]
+ },
+ {
+  "id": "v5-122",
+  "family": "mine",
+  "oracle": "mine_target",
+  "top1": "mine_target",
+  "correct": 1,
+  "p_oracle": 0.9609375,
+  "probs": [
+   0.005,
+   0.961,
+   0.011,
+   0.005,
+   0.014,
+   0.002,
+   0.005
+  ]
+ },
+ {
+  "id": "give-51",
+  "family": "C",
+  "oracle": "mine_target",
+  "top1": "mine_target",
+  "correct": 1,
+  "p_oracle": 0.98046875,
+  "probs": [
+   0.003,
+   0.98,
+   0.008,
+   0.003,
+   0.001,
+   0.002,
+   0.002
+  ]
+ },
+ {
+  "id": "ab-13",
+  "family": "mine",
+  "oracle": "mine_target",
+  "top1": "mine_target",
+  "correct": 1,
+  "p_oracle": 0.96875,
+  "probs": [
+   0.007,
+   0.969,
+   0.01,
+   0.007,
+   0.002,
+   0.003,
+   0.003
+  ]
+ },
+ {
+  "id": "ab-22",
+  "family": "mine",
+  "oracle": "mine_target",
+  "top1": "mine_target",
+  "correct": 1,
+  "p_oracle": 0.97265625,
+  "probs": [
+   0.004,
+   0.973,
+   0.006,
+   0.002,
+   0.011,
+   0.001,
+   0.004
+  ]
+ },
+ {
+  "id": "ab-21",
+  "family": "mine",
+  "oracle": "mine_target",
+  "top1": "mine_target",
+  "correct": 1,
+  "p_oracle": 0.96484375,
+  "probs": [
+   0.005,
+   0.965,
+   0.013,
+   0.003,
+   0.007,
+   0.002,
+   0.004
+  ]
+ },
+ {
+  "id": "ab-17",
+  "family": "mine",
+  "oracle": "mine_target",
+  "top1": "mine_target",
+  "correct": 1,
+  "p_oracle": 0.95703125,
+  "probs": [
+   0.006,
+   0.957,
+   0.013,
+   0.007,
+   0.008,
+   0.003,
+   0.006
+  ]
+ },
+ {
+  "id": "give-36",
+  "family": "A",
+  "oracle": "give_tool",
+  "top1": "give_tool",
+  "correct": 1,
+  "p_oracle": 0.515625,
+  "probs": [
+   0.009,
+   0.426,
+   0.011,
+   0.016,
+   0.516,
+   0.004,
+   0.02
+  ]
+ },
+ {
+  "id": "give-37",
+  "family": "B",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.006927490234375,
+  "probs": [
+   0.005,
+   0.965,
+   0.007,
+   0.005,
+   0.007,
+   0.002,
+   0.007
+  ]
+ },
+ {
+  "id": "give-34",
+  "family": "A",
+  "oracle": "give_tool",
+  "top1": "give_tool",
+  "correct": 1,
+  "p_oracle": 0.546875,
+  "probs": [
+   0.016,
+   0.354,
+   0.031,
+   0.019,
+   0.547,
+   0.006,
+   0.027
+  ]
+ },
+ {
+  "id": "give-35",
+  "family": "B",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.050048828125,
+  "probs": [
+   0.008,
+   0.887,
+   0.03,
+   0.009,
+   0.05,
+   0.003,
+   0.012
+  ]
+ },
+ {
+  "id": "give-40",
+  "family": "A",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.451171875,
+  "probs": [
+   0.01,
+   0.48,
+   0.015,
+   0.016,
+   0.451,
+   0.004,
+   0.024
+  ]
+ },
+ {
+  "id": "give-41",
+  "family": "B",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.006927490234375,
+  "probs": [
+   0.005,
+   0.969,
+   0.007,
+   0.004,
+   0.007,
+   0.002,
+   0.008
+  ]
+ },
+ {
+  "id": "give-38",
+  "family": "A",
+  "oracle": "give_tool",
+  "top1": "give_tool",
+  "correct": 1,
+  "p_oracle": 0.5703125,
+  "probs": [
+   0.014,
+   0.324,
+   0.039,
+   0.017,
+   0.57,
+   0.006,
+   0.03
+  ]
+ },
+ {
+  "id": "give-39",
+  "family": "B",
+  "oracle": "give_tool",
+  "top1": "mine_target",
+  "correct": 0,
+  "p_oracle": 0.06298828125,
+  "probs": [
+   0.008,
+   0.867,
+   0.034,
+   0.01,
+   0.063,
+   0.003,
+   0.016
+  ]
+ },
+ {
+  "id": "ab-8",
+  "family": "mine",
+  "oracle": "mine_target",
+  "top1": "mine_target",
+  "correct": 1,
+  "p_oracle": 0.9765625,
+  "probs": [
+   0.003,
+   0.977,
+   0.01,
+   0.003,
+   0.001,
+   0.002,
+   0.003
+  ]
+ },
+ {
+  "id": "ab-14",
+  "family": "mine",
+  "oracle": "mine_target",
+  "top1": "mine_target",
+  "correct": 1,
+  "p_oracle": 0.953125,
+  "probs": [
+   0.006,
+   0.953,
+   0.014,
+   0.008,
+   0.008,
+   0.003,
+   0.006
+  ]
+ },
+ {
+  "id": "ab-9",
+  "family": "mine",
+  "oracle": "mine_target",
+  "top1": "mine_target",
+  "correct": 1,
+  "p_oracle": 0.9765625,
+  "probs": [
+   0.004,
+   0.977,
+   0.007,
+   0.002,
+   0.004,
+   0.001,
+   0.007
+  ]
+ },
+ {
+  "id": "pickup-52",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.70703125,
+  "probs": [
+   0.029,
+   0.012,
+   0.707,
+   0.019,
+   0.108,
+   0.09,
+   0.033
+  ]
+ },
+ {
+  "id": "pickup-69",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.0234375,
+  "probs": [
+   0.014,
+   0.005,
+   0.023,
+   0.004,
+   0.008,
+   0.938,
+   0.01
+  ]
+ },
+ {
+  "id": "pickup-59",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.87890625,
+  "probs": [
+   0.009,
+   0.002,
+   0.879,
+   0.006,
+   0.072,
+   0.019,
+   0.012
+  ]
+ },
+ {
+  "id": "pickup-53",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.890625,
+  "probs": [
+   0.008,
+   0.002,
+   0.891,
+   0.006,
+   0.068,
+   0.017,
+   0.009
+  ]
+ },
+ {
+  "id": "pickup-70",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.01300048828125,
+  "probs": [
+   0.007,
+   0.002,
+   0.013,
+   0.002,
+   0.004,
+   0.969,
+   0.004
+  ]
+ },
+ {
+  "id": "pickup-60",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.64453125,
+  "probs": [
+   0.044,
+   0.028,
+   0.645,
+   0.021,
+   0.145,
+   0.06,
+   0.056
+  ]
+ },
+ {
+  "id": "pickup-54",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.62890625,
+  "probs": [
+   0.03,
+   0.033,
+   0.629,
+   0.019,
+   0.181,
+   0.052,
+   0.055
+  ]
+ },
+ {
+  "id": "pickup-64",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.01556396484375,
+  "probs": [
+   0.008,
+   0.003,
+   0.016,
+   0.003,
+   0.004,
+   0.961,
+   0.005
+  ]
+ },
+ {
+  "id": "pickup-61",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.62890625,
+  "probs": [
+   0.021,
+   0.019,
+   0.629,
+   0.023,
+   0.217,
+   0.045,
+   0.045
+  ]
+ },
+ {
+  "id": "pickup-71",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.02490234375,
+  "probs": [
+   0.015,
+   0.005,
+   0.025,
+   0.004,
+   0.008,
+   0.934,
+   0.01
+  ]
+ },
+ {
+  "id": "pickup-72",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.01220703125,
+  "probs": [
+   0.007,
+   0.002,
+   0.012,
+   0.002,
+   0.004,
+   0.969,
+   0.004
+  ]
+ },
+ {
+  "id": "pickup-62",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.8203125,
+  "probs": [
+   0.012,
+   0.003,
+   0.82,
+   0.007,
+   0.098,
+   0.046,
+   0.012
+  ]
+ },
+ {
+  "id": "pickup-55",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.63671875,
+  "probs": [
+   0.022,
+   0.017,
+   0.637,
+   0.021,
+   0.207,
+   0.046,
+   0.049
+  ]
+ },
+ {
+  "id": "pickup-65",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.0234375,
+  "probs": [
+   0.014,
+   0.005,
+   0.023,
+   0.004,
+   0.007,
+   0.938,
+   0.01
+  ]
+ },
+ {
+  "id": "pickup-63",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.66015625,
+  "probs": [
+   0.023,
+   0.035,
+   0.66,
+   0.014,
+   0.178,
+   0.029,
+   0.062
+  ]
+ },
+ {
+  "id": "pickup-73",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.0234375,
+  "probs": [
+   0.013,
+   0.005,
+   0.023,
+   0.004,
+   0.008,
+   0.938,
+   0.01
+  ]
+ },
+ {
+  "id": "pickup-66",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.01080322265625,
+  "probs": [
+   0.006,
+   0.002,
+   0.011,
+   0.002,
+   0.004,
+   0.973,
+   0.004
+  ]
+ },
+ {
+  "id": "pickup-56",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.828125,
+  "probs": [
+   0.019,
+   0.003,
+   0.828,
+   0.008,
+   0.068,
+   0.06,
+   0.015
+  ]
+ },
+ {
+  "id": "pickup-57",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.72265625,
+  "probs": [
+   0.022,
+   0.038,
+   0.723,
+   0.012,
+   0.143,
+   0.023,
+   0.038
+  ]
+ },
+ {
+  "id": "pickup-67",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.0220947265625,
+  "probs": [
+   0.014,
+   0.005,
+   0.022,
+   0.004,
+   0.007,
+   0.938,
+   0.009
+  ]
+ },
+ {
+  "id": "pickup-74",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.012939453125,
+  "probs": [
+   0.007,
+   0.003,
+   0.013,
+   0.002,
+   0.004,
+   0.965,
+   0.004
+  ]
+ },
+ {
+  "id": "pickup-68",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.01220703125,
+  "probs": [
+   0.007,
+   0.002,
+   0.012,
+   0.002,
+   0.004,
+   0.969,
+   0.004
+  ]
+ },
+ {
+  "id": "pickup-58",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "pickup_item",
+  "correct": 1,
+  "p_oracle": 0.69140625,
+  "probs": [
+   0.02,
+   0.013,
+   0.691,
+   0.015,
+   0.164,
+   0.068,
+   0.029
+  ]
+ },
+ {
+  "id": "pickup-75",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.0234375,
+  "probs": [
+   0.014,
+   0.005,
+   0.023,
+   0.004,
+   0.008,
+   0.934,
+   0.011
+  ]
+ },
+ {
+  "id": "pickup-79",
+  "family": "pickup-mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.98046875,
+  "probs": [
+   0.004,
+   0.001,
+   0.001,
+   0.001,
+   0.001,
+   0.98,
+   0.01
+  ]
+ },
+ {
+  "id": "pickup-80",
+  "family": "pickup-mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.98046875,
+  "probs": [
+   0.004,
+   0.001,
+   0.001,
+   0.002,
+   0.001,
+   0.98,
+   0.008
+  ]
+ },
+ {
+  "id": "v5-117",
+  "family": "mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.96875,
+  "probs": [
+   0.011,
+   0.002,
+   0.011,
+   0.002,
+   0.002,
+   0.969,
+   0.005
+  ]
+ },
+ {
+  "id": "v5-118",
+  "family": "mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.96484375,
+  "probs": [
+   0.007,
+   0.003,
+   0.014,
+   0.003,
+   0.003,
+   0.965,
+   0.006
+  ]
+ },
+ {
+  "id": "pickup-81",
+  "family": "pickup-mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.98046875,
+  "probs": [
+   0.004,
+   0.001,
+   0.001,
+   0.002,
+   0.001,
+   0.98,
+   0.008
+  ]
+ },
+ {
+  "id": "ab-25",
+  "family": "mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.98046875,
+  "probs": [
+   0.007,
+   0.002,
+   0.005,
+   0.002,
+   0.001,
+   0.98,
+   0.004
+  ]
+ },
+ {
+  "id": "ab-15",
+  "family": "mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.98046875,
+  "probs": [
+   0.008,
+   0.002,
+   0.004,
+   0.002,
+   0.001,
+   0.98,
+   0.003
+  ]
+ },
+ {
+  "id": "ab-23",
+  "family": "mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.9765625,
+  "probs": [
+   0.008,
+   0.002,
+   0.006,
+   0.002,
+   0.001,
+   0.977,
+   0.004
+  ]
+ },
+ {
+  "id": "ab-18",
+  "family": "mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.98046875,
+  "probs": [
+   0.008,
+   0.002,
+   0.004,
+   0.002,
+   0.001,
+   0.98,
+   0.003
+  ]
+ },
+ {
+  "id": "ab-10",
+  "family": "mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.96875,
+  "probs": [
+   0.01,
+   0.002,
+   0.01,
+   0.002,
+   0.002,
+   0.969,
+   0.005
+  ]
+ },
+ {
+  "id": "pickup-76",
+  "family": "pickup-mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.98046875,
+  "probs": [
+   0.004,
+   0.001,
+   0.001,
+   0.001,
+   0.001,
+   0.98,
+   0.008
+  ]
+ },
+ {
+  "id": "pickup-77",
+  "family": "pickup-mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.984375,
+  "probs": [
+   0.004,
+   0.001,
+   0.001,
+   0.001,
+   0.001,
+   0.984,
+   0.005
+  ]
+ },
+ {
+  "id": "pickup-78",
+  "family": "pickup-mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.984375,
+  "probs": [
+   0.004,
+   0.001,
+   0.001,
+   0.001,
+   0.001,
+   0.984,
+   0.006
+  ]
+ },
+ {
+  "id": "v5-119",
+  "family": "mine",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.96875,
+  "probs": [
+   0.006,
+   0.002,
+   0.011,
+   0.002,
+   0.003,
+   0.969,
+   0.005
+  ]
+ },
+ {
+  "id": "v5-115",
+  "family": "mine",
+  "oracle": "goto_target",
+  "top1": "goto_target",
+  "correct": 1,
+  "p_oracle": 0.52734375,
+  "probs": [
+   0.527,
+   0.342,
+   0.009,
+   0.006,
+   0.005,
+   0.104,
+   0.008
+  ]
+ },
+ {
+  "id": "v5-114",
+  "family": "mine",
+  "oracle": "goto_target",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.06689453125,
+  "probs": [
+   0.067,
+   0.022,
+   0.011,
+   0.004,
+   0.005,
+   0.871,
+   0.021
+  ]
+ },
+ {
+  "id": "v5-120",
+  "family": "mine",
+  "oracle": "goto_target",
+  "top1": "goto_target",
+  "correct": 1,
+  "p_oracle": 0.8359375,
+  "probs": [
+   0.836,
+   0.064,
+   0.004,
+   0.003,
+   0.003,
+   0.088,
+   0.003
+  ]
+ },
+ {
+  "id": "ab-11",
+  "family": "mine",
+  "oracle": "goto_target",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.07958984375,
+  "probs": [
+   0.08,
+   0.023,
+   0.011,
+   0.005,
+   0.004,
+   0.855,
+   0.021
+  ]
+ },
+ {
+  "id": "ab-12",
+  "family": "mine",
+  "oracle": "goto_target",
+  "top1": "goto_target",
+  "correct": 1,
+  "p_oracle": 0.828125,
+  "probs": [
+   0.828,
+   0.105,
+   0.004,
+   0.004,
+   0.002,
+   0.053,
+   0.002
+  ]
+ },
+ {
+  "id": "ab-20",
+  "family": "mine",
+  "oracle": "goto_target",
+  "top1": "goto_target",
+  "correct": 1,
+  "p_oracle": 0.8671875,
+  "probs": [
+   0.867,
+   0.059,
+   0.004,
+   0.004,
+   0.002,
+   0.059,
+   0.004
+  ]
+ },
+ {
+  "id": "ab-16",
+  "family": "mine",
+  "oracle": "goto_target",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.08349609375,
+  "probs": [
+   0.083,
+   0.026,
+   0.011,
+   0.005,
+   0.004,
+   0.844,
+   0.027
+  ]
+ },
+ {
+  "id": "ab-24",
+  "family": "mine",
+  "oracle": "goto_target",
+  "top1": "goto_target",
+  "correct": 1,
+  "p_oracle": 0.87109375,
+  "probs": [
+   0.871,
+   0.056,
+   0.004,
+   0.004,
+   0.002,
+   0.059,
+   0.003
+  ]
+ },
+ {
+  "id": "ab-19",
+  "family": "mine",
+  "oracle": "goto_target",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.11083984375,
+  "probs": [
+   0.111,
+   0.025,
+   0.011,
+   0.005,
+   0.004,
+   0.82,
+   0.025
+  ]
+ },
+ {
+  "id": "ab-6",
+  "family": "mine",
+  "oracle": "goto_target",
+  "top1": "goto_target",
+  "correct": 1,
+  "p_oracle": 0.54296875,
+  "probs": [
+   0.543,
+   0.35,
+   0.008,
+   0.006,
+   0.004,
+   0.083,
+   0.006
+  ]
+ },
+ {
+  "id": "ab-5",
+  "family": "mine",
+  "oracle": "goto_target",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.08349609375,
+  "probs": [
+   0.083,
+   0.027,
+   0.012,
+   0.004,
+   0.006,
+   0.848,
+   0.021
+  ]
+ },
+ {
+  "id": "ab-7",
+  "family": "mine",
+  "oracle": "goto_target",
+  "top1": "goto_target",
+  "correct": 1,
+  "p_oracle": 0.73828125,
+  "probs": [
+   0.738,
+   0.165,
+   0.005,
+   0.003,
+   0.003,
+   0.083,
+   0.003
+  ]
+ },
+ {
+  "id": "pickup-101",
+  "family": "build",
+  "oracle": "place_block",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.0308837890625,
+  "probs": [
+   0.004,
+   0.001,
+   0.001,
+   0.031,
+   0.0,
+   0.961,
+   0.001
+  ]
+ },
+ {
+  "id": "pickup-96",
+  "family": "build",
+  "oracle": "place_block",
+  "top1": "place_block",
+  "correct": 1,
+  "p_oracle": 0.9921875,
+  "probs": [
+   0.003,
+   0.001,
+   0.001,
+   0.992,
+   0.0,
+   0.001,
+   0.003
+  ]
+ },
+ {
+  "id": "pickup-102",
+  "family": "build",
+  "oracle": "place_block",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.039306640625,
+  "probs": [
+   0.005,
+   0.001,
+   0.001,
+   0.039,
+   0.0,
+   0.953,
+   0.001
+  ]
+ },
+ {
+  "id": "pickup-97",
+  "family": "build",
+  "oracle": "place_block",
+  "top1": "place_block",
+  "correct": 1,
+  "p_oracle": 0.93359375,
+  "probs": [
+   0.047,
+   0.007,
+   0.002,
+   0.934,
+   0.001,
+   0.002,
+   0.007
+  ]
+ },
+ {
+  "id": "pickup-103",
+  "family": "build",
+  "oracle": "place_block",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.034912109375,
+  "probs": [
+   0.006,
+   0.001,
+   0.001,
+   0.035,
+   0.0,
+   0.957,
+   0.001
+  ]
+ },
+ {
+  "id": "pickup-98",
+  "family": "build",
+  "oracle": "place_block",
+  "top1": "place_block",
+  "correct": 1,
+  "p_oracle": 0.9921875,
+  "probs": [
+   0.003,
+   0.001,
+   0.001,
+   0.992,
+   0.0,
+   0.001,
+   0.003
+  ]
+ },
+ {
+  "id": "pickup-104",
+  "family": "build",
+  "oracle": "place_block",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.0257568359375,
+  "probs": [
+   0.006,
+   0.001,
+   0.001,
+   0.026,
+   0.0,
+   0.965,
+   0.001
+  ]
+ },
+ {
+  "id": "pickup-99",
+  "family": "build",
+  "oracle": "place_block",
+  "top1": "place_block",
+  "correct": 1,
+  "p_oracle": 0.93359375,
+  "probs": [
+   0.046,
+   0.007,
+   0.002,
+   0.934,
+   0.001,
+   0.003,
+   0.009
+  ]
+ },
+ {
+  "id": "pickup-105",
+  "family": "build",
+  "oracle": "place_block",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.02734375,
+  "probs": [
+   0.005,
+   0.001,
+   0.001,
+   0.027,
+   0.0,
+   0.965,
+   0.001
+  ]
+ },
+ {
+  "id": "pickup-94",
+  "family": "build",
+  "oracle": "place_block",
+  "top1": "place_block",
+  "correct": 1,
+  "p_oracle": 0.9921875,
+  "probs": [
+   0.003,
+   0.001,
+   0.001,
+   0.992,
+   0.0,
+   0.001,
+   0.002
+  ]
+ },
+ {
+  "id": "pickup-100",
+  "family": "build",
+  "oracle": "place_block",
+  "top1": "goto_base",
+  "correct": 0,
+  "p_oracle": 0.0308837890625,
+  "probs": [
+   0.005,
+   0.001,
+   0.001,
+   0.031,
+   0.0,
+   0.961,
+   0.001
+  ]
+ },
+ {
+  "id": "pickup-95",
+  "family": "build",
+  "oracle": "place_block",
+  "top1": "place_block",
+  "correct": 1,
+  "p_oracle": 0.92578125,
+  "probs": [
+   0.052,
+   0.008,
+   0.003,
+   0.926,
+   0.001,
+   0.003,
+   0.009
+  ]
+ },
+ {
+  "id": "pickup-106",
+  "family": "build",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.984375,
+  "probs": [
+   0.004,
+   0.001,
+   0.002,
+   0.001,
+   0.001,
+   0.984,
+   0.009
+  ]
+ },
+ {
+  "id": "pickup-107",
+  "family": "build",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.984375,
+  "probs": [
+   0.005,
+   0.001,
+   0.002,
+   0.001,
+   0.001,
+   0.984,
+   0.007
+  ]
+ },
+ {
+  "id": "pickup-108",
+  "family": "build",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.984375,
+  "probs": [
+   0.005,
+   0.001,
+   0.002,
+   0.001,
+   0.001,
+   0.984,
+   0.007
+  ]
+ },
+ {
+  "id": "pickup-109",
+  "family": "build",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.98046875,
+  "probs": [
+   0.005,
+   0.002,
+   0.002,
+   0.001,
+   0.001,
+   0.98,
+   0.01
+  ]
+ },
+ {
+  "id": "pickup-110",
+  "family": "build",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.98046875,
+  "probs": [
+   0.005,
+   0.002,
+   0.002,
+   0.001,
+   0.001,
+   0.98,
+   0.011
+  ]
+ },
+ {
+  "id": "pickup-111",
+  "family": "build",
+  "oracle": "goto_base",
+  "top1": "goto_base",
+  "correct": 1,
+  "p_oracle": 0.98046875,
+  "probs": [
+   0.005,
+   0.002,
+   0.002,
+   0.001,
+   0.001,
+   0.98,
+   0.008
+  ]
+ }
+]

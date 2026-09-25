@@ -1,0 +1,2093 @@
+[
+ {
+  "id": "pickup-92",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "p_oracle": 0.044663045555353165,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.008558924309909344,
+   "harvest_target": 0.004937728866934776,
+   "pickup_item": 0.044663045555353165,
+   "place_block": 0.0024265653919428587,
+   "give_tool": 0.004026449751108885,
+   "goto_base": 0.9284583330154419,
+   "wait": 0.006928927265107632
+  }
+ },
+ {
+  "id": "pickup-82",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "p_oracle": 0.8166854381561279,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.059780582785606384,
+   "harvest_target": 0.008032776415348053,
+   "pickup_item": 0.8166854381561279,
+   "place_block": 0.007339437026530504,
+   "give_tool": 0.014271607622504234,
+   "goto_base": 0.0773053914308548,
+   "wait": 0.0165847335010767
+  }
+ },
+ {
+  "id": "pickup-93",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "p_oracle": 0.04845388978719711,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.00821598432958126,
+   "harvest_target": 0.004641431383788586,
+   "pickup_item": 0.04845388978719711,
+   "place_block": 0.0023118832614272833,
+   "give_tool": 0.003846439765766263,
+   "goto_base": 0.926204264163971,
+   "wait": 0.006326074246317148
+  }
+ },
+ {
+  "id": "pickup-83",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "p_oracle": 0.7388737201690674,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.04902346804738045,
+   "harvest_target": 0.012530582025647163,
+   "pickup_item": 0.7388737201690674,
+   "place_block": 0.010615983046591282,
+   "give_tool": 0.029002930968999863,
+   "goto_base": 0.1073794811964035,
+   "wait": 0.05257372930645943
+  }
+ },
+ {
+  "id": "pickup-84",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "p_oracle": 0.804702877998352,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.0375942662358284,
+   "harvest_target": 0.008825032971799374,
+   "pickup_item": 0.804702877998352,
+   "place_block": 0.008167466148734093,
+   "give_tool": 0.019905582070350647,
+   "goto_base": 0.0942058265209198,
+   "wait": 0.026598908007144928
+  }
+ },
+ {
+  "id": "pickup-88",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "p_oracle": 0.04672835394740105,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.008228224702179432,
+   "harvest_target": 0.004745074547827244,
+   "pickup_item": 0.04672835394740105,
+   "place_block": 0.0023480034433305264,
+   "give_tool": 0.00394549872726202,
+   "goto_base": 0.9273657202720642,
+   "wait": 0.006639125291258097
+  }
+ },
+ {
+  "id": "pickup-89",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "p_oracle": 0.03823361173272133,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.007382570765912533,
+   "harvest_target": 0.004430482629686594,
+   "pickup_item": 0.03823361173272133,
+   "place_block": 0.002228124300017953,
+   "give_tool": 0.00360679323785007,
+   "goto_base": 0.9377449750900269,
+   "wait": 0.0063734399154782295
+  }
+ },
+ {
+  "id": "pickup-85",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "p_oracle": 0.7794554829597473,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.06236397475004196,
+   "harvest_target": 0.009645255282521248,
+   "pickup_item": 0.7794554829597473,
+   "place_block": 0.008420965634286404,
+   "give_tool": 0.01843508705496788,
+   "goto_base": 0.08914113789796829,
+   "wait": 0.03253813087940216
+  }
+ },
+ {
+  "id": "pickup-86",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "p_oracle": 0.8166264295578003,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.03875022381544113,
+   "harvest_target": 0.008792553097009659,
+   "pickup_item": 0.8166264295578003,
+   "place_block": 0.008385604247450829,
+   "give_tool": 0.02053387649357319,
+   "goto_base": 0.08357720822095871,
+   "wait": 0.023334123194217682
+  }
+ },
+ {
+  "id": "pickup-90",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "p_oracle": 0.05191871523857117,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.00993775762617588,
+   "harvest_target": 0.005159427877515554,
+   "pickup_item": 0.05191871523857117,
+   "place_block": 0.002601016080006957,
+   "give_tool": 0.004233709070831537,
+   "goto_base": 0.919136643409729,
+   "wait": 0.007012837566435337
+  }
+ },
+ {
+  "id": "pickup-91",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "p_oracle": 0.04686741903424263,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.009068555198609829,
+   "harvest_target": 0.005060526076704264,
+   "pickup_item": 0.04686741903424263,
+   "place_block": 0.002546221250668168,
+   "give_tool": 0.004189258441329002,
+   "goto_base": 0.9253667593002319,
+   "wait": 0.006901211105287075
+  }
+ },
+ {
+  "id": "pickup-87",
+  "family": "pickup-harvest",
+  "oracle": "pickup_item",
+  "p_oracle": 0.7871801257133484,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.039863765239715576,
+   "harvest_target": 0.011582257226109505,
+   "pickup_item": 0.7871801257133484,
+   "place_block": 0.010121772065758705,
+   "give_tool": 0.030150627717375755,
+   "goto_base": 0.07915004342794418,
+   "wait": 0.041951388120651245
+  }
+ },
+ {
+  "id": "v5-113",
+  "family": "harvest",
+  "oracle": "goto_base",
+  "p_oracle": 0.9250487089157104,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.038428593426942825,
+   "harvest_target": 0.005269037093967199,
+   "pickup_item": 0.02072923071682453,
+   "place_block": 0.0023646706249564886,
+   "give_tool": 0.0027193462010473013,
+   "goto_base": 0.9250487089157104,
+   "wait": 0.0054403627291321754
+  }
+ },
+ {
+  "id": "ab-4",
+  "family": "harvest",
+  "oracle": "goto_base",
+  "p_oracle": 0.9267317652702332,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.03829319775104523,
+   "harvest_target": 0.0051862155087292194,
+   "pickup_item": 0.019607793539762497,
+   "place_block": 0.002265294548124075,
+   "give_tool": 0.0028128328267484903,
+   "goto_base": 0.9267317652702332,
+   "wait": 0.0051030064933001995
+  }
+ },
+ {
+  "id": "ab-2",
+  "family": "harvest",
+  "oracle": "goto_base",
+  "p_oracle": 0.9263399839401245,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.0406603068113327,
+   "harvest_target": 0.00512666255235672,
+   "pickup_item": 0.01753784343600273,
+   "place_block": 0.0023024999536573887,
+   "give_tool": 0.0026625236496329308,
+   "goto_base": 0.9263399839401245,
+   "wait": 0.005370075814425945
+  }
+ },
+ {
+  "id": "ab-1",
+  "family": "harvest",
+  "oracle": "goto_base",
+  "p_oracle": 0.9282734990119934,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.038152940571308136,
+   "harvest_target": 0.006309992633759975,
+   "pickup_item": 0.01498626172542572,
+   "place_block": 0.0024585844948887825,
+   "give_tool": 0.004667489789426327,
+   "goto_base": 0.9282734990119934,
+   "wait": 0.005151247140020132
+  }
+ },
+ {
+  "id": "v5-112",
+  "family": "harvest",
+  "oracle": "goto_target",
+  "p_oracle": 0.15889617800712585,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.15889617800712585,
+   "harvest_target": 0.04867413640022278,
+   "pickup_item": 0.03528359904885292,
+   "place_block": 0.009498490951955318,
+   "give_tool": 0.01162452157586813,
+   "goto_base": 0.7126824259757996,
+   "wait": 0.023340608924627304
+  }
+ },
+ {
+  "id": "ab-0",
+  "family": "harvest",
+  "oracle": "goto_target",
+  "p_oracle": 0.1837664246559143,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.1837664246559143,
+   "harvest_target": 0.04452478885650635,
+   "pickup_item": 0.03363301604986191,
+   "place_block": 0.009458976797759533,
+   "give_tool": 0.011372389271855354,
+   "goto_base": 0.6981453895568848,
+   "wait": 0.019099026918411255
+  }
+ },
+ {
+  "id": "ab-3",
+  "family": "harvest",
+  "oracle": "goto_target",
+  "p_oracle": 0.18116329610347748,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.18116329610347748,
+   "harvest_target": 0.045379407703876495,
+   "pickup_item": 0.03459416702389717,
+   "place_block": 0.009528816677629948,
+   "give_tool": 0.01142344530671835,
+   "goto_base": 0.6963129639625549,
+   "wait": 0.021597938612103462
+  }
+ },
+ {
+  "id": "give-44",
+  "family": "A",
+  "oracle": "give_tool",
+  "p_oracle": 0.4789332449436188,
+  "top1": true,
+  "choice": "give_tool",
+  "probs": {
+   "goto_target": 0.022806931287050247,
+   "mine_target": 0.39033958315849304,
+   "pickup_item": 0.025192005559802055,
+   "place_block": 0.03380022943019867,
+   "give_tool": 0.4789332449436188,
+   "goto_base": 0.01109126303344965,
+   "wait": 0.03783665969967842
+  }
+ },
+ {
+  "id": "give-45",
+  "family": "B",
+  "oracle": "give_tool",
+  "p_oracle": 0.019906092435121536,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.015822814777493477,
+   "mine_target": 0.8984652757644653,
+   "pickup_item": 0.02058822475373745,
+   "place_block": 0.01548447459936142,
+   "give_tool": 0.019906092435121536,
+   "goto_base": 0.007278866600245237,
+   "wait": 0.02245435118675232
+  }
+ },
+ {
+  "id": "give-42",
+  "family": "A",
+  "oracle": "give_tool",
+  "p_oracle": 0.4620409607887268,
+  "top1": true,
+  "choice": "give_tool",
+  "probs": {
+   "goto_target": 0.03225751593708992,
+   "mine_target": 0.34408584237098694,
+   "pickup_item": 0.05552956461906433,
+   "place_block": 0.03939179703593254,
+   "give_tool": 0.4620409607887268,
+   "goto_base": 0.015847424045205116,
+   "wait": 0.05084691941738129
+  }
+ },
+ {
+  "id": "give-43",
+  "family": "B",
+  "oracle": "give_tool",
+  "p_oracle": 0.08200472593307495,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.018641896545886993,
+   "mine_target": 0.7830944061279297,
+   "pickup_item": 0.05629095807671547,
+   "place_block": 0.023895438760519028,
+   "give_tool": 0.08200472593307495,
+   "goto_base": 0.009944355115294456,
+   "wait": 0.02612835168838501
+  }
+ },
+ {
+  "id": "give-48",
+  "family": "A",
+  "oracle": "give_tool",
+  "p_oracle": 0.4121261239051819,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.023624321445822716,
+   "mine_target": 0.4391258955001831,
+   "pickup_item": 0.03361858054995537,
+   "place_block": 0.03374883159995079,
+   "give_tool": 0.4121261239051819,
+   "goto_base": 0.011736554093658924,
+   "wait": 0.04601963609457016
+  }
+ },
+ {
+  "id": "give-49",
+  "family": "B",
+  "oracle": "give_tool",
+  "p_oracle": 0.01630699820816517,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.014382238499820232,
+   "mine_target": 0.9150643348693848,
+   "pickup_item": 0.01808590441942215,
+   "place_block": 0.012296795845031738,
+   "give_tool": 0.01630699820816517,
+   "goto_base": 0.006311378907412291,
+   "wait": 0.017552265897393227
+  }
+ },
+ {
+  "id": "give-46",
+  "family": "A",
+  "oracle": "give_tool",
+  "p_oracle": 0.49943509697914124,
+  "top1": true,
+  "choice": "give_tool",
+  "probs": {
+   "goto_target": 0.02679375931620598,
+   "mine_target": 0.31113436818122864,
+   "pickup_item": 0.06218457221984863,
+   "place_block": 0.032980866730213165,
+   "give_tool": 0.49943509697914124,
+   "goto_base": 0.015626220032572746,
+   "wait": 0.05184518173336983
+  }
+ },
+ {
+  "id": "give-47",
+  "family": "B",
+  "oracle": "give_tool",
+  "p_oracle": 0.0888245478272438,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.018494876101613045,
+   "mine_target": 0.7854191660881042,
+   "pickup_item": 0.05074654519557953,
+   "place_block": 0.019887877628207207,
+   "give_tool": 0.0888245478272438,
+   "goto_base": 0.009331722743809223,
+   "wait": 0.027295207604765892
+  }
+ },
+ {
+  "id": "give-28",
+  "family": "A",
+  "oracle": "give_tool",
+  "p_oracle": 0.4466036856174469,
+  "top1": true,
+  "choice": "give_tool",
+  "probs": {
+   "goto_target": 0.023100072517991066,
+   "mine_target": 0.4068811535835266,
+   "pickup_item": 0.027271924540400505,
+   "place_block": 0.038232892751693726,
+   "give_tool": 0.4466036856174469,
+   "goto_base": 0.01159169152379036,
+   "wait": 0.04631851986050606
+  }
+ },
+ {
+  "id": "give-29",
+  "family": "B",
+  "oracle": "give_tool",
+  "p_oracle": 0.020684096962213516,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.016435563564300537,
+   "mine_target": 0.8944864869117737,
+   "pickup_item": 0.020600534975528717,
+   "place_block": 0.01747790537774563,
+   "give_tool": 0.020684096962213516,
+   "goto_base": 0.007637119386345148,
+   "wait": 0.02267826907336712
+  }
+ },
+ {
+  "id": "give-26",
+  "family": "A",
+  "oracle": "give_tool",
+  "p_oracle": 0.4816461205482483,
+  "top1": true,
+  "choice": "give_tool",
+  "probs": {
+   "goto_target": 0.03049522452056408,
+   "mine_target": 0.3292389512062073,
+   "pickup_item": 0.05151784047484398,
+   "place_block": 0.037404026836156845,
+   "give_tool": 0.4816461205482483,
+   "goto_base": 0.015694238245487213,
+   "wait": 0.05400361120700836
+  }
+ },
+ {
+  "id": "give-27",
+  "family": "B",
+  "oracle": "give_tool",
+  "p_oracle": 0.08926472812891006,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.01835181564092636,
+   "mine_target": 0.7790212631225586,
+   "pickup_item": 0.05136297643184662,
+   "place_block": 0.023506062105298042,
+   "give_tool": 0.08926472812891006,
+   "goto_base": 0.010148058645427227,
+   "wait": 0.02834489196538925
+  }
+ },
+ {
+  "id": "give-32",
+  "family": "A",
+  "oracle": "give_tool",
+  "p_oracle": 0.4412005543708801,
+  "top1": true,
+  "choice": "give_tool",
+  "probs": {
+   "goto_target": 0.02360634133219719,
+   "mine_target": 0.4054199159145355,
+   "pickup_item": 0.03620287775993347,
+   "place_block": 0.036969710141420364,
+   "give_tool": 0.4412005543708801,
+   "goto_base": 0.011760747991502285,
+   "wait": 0.044839926064014435
+  }
+ },
+ {
+  "id": "give-33",
+  "family": "B",
+  "oracle": "give_tool",
+  "p_oracle": 0.017657704651355743,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.014195012860000134,
+   "mine_target": 0.9126168489456177,
+   "pickup_item": 0.01781141571700573,
+   "place_block": 0.012601764872670174,
+   "give_tool": 0.017657704651355743,
+   "goto_base": 0.006676416844129562,
+   "wait": 0.018440915271639824
+  }
+ },
+ {
+  "id": "give-30",
+  "family": "A",
+  "oracle": "give_tool",
+  "p_oracle": 0.5012718439102173,
+  "top1": true,
+  "choice": "give_tool",
+  "probs": {
+   "goto_target": 0.027996158227324486,
+   "mine_target": 0.3056870996952057,
+   "pickup_item": 0.061881281435489655,
+   "place_block": 0.03377680853009224,
+   "give_tool": 0.5012718439102173,
+   "goto_base": 0.016013745218515396,
+   "wait": 0.053373079746961594
+  }
+ },
+ {
+  "id": "give-31",
+  "family": "B",
+  "oracle": "give_tool",
+  "p_oracle": 0.09346333146095276,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.018021337687969208,
+   "mine_target": 0.7663425803184509,
+   "pickup_item": 0.05693281814455986,
+   "place_block": 0.021640026941895485,
+   "give_tool": 0.09346333146095276,
+   "goto_base": 0.00994022749364376,
+   "wait": 0.03365960344672203
+  }
+ },
+ {
+  "id": "v5-116",
+  "family": "mine",
+  "oracle": "mine_target",
+  "p_oracle": 0.9258912205696106,
+  "top1": true,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.011707168072462082,
+   "mine_target": 0.9258912205696106,
+   "pickup_item": 0.017300324514508247,
+   "place_block": 0.008632139302790165,
+   "give_tool": 0.013796284794807434,
+   "goto_base": 0.005781728308647871,
+   "wait": 0.01689107157289982
+  }
+ },
+ {
+  "id": "v5-121",
+  "family": "mine",
+  "oracle": "give_tool",
+  "p_oracle": 0.006012538447976112,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.011340630240738392,
+   "mine_target": 0.930162250995636,
+   "pickup_item": 0.026507630944252014,
+   "place_block": 0.009758122265338898,
+   "give_tool": 0.006012538447976112,
+   "goto_base": 0.007158976513892412,
+   "wait": 0.009059734642505646
+  }
+ },
+ {
+  "id": "give-50",
+  "family": "C",
+  "oracle": "mine_target",
+  "p_oracle": 0.930162250995636,
+  "top1": true,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.011340630240738392,
+   "mine_target": 0.930162250995636,
+   "pickup_item": 0.026507630944252014,
+   "place_block": 0.009758122265338898,
+   "give_tool": 0.006012538447976112,
+   "goto_base": 0.007158976513892412,
+   "wait": 0.009059734642505646
+  }
+ },
+ {
+  "id": "v5-122",
+  "family": "mine",
+  "oracle": "mine_target",
+  "p_oracle": 0.8948310613632202,
+  "top1": true,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.0133393919095397,
+   "mine_target": 0.8948310613632202,
+   "pickup_item": 0.025571146979928017,
+   "place_block": 0.013647407293319702,
+   "give_tool": 0.03175909444689751,
+   "goto_base": 0.006769122090190649,
+   "wait": 0.014082836918532848
+  }
+ },
+ {
+  "id": "give-51",
+  "family": "C",
+  "oracle": "mine_target",
+  "p_oracle": 0.9267102479934692,
+  "top1": true,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.011899960227310658,
+   "mine_target": 0.9267102479934692,
+   "pickup_item": 0.02592945657670498,
+   "place_block": 0.011293421499431133,
+   "give_tool": 0.006315993145108223,
+   "goto_base": 0.007622989825904369,
+   "wait": 0.010227895341813564
+  }
+ },
+ {
+  "id": "ab-13",
+  "family": "mine",
+  "oracle": "mine_target",
+  "p_oracle": 0.9124891757965088,
+  "top1": true,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.019260728731751442,
+   "mine_target": 0.9124891757965088,
+   "pickup_item": 0.023630741983652115,
+   "place_block": 0.018444731831550598,
+   "give_tool": 0.007430985104292631,
+   "goto_base": 0.009151083417236805,
+   "wait": 0.009592507965862751
+  }
+ },
+ {
+  "id": "ab-22",
+  "family": "mine",
+  "oracle": "mine_target",
+  "p_oracle": 0.9296104907989502,
+  "top1": true,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.011024289764463902,
+   "mine_target": 0.9296104907989502,
+   "pickup_item": 0.015755265951156616,
+   "place_block": 0.0053087943233549595,
+   "give_tool": 0.02405194379389286,
+   "goto_base": 0.004705365281552076,
+   "wait": 0.00954389851540327
+  }
+ },
+ {
+  "id": "ab-21",
+  "family": "mine",
+  "oracle": "mine_target",
+  "p_oracle": 0.8979114890098572,
+  "top1": true,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.015094420872628689,
+   "mine_target": 0.8979114890098572,
+   "pickup_item": 0.03522132709622383,
+   "place_block": 0.010133866220712662,
+   "give_tool": 0.02003994956612587,
+   "goto_base": 0.008920813910663128,
+   "wait": 0.012678264640271664
+  }
+ },
+ {
+  "id": "ab-17",
+  "family": "mine",
+  "oracle": "mine_target",
+  "p_oracle": 0.8702825307846069,
+  "top1": true,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.019116230309009552,
+   "mine_target": 0.8702825307846069,
+   "pickup_item": 0.03434702754020691,
+   "place_block": 0.022344432771205902,
+   "give_tool": 0.02437721937894821,
+   "goto_base": 0.009758219122886658,
+   "wait": 0.01977435126900673
+  }
+ },
+ {
+  "id": "give-36",
+  "family": "A",
+  "oracle": "give_tool",
+  "p_oracle": 0.4764208495616913,
+  "top1": true,
+  "choice": "give_tool",
+  "probs": {
+   "goto_target": 0.0232472475618124,
+   "mine_target": 0.39558103680610657,
+   "pickup_item": 0.02483992651104927,
+   "place_block": 0.03108031116425991,
+   "give_tool": 0.4764208495616913,
+   "goto_base": 0.011323654092848301,
+   "wait": 0.03750700131058693
+  }
+ },
+ {
+  "id": "give-37",
+  "family": "B",
+  "oracle": "give_tool",
+  "p_oracle": 0.020730065181851387,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.01562026422470808,
+   "mine_target": 0.9008992314338684,
+   "pickup_item": 0.019717751070857048,
+   "place_block": 0.015119933523237705,
+   "give_tool": 0.020730065181851387,
+   "goto_base": 0.0074749900959432125,
+   "wait": 0.020437875762581825
+  }
+ },
+ {
+  "id": "give-34",
+  "family": "A",
+  "oracle": "give_tool",
+  "p_oracle": 0.48894548416137695,
+  "top1": true,
+  "choice": "give_tool",
+  "probs": {
+   "goto_target": 0.02974865399301052,
+   "mine_target": 0.3379770815372467,
+   "pickup_item": 0.04879801347851753,
+   "place_block": 0.032948512583971024,
+   "give_tool": 0.48894548416137695,
+   "goto_base": 0.015134384855628014,
+   "wait": 0.04644785448908806
+  }
+ },
+ {
+  "id": "give-35",
+  "family": "B",
+  "oracle": "give_tool",
+  "p_oracle": 0.07889385521411896,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.01912362314760685,
+   "mine_target": 0.7890358567237854,
+   "pickup_item": 0.053946152329444885,
+   "place_block": 0.0213567353785038,
+   "give_tool": 0.07889385521411896,
+   "goto_base": 0.01036285050213337,
+   "wait": 0.02728102169930935
+  }
+ },
+ {
+  "id": "give-40",
+  "family": "A",
+  "oracle": "give_tool",
+  "p_oracle": 0.38899460434913635,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.022941168397665024,
+   "mine_target": 0.45962220430374146,
+   "pickup_item": 0.03594501316547394,
+   "place_block": 0.032876089215278625,
+   "give_tool": 0.38899460434913635,
+   "goto_base": 0.011849521659314632,
+   "wait": 0.04777133837342262
+  }
+ },
+ {
+  "id": "give-41",
+  "family": "B",
+  "oracle": "give_tool",
+  "p_oracle": 0.017092186957597733,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.01467355526983738,
+   "mine_target": 0.9094346761703491,
+   "pickup_item": 0.019130170345306396,
+   "place_block": 0.012540876865386963,
+   "give_tool": 0.017092186957597733,
+   "goto_base": 0.007099938578903675,
+   "wait": 0.020028581842780113
+  }
+ },
+ {
+  "id": "give-38",
+  "family": "A",
+  "oracle": "give_tool",
+  "p_oracle": 0.4956664741039276,
+  "top1": true,
+  "choice": "give_tool",
+  "probs": {
+   "goto_target": 0.02921113185584545,
+   "mine_target": 0.31341832876205444,
+   "pickup_item": 0.06254161149263382,
+   "place_block": 0.030911434441804886,
+   "give_tool": 0.4956664741039276,
+   "goto_base": 0.016502147540450096,
+   "wait": 0.05174878239631653
+  }
+ },
+ {
+  "id": "give-39",
+  "family": "B",
+  "oracle": "give_tool",
+  "p_oracle": 0.09118429571390152,
+  "top1": false,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.018862539902329445,
+   "mine_target": 0.7684862017631531,
+   "pickup_item": 0.059452179819345474,
+   "place_block": 0.021697040647268295,
+   "give_tool": 0.09118429571390152,
+   "goto_base": 0.010197938419878483,
+   "wait": 0.030119795352220535
+  }
+ },
+ {
+  "id": "ab-8",
+  "family": "mine",
+  "oracle": "mine_target",
+  "p_oracle": 0.9289777874946594,
+  "top1": true,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.012004067189991474,
+   "mine_target": 0.9289777874946594,
+   "pickup_item": 0.0270095132291317,
+   "place_block": 0.009706488810479641,
+   "give_tool": 0.0060534304939210415,
+   "goto_base": 0.007489941548556089,
+   "wait": 0.008758742362260818
+  }
+ },
+ {
+  "id": "ab-14",
+  "family": "mine",
+  "oracle": "mine_target",
+  "p_oracle": 0.8840345144271851,
+  "top1": true,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.017692474648356438,
+   "mine_target": 0.8840345144271851,
+   "pickup_item": 0.032591812312603,
+   "place_block": 0.019152792170643806,
+   "give_tool": 0.021100522950291634,
+   "goto_base": 0.008854569867253304,
+   "wait": 0.01657327637076378
+  }
+ },
+ {
+  "id": "ab-9",
+  "family": "mine",
+  "oracle": "mine_target",
+  "p_oracle": 0.929312527179718,
+  "top1": true,
+  "choice": "mine_target",
+  "probs": {
+   "goto_target": 0.011572249233722687,
+   "mine_target": 0.929312527179718,
+   "pickup_item": 0.017184922471642494,
+   "place_block": 0.007708779536187649,
+   "give_tool": 0.012799477204680443,
+   "goto_base": 0.005683051887899637,
+   "wait": 0.01573891192674637
+  }
+ },
+ {
+  "id": "pickup-52",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.5819512009620667,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.05087364837527275,
+   "mine_target": 0.027925442904233932,
+   "pickup_item": 0.5819512009620667,
+   "place_block": 0.041186872869729996,
+   "give_tool": 0.12340795993804932,
+   "goto_base": 0.11721256375312805,
+   "wait": 0.05744238197803497
+  }
+ },
+ {
+  "id": "pickup-69",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.05166526883840561,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.033500440418720245,
+   "mine_target": 0.015073311515152454,
+   "pickup_item": 0.05166526883840561,
+   "place_block": 0.013753168284893036,
+   "give_tool": 0.021294547244906425,
+   "goto_base": 0.8363791108131409,
+   "wait": 0.028334109112620354
+  }
+ },
+ {
+  "id": "pickup-59",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.7729778289794922,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.023844344541430473,
+   "mine_target": 0.008571155369281769,
+   "pickup_item": 0.7729778289794922,
+   "place_block": 0.018018784001469612,
+   "give_tool": 0.09986821562051773,
+   "goto_base": 0.047160763293504715,
+   "wait": 0.029558898881077766
+  }
+ },
+ {
+  "id": "pickup-53",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.7611895799636841,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.025124046951532364,
+   "mine_target": 0.008631587028503418,
+   "pickup_item": 0.7611895799636841,
+   "place_block": 0.019810620695352554,
+   "give_tool": 0.10928252339363098,
+   "goto_base": 0.04587046429514885,
+   "wait": 0.03009117767214775
+  }
+ },
+ {
+  "id": "pickup-70",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.03588097169995308,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.019596368074417114,
+   "mine_target": 0.009343446232378483,
+   "pickup_item": 0.03588097169995308,
+   "place_block": 0.008457059040665627,
+   "give_tool": 0.01258754637092352,
+   "goto_base": 0.9006094932556152,
+   "wait": 0.01352517120540142
+  }
+ },
+ {
+  "id": "pickup-60",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.4948420524597168,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.06689498573541641,
+   "mine_target": 0.05385863408446312,
+   "pickup_item": 0.4948420524597168,
+   "place_block": 0.04152067378163338,
+   "give_tool": 0.16351018846035004,
+   "goto_base": 0.09005951881408691,
+   "wait": 0.08931393921375275
+  }
+ },
+ {
+  "id": "pickup-54",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.48860278725624084,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.0495268851518631,
+   "mine_target": 0.055980343371629715,
+   "pickup_item": 0.48860278725624084,
+   "place_block": 0.037972986698150635,
+   "give_tool": 0.1972418874502182,
+   "goto_base": 0.08268722146749496,
+   "wait": 0.08798781037330627
+  }
+ },
+ {
+  "id": "pickup-64",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.04008317366242409,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.022719712927937508,
+   "mine_target": 0.010237244889140129,
+   "pickup_item": 0.04008317366242409,
+   "place_block": 0.010169423185288906,
+   "give_tool": 0.014320779591798782,
+   "goto_base": 0.8873668313026428,
+   "wait": 0.015102853067219257
+  }
+ },
+ {
+  "id": "pickup-61",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.5192432403564453,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.04024605080485344,
+   "mine_target": 0.037379756569862366,
+   "pickup_item": 0.5192432403564453,
+   "place_block": 0.04482808709144592,
+   "give_tool": 0.1963385045528412,
+   "goto_base": 0.07386228442192078,
+   "wait": 0.08810205012559891
+  }
+ },
+ {
+  "id": "pickup-71",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.058596063405275345,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.0395047701895237,
+   "mine_target": 0.01637531816959381,
+   "pickup_item": 0.058596063405275345,
+   "place_block": 0.014365610666573048,
+   "give_tool": 0.02154039777815342,
+   "goto_base": 0.8221331834793091,
+   "wait": 0.02748471312224865
+  }
+ },
+ {
+  "id": "pickup-72",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.0328635536134243,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.02043776959180832,
+   "mine_target": 0.009251528419554234,
+   "pickup_item": 0.0328635536134243,
+   "place_block": 0.009254255332052708,
+   "give_tool": 0.012470562011003494,
+   "goto_base": 0.9013882875442505,
+   "wait": 0.014334057457745075
+  }
+ },
+ {
+  "id": "pickup-62",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.7090777158737183,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.025928625836968422,
+   "mine_target": 0.00858395267277956,
+   "pickup_item": 0.7090777158737183,
+   "place_block": 0.01933157630264759,
+   "give_tool": 0.1259675920009613,
+   "goto_base": 0.08312838524580002,
+   "wait": 0.02798229083418846
+  }
+ },
+ {
+  "id": "pickup-55",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.4817732572555542,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.04155968874692917,
+   "mine_target": 0.03616156056523323,
+   "pickup_item": 0.4817732572555542,
+   "place_block": 0.045350030064582825,
+   "give_tool": 0.22177055478096008,
+   "goto_base": 0.07898435741662979,
+   "wait": 0.09440057724714279
+  }
+ },
+ {
+  "id": "pickup-65",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.05024207383394241,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.03556685894727707,
+   "mine_target": 0.015311317518353462,
+   "pickup_item": 0.05024207383394241,
+   "place_block": 0.01414727047085762,
+   "give_tool": 0.02080104686319828,
+   "goto_base": 0.837433397769928,
+   "wait": 0.026498062536120415
+  }
+ },
+ {
+  "id": "pickup-63",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.5329098701477051,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.042205654084682465,
+   "mine_target": 0.05899086222052574,
+   "pickup_item": 0.5329098701477051,
+   "place_block": 0.030507078394293785,
+   "give_tool": 0.1877567023038864,
+   "goto_base": 0.05055014044046402,
+   "wait": 0.09707976132631302
+  }
+ },
+ {
+  "id": "pickup-73",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.05495285987854004,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.0377533994615078,
+   "mine_target": 0.015771178528666496,
+   "pickup_item": 0.05495285987854004,
+   "place_block": 0.015302874147891998,
+   "give_tool": 0.02268650010228157,
+   "goto_base": 0.822881817817688,
+   "wait": 0.03065130114555359
+  }
+ },
+ {
+  "id": "pickup-66",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.029261622577905655,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.02021815814077854,
+   "mine_target": 0.008819152601063251,
+   "pickup_item": 0.029261622577905655,
+   "place_block": 0.008399001322686672,
+   "give_tool": 0.01163539383560419,
+   "goto_base": 0.908512532711029,
+   "wait": 0.013154172338545322
+  }
+ },
+ {
+  "id": "pickup-56",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.7145711779594421,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.03899563103914261,
+   "mine_target": 0.008590105921030045,
+   "pickup_item": 0.7145711779594421,
+   "place_block": 0.01938992366194725,
+   "give_tool": 0.08352294564247131,
+   "goto_base": 0.0992276594042778,
+   "wait": 0.03570263832807541
+  }
+ },
+ {
+  "id": "pickup-57",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.6001371145248413,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.04248430207371712,
+   "mine_target": 0.06659527868032455,
+   "pickup_item": 0.6001371145248413,
+   "place_block": 0.02611679956316948,
+   "give_tool": 0.15771791338920593,
+   "goto_base": 0.0406167171895504,
+   "wait": 0.06633178889751434
+  }
+ },
+ {
+  "id": "pickup-67",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.04943254590034485,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.035477932542562485,
+   "mine_target": 0.015511545352637768,
+   "pickup_item": 0.04943254590034485,
+   "place_block": 0.013225628063082695,
+   "give_tool": 0.019072076305747032,
+   "goto_base": 0.8460241556167603,
+   "wait": 0.021256115287542343
+  }
+ },
+ {
+  "id": "pickup-74",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.0355624258518219,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.02001524530351162,
+   "mine_target": 0.009479100815951824,
+   "pickup_item": 0.0355624258518219,
+   "place_block": 0.008885622955858707,
+   "give_tool": 0.0129751767963171,
+   "goto_base": 0.8998556137084961,
+   "wait": 0.013226905837655067
+  }
+ },
+ {
+  "id": "pickup-68",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.03565618768334389,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.022444458678364754,
+   "mine_target": 0.009476074017584324,
+   "pickup_item": 0.03565618768334389,
+   "place_block": 0.00876280665397644,
+   "give_tool": 0.013280514627695084,
+   "goto_base": 0.8975699543952942,
+   "wait": 0.012809950858354568
+  }
+ },
+ {
+  "id": "pickup-58",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.5925218462944031,
+  "top1": true,
+  "choice": "pickup_item",
+  "probs": {
+   "goto_target": 0.035901542752981186,
+   "mine_target": 0.028101857751607895,
+   "pickup_item": 0.5925218462944031,
+   "place_block": 0.03272150829434395,
+   "give_tool": 0.17186108231544495,
+   "goto_base": 0.09027934819459915,
+   "wait": 0.04861271753907204
+  }
+ },
+ {
+  "id": "pickup-75",
+  "family": "pickup-mine",
+  "oracle": "pickup_item",
+  "p_oracle": 0.047103915363550186,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.03422985598444939,
+   "mine_target": 0.01537293940782547,
+   "pickup_item": 0.047103915363550186,
+   "place_block": 0.013514956459403038,
+   "give_tool": 0.01972702518105507,
+   "goto_base": 0.8427355885505676,
+   "wait": 0.027315670624375343
+  }
+ },
+ {
+  "id": "pickup-79",
+  "family": "pickup-mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.9415822625160217,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.012257233262062073,
+   "mine_target": 0.006030794233083725,
+   "pickup_item": 0.005631432402879,
+   "place_block": 0.0060419910587370396,
+   "give_tool": 0.005478102248162031,
+   "goto_base": 0.9415822625160217,
+   "wait": 0.02297814190387726
+  }
+ },
+ {
+  "id": "pickup-80",
+  "family": "pickup-mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.9362481236457825,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.014408581890165806,
+   "mine_target": 0.0063681835308671,
+   "pickup_item": 0.006224198266863823,
+   "place_block": 0.006687955930829048,
+   "give_tool": 0.00615191925317049,
+   "goto_base": 0.9362481236457825,
+   "wait": 0.02391105704009533
+  }
+ },
+ {
+  "id": "v5-117",
+  "family": "mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.9121072888374329,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.026230456307530403,
+   "mine_target": 0.007199584040790796,
+   "pickup_item": 0.0261941347271204,
+   "place_block": 0.007323101162910461,
+   "give_tool": 0.007319233845919371,
+   "goto_base": 0.9121072888374329,
+   "wait": 0.01362612470984459
+  }
+ },
+ {
+  "id": "v5-118",
+  "family": "mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.9026781320571899,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.01963270828127861,
+   "mine_target": 0.009851375594735146,
+   "pickup_item": 0.03254808858036995,
+   "place_block": 0.009452419355511665,
+   "give_tool": 0.010013102553784847,
+   "goto_base": 0.9026781320571899,
+   "wait": 0.01582413911819458
+  }
+ },
+ {
+  "id": "pickup-81",
+  "family": "pickup-mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.9377658367156982,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.015156734734773636,
+   "mine_target": 0.006087612360715866,
+   "pickup_item": 0.005900150164961815,
+   "place_block": 0.006580797024071217,
+   "give_tool": 0.005478349514305592,
+   "goto_base": 0.9377658367156982,
+   "wait": 0.023030458018183708
+  }
+ },
+ {
+  "id": "ab-25",
+  "family": "mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.9330060482025146,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.019658377394080162,
+   "mine_target": 0.006452686619013548,
+   "pickup_item": 0.01720431260764599,
+   "place_block": 0.007548817433416843,
+   "give_tool": 0.004340151324868202,
+   "goto_base": 0.9330060482025146,
+   "wait": 0.011789628304541111
+  }
+ },
+ {
+  "id": "ab-15",
+  "family": "mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.9307318329811096,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.025450197979807854,
+   "mine_target": 0.00749384006485343,
+   "pickup_item": 0.014023655094206333,
+   "place_block": 0.008628634735941887,
+   "give_tool": 0.004705345258116722,
+   "goto_base": 0.9307318329811096,
+   "wait": 0.008966494351625443
+  }
+ },
+ {
+  "id": "ab-23",
+  "family": "mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.9304590225219727,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.020384011790156364,
+   "mine_target": 0.006977570243179798,
+   "pickup_item": 0.017964636906981468,
+   "place_block": 0.007847790606319904,
+   "give_tool": 0.00458528520539403,
+   "goto_base": 0.9304590225219727,
+   "wait": 0.011781759560108185
+  }
+ },
+ {
+  "id": "ab-18",
+  "family": "mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.93058180809021,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.02606421895325184,
+   "mine_target": 0.007485782727599144,
+   "pickup_item": 0.013258961029350758,
+   "place_block": 0.00864729005843401,
+   "give_tool": 0.004575397353619337,
+   "goto_base": 0.93058180809021,
+   "wait": 0.009386606514453888
+  }
+ },
+ {
+  "id": "ab-10",
+  "family": "mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.9146721959114075,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.024269279092550278,
+   "mine_target": 0.007148691453039646,
+   "pickup_item": 0.02509533055126667,
+   "place_block": 0.0071855392307043076,
+   "give_tool": 0.007379929069429636,
+   "goto_base": 0.9146721959114075,
+   "wait": 0.014249047264456749
+  }
+ },
+ {
+  "id": "pickup-76",
+  "family": "pickup-mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.9405494332313538,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.013075880706310272,
+   "mine_target": 0.006139765027910471,
+   "pickup_item": 0.005586892366409302,
+   "place_block": 0.005800426006317139,
+   "give_tool": 0.0055059096775949,
+   "goto_base": 0.9405494332313538,
+   "wait": 0.023341743275523186
+  }
+ },
+ {
+  "id": "pickup-77",
+  "family": "pickup-mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.945664644241333,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.01301574893295765,
+   "mine_target": 0.006108324974775314,
+   "pickup_item": 0.0057927872985601425,
+   "place_block": 0.006180999800562859,
+   "give_tool": 0.0056792329996824265,
+   "goto_base": 0.945664644241333,
+   "wait": 0.01755821518599987
+  }
+ },
+ {
+  "id": "pickup-78",
+  "family": "pickup-mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.9441518783569336,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.01229585986584425,
+   "mine_target": 0.0061207120306789875,
+   "pickup_item": 0.005734945647418499,
+   "place_block": 0.0061603751964867115,
+   "give_tool": 0.005624711047858,
+   "goto_base": 0.9441518783569336,
+   "wait": 0.019911540672183037
+  }
+ },
+ {
+  "id": "v5-119",
+  "family": "mine",
+  "oracle": "goto_base",
+  "p_oracle": 0.9089677333831787,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.01727559044957161,
+   "mine_target": 0.009425853379070759,
+   "pickup_item": 0.030734164640307426,
+   "place_block": 0.008748232387006283,
+   "give_tool": 0.008765745908021927,
+   "goto_base": 0.9089677333831787,
+   "wait": 0.01608256995677948
+  }
+ },
+ {
+  "id": "v5-115",
+  "family": "mine",
+  "oracle": "goto_target",
+  "p_oracle": 0.49483639001846313,
+  "top1": true,
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.49483639001846313,
+   "mine_target": 0.30591440200805664,
+   "pickup_item": 0.02053181827068329,
+   "place_block": 0.014777421951293945,
+   "give_tool": 0.012269253842532635,
+   "goto_base": 0.13478992879390717,
+   "wait": 0.01688075065612793
+  }
+ },
+ {
+  "id": "v5-114",
+  "family": "mine",
+  "oracle": "goto_target",
+  "p_oracle": 0.11499175429344177,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.11499175429344177,
+   "mine_target": 0.04813652113080025,
+   "pickup_item": 0.029465029016137123,
+   "place_block": 0.012312355451285839,
+   "give_tool": 0.015181436203420162,
+   "goto_base": 0.733107328414917,
+   "wait": 0.04680551961064339
+  }
+ },
+ {
+  "id": "v5-120",
+  "family": "mine",
+  "oracle": "goto_target",
+  "p_oracle": 0.7267726063728333,
+  "top1": true,
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.7267726063728333,
+   "mine_target": 0.09775321185588837,
+   "pickup_item": 0.013078668154776096,
+   "place_block": 0.010026500560343266,
+   "give_tool": 0.009011970832943916,
+   "goto_base": 0.13205114006996155,
+   "wait": 0.011305811814963818
+  }
+ },
+ {
+  "id": "ab-11",
+  "family": "mine",
+  "oracle": "goto_target",
+  "p_oracle": 0.1083257868885994,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.1083257868885994,
+   "mine_target": 0.0430748276412487,
+   "pickup_item": 0.024977244436740875,
+   "place_block": 0.012832778505980968,
+   "give_tool": 0.010161351412534714,
+   "goto_base": 0.7608175277709961,
+   "wait": 0.03981047496199608
+  }
+ },
+ {
+  "id": "ab-12",
+  "family": "mine",
+  "oracle": "goto_target",
+  "p_oracle": 0.7297890186309814,
+  "top1": true,
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.7297890186309814,
+   "mine_target": 0.13082435727119446,
+   "pickup_item": 0.01348372083157301,
+   "place_block": 0.012065878137946129,
+   "give_tool": 0.006945508997887373,
+   "goto_base": 0.09824571758508682,
+   "wait": 0.008645713329315186
+  }
+ },
+ {
+  "id": "ab-20",
+  "family": "mine",
+  "oracle": "goto_target",
+  "p_oracle": 0.7675619721412659,
+  "top1": true,
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.7675619721412659,
+   "mine_target": 0.08568349480628967,
+   "pickup_item": 0.013516262173652649,
+   "place_block": 0.011524667032063007,
+   "give_tool": 0.006706789135932922,
+   "goto_base": 0.10352388769388199,
+   "wait": 0.011482911184430122
+  }
+ },
+ {
+  "id": "ab-16",
+  "family": "mine",
+  "oracle": "goto_target",
+  "p_oracle": 0.11703584343194962,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.11703584343194962,
+   "mine_target": 0.04489744454622269,
+   "pickup_item": 0.026799466460943222,
+   "place_block": 0.013763322494924068,
+   "give_tool": 0.010849302634596825,
+   "goto_base": 0.7327558994293213,
+   "wait": 0.05389869213104248
+  }
+ },
+ {
+  "id": "ab-24",
+  "family": "mine",
+  "oracle": "goto_target",
+  "p_oracle": 0.7831365466117859,
+  "top1": true,
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.7831365466117859,
+   "mine_target": 0.0914664939045906,
+   "pickup_item": 0.012579100206494331,
+   "place_block": 0.011200360022485256,
+   "give_tool": 0.006457728799432516,
+   "goto_base": 0.0844043716788292,
+   "wait": 0.010755431838333607
+  }
+ },
+ {
+  "id": "ab-19",
+  "family": "mine",
+  "oracle": "goto_target",
+  "p_oracle": 0.14732259511947632,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.14732259511947632,
+   "mine_target": 0.04910443723201752,
+   "pickup_item": 0.026693206280469894,
+   "place_block": 0.013988607563078403,
+   "give_tool": 0.010795868933200836,
+   "goto_base": 0.6966665387153625,
+   "wait": 0.055428698658943176
+  }
+ },
+ {
+  "id": "ab-6",
+  "family": "mine",
+  "oracle": "goto_target",
+  "p_oracle": 0.4958861768245697,
+  "top1": true,
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.4958861768245697,
+   "mine_target": 0.32959920167922974,
+   "pickup_item": 0.018620533868670464,
+   "place_block": 0.014595204032957554,
+   "give_tool": 0.012096037156879902,
+   "goto_base": 0.11294303089380264,
+   "wait": 0.016259826719760895
+  }
+ },
+ {
+  "id": "ab-5",
+  "family": "mine",
+  "oracle": "goto_target",
+  "p_oracle": 0.1332462877035141,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.1332462877035141,
+   "mine_target": 0.0484442301094532,
+   "pickup_item": 0.028729204088449478,
+   "place_block": 0.012965865433216095,
+   "give_tool": 0.015782682225108147,
+   "goto_base": 0.7100159525871277,
+   "wait": 0.05081566423177719
+  }
+ },
+ {
+  "id": "ab-7",
+  "family": "mine",
+  "oracle": "goto_target",
+  "p_oracle": 0.6525359749794006,
+  "top1": true,
+  "choice": "goto_target",
+  "probs": {
+   "goto_target": 0.6525359749794006,
+   "mine_target": 0.19304010272026062,
+   "pickup_item": 0.013286273926496506,
+   "place_block": 0.009936830960214138,
+   "give_tool": 0.00906478799879551,
+   "goto_base": 0.11352936923503876,
+   "wait": 0.008606699295341969
+  }
+ },
+ {
+  "id": "pickup-101",
+  "family": "build",
+  "oracle": "place_block",
+  "p_oracle": 0.054240886121988297,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.014961819164454937,
+   "mine_target": 0.0038094408810138702,
+   "pickup_item": 0.003698379499837756,
+   "place_block": 0.054240886121988297,
+   "give_tool": 0.001877731760032475,
+   "goto_base": 0.9166742563247681,
+   "wait": 0.004737488459795713
+  }
+ },
+ {
+  "id": "pickup-96",
+  "family": "build",
+  "oracle": "place_block",
+  "p_oracle": 0.9663183689117432,
+  "top1": true,
+  "choice": "place_block",
+  "probs": {
+   "goto_target": 0.010623112320899963,
+   "mine_target": 0.004396794363856316,
+   "pickup_item": 0.004143720027059317,
+   "place_block": 0.9663183689117432,
+   "give_tool": 0.0010851203696802258,
+   "goto_base": 0.005010089837014675,
+   "wait": 0.00842271652072668
+  }
+ },
+ {
+  "id": "pickup-102",
+  "family": "build",
+  "oracle": "place_block",
+  "p_oracle": 0.0751531720161438,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.016295932233333588,
+   "mine_target": 0.003985646180808544,
+   "pickup_item": 0.00396641343832016,
+   "place_block": 0.0751531720161438,
+   "give_tool": 0.0019189829472452402,
+   "goto_base": 0.8940707445144653,
+   "wait": 0.004609122406691313
+  }
+ },
+ {
+  "id": "pickup-97",
+  "family": "build",
+  "oracle": "place_block",
+  "p_oracle": 0.8545703887939453,
+  "top1": true,
+  "choice": "place_block",
+  "probs": {
+   "goto_target": 0.08934640139341354,
+   "mine_target": 0.01759207248687744,
+   "pickup_item": 0.008048800751566887,
+   "place_block": 0.8545703887939453,
+   "give_tool": 0.0029928998555988073,
+   "goto_base": 0.00948691088706255,
+   "wait": 0.017962535843253136
+  }
+ },
+ {
+  "id": "pickup-103",
+  "family": "build",
+  "oracle": "place_block",
+  "p_oracle": 0.06880350410938263,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.017419150099158287,
+   "mine_target": 0.003758080769330263,
+   "pickup_item": 0.0037003185134381056,
+   "place_block": 0.06880350410938263,
+   "give_tool": 0.001816582982428372,
+   "goto_base": 0.8999778628349304,
+   "wait": 0.004524578806012869
+  }
+ },
+ {
+  "id": "pickup-98",
+  "family": "build",
+  "oracle": "place_block",
+  "p_oracle": 0.9652724862098694,
+  "top1": true,
+  "choice": "place_block",
+  "probs": {
+   "goto_target": 0.011388971470296383,
+   "mine_target": 0.004612570628523827,
+   "pickup_item": 0.004445742350071669,
+   "place_block": 0.9652724862098694,
+   "give_tool": 0.00110232166480273,
+   "goto_base": 0.005473696161061525,
+   "wait": 0.0077041019685566425
+  }
+ },
+ {
+  "id": "pickup-104",
+  "family": "build",
+  "oracle": "place_block",
+  "p_oracle": 0.052492525428533554,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.014728613197803497,
+   "mine_target": 0.0034594915341585875,
+   "pickup_item": 0.0036295412573963404,
+   "place_block": 0.052492525428533554,
+   "give_tool": 0.0017559443367645144,
+   "goto_base": 0.9193518161773682,
+   "wait": 0.004582017660140991
+  }
+ },
+ {
+  "id": "pickup-99",
+  "family": "build",
+  "oracle": "place_block",
+  "p_oracle": 0.8643416166305542,
+  "top1": true,
+  "choice": "place_block",
+  "probs": {
+   "goto_target": 0.07977064698934555,
+   "mine_target": 0.015172929503023624,
+   "pickup_item": 0.007963776588439941,
+   "place_block": 0.8643416166305542,
+   "give_tool": 0.0029697224963456392,
+   "goto_base": 0.009105246514081955,
+   "wait": 0.020676100626587868
+  }
+ },
+ {
+  "id": "pickup-105",
+  "family": "build",
+  "oracle": "place_block",
+  "p_oracle": 0.047822993248701096,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.01671414077281952,
+   "mine_target": 0.003790379734709859,
+   "pickup_item": 0.0037575089372694492,
+   "place_block": 0.047822993248701096,
+   "give_tool": 0.001905992510728538,
+   "goto_base": 0.9212564826011658,
+   "wait": 0.004752478562295437
+  }
+ },
+ {
+  "id": "pickup-94",
+  "family": "build",
+  "oracle": "place_block",
+  "p_oracle": 0.9668135643005371,
+  "top1": true,
+  "choice": "place_block",
+  "probs": {
+   "goto_target": 0.010462653823196888,
+   "mine_target": 0.00405168766155839,
+   "pickup_item": 0.00443695392459631,
+   "place_block": 0.9668135643005371,
+   "give_tool": 0.0010639543179422617,
+   "goto_base": 0.005135486368089914,
+   "wait": 0.008035784587264061
+  }
+ },
+ {
+  "id": "pickup-100",
+  "family": "build",
+  "oracle": "place_block",
+  "p_oracle": 0.053339436650276184,
+  "top1": false,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.015010218136012554,
+   "mine_target": 0.003668630961328745,
+   "pickup_item": 0.0040337201207876205,
+   "place_block": 0.053339436650276184,
+   "give_tool": 0.0018290418665856123,
+   "goto_base": 0.9175575971603394,
+   "wait": 0.004561365582048893
+  }
+ },
+ {
+  "id": "pickup-95",
+  "family": "build",
+  "oracle": "place_block",
+  "p_oracle": 0.8540194034576416,
+  "top1": true,
+  "choice": "place_block",
+  "probs": {
+   "goto_target": 0.08666851371526718,
+   "mine_target": 0.01749020256102085,
+   "pickup_item": 0.008972599171102047,
+   "place_block": 0.8540194034576416,
+   "give_tool": 0.0031616005580872297,
+   "goto_base": 0.00978667102754116,
+   "wait": 0.019900953397154808
+  }
+ },
+ {
+  "id": "pickup-106",
+  "family": "build",
+  "oracle": "goto_base",
+  "p_oracle": 0.9410116672515869,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.01431294810026884,
+   "mine_target": 0.006080476101487875,
+   "pickup_item": 0.006931001786142588,
+   "place_block": 0.004242754075676203,
+   "give_tool": 0.002985861850902438,
+   "goto_base": 0.9410116672515869,
+   "wait": 0.02443523332476616
+  }
+ },
+ {
+  "id": "pickup-107",
+  "family": "build",
+  "oracle": "goto_base",
+  "p_oracle": 0.9405351877212524,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.017206495627760887,
+   "mine_target": 0.006007644347846508,
+   "pickup_item": 0.0071787359192967415,
+   "place_block": 0.004164468962699175,
+   "give_tool": 0.002956447657197714,
+   "goto_base": 0.9405351877212524,
+   "wait": 0.021951021626591682
+  }
+ },
+ {
+  "id": "pickup-108",
+  "family": "build",
+  "oracle": "goto_base",
+  "p_oracle": 0.947564423084259,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.014497422613203526,
+   "mine_target": 0.005637668073177338,
+   "pickup_item": 0.006628680974245071,
+   "place_block": 0.0038992592599242926,
+   "give_tool": 0.002730939071625471,
+   "goto_base": 0.947564423084259,
+   "wait": 0.019041599705815315
+  }
+ },
+ {
+  "id": "pickup-109",
+  "family": "build",
+  "oracle": "goto_base",
+  "p_oracle": 0.9397556185722351,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.015061095356941223,
+   "mine_target": 0.006131353788077831,
+   "pickup_item": 0.006786742247641087,
+   "place_block": 0.0043353186920285225,
+   "give_tool": 0.0031099969055503607,
+   "goto_base": 0.9397556185722351,
+   "wait": 0.02481992170214653
+  }
+ },
+ {
+  "id": "pickup-110",
+  "family": "build",
+  "oracle": "goto_base",
+  "p_oracle": 0.9379005432128906,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.015730127692222595,
+   "mine_target": 0.006485141813755035,
+   "pickup_item": 0.00738339452072978,
+   "place_block": 0.00462878355756402,
+   "give_tool": 0.0031414534896612167,
+   "goto_base": 0.9379005432128906,
+   "wait": 0.02473062090575695
+  }
+ },
+ {
+  "id": "pickup-111",
+  "family": "build",
+  "oracle": "goto_base",
+  "p_oracle": 0.9425437450408936,
+  "top1": true,
+  "choice": "goto_base",
+  "probs": {
+   "goto_target": 0.014479844830930233,
+   "mine_target": 0.006182445213198662,
+   "pickup_item": 0.00764870923012495,
+   "place_block": 0.004427439998835325,
+   "give_tool": 0.0030713204760104418,
+   "goto_base": 0.9425437450408936,
+   "wait": 0.021646499633789062
+  }
+ }
+]

@@ -1,0 +1,1022 @@
+[
+ {
+  "id": "pm-A00",
+  "family": "pickup-mine",
+  "type": "pickup_item",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512008, 3, 512016), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: rock-granite\nsince_last_step: marker gone\nlast_action: marker removed\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "pm-A01",
+  "family": "pickup-mine",
+  "type": "pickup_item",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512011, 3, 512018), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: stone-granite\nsince_last_step: no change\nlast_action: mining done\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "pm-A02",
+  "family": "pickup-mine",
+  "type": "pickup_item",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512014, 3, 512020), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: game:rock-granite\nsince_last_step: marker gone\nlast_action: no change\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "pm-A03",
+  "family": "pickup-mine",
+  "type": "pickup_item",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512017, 3, 512022), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: rock-granite\nsince_last_step: no change\nlast_action: marker removed\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "pm-A04",
+  "family": "pickup-mine",
+  "type": "pickup_item",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512020, 3, 512024), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: stone-granite\nsince_last_step: marker gone\nlast_action: mining done\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "pm-A05",
+  "family": "pickup-mine",
+  "type": "pickup_item",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512023, 3, 512016), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: game:rock-granite\nsince_last_step: no change\nlast_action: no change\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "pm-A06",
+  "family": "pickup-mine",
+  "type": "pickup_item",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512026, 3, 512018), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: rock-granite\nsince_last_step: marker gone\nlast_action: marker removed\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "pm-A07",
+  "family": "pickup-mine",
+  "type": "pickup_item",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512008, 3, 512020), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: stone-granite\nsince_last_step: no change\nlast_action: mining done\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "pm-A08",
+  "family": "pickup-mine",
+  "type": "pickup_item",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512011, 3, 512022), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: game:rock-granite\nsince_last_step: marker gone\nlast_action: no change\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "pm-A09",
+  "family": "pickup-mine",
+  "type": "pickup_item",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512014, 3, 512024), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: rock-granite\nsince_last_step: no change\nlast_action: marker removed\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "pm-A10",
+  "family": "pickup-mine",
+  "type": "pickup_item",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512017, 3, 512016), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: stone-granite\nsince_last_step: marker gone\nlast_action: mining done\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "pm-A11",
+  "family": "pickup-mine",
+  "type": "pickup_item",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512020, 3, 512018), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: game:rock-granite\nsince_last_step: no change\nlast_action: no change\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "pm-B00",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512014, 3, 512020), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: rock-granite\nsince_last_step: marker gone\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-B01",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512017, 3, 512022), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: stone-granite\nsince_last_step: no change\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-B02",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512020, 3, 512024), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: rock-granite\nsince_last_step: marker gone\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-B03",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512023, 3, 512016), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: stone-granite\nsince_last_step: no change\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-B04",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512026, 3, 512018), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: rock-granite\nsince_last_step: marker gone\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-B05",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512008, 3, 512020), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: stone-granite\nsince_last_step: no change\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-B06",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512011, 3, 512022), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: rock-granite\nsince_last_step: marker gone\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-B07",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512014, 3, 512024), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: stone-granite\nsince_last_step: no change\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-B08",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512017, 3, 512016), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: rock-granite\nsince_last_step: marker gone\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-B09",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512020, 3, 512018), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: stone-granite\nsince_last_step: no change\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-B10",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512023, 3, 512020), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: rock-granite\nsince_last_step: marker gone\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-B11",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512026, 3, 512022), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: stone-granite\nsince_last_step: no change\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-C00",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512020, 3, 512024), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-C01",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512023, 3, 512016), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-C02",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512026, 3, 512018), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-C03",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512008, 3, 512020), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-C04",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512011, 3, 512022), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pm-C05",
+  "family": "pickup-mine",
+  "type": "goto_base",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512014, 3, 512024), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: marker removed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "ph-A00",
+  "family": "pickup-harvest",
+  "type": "pickup_item",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512011, 3, 512018), near_target=yes, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: crop-carrot\nsince_last_step: crop gone\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "ph-A01",
+  "family": "pickup-harvest",
+  "type": "pickup_item",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512014, 3, 512020), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: crop-carrot\nsince_last_step: no change\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "ph-A02",
+  "family": "pickup-harvest",
+  "type": "pickup_item",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512017, 3, 512022), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: crop-carrot\nsince_last_step: crop gone\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "ph-A03",
+  "family": "pickup-harvest",
+  "type": "pickup_item",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512020, 3, 512024), near_target=yes, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: crop-carrot\nsince_last_step: no change\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "ph-A04",
+  "family": "pickup-harvest",
+  "type": "pickup_item",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512023, 3, 512016), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: crop-carrot\nsince_last_step: crop gone\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "ph-A05",
+  "family": "pickup-harvest",
+  "type": "pickup_item",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512026, 3, 512018), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: crop-carrot\nsince_last_step: no change\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "ph-B00",
+  "family": "pickup-harvest",
+  "type": "goto_base",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512017, 3, 512022), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: crop-carrot\nsince_last_step: no change\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "ph-B01",
+  "family": "pickup-harvest",
+  "type": "goto_base",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512020, 3, 512024), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: crop-carrot\nsince_last_step: no change\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "ph-B02",
+  "family": "pickup-harvest",
+  "type": "goto_base",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512023, 3, 512016), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: crop-carrot\nsince_last_step: no change\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "ph-B03",
+  "family": "pickup-harvest",
+  "type": "goto_base",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512026, 3, 512018), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: crop-carrot\nsince_last_step: no change\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "ph-B04",
+  "family": "pickup-harvest",
+  "type": "goto_base",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512008, 3, 512020), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: crop-carrot\nsince_last_step: no change\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "ph-B05",
+  "family": "pickup-harvest",
+  "type": "goto_base",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512011, 3, 512022), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: crop-carrot\nsince_last_step: no change\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pb-A00",
+  "family": "build",
+  "type": "place_block",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: build\nfacts: bot at (512023, 3, 512016), near_target=yes, near_base=no, marker_present=yes\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: arrived at marker\nlast_action: none\nproposed action: place_block",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "place_block",
+  "proposed": "place_block"
+ },
+ {
+  "id": "pb-A01",
+  "family": "build",
+  "type": "place_block",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: build\nfacts: bot at (512026, 3, 512018), near_target=yes, near_base=no, marker_present=yes\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: place_block",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "place_block",
+  "proposed": "place_block"
+ },
+ {
+  "id": "pb-A02",
+  "family": "build",
+  "type": "place_block",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: build\nfacts: bot at (512008, 3, 512020), near_target=yes, near_base=no, marker_present=yes\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: arrived at marker\nlast_action: none\nproposed action: place_block",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "place_block",
+  "proposed": "place_block"
+ },
+ {
+  "id": "pb-A03",
+  "family": "build",
+  "type": "place_block",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: build\nfacts: bot at (512011, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: place_block",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "place_block",
+  "proposed": "place_block"
+ },
+ {
+  "id": "pb-A04",
+  "family": "build",
+  "type": "place_block",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: build\nfacts: bot at (512014, 3, 512024), near_target=yes, near_base=no, marker_present=yes\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: arrived at marker\nlast_action: none\nproposed action: place_block",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "place_block",
+  "proposed": "place_block"
+ },
+ {
+  "id": "pb-A05",
+  "family": "build",
+  "type": "place_block",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: build\nfacts: bot at (512017, 3, 512016), near_target=yes, near_base=no, marker_present=yes\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: place_block",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "place_block",
+  "proposed": "place_block"
+ },
+ {
+  "id": "pb-B00",
+  "family": "build",
+  "type": "goto_base",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: build\nfacts: bot at (512026, 3, 512018), near_target=yes, near_base=no, marker_present=yes\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: arrived at marker\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "place_block",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pb-B01",
+  "family": "build",
+  "type": "goto_base",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: build\nfacts: bot at (512008, 3, 512020), near_target=yes, near_base=no, marker_present=yes\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: arrived at marker\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "place_block",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pb-B02",
+  "family": "build",
+  "type": "goto_base",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: build\nfacts: bot at (512011, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: arrived at marker\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "place_block",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pb-B03",
+  "family": "build",
+  "type": "goto_base",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: build\nfacts: bot at (512014, 3, 512024), near_target=yes, near_base=no, marker_present=yes\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: arrived at marker\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "place_block",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pb-B04",
+  "family": "build",
+  "type": "goto_base",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: build\nfacts: bot at (512017, 3, 512016), near_target=yes, near_base=no, marker_present=yes\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: arrived at marker\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "place_block",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pb-B05",
+  "family": "build",
+  "type": "goto_base",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: build\nfacts: bot at (512020, 3, 512018), near_target=yes, near_base=no, marker_present=yes\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: arrived at marker\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "place_block",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pb-C00",
+  "family": "build",
+  "type": "goto_base",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: return\nfacts: bot at (512008, 3, 512020), near_target=no, near_base=no, marker_present=no\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: block placed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pb-C01",
+  "family": "build",
+  "type": "goto_base",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: return\nfacts: bot at (512011, 3, 512022), near_target=no, near_base=no, marker_present=no\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: block placed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pb-C02",
+  "family": "build",
+  "type": "goto_base",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: return\nfacts: bot at (512014, 3, 512024), near_target=no, near_base=no, marker_present=no\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: block placed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pb-C03",
+  "family": "build",
+  "type": "goto_base",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: return\nfacts: bot at (512017, 3, 512016), near_target=no, near_base=no, marker_present=no\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: block placed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pb-C04",
+  "family": "build",
+  "type": "goto_base",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: return\nfacts: bot at (512020, 3, 512018), near_target=no, near_base=no, marker_present=no\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: block placed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "pb-C05",
+  "family": "build",
+  "type": "goto_base",
+  "state": "task: place a block at the marker, then return to base\ncurrent phase: return\nfacts: bot at (512023, 3, 512020), near_target=no, near_base=no, marker_present=no\ncarrying: rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: block placed\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ }
+]
