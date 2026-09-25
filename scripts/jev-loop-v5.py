@@ -193,6 +193,26 @@ def decider_readout(decider_url, state_text, options):
     return {"probs": r.get("probs"), "choice": r.get("choice"), "ms": ms,
             "error": None}
 
+
+def decider_readout_fast(prompt_url, card_url, model, state_text, options):
+    """Fast path: prompt built by the decider-service (/prompt), inference on
+    the GPU card (the 3060 host mux) over the tailnet. decider-fast-client.py."""
+    import importlib.util, os
+    spec = importlib.util.spec_from_file_location(
+        "decider_fast_client",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                     "jevab", "decider-fast-client.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    t0 = time.time()
+    r = mod.fast_readout(prompt_url, card_url, model, state_text,
+                         list(options), timeout=60)
+    ms = int((time.time() - t0) * 1000)
+    if not r.get("ok"):
+        return {"probs": None, "choice": None, "ms": ms, "error": r.get("error")}
+    return {"probs": r.get("probs"), "choice": r.get("choice"), "ms": ms,
+            "error": None}
+
 def laya_noul(openjev, state_text, proposal, mission):
     q = {"type": "noul", "instructions": MISSIONS[mission]["laya_instructions"]}
     t0 = time.time()
@@ -513,7 +533,16 @@ def run_once(a, pol, fault_phases):
             judge = llm_judge(a.llm, a.llm_model, state_text, proposal, mission)
             final = judge["choice"] or proposal
         elif a.decider:
-            dref = decider_readout(a.decider, state_text, MISSIONS[mission]["actions"])
+            if a.decider_fast and (a.prompt or a.decider):
+                dref = decider_readout_fast(a.prompt or a.decider,
+                                            a.decider_fast,
+                                            a.decider_fast_model, state_text,
+                                            MISSIONS[mission]["actions"])
+                if dref["error"]:
+                    dref = decider_readout(a.decider, state_text,
+                                           MISSIONS[mission]["actions"])  # CPU fallback
+            else:
+                dref = decider_readout(a.decider, state_text, MISSIONS[mission]["actions"])
             p_dec = (dref["probs"].get(proposal)
                      if dref and dref["probs"] is not None else None)
             if dref and dref["error"]:
@@ -648,6 +677,11 @@ def main():
                          "faulty yes 0.29-0.32 vs correct yes 0.36-0.39 (gap 0.32-0.36).")
     ap.add_argument("--decider", default=os.environ.get("POLIS_DECIDER", ""),
                     help="decider-service.py /readout base URL (empty = v4 behavior)")
+    ap.add_argument("--decider-fast", default=os.environ.get("POLIS_DECIDER_FAST", ""),
+                    help="GPU card base URL for the fast path (llama-mux llama-server); inference there, prompt from --prompt")
+    ap.add_argument("--prompt", default=os.environ.get("POLIS_PROMPT", ""),
+                    help="decider-service base URL for /prompt (fast path); falls back to --decider's service")
+    ap.add_argument("--decider-fast-model", default="qwen35-decider-2b")
     ap.add_argument("--harness", default="http://127.0.0.1:8585")
     ap.add_argument("--openjev", default=os.environ.get("OPENJEV", "the Laya noul endpoint"),
                     help="Laya noul endpoint (openjev the Laya box on the  LAN)")

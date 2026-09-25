@@ -10,6 +10,16 @@ service so a decision loop on another machine can call it per step:
   -> {"ok": true, "probs": {"goto_target": 0.42, ...},
       "choice": "goto_target", "ms": 3100}
 
+  POST /prompt {"state": ..., "options": [...], "question": optional}
+  -> {"ok": true, "prompt": "<full chat-templated prompt text>",
+      "letters": [<token id of option letter A>, ...], "nopts": N}
+  The /prompt endpoint exists for the *fast path* (decider-fast-client.py):
+  a caller on another box (that lacks the decider package/tokenizer) gets
+  the exact prompt this service would run, plus the option-letter token
+  ids, and sends the prompt itself to a GPU llama-server (the the 3060 card)
+  over the tailnet, recovering the T=1.3 letter distribution from the
+  raw n_probs. Total ~100-150 ms/row vs ~3-4 s for the in-process readout.
+
   GET /health -> {"ok": true, "gguf": ..., "loaded": true}
 
 The model is loaded once at startup (a few seconds for 2B Q8 on CPU) and
@@ -46,6 +56,7 @@ class Service:
     def __init__(self, gguf, threads, ctx):
         gr = _load_gguf_runner(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                             "gguf-runner.py"))
+        self.gr = gr
         self.gguf = gguf
         self.lock = threading.Lock()
         self.decider = None
@@ -64,6 +75,24 @@ class Service:
                    "probs": d.get("probs") or {o: 0.0 for o in options},
                    "choice": d.get("choice"), "ms": ms}
         return out
+
+    def build_prompt(self, state, options, question):
+        """Exact prompt the in-process readout would run, plus the option-
+        letter token ids. For the fast path (decider-fast-client.py)."""
+        with self.lock:
+            t0 = time.time()
+            g = self.gr
+            item = g.dprompt_build(
+                g.Example(state, [g.Q(question or CHOICE_Q, list(options), 0)], "infer"),
+                self.decider.tok, g._NoShuffle(),
+                max_options=min(g.MAX_OPTIONS, g.DP_MAX),
+                max_ctx_tokens=g.MAX_CTX_TOKENS, layout="state_first")
+            ids, nopts = item["ids"], item["nopts"][0]
+            text = self.decider.tok.decode(ids)
+            ms = int((time.time() - t0) * 1000)
+            return {"ok": True, "prompt": text, "nopts": nopts,
+                    "letters": [self.decider.letters[i] for i in range(nopts)],
+                    "ms": ms}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -87,6 +116,18 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, {"error": "not found"})
 
     def do_POST(self):
+        if self.path == "/prompt":
+            try:
+                req = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)))
+                state = req.get("state") or ""
+                options = req.get("options") or []
+                if not state or not options:
+                    return self._send(400, {"error": "state and options are required"})
+                d = self.service.build_prompt(state, options, req.get("question"))
+                self._send(200, d)
+            except Exception as e:
+                self._send(500, {"ok": False, "error": repr(e)[:200]})
+            return
         if self.path != "/readout":
             return self._send(404, {"error": "not found"})
         try:
