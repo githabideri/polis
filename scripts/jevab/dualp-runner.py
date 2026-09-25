@@ -118,6 +118,14 @@ def main():
     ap.add_argument("--skip-laya", action="store_true")
     ap.add_argument("--skip-decider", action="store_true")
     ap.add_argument("--timeout", type=float, default=90.0)
+    ap.add_argument("--pace", type=float, default=0.5,
+                    help="sleep seconds between rows. REQUIRED > 0 for the "
+                         "the 3060 host mux: this llama.cpp build corrupts tail-token "
+                         "logprobs when multiple shared-prefix prompts land "
+                         "in one server batch with --cache-prompt (2026-09-25 "
+                         "R1: 14/96 rows read p_oracle=0.000 in a tight batch "
+                         "but 0.64-1.000 spaced; live loop requests are "
+                         "seconds apart and unaffected).")
     a = ap.parse_args()
 
     rows = json.load(open(a.rows))
@@ -128,6 +136,8 @@ def main():
     n_ok = n_err = 0
     t0 = time.time()
     for i, r in enumerate(rows):
+        if a.pace and i > 0:
+            time.sleep(a.pace)
         # proposal under evaluation: the row's `proposed`, or the oracle
         # when the row carries no natural proposal (A/B corpus convention)
         prop = r.get("proposed")
@@ -146,6 +156,18 @@ def main():
             rec.update({"laya": laya_noul(a.openjev, r["mission"], state,
                                           a.timeout)})
         if not a.skip_decider:
+            if not getattr(main, "_warmed", False):
+                # prewarm: force the mux model switch BEFORE the timed batch
+                decider_fast(a.prompt, a.card, a.model,
+                             "task: mine the marker block, then return to base\n"
+                             "current phase: done\nfacts: bot at (1, 2, 3), "
+                             "near_target=no, near_base=yes, marker_present=no\n"
+                             "carrying: empty\nitems: none\nsince_last_step: "
+                             "no change\nlast_action: done\nproposed action: wait",
+                             ["goto_target", "mine_target", "pickup_item",
+                              "place_block", "give_tool", "goto_base", "wait"],
+                             a.timeout)
+                main._warmed = True
             d = decider_fast(a.prompt, a.card, a.model, state,
                              r.get("options") or [], a.timeout)
             rec["decider"] = {

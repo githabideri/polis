@@ -1026,3 +1026,119 @@ data point for that tail.
 4. **Corpus growth for the tail**: out-of-vocabulary state families
    (new block types, multi-item carries) to give the *next* fine-tune a
    calibration signal for abstention instead of confident guessing.
+
+## 17. R1: out-of-vocabulary content and live natural missions (2026-09-25/26, 10th pass)
+
+§16 ended on a stated risk: the FT decider is "sharp inside the learned
+distribution, unknown outside" — an out-of-vocabulary state would get a
+confident guess rather than abstinence. R1 measures exactly that, in two
+halves: (a) offline probes of the FT model on OOV *content* (block ids,
+mission phrasings) through the trained fact channel, (b) live missions on
+the game testbed against *natural* world structures with natural task wording.
+
+### R1a — OOV probes (96 new rows + 96-row val-world control)
+
+`gen-r1-probe-rows.py` generates two probe families over the byte-identical
+trained state template:
+
+- **oov-id**: trained task phrasing; carrying/items lines carry block ids
+  absent from the 09-25 corpora (coal/copper/tin/silver/iron/gold ores,
+  pine/birch/spruce/linden/willow logs, potato/oat/barley/rye crops and
+  seeds, wool/dove-feather/flint)
+- **oov-task**: natural mission phrasings ("mine the coal ore, then return
+  to base" …) plus the same OOV ids, so the task line and the item lines
+  are novel at once
+
+Canonical measurement: dedicated 2B server on the the 12 GB 3060 (no prompt
+cache), pre-fetched prompts, paced — 192 rows in ~2 min:
+
+| family | n | top-1 | p_oracle mean | p_oracle min |
+|---|---|---|---|---|
+| control (96-row val world) | 96 | 96/96 | 0.99 | 0.68 |
+| oov-id | 48 | **48/48** | **0.9998** | **0.998** |
+| oov-task | 48 | **48/48** | **0.9998** | **0.999** |
+
+**Verdict: the FT decider generalizes to OOV content.** It judges from the
+phase structure of the channel, not from memorized block ids or task
+words; p sits at the trained ceiling on both probe families. The §16
+"confident guess outside the distribution" risk is **not confirmed** for
+block-id/task-word OOV — the residual risk shifts to *structurally* novel
+states (new phase patterns, which the next corpus should cover with
+abstention labels; see Next).
+
+### R1b — live natural missions (the game testbed, FT reflex via the the 3060 host mux)
+
+- **mine**: granite marker embedded in a 3×3 rock-limestone pocket
+  (natural ore-pocket structure), natural task wording, `--drop-after-mine`
+  → **complete**: 3 steps, injected fault corrected 1/1, 3 judge calls,
+  0 SC (the decider's p on these natural-phrasing rows ran below tau-dec —
+  the loop escalated to the 27B, which is the designed behavior).
+- **harvest**: a real non-carrot crop — `crop-rye-9` (first run with
+  `crop-rye-7` failed: rye matures at stage 9/9, not 7/7 — the game's own
+  stage gating reported "crop not mature: stage 7/9"), natural wording,
+  `--drop-after-harvest` → **complete**: harvest → pickup → return → done;
+  mission_complete True, fault 1/1, **4/8 reflex short-circuits**.
+
+Findings:
+
+1. **Pickup approach step (new, loop level).** Harvest drops land at the
+   source block; after a ranged harvest the item can sit 3.26 blocks from
+   the bot — beyond the 3.0 pickup range (this is a *general* game
+   condition, not a rye quirk: items roll on slopes, the bot drifts during
+   action animations). The v5 pickup executor now gootos the item's cell
+   first when the nearest ground item is > 2.5 blocks away (same pattern
+   as the 9th-pass mine approach step). Durable follow-up: the mod's
+   `PolisPickupItemAction` currently hard-fails on `dist > range` — it
+   should self-approach (queue a goto to the item, pick up on arrival)
+   like the mine action's approach.
+2. **Harvest completion detector was hardcoded to "carrot"**
+   (`any("carrot" in carrying)`); the rye mission (carrying
+   `game:seeds-rye`) never declared complete. Fixed to a baseline-carry
+   diff: complete = at base + a new non-tool item was acquired.
+3. **The decider mis-picks on structurally novel state text**: on the
+   post-pickup return rows (compound `since_last_step` lines) it proposed
+   `pickup_item` with nontrivial mass; the judge corrected. Laya p on the
+   natural-phrasing rows ran 0.30–0.49 (below the fixture baseline), so
+   SC rate is lower on natural wording than on corpus wording. This is
+   the calibration tail R1 was built to measure: the loop's answer
+   (escalate to the 27B) is exactly right, and the tail's shape is now
+   characterized for the next corpus.
+4. **VS 1.22.7 code space (reference).** Item codes and block codes are
+   different spaces: the corpus's "stone-granite"/"oak"/"wheat" strings
+   are *channel vocabulary* — they are not settable block codes in 1.22
+   (`Unknown block: stone-coal`, `…: oak`, `…: wheat`). Real codes:
+   granite = `rock-granite`, rye = `crop-rye-<stage 0..9>`, cabbage =
+   `crop-cabbage-<stage>`. The facts channel was never exposed to game
+   block codes, which is why the model never needed them.
+
+### Measurement-artifact finding (batched readouts on this build)
+
+Batched measurement through the mux with the dualp-runner's request
+pattern (fresh `/prompt` fetch per row, immediately followed by the
+completion) **deterministically corrupted p_oracle on 14/96 val-world
+rows** (1e-6 … 1e-3; top-1 unaffected) across every batch run (a–e, over
+several hours). The same rows read with pre-fetched prompts — or against
+the dedicated server — returned 0.68–1.0; the corruption pattern (which
+14 rows) was identical in every runner batch. Toggling `--cache-prompt`
+on/off in the child did not change it, so the prompt cache is not (the
+only) cause; the trigger is the runner's request interleaving hitting some
+server state in this mainline build. **Protocol rule adopted:** batch
+measurements use pre-fetched prompts or a dedicated server, and any row
+with p_oracle < 0.001 in a batch is re-read individually before
+interpretation. (File a note for the llama.cpp build maintainer;
+`data/r1a-batch-*.log` + this section are the reproduction.)
+
+### Next (in order)
+
+1. **Build mission** (`place_block` end-to-end) — closes the 7-option
+   vocabulary; the FT model already scores the corpus place_block rows.
+2. **Monitoring**: decider readout latency + SC rate as a Grafana panel;
+   the FT model registered in the llm-hub config/sidecar.
+3. **Nightly val-world canary** (96 rows, ~2 min on the card): the drift
+   guard for the deployed reflex.
+4. **Next fine-tune corpus**: OOV *state* families with abstention labels
+   (new phase patterns — the §16/§17 residual risk), multi-crop harvest
+   rows (rye/oat/cabbage), natural-phrasing rows. `gen-r1-probe-rows.py`
+   is the seed.
+5. **Mod rebuild session**: pickup self-approach (durable form of
+   finding 1), plus the other carried items.

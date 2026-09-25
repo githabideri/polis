@@ -115,9 +115,11 @@ class Polis:
         r = self.cmd("scan", [str(x - pad), "2", str(z - pad),
                               str(x + pad), str(y + 2), str(z + pad)], bot)
         return (r.get("Data") or {}).get("blocks", [])
-    def marker_present(self, bot, cell):
+    def marker_present(self, bot, cell, marker=None):
         x, y, z = cell
-        return any(b.get("code") in ("rock-granite", "game:rock-granite")
+        codes = ((marker, "game:" + marker) if marker
+                 else ("rock-granite", "game:rock-granite"))
+        return any(b.get("code") in codes
                    and b.get("pos") == [x, y, z]
                    for b in self.cell_blocks(bot, cell))
     def crop_present(self, bot, cell):
@@ -299,7 +301,8 @@ def goto_wait(pol, bot, cell, timeout=45):
         time.sleep(0.5)
     return {"ok": False, "msg": "goto timeout"}
 
-def execute(pol, bot, action, target, base, mission, autocollect=True):
+def execute(pol, bot, action, target, base, mission, autocollect=True,
+            marker="rock-granite", crop="crop-carrot-7"):
     if action in ("goto_target", "goto_base"):
         if action == "goto_target":
             if mission == "harvest":
@@ -364,9 +367,20 @@ def execute(pol, bot, action, target, base, mission, autocollect=True):
         return {"ok": False, "msg": "pickaxe not carried after 8 gives"}
     if action == "pickup_item":
         # nearest ground item (harness: goto+pickup sequence); success = the
-        # pickup action reports, or the ground-item list shrinks
+        # pickup action reports, or the ground-item list shrinks.
+        # Approach step: item entities drop where the source block was, so
+        # after a ranged harvest/mine they can sit just beyond the 3.0
+        # pickup range (observed live 2026-09-26: rye seeds 3.26 out). Go to
+        # the item's cell first, then pick up (same pattern as the mine
+        # approach step); durable fix = the mod's pickup action self-
+        # approaching (PolisPickupItemAction currently Fails on dist>range).
         st0 = pol.state(bot)
         n0 = len(st0.get("Items") or [])
+        items = st0.get("Items") or []
+        if items and (items[0].get("Dist") or 0) > 2.5:
+            ip = items[0].get("Pos") or []
+            if len(ip) == 3:
+                goto_wait(pol, bot, (int(ip[0]), int(ip[1]), int(ip[2])), timeout=20)
         r = pol.cmd("pickup", [], bot)
         if not r.get("Ok") and "No item entity found" not in (r.get("Message") or ""):
             return {"ok": False, "msg": r.get("Message") or r.get("error") or "pickup refused"}
@@ -382,10 +396,7 @@ def execute(pol, bot, action, target, base, mission, autocollect=True):
         return {"ok": False, "msg": "pickup timeout"}
     if action == "place_block":
         # setblock at the target cell (the fixture's marker block type)
-        if mission == "harvest":
-            code = "crop-carrot-7"
-        else:
-            code = "rock-granite"
+        code = crop if mission == "harvest" else marker
         r = pol.cmd("setblock", [code, str(target[0]), str(target[1]),
                                  str(target[2])], bot)
         ok = bool(r.get("Ok")) or (r.get("arrived") is True)
@@ -421,9 +432,17 @@ def setup_fixture(a, pol, mission, dist=8):
     base = (bx, by, bz)
     if mission == "mine":
         target = (bx + dist, by, bz)
+        if a.pocket:
+            # natural context: stone-limestone cluster around the marker
+            # cell (the target cell itself is set last, so the marker wins)
+            for dx in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    if (dx, dz) != (0, 0):
+                        pol.cmd("setblock", ["stone-limestone", str(target[0] + dx),
+                                             str(by), str(target[2] + dz)], a.bot)
         for _ in range(2):
-            pol.cmd("setblock", ["rock-granite", str(target[0]), str(target[1]), str(target[2])], a.bot)
-            if pol.marker_present(a.bot, target):
+            pol.cmd("setblock", [a.marker, str(target[0]), str(target[1]), str(target[2])], a.bot)
+            if pol.marker_present(a.bot, target, a.marker):
                 break
             time.sleep(1)
         # verified tool (the bot's default right hand may be occupied by a
@@ -434,16 +453,20 @@ def setup_fixture(a, pol, mission, dist=8):
                 break
             time.sleep(1)
     else:
-        # farmland at ground level, mature crop (stage 7/7) one above
+        # farmland at ground level, mature crop one above
         farmland = (bx + dist, by, bz)
         target = (bx + dist, by + 1, bz)
         pol.cmd("setblock", ["farmland-dry-medium", str(farmland[0]), str(farmland[1]), str(farmland[2])], a.bot)
         for _ in range(2):
-            pol.cmd("setblock", ["crop-carrot-7", str(target[0]), str(target[1]), str(target[2])], a.bot)
+            pol.cmd("setblock", [a.crop, str(target[0]), str(target[1]), str(target[2])], a.bot)
             if pol.crop_present(a.bot, target):
                 break
             time.sleep(1)
-    return base, target
+    # baseline carry (after tool gives): harvest completion is "something
+    # new and non-tool was acquired", not a hardcoded crop code (the old
+    # "carrot in carrying" check broke on rye/oat/etc - 2026-09-26 R1b)
+    base_carry = set(c for c in pol.carrying(a.bot) if c)
+    return base, target, base_carry
 
 def run_once(a, pol, fault_phases):
     mission = a.mission
@@ -461,8 +484,9 @@ def run_once(a, pol, fault_phases):
         a.bot = int(new_id)
     pol = Polis(a.harness, a.uid)
     time.sleep(2)
-    base, target = setup_fixture(a, pol, mission, a.dist)
-    fixture_check = pol.crop_present if mission == "harvest" else pol.marker_present
+    base, target, base_carry = setup_fixture(a, pol, mission, a.dist)
+    fixture_check = (pol.crop_present if mission == "harvest"
+                     else lambda bot, cell: pol.marker_present(bot, cell, a.marker))
     has_tool = any("pickaxe" in (c or "") for c in pol.carrying(a.bot))
     print("setup: bot #%d base=%s target=%s mission=%s faults=%s %s fixture=%s" % (
         a.bot, base, target, mission, sorted(fault_phases),
@@ -563,7 +587,7 @@ def run_once(a, pol, fault_phases):
             "carrying: %s\nitems: %s\n"
             "since_last_step: %s\nlast_action: %s\nproposed action: %s"
         ) % (
-            MISSIONS[mission]["task"], phase, pos[0], pos[1], pos[2],
+            a.task or MISSIONS[mission]["task"], phase, pos[0], pos[1], pos[2],
             "yes" if near_t else "no", "yes" if near_b else "no",
             fixture_label, "yes" if fixture else "no",
             ", ".join((c or "?") for c in carrying[:5]) or "empty",
@@ -633,7 +657,8 @@ def run_once(a, pol, fault_phases):
         last_final = final
 
         ex = execute(pol, a.bot, final, target, base, mission,
-                     autocollect=not a.no_autocollect)
+                     autocollect=not a.no_autocollect,
+                     marker=a.marker, crop=a.crop)
         if (a.drop_after_harvest and mission == "harvest"
                 and final == "harvest_target" and ex["ok"]):
             # world event: the harvest's item(s) are dropped at the crop
@@ -652,7 +677,7 @@ def run_once(a, pol, fault_phases):
             gi = [i for i in (st2.get("Items") or [])
                   if (i.get("Dist") or 99) <= 5]
             if not gi:
-                pol.cmd("give", ["stone-granite", "1"], a.bot)
+                pol.cmd("give", [a.marker, "1"], a.bot)
                 time.sleep(0.5)
                 pol.cmd("drop", [], a.bot)
                 time.sleep(0.5)
@@ -724,9 +749,13 @@ def run_once(a, pol, fault_phases):
     st = pol.state(a.bot)
     at_base = dist(st["Bot"]["Pos"], base) <= 2.5
     if mission == "mine":
-        complete = (not pol.marker_present(a.bot, target)) and at_base
+        complete = (not pol.marker_present(a.bot, target, a.marker)) and at_base
     else:
-        complete = (any("carrot" in (c or "") for c in pol.carrying(a.bot))) and at_base
+        # crop-generic completion: a new non-tool item was acquired
+        complete = at_base and any(
+            (c not in base_carry)
+            and not any(t in (c or "") for t in ("pickaxe", "linensack"))
+            for c in pol.carrying(a.bot))
     return rows, {
         "mission_complete": complete,
         "steps_to_complete": next((r["step"] for r in reversed(rows) if r["match"]), None)
@@ -743,6 +772,20 @@ def main():
                     help="fixture distance in blocks east of the player (world "
                          "variety: the 29%% travel-phase bias says longer "
                          "travels are the under-represented regime)")
+    ap.add_argument("--marker", default="rock-granite",
+                    help="mine fixture: block code set at the target cell "
+                         "(R1: real block types, e.g. stone-coal)")
+    ap.add_argument("--crop", default="crop-carrot-7",
+                    help="harvest fixture: crop code set above the farmland "
+                         "(R1: real crops, e.g. crop-wheat-12)")
+    ap.add_argument("--task", default=None,
+                    help="override the state-text task line (R1: natural "
+                         "mission phrasing, e.g. 'mine the coal ore, then "
+                         "return to base')")
+    ap.add_argument("--pocket", action="store_true",
+                    help="mine fixture: surround the target cell with a 3x3 "
+                         "stone-limestone cluster (natural ore-pocket "
+                         "context around the marker)")
     ap.add_argument("--no-autocollect", action="store_true",
                     help="mine/harvest: run the mine/harvest action without "
                          "autocollect so the drops land on the ground - the "

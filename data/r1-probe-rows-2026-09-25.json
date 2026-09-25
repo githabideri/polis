@@ -1,0 +1,1730 @@
+[
+ {
+  "id": "r1-000",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512022, 3, 511993), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-willow, game:stone-copper\nitems: game:stone-silver\nsince_last_step: ground item appeared\nlast_action: picked 1x game:stone-copper\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-001",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512016, 3, 512050), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-barley\nitems: game:crop-potato\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-002",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the coal ore, then return to base\ncurrent phase: done\nfacts: bot at (512023, 3, 512035), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack, game:stone-gold\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-003",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the oats, then return to base\ncurrent phase: return\nfacts: bot at (512021, 3, 512027), near_target=no, near_base=no, crop_present=no\ncarrying: game:feathers-dove\nitems: game:flint\nsince_last_step: ground item picked up\nlast_action: picked 1x game:crop-potato\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-004",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (512022, 3, 512022), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:stone-iron\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-005",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512010, 3, 512001), near_target=no, near_base=no, crop_present=yes\ncarrying: game:wool-sheep\nitems: game:crop-rye\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "r1-006",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the granite ore, then return to base\ncurrent phase: return\nfacts: bot at (512010, 3, 512006), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:wool-sheep\nitems: game:stone-coal\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-007",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the barley, then return to base\ncurrent phase: travel\nfacts: bot at (512017, 3, 512013), near_target=no, near_base=no, crop_present=yes\ncarrying: game:seeds-oat\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-008",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512011, 3, 512010), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:wool-sheep\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-009",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512033, 3, 512045), near_target=no, near_base=no, crop_present=yes\ncarrying: game:wool-sheep\nitems: game:crop-barley, game:wool-sheep\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "r1-010",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the tin ore, then return to base\ncurrent phase: return\nfacts: bot at (512024, 3, 512025), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:stone-tin\nitems: game:stone-gold\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-011",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the wheat, then return to base\ncurrent phase: travel\nfacts: bot at (511995, 3, 512033), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-barley, game:seeds-oat\nitems: game:crop-rye, game:flint\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-012",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512004, 3, 512018), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-pine, game:stone-silver\nitems: game:stone-coal\nsince_last_step: ground item appeared\nlast_action: picked 1x game:stone-copper\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-013",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512026, 3, 512010), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-rye, game:seeds-potato\nitems: game:crop-rye\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "r1-014",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the coal ore, then return to base\ncurrent phase: return\nfacts: bot at (512035, 3, 512025), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-015",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the potato patch, then return to base\ncurrent phase: harvest\nfacts: bot at (512011, 3, 512035), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-barley\nitems: game:crop-potato, game:wool-sheep\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "r1-016",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (512041, 3, 512040), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:feathers-dove\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-017",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512035, 3, 512031), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-potato, game:seeds-potato\nitems: game:crop-oat, game:wool-sheep\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-018",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the copper ore, then return to base\ncurrent phase: return\nfacts: bot at (512005, 3, 512009), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-019",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the barley, then return to base\ncurrent phase: pickup\nfacts: bot at (512017, 3, 511995), near_target=no, near_base=no, crop_present=no\ncarrying: game:seeds-barley\nitems: game:crop-potato\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-020",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (512030, 3, 512047), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack, game:stone-copper\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-021",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512042, 3, 512015), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-potato\nitems: game:crop-rye\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-022",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the copper ore, then return to base\ncurrent phase: done\nfacts: bot at (512006, 3, 512037), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:stone-tin\nitems: game:stone-copper\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-023",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the potato patch, then return to base\ncurrent phase: return\nfacts: bot at (512014, 3, 512024), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-potato, game:seeds-potato\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:crop-potato\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-024",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512014, 3, 512051), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack, game:stone-coal\nitems: game:stone-copper\nsince_last_step: no change\nlast_action: mining\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "r1-025",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512020, 3, 512025), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-barley\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-026",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the granite ore, then return to base\ncurrent phase: done\nfacts: bot at (512021, 3, 512042), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-pine, game:stone-gold\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-027",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the potato patch, then return to base\ncurrent phase: pickup\nfacts: bot at (512030, 3, 512003), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-rye, game:seeds-rye\nitems: game:crop-oat\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-028",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512017, 3, 512028), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:stone-gold\nitems: none\nsince_last_step: marker gone\nlast_action: mined\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-029",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512027, 3, 512011), near_target=no, near_base=no, crop_present=no\ncarrying: game:wool-sheep\nitems: game:crop-oat\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-030",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the copper ore, then return to base\ncurrent phase: mine\nfacts: bot at (512046, 3, 512013), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack, game:stone-tin\nitems: game:stone-copper\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "r1-031",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the potato patch, then return to base\ncurrent phase: travel\nfacts: bot at (512041, 3, 512015), near_target=no, near_base=no, crop_present=yes\ncarrying: game:wool-sheep\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-032",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 3, 512021), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:stone-silver\nitems: none\nsince_last_step: no change\nlast_action: mining\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "mine_target"
+ },
+ {
+  "id": "r1-033",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512009, 3, 512028), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-potato, game:seeds-potato\nitems: game:crop-oat\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-034",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the copper ore, then return to base\ncurrent phase: done\nfacts: bot at (512026, 3, 512049), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:stone-tin\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-035",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the wheat, then return to base\ncurrent phase: pickup\nfacts: bot at (512030, 3, 512021), near_target=no, near_base=no, crop_present=no\ncarrying: game:feathers-dove\nitems: game:crop-barley\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-036",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512036, 3, 512040), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: marker gone\nlast_action: mined\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-037",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512014, 3, 512018), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-potato, game:seeds-potato\nitems: game:crop-rye\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-038",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the copper ore, then return to base\ncurrent phase: done\nfacts: bot at (512007, 3, 512012), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-linden, game:stone-copper\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-039",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the barley, then return to base\ncurrent phase: pickup\nfacts: bot at (512015, 3, 512021), near_target=no, near_base=no, crop_present=no\ncarrying: game:feathers-dove\nitems: game:crop-rye\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-040",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (512020, 3, 512013), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:feathers-dove\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-041",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512020, 3, 512017), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-rye, game:seeds-oat\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-042",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the copper ore, then return to base\ncurrent phase: mine\nfacts: bot at (512003, 3, 512016), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack, game:stone-gold\nitems: none\nsince_last_step: no change\nlast_action: mining\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "r1-043",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the wheat, then return to base\ncurrent phase: harvest\nfacts: bot at (512005, 3, 511996), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-potato\nitems: none\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "r1-044",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512008, 3, 512032), near_target=no, near_base=no, marker_present=yes\ncarrying: game:wood-willow, game:stone-coal\nitems: game:stone-coal, game:wool-sheep\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-045",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512037, 3, 512019), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-potato, game:seeds-oat\nitems: game:crop-oat\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-046",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the coal ore, then return to base\ncurrent phase: return\nfacts: bot at (512001, 3, 512026), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack, game:stone-tin\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-047",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the barley, then return to base\ncurrent phase: pickup\nfacts: bot at (512011, 3, 512023), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-oat\nitems: game:crop-oat\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-048",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (511998, 3, 512026), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:stone-coal, game:feathers-dove\nsince_last_step: no change\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "mine_target"
+ },
+ {
+  "id": "r1-049",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512016, 3, 512003), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-oat\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-050",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the tin ore, then return to base\ncurrent phase: done\nfacts: bot at (512018, 3, 512034), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-birch, game:stone-copper\nitems: game:wool-sheep\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-051",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the barley, then return to base\ncurrent phase: travel\nfacts: bot at (512017, 3, 512017), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-potato\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-052",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512013, 3, 512045), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:stone-tin\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-053",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512031, 3, 512032), near_target=no, near_base=no, crop_present=no\ncarrying: game:flint\nitems: game:crop-rye\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-054",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the coal ore, then return to base\ncurrent phase: done\nfacts: bot at (512005, 3, 511999), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-birch, game:stone-copper\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-055",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the wheat, then return to base\ncurrent phase: harvest\nfacts: bot at (512030, 3, 512037), near_target=no, near_base=no, crop_present=yes\ncarrying: game:seeds-rye\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "r1-056",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512017, 3, 512018), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:stone-copper\nsince_last_step: no change\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "mine_target"
+ },
+ {
+  "id": "r1-057",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512037, 3, 512029), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-rye, game:seeds-rye\nitems: none\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "r1-058",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the tin ore, then return to base\ncurrent phase: return\nfacts: bot at (512018, 3, 512037), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:stone-silver\nitems: none\nsince_last_step: marker gone\nlast_action: mined\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-059",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the potato patch, then return to base\ncurrent phase: done\nfacts: bot at (512021, 3, 512027), near_target=no, near_base=no, crop_present=no\ncarrying: game:feathers-dove\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-060",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512020, 3, 512027), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-willow, game:stone-coal\nitems: game:stone-gold\nsince_last_step: ground item appeared\nlast_action: picked 1x game:stone-copper\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-061",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512038, 3, 512039), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-oat, game:seeds-oat\nitems: game:crop-rye\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-062",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the coal ore, then return to base\ncurrent phase: travel\nfacts: bot at (512040, 3, 512000), near_target=no, near_base=no, marker_present=yes\ncarrying: game:wood-birch, game:stone-tin\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-063",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the barley, then return to base\ncurrent phase: harvest\nfacts: bot at (512026, 3, 512043), near_target=no, near_base=no, crop_present=yes\ncarrying: game:feathers-dove\nitems: none\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "r1-064",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512021, 3, 512047), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:stone-gold\nitems: game:stone-silver, game:flint\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-065",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512023, 3, 512022), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-barley, game:seeds-oat\nitems: game:crop-oat\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-066",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the granite ore, then return to base\ncurrent phase: travel\nfacts: bot at (512012, 3, 512015), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:wool-sheep\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-067",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the potato patch, then return to base\ncurrent phase: pickup\nfacts: bot at (512012, 3, 512043), near_target=no, near_base=no, crop_present=no\ncarrying: game:feathers-dove\nitems: game:crop-oat\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-068",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512024, 3, 512035), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack, game:stone-coal\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-069",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512007, 3, 512036), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-rye\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-070",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the granite ore, then return to base\ncurrent phase: return\nfacts: bot at (512015, 3, 512029), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-birch, game:stone-silver\nitems: game:stone-gold\nsince_last_step: marker gone\nlast_action: mined\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-071",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the wheat, then return to base\ncurrent phase: done\nfacts: bot at (512003, 3, 512011), near_target=no, near_base=no, crop_present=no\ncarrying: game:wool-sheep\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-072",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512003, 3, 512037), near_target=no, near_base=no, marker_present=yes\ncarrying: game:wood-linden, game:stone-iron\nitems: game:stone-copper, game:wool-sheep\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-073",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512028, 3, 512002), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-barley, game:seeds-barley\nitems: game:flint\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-074",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the granite ore, then return to base\ncurrent phase: done\nfacts: bot at (512028, 3, 512006), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-linden, game:stone-iron\nitems: game:stone-tin\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-075",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the oats, then return to base\ncurrent phase: return\nfacts: bot at (512030, 3, 512004), near_target=no, near_base=no, crop_present=no\ncarrying: game:seeds-rye\nitems: game:flint\nsince_last_step: ground item picked up\nlast_action: picked 1x game:crop-potato\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-076",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512026, 3, 512034), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: no change\nlast_action: mined\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "mine_target"
+ },
+ {
+  "id": "r1-077",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512036, 3, 512009), near_target=no, near_base=no, crop_present=yes\ncarrying: game:wool-sheep\nitems: none\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "r1-078",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the granite ore, then return to base\ncurrent phase: travel\nfacts: bot at (512021, 3, 511997), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:stone-tin, game:wool-sheep\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-079",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the barley, then return to base\ncurrent phase: return\nfacts: bot at (512044, 3, 512023), near_target=no, near_base=no, crop_present=no\ncarrying: game:flint\nitems: none\nsince_last_step: crop gone\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-080",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (511992, 3, 512016), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:feathers-dove\nitems: game:stone-tin\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-081",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512025, 3, 512024), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-oat\nitems: game:crop-rye\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-082",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the granite ore, then return to base\ncurrent phase: travel\nfacts: bot at (512014, 3, 512023), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack, game:stone-iron\nitems: game:stone-silver, game:wool-sheep\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-083",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the potato patch, then return to base\ncurrent phase: return\nfacts: bot at (512008, 3, 512017), near_target=no, near_base=no, crop_present=no\ncarrying: game:seeds-potato\nitems: game:crop-potato\nsince_last_step: crop gone\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-084",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512038, 3, 512014), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:stone-copper\nitems: game:stone-iron\nsince_last_step: no change\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "mine_target"
+ },
+ {
+  "id": "r1-085",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512028, 3, 512015), near_target=no, near_base=no, crop_present=yes\ncarrying: game:feathers-dove\nitems: game:crop-potato, game:wool-sheep\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-086",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the granite ore, then return to base\ncurrent phase: pickup\nfacts: bot at (512029, 3, 512019), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:flint\nitems: game:stone-tin\nsince_last_step: ground item appeared\nlast_action: picked 1x game:stone-copper\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-087",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the oats, then return to base\ncurrent phase: travel\nfacts: bot at (511995, 3, 512026), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-oat\nitems: game:crop-potato, game:wool-sheep\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-088",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512004, 3, 512006), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:stone-gold, game:flint\nsince_last_step: no change\nlast_action: mined\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "mine_target"
+ },
+ {
+  "id": "r1-089",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512021, 3, 512015), near_target=no, near_base=no, crop_present=no\ncarrying: game:wool-sheep\nitems: game:crop-rye\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "r1-090",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the coal ore, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512031), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:wool-sheep\nitems: game:stone-tin, game:feathers-dove\nsince_last_step: no change\nlast_action: mining\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "mine_target"
+ },
+ {
+  "id": "r1-091",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the barley, then return to base\ncurrent phase: pickup\nfacts: bot at (511995, 3, 512036), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-barley\nitems: game:crop-rye\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-092",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-id",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512018, 3, 512036), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack, game:stone-silver\nitems: game:stone-coal\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "r1-093",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-id",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512014, 3, 512014), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-barley\nitems: game:crop-potato, game:feathers-dove\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "r1-094",
+  "source": "r1-probe-2026-09-25",
+  "mission": "mine",
+  "family": "oov-task",
+  "state": "task: mine the granite ore, then return to base\ncurrent phase: pickup\nfacts: bot at (512013, 3, 512019), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-willow, game:stone-tin\nitems: game:stone-iron\nsince_last_step: ground item appeared\nlast_action: picked 1x game:stone-copper\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "r1-095",
+  "source": "r1-probe-2026-09-25",
+  "mission": "harvest",
+  "family": "oov-task",
+  "state": "task: harvest the potato patch, then return to base\ncurrent phase: done\nfacts: bot at (512035, 3, 512018), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-rye\nitems: game:crop-rye\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ }
+]
