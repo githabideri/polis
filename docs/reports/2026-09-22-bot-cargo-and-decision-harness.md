@@ -713,15 +713,41 @@ correct action *proposed* to endorse it.
   and appends a JSONL sidecar to `data/botview.jsonl`; optional single
   `--screenshot`).
 
+### Fast decider path over the tailnet (done this morning, 2026-09-25)
+
+The tailnet node was approved; the Decider now runs on the **the 3060 card**
+for the live loop. Because the polis testbed box does not carry the
+decider package/tokenizer, the path is split in two:
+`decider-service.py` gained a **`/prompt`** endpoint (returns the exact
+state-first prompt text plus the option-letter token ids — the service
+already holds the tokenizer), and **`decider-fast-client.py`** (pure
+stdlib, runs on the testbed) takes that prompt to the the 3060 host llama-server
+over the tailnet and recovers the T=1.3 letter distribution from the raw
+`n_probs` (same math as the C-API path). `jev-loop-v5.py` now takes
+`--decider-fast`/`--prompt` and falls back to the in-process CPU readout
+on any error.
+
+Measured end-to-end from the testbed: **286 ms/row warm** (10.6 s first
+call, includes the one-time model load on the card) — the 3-4 s CPU
+readout is ~12× slower. The the 3060 card's letter-logit readout is
+numerically the validated Q8 (mine_target 0.918 here vs 0.921-0.926 on
+the in-process controls; choice identical). This produced the **first
+live short-circuit** of the loop: a harvest return-step with Laya 0.41
+(>= tau-strong 0.40) and Decider 0.96 (>= tau_dec 0.5) executed directly,
+no 27B call — the two small tiers doing their designed job. After each
+window the card is switched back to the 35B resident (the mux
+`/models/load` evicts the decider automatically).
+
 ### Next (in order)
 
-(a) user approves the tailnet node -> repoint `--decider` to the the 3060 card
-(one env var; expect ~290 ms/row instead of 3-4 s); (b) **done overnight:**
+(a) **done** — tailnet node approved, fast decider path live on the the 3060 host
+card (~286 ms/row, first short-circuit observed); (b) **done overnight:**
 `tau-strong` re-derived to 0.40 and `tau-yes` to 0.35 (see finding 4);
 re-run the four missions at the new defaults to measure the short-circuit
 rate; (c) substitution-form 27B tool rule;
-(d) corpus growth: `give_tool` labeled rows (cheap now — the Decider
-serves live on the CPU batch box) + world variety (distances, target types, night/day)
-against the travel-phase bias; (e) action batch 2: `place_block` into a
-prompt set (6 options — re-convert/eval the GGUF letter mapping before
-trusting it).
+(d) corpus growth: `give_tool` labeled rows (**done** — 30-row grid,
+report finding 3; the 2B detects but does not select, so the A/B rows
+are the fine-tune input) + world variety (distances, target types,
+night/day) against the travel-phase bias; (e) action batch 2:
+`place_block` into a prompt set (6 options — re-convert/eval the GGUF
+letter mapping before trusting it).

@@ -2,10 +2,10 @@
  "loop": "jev-loop-v5 harness (Decider-2B choice reflex + Laya noul + 27B doubt-arbiter)",
  "mission": "harvest",
  "reflex": "decider 2B choice, tau_dec=0.5",
- "reflex2": "laya 421M noul, tau_yes=0.35 tau_strong=0.6",
+ "reflex2": "laya 421M noul, tau_yes=0.35 tau_strong=0.4",
  "judge": "qwen3.8-27b-dual (thinking off)",
  "runs": 1,
- "bot": 105,
+ "bot": 114,
  "steps_total": 2,
  "mission_complete": [
   true
@@ -14,17 +14,17 @@
  "avg_steps_to_complete": 2.0,
  "injected_faults": 1,
  "faults_corrected": "1/1",
- "reflex_short_circuits": "0/2",
- "decider_confirms": "0/2",
- "avg_decider_ms": 4180,
+ "reflex_short_circuits": "1/2",
+ "decider_confirms": "1/2",
+ "avg_decider_ms": 397,
  "stall_bypasses": 0,
- "judge_calls": 2,
+ "judge_calls": 1,
  "false_waits": 0,
- "judge_oracle_match": "1/2",
+ "judge_oracle_match": "0/1",
  "exec_oracle_match": "1/2",
  "exec_success": "2/2",
- "avg_laya_ms": 1322,
- "avg_judge_ms": 229,
+ "avg_laya_ms": 1402,
+ "avg_judge_ms": 752,
  "threshold_derivation": {
   "correct_p": [
    0.4076
@@ -49,7 +49,7 @@
    "path": "judge",
    "judge_choice": "harvest_target",
    "judge_raw": "harvest_target",
-   "judge_ms": 224,
+   "judge_ms": 752,
    "executed": "harvest_target",
    "exec_ok": true,
    "exec_msg": "harvested game:crop-carrot-7 with collection",
@@ -57,9 +57,10 @@
    "oracle": "goto_target",
    "match": false,
    "fault_corrected": true,
+   "last_resort_repair": false,
    "since_last_step": "no change",
    "state_text": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512022), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
-   "laya_ms": 1163
+   "laya_ms": 1229
   },
   {
    "step": 2,
@@ -67,13 +68,13 @@
    "proposal": "goto_base",
    "injected": false,
    "p": 0.4076,
-   "p_decider": 0.9483848214149475,
+   "p_decider": 0.9563800981411682,
    "decider_choice": "goto_base",
-   "decider_ms": 4180,
-   "path": "reflex+decider->judge",
-   "judge_choice": "goto_base",
-   "judge_raw": "goto_base",
-   "judge_ms": 234,
+   "decider_ms": 397,
+   "path": "reflex+decider",
+   "judge_choice": null,
+   "judge_raw": null,
+   "judge_ms": null,
    "executed": "goto_base",
    "exec_ok": true,
    "exec_msg": "done",
@@ -81,9 +82,10 @@
    "oracle": "goto_base",
    "match": true,
    "fault_corrected": false,
+   "last_resort_repair": false,
    "since_last_step": "crop gone, harvested item now carried, phase travel -> return",
    "state_text": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512012, 3, 512022), near_target=yes, near_base=no, crop_present=no\ncarrying: game:seeds-carrot, game:vegetable-carrot, game:linensack\nsince_last_step: crop gone, harvested item now carried, phase travel -> return\nlast_action: harvested game:crop-carrot-7 with collection\nproposed action: goto_base",
-   "laya_ms": 1481
+   "laya_ms": 1575
   }
  ]
 }
