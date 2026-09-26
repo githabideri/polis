@@ -849,7 +849,7 @@ def run_once(a, pol, fault_phases):
         # this step's decision. Non-fatal; a failed shot is "no frame".
         step_b64 = None
         if a.dashcam == "always":
-            step_b64, _ = dashcam_frame(a.dashcam_dir,
+            step_b64, _ = dashcam_frame(pol, a.dashcam_dir,
                                         "r%02d-step%02d.png" % (a.run, i + 1),
                                         pos, dashcam_yaw_to(pos, target))
 
@@ -860,7 +860,7 @@ def run_once(a, pol, fault_phases):
                 return None
             if a.dashcam == "always" and step_b64:
                 return step_b64
-            return dashcam_frame(a.dashcam_dir,
+            return dashcam_frame(pol, a.dashcam_dir,
                                  "r%02d-judge%02d.png" % (a.run, i + 1),
                                  pos, dashcam_yaw_to(pos, target))[0]
 
@@ -938,7 +938,7 @@ def run_once(a, pol, fault_phases):
         if a.dashcam == "auto" and not ex["ok"]:
             pos_f = pol.state(a.bot)["Bot"]["Pos"]
             dashcam_fail = "r%02d-fail%02d.png" % (a.run, i + 1)
-            dashcam_frame(a.dashcam_dir, dashcam_fail, pos_f,
+            dashcam_frame(pol, a.dashcam_dir, dashcam_fail, pos_f,
                           dashcam_yaw_to(pos_f, target))
         if a.dashcam == "always" and step_b64:
             dashcam_name = "r%02d-step%02d.png" % (a.run, i + 1)
