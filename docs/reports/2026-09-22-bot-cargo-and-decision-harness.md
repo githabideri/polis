@@ -1235,3 +1235,85 @@ val), same adoption rule, extended: **no val-world regression (96/96),
 no OOV regression, abstention rows show a quiet distribution (top-1
 `wait`, low max-p) where FT-1 was confident, and a live build fixture
 still completes.** Results: §19.
+
+## 19. Fine-tune round 2: the abstention reflex (2026-09-26, 11th pass)
+
+### The three-way A/B (clean protocol, on the card)
+
+`scripts/jevab/ft2-ab-measure.py`: rendered prompts + one-shot
+completions (the §17 protocol), 96 val-world rows, the 96 R1a OOV rows,
+and the 45 held-out abstention rows, against all three reflexes on the
+the 3060 card (base, FT-1, FT-2; raw rows in `data/ft2-ab/`):
+
+| slice | base | FT-1 | **FT-2** |
+|---|---|---|---|
+| val-world 96 (top-1 / mean p / min p) | 71 / 0.562 / 0.004 | 96 / 0.9923 / **0.679** | 96 / 0.9956 / **0.883** |
+| OOV 96 (top-1 / mean p) | 90 / 0.700 | 96 / 0.9998 | 96 / 0.9996 |
+| abstain 45 (top-1 `wait` / mean p(`wait`) / max-p mean / max-p max) | 7 (16%) / 0.166 / 0.663 / 0.927 | 13 (29%) / 0.284 / **0.967** / **1.000** | **45 (100%) / 0.9974 / 0.9974 / 0.9999** |
+
+Reading:
+
+1. **No regression anywhere.** Val-world stays 96/96 and the *floor*
+   rises (min p_oracle 0.679 → 0.883): FT-1's weakest rows were the
+   ones the round-2 corpus reinforced; OOV is statistically
+   unchanged (0.9998 vs 0.9996).
+2. **The abstention capability is real and is the right shape.** On
+   the held-out "none of the 7 is right" states FT-2 answers `wait`
+   on all 45 with p ≈ 1.0 — and the distribution is *peaked on
+   `wait`* (max-p mean equals p(`wait`) mean), not flat. The
+   calibrated-abstainer behavior the jev-designer rule calls for: the
+   escape option is a confident signal to escalate to the judge, not
+   a shrug.
+3. **What FT-1 actually did on those states is the design
+   justification, in one row.** FT-1: 71% of abstention states got a
+   *confident wrong action* (max-p mean 0.967, max 1.000) — exactly
+   the "confident guessing outside the learned distribution" risk the
+   §16 adoption note flagged, now *measured* (29% of the time it
+   picked the escape; base: 84% wrong but at least uncertain).
+   Under the cascade, a confident wrong reflex still passes the
+   Laya-yes gate; only the judge catches it. Round 2 removes most of
+   that exposure at zero cost to the in-distribution slices.
+
+### Live build on the new reflex (the game testbed, d12, travel fault)
+
+7 steps, `mission_complete=true`, fault injected (travel: bot skipped
+the target) and recovered, 2/7 rows pure reflex short-circuit, 5 judge
+calls. One calibration note, kept honest: the build mission's travel
+rows read p ≈ 0.31–0.33 (below the strong gate 0.40), so they went to
+the judge, which confirmed each — the cascade doing exactly what it is
+for, at the cost of five ~1–2 s judge calls. The val-world travel
+rows in the same run's A/B are 0.99+, so this is a phrasing
+sensitivity of this mission's state text, not a capability regression;
+the canary watches the val-world slice, and these live rows are the
+labeled set to grow for the next re-derivation.
+
+### Deployment notes (the 9th-pass footgun, re-confirmed with the new
+converter)
+
+The the 3060 host llama.cpp build advanced between passes, and its
+`convert_hf_to_gguf.py` changed the MTP contract: the *default*
+conversion now *includes* NextN/MTP tensors, which the running
+server build rejects at load (`check_tensor_dims: tensor
+'blk.24.attn_norm.weight' not found` — the server expects the 24
+blocks); `--mtp` exports *only* the draft head (540 MB, 2 tensors).
+The flag that produces a loadable target file is **`--no-mtp`**
+(= `--no-nextn` in this build) — same as the 9th pass, different
+spelling. Protocol: a converted GGUF is only adopted after a real
+load through the mux (the load error appears only in the server
+journal, never as a converter warning). The FT-2 GGUF (2.0 GB Q8_0)
+lives in `/mnt/models/decider-2b-ft2/` (uid 100000 convention), the
+mux roster and the hub config gained the third decider entry, and the
+v5 / fast-client / canary defaults now point at FT-2. The canary's
+pre-sync run re-measured FT-1 (96/96, min 0.6794 — identical to this
+A/B's FT-1 val-world row: the protocol is reproducible run-to-run).
+
+### Verdict
+
+**FT-2 is the deployed reflex.** Adoption criteria (pre-committed
+before measurement): no val-world regression — 96/96 with a higher
+floor; no OOV regression — 96/96, statistically equal; abstention
+quiet where FT-1 was confident — 45/45 `wait` at p ≈ 1.0 vs 13/45
+at max-p 0.97; live build still completes — yes, with the cascade
+covering the borderline travel phrasing. FT-1 stays in the roster as
+the A/B reference (same role as base); the nightly canary now guards
+FT-2.

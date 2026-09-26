@@ -90,7 +90,7 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--prompt", required=True, help="decider-service base URL")
     ap.add_argument("--card", required=True, help="llama-server/mux base URL")
-    ap.add_argument("--model", default="qwen35-decider-2b-ft",
+    ap.add_argument("--model", default="qwen35-decider-2b-ft2",
                     help="model id on the card; base model: qwen35-decider-2b")
     ap.add_argument("--state-file", required=True)
     ap.add_argument("--options", required=True, help="comma-separated")

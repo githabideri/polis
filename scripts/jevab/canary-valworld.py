@@ -60,7 +60,7 @@ def main():
                     help="decider-service /prompt endpoint (the CPU batch box)")
     ap.add_argument("--card", default="http://the 3060 model mux",
                     help="model mux (the 3060 host the 3060 model container, via tailnet)")
-    ap.add_argument("--model", default="qwen35-decider-2b-ft")
+    ap.add_argument("--model", default="qwen35-decider-2b-ft2")
     ap.add_argument("--restore", default="qwen36-35b-mtp",
                     help="model to make resident after measuring (empty = skip)")
     ap.add_argument("--out-dir", default="/var/log/polis-canary")

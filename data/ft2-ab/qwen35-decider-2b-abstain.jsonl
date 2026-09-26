@@ -1,0 +1,45 @@
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "goto_target", "oracle": "wait", "p_oracle": 0.012617761498725564, "max_p": 0.6530047354895124, "ms": 279, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "goto_target", "oracle": "wait", "p_oracle": 0.006359938849647629, "max_p": 0.908342622668146, "ms": 259, "error": ""}
+{"row": null, "family": "abstain", "mission": "harvest ", "ok": true, "choice": "harvest_target", "oracle": "wait", "p_oracle": 0.03095914782628322, "max_p": 0.844152591269751, "ms": 259, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "mine_target", "oracle": "wait", "p_oracle": 0.07057644284281403, "max_p": 0.3991847893307531, "ms": 285, "error": ""}
+{"row": null, "family": "abstain", "mission": "organize", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.26738357449876105, "max_p": 0.5295353655807922, "ms": 275, "error": ""}
+{"row": null, "family": "abstain", "mission": "check th", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.11577695885241467, "max_p": 0.8463297514121114, "ms": 267, "error": ""}
+{"row": null, "family": "abstain", "mission": "fix the ", "ok": true, "choice": "goto_target", "oracle": "wait", "p_oracle": 0.024333238934851686, "max_p": 0.5700446337678777, "ms": 279, "error": ""}
+{"row": null, "family": "abstain", "mission": "feed the", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.040396089637068755, "max_p": 0.9268465077313861, "ms": 273, "error": ""}
+{"row": null, "family": "abstain", "mission": "paint th", "ok": true, "choice": "wait", "oracle": "wait", "p_oracle": 0.9078339491029489, "max_p": 0.9078339491029489, "ms": 296, "error": ""}
+{"row": null, "family": "abstain", "mission": "haul the", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.01007509163529472, "max_p": 0.8017282266542195, "ms": 291, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "goto_target", "oracle": "wait", "p_oracle": 0.014709447254236101, "max_p": 0.4171127401300541, "ms": 289, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.14095941364305878, "max_p": 0.47812700546563275, "ms": 280, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "goto_target", "oracle": "wait", "p_oracle": 0.026349494004162234, "max_p": 0.7326111116703731, "ms": 279, "error": ""}
+{"row": null, "family": "abstain", "mission": "harvest ", "ok": true, "choice": "harvest_target", "oracle": "wait", "p_oracle": 0.036862601119155555, "max_p": 0.8203640141275652, "ms": 280, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "mine_target", "oracle": "wait", "p_oracle": 0.05951076088830077, "max_p": 0.42671515398292553, "ms": 283, "error": ""}
+{"row": null, "family": "abstain", "mission": "harvest ", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.03142578973567405, "max_p": 0.9155714173644175, "ms": 272, "error": ""}
+{"row": null, "family": "abstain", "mission": "organize", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.2085829026716746, "max_p": 0.7480957418232509, "ms": 287, "error": ""}
+{"row": null, "family": "abstain", "mission": "check th", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.10169558553406162, "max_p": 0.8608599458160843, "ms": 292, "error": ""}
+{"row": null, "family": "abstain", "mission": "fix the ", "ok": true, "choice": "goto_target", "oracle": "wait", "p_oracle": 0.020338000756897692, "max_p": 0.6397243880973201, "ms": 282, "error": ""}
+{"row": null, "family": "abstain", "mission": "feed the", "ok": true, "choice": "wait", "oracle": "wait", "p_oracle": 0.4535864931737623, "max_p": 0.4535864931737623, "ms": 273, "error": ""}
+{"row": null, "family": "abstain", "mission": "paint th", "ok": true, "choice": "wait", "oracle": "wait", "p_oracle": 0.9012377026613889, "max_p": 0.9012377026613889, "ms": 282, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "goto_target", "oracle": "wait", "p_oracle": 0.01635682320146852, "max_p": 0.37456691737505077, "ms": 284, "error": ""}
+{"row": null, "family": "abstain", "mission": "harvest ", "ok": true, "choice": "harvest_target", "oracle": "wait", "p_oracle": 0.32224173602556033, "max_p": 0.47785851533047013, "ms": 264, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.12379620046244356, "max_p": 0.2279625057568104, "ms": 261, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "goto_target", "oracle": "wait", "p_oracle": 0.02132966172084948, "max_p": 0.7814548655560756, "ms": 284, "error": ""}
+{"row": null, "family": "abstain", "mission": "harvest ", "ok": true, "choice": "harvest_target", "oracle": "wait", "p_oracle": 0.03841686517989609, "max_p": 0.8241827939581722, "ms": 291, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "mine_target", "oracle": "wait", "p_oracle": 0.06100352048027626, "max_p": 0.38192927578258745, "ms": 292, "error": ""}
+{"row": null, "family": "abstain", "mission": "harvest ", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.042198878084542674, "max_p": 0.900837647015365, "ms": 278, "error": ""}
+{"row": null, "family": "abstain", "mission": "organize", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.21468883603051558, "max_p": 0.7409626662301798, "ms": 283, "error": ""}
+{"row": null, "family": "abstain", "mission": "check th", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.08698558556777422, "max_p": 0.8784919013100139, "ms": 271, "error": ""}
+{"row": null, "family": "abstain", "mission": "feed the", "ok": true, "choice": "wait", "oracle": "wait", "p_oracle": 0.44700185282322036, "max_p": 0.44700185282322036, "ms": 270, "error": ""}
+{"row": null, "family": "abstain", "mission": "paint th", "ok": true, "choice": "wait", "oracle": "wait", "p_oracle": 0.9024180504309477, "max_p": 0.9024180504309477, "ms": 262, "error": ""}
+{"row": null, "family": "abstain", "mission": "harvest ", "ok": true, "choice": "harvest_target", "oracle": "wait", "p_oracle": 0.31837904549863194, "max_p": 0.4804862175964672, "ms": 260, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.011302555915547782, "max_p": 0.9271626768263592, "ms": 274, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "give_tool", "oracle": "wait", "p_oracle": 0.028723311596203442, "max_p": 0.5512293659507655, "ms": 267, "error": ""}
+{"row": null, "family": "abstain", "mission": "harvest ", "ok": true, "choice": "harvest_target", "oracle": "wait", "p_oracle": 0.029445317080191144, "max_p": 0.8366314665949475, "ms": 262, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "mine_target", "oracle": "wait", "p_oracle": 0.06603577217224686, "max_p": 0.41732174051063187, "ms": 266, "error": ""}
+{"row": null, "family": "abstain", "mission": "harvest ", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.03813678247308653, "max_p": 0.9113404242696922, "ms": 285, "error": ""}
+{"row": null, "family": "abstain", "mission": "organize", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.19984218477495932, "max_p": 0.7545041927491389, "ms": 277, "error": ""}
+{"row": null, "family": "abstain", "mission": "check th", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.1100944384100409, "max_p": 0.853068471018613, "ms": 292, "error": ""}
+{"row": null, "family": "abstain", "mission": "fix the ", "ok": true, "choice": "goto_target", "oracle": "wait", "p_oracle": 0.12095098685656754, "max_p": 0.42886249207928334, "ms": 265, "error": ""}
+{"row": null, "family": "abstain", "mission": "feed the", "ok": true, "choice": "wait", "oracle": "wait", "p_oracle": 0.43062132957401106, "max_p": 0.43062132957401106, "ms": 264, "error": ""}
+{"row": null, "family": "abstain", "mission": "paint th", "ok": true, "choice": "wait", "oracle": "wait", "p_oracle": 0.32679552270918283, "max_p": 0.32679552270918283, "ms": 275, "error": ""}
+{"row": null, "family": "abstain", "mission": "haul the", "ok": true, "choice": "goto_base", "oracle": "wait", "p_oracle": 0.010183882335508886, "max_p": 0.8245017908015447, "ms": 260, "error": ""}
+{"row": null, "family": "abstain", "mission": "mine the", "ok": true, "choice": "goto_target", "oracle": "wait", "p_oracle": 0.014231991135041505, "max_p": 0.38172976456938484, "ms": 285, "error": ""}
