@@ -1142,3 +1142,96 @@ interpretation. (File a note for the llama.cpp build maintainer;
    is the seed.
 5. **Mod rebuild session**: pickup self-approach (durable form of
    finding 1), plus the other carried items.
+
+## 18. The build mission goes live; the 7-option vocabulary is closed (2026-09-26, 11th pass)
+
+### The harness `place` action's approach point (mod fix)
+
+The 7-option vocabulary had `place_block` as a *distractor* in mine and
+harvest (the executor cheated via `setblock`). Making it a real action
+surfaced a latent harness bug: for a ground-level placement (face up),
+the approach position was computed at the *clicked surface's* block
+level — the solid ground block itself. A goto target inside a solid
+block has no path, so the sequence's goto never moved the bot and the
+place failed from the spawn point (`out of range: 8.59 > 4.50`).
+Fix: the approach cell is at the *target's* level (the air cell next to
+the target). After the fix, `place <block> x y z` is a true
+end-to-end action: it finds the block in the bot's inventory, walks the
+approach cell, and places one block (verified live: block lands at the
+target cell on the ground).
+
+Also confirmed in 1.22: `stone-granite` is an *item* code only (the
+place resolver rejects it as a block); the placeable stones are the
+`rock-*` blocks, whose item and block share the code
+(`give rock-granite` / `place rock-granite`).
+
+### Build mission (v5)
+
+`--mission build` adds the third mission family: the fixture is
+INVERTED compared to mine/harvest — the build site (an air cell at foot
+level, `dist` east) starts **empty** and must get **filled**; the bot is
+given the block; phases are travel → build → return → done (no pickup
+phase — the block is consumed, never dropped). The 7-option tuple is
+deliberately identical to harvest's (same letter positions) so the
+reflex sees an in-distribution option list; the novel parts are the
+task wording, the phase name, and the inverted fixture line
+(`build_site_filled=no→yes`). Faults: travel = skip-goal proposal;
+build = the block dropped from the hand (the correct answer becomes
+`give_tool` — the build "tool" is the block itself).
+
+Live results (both via the the 3060 host mux, FT reflex):
+
+| run | fixture | fault | steps | outcome |
+|---|---|---|---|---|
+| d12 | granite at 12 | travel (skip-goal) | 6 | **complete**; the 27B *missed* the injected skip-goal once (answered the proposed goto_base on the novel task wording), then re-routed the bot to the site on the next three judge calls — the loop recovered a fault its arbiter missed |
+| d20 | granite at 20 | build (block dropped) | 5 | **complete**; place failed (`Bot doesn't have rock-granite in inventory`) → next step the decider picked **give_tool at p=0.964** (short-circuit) → place succeeded |
+
+Decider readout on the novel mission: **p≈1.0 on build, return and
+give_tool rows; p≈0.0 on build-travel rows** (the inverted fixture +
+new phase name confuse the travel reading — the judge covered it).
+Laya p on build runs ran 0.31–0.69. The short-circuit path fired 2/6
+and 3/5. One measurement note: the first run's decider calls each cost
+~10 s because the mux performed the one-time 35B→FT switch mid-run
+(subsequent calls 80–300 ms) — the on-demand cost, paid once.
+
+Mid-run, the mux's **stall detector self-healed a wedged FT child**
+(`n_proc=1`, `n_decode_total` frozen 1728 s → child restart; next
+request reloaded the model in ~60 s; the following canary passed
+96/96). The wedge's root cause is uninvestigated — a request left in
+flight across a model switch is the prime suspect.
+
+### Nightly drift guard (canary)
+
+`scripts/jevab/canary-valworld.py` + a 04:30 systemd timer on the game testbed:
+each night it re-measures the 96-row external val world with the clean
+protocol (rendered prompts + paced one-shot completions — never the
+dualp-runner's per-row fetch pattern, §17), against the deployed model,
+and restores the 35B as resident afterwards. Pre-committed failure
+criteria: top-1 < 90/96, or mean p_oracle < 0.95, or any p_oracle <
+0.50 (under the clean protocol, p < 0.001 means real degradation, not
+the batch artifact); more than half the rows erroring exits 2
+(infrastructure, not model — e.g. during a fine-tune window). First run
+(04:05): **PASS — 96/96, mean p 0.9923, min 0.6794, 185 s**.
+
+### Fine-tune round 2 (in progress at the time of writing)
+
+Two measured gaps motivate round 2: (1) the build mission's travel rows
+(p≈0) — the reflex should own its newest mission end to end; (2) the
+§16/§17 residual risk — outside the learned distribution the model
+guesses *confidently*. The jev-designer rule for that: a choice
+question gets an explicit escape option; in this loop the escape is
+`wait`. So the round-2 corpus (575 train / 141 val) adds, on top of the
+round-1 corpus (363) and the R1a OOV probes (96): a build-mission grid
+(72 rows) and **abstention rows (89 unique, 44/45 train/held-out)** —
+states where none of the 7 actions is right, all labeled `wait`:
+missions that map to no phase (out-of-vocabulary goal, idle scene),
+stalled loops (no progress for 3+ steps, last action failed), and
+contradictory facts. Deliberately *not* in scope: teaching uncertainty
+about states that DO have a right answer (that would regress the 96/96
+val baseline).
+
+Same gentle recipe (LoRA r8/α16, lr 2e-5, patience-3 on the external
+val), same adoption rule, extended: **no val-world regression (96/96),
+no OOV regression, abstention rows show a quiet distribution (top-1
+`wait`, low max-p) where FT-1 was confident, and a live build fixture
+still completes.** Results: §19.
