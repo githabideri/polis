@@ -1,0 +1,2540 @@
+[
+ {
+  "id": "valw-000",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512023, 3, 512025), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:bone, game:seeds-carrot\nsince_last_step: no change\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "mine_target"
+ },
+ {
+  "id": "valw-001",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "mine",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (512023, 3, 512030), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-002",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "return",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512008, 3, 512053), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-granite\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-003",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "return",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512000, 3, 512009), near_target=no, near_base=no, crop_present=no\ncarrying: empty\nitems: game:wood-log\nsince_last_step: harvested item now carried\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-004",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "pickup",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512028, 3, 512023), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: game:stone-granite\nsince_last_step: ground item appeared\nlast_action: picked 1x game:seeds-carrot\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "valw-005",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512018, 3, 512038), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-006",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "pickup",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512024, 3, 512022), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: game:crop-carrot, game:seeds-carrot\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "valw-007",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "travel",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512003, 3, 512010), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: game:stone-granite\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-008",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (511997, 3, 512016), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "valw-009",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "travel",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512033, 3, 512052), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-010",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512009, 3, 512035), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:rock-andesite\nsince_last_step: no change\nlast_action: mining\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "mine_target"
+ },
+ {
+  "id": "valw-011",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (511989, 3, 512031), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: game:dirt, game:flint\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-012",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "mine",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (511994, 3, 512038), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: mining\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-013",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "travel",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512012, 3, 512033), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: game:dirt, game:wood-log\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-014",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512019, 3, 512016), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: mining\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-015",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512049, 3, 512030), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: mining\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-016",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512029, 3, 512005), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-017",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "pickup",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512030, 3, 512048), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: game:crop-carrot, game:seeds-carrot\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "valw-018",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512038, 3, 512035), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-019",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (511997, 3, 512000), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-020",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 3, 512005), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-021",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512024, 3, 512020), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: game:dirt, game:rock-andesite\nsince_last_step: no change\nlast_action: mined\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-022",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512009, 3, 512026), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: mining\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-023",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512016, 3, 512010), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: game:wood-log\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-024",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512048, 3, 512035), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "valw-025",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "return",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512038, 3, 512038), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: harvested item now carried\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-026",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512011, 3, 512017), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: game:wood-log, game:stone-granite\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-027",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512035, 3, 511994), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-028",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "pickup",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512025, 3, 512043), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: game:stone-granite\nsince_last_step: ground item appeared\nlast_action: picked 1x game:seeds-carrot\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "valw-029",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512032, 3, 512041), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: game:feathers-chicken\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-030",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "done",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (511993, 3, 512041), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack\nitems: game:rock-andesite\nsince_last_step: no change\nlast_action: arrived\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-031",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "return",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512007, 3, 511989), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-granite\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-032",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "travel",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512027, 3, 512017), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: game:dirt, game:feathers-chicken\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-033",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512009, 3, 512002), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "valw-034",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512015, 3, 511999), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:stone-granite\nsince_last_step: no change\nlast_action: done\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "mine_target"
+ },
+ {
+  "id": "valw-035",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "travel",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512030, 3, 511995), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-036",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "done",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (511993, 3, 512033), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "valw-037",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512037, 3, 512003), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: game:rock-andesite, game:rock-andesite\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-038",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512051, 3, 512010), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "valw-039",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512021, 3, 512041), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:bone, game:flint\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-040",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "return",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (511997, 3, 512007), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: game:bone\nsince_last_step: harvested item now carried\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-041",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512049, 3, 512007), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-042",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "travel",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512009, 3, 512055), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-043",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512003, 3, 512013), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:stone-granite, game:dirt\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-044",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "mine",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (512021, 3, 512032), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: game:stone-granite, game:stone-granite\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-045",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512023, 3, 512030), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:wood-log\nsince_last_step: no change\nlast_action: mining\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-046",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "return",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512015, 3, 512047), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-granite\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-047",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "return",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512044, 3, 512041), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: marker gone\nlast_action: mined\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-048",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "pickup",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512031, 3, 512006), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack\nitems: game:seeds-carrot\nsince_last_step: marker gone, ground item appeared\nlast_action: mined\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "valw-049",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512045, 3, 512033), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-050",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "pickup",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (511996, 3, 512042), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: game:stone-granite\nsince_last_step: ground item appeared\nlast_action: picked 1x game:seeds-carrot\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "valw-051",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512011, 3, 512046), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:cloth\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-052",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512016, 3, 512047), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: game:bone, game:stone-granite\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "valw-053",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512038, 3, 512025), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: game:flint, game:feathers-chicken\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-054",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "mine",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (512023, 3, 512056), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: game:feathers-chicken\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-055",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512004, 3, 512044), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:stone-granite, game:stone-granite\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-056",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "mine",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (511999, 3, 512032), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: game:seeds-carrot, game:bone\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-057",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512023, 3, 512055), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-058",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512010, 3, 512019), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:dirt, game:wood-log\nsince_last_step: no change\nlast_action: mining\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "mine_target"
+ },
+ {
+  "id": "valw-059",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "mine",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (512025, 3, 512010), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-060",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512039, 3, 512038), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-061",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "pickup",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512042, 3, 512029), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack\nitems: game:stone-granite\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "valw-062",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512021, 3, 512012), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:seeds-carrot\nsince_last_step: no change\nlast_action: mining\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "mine_target",
+  "proposed": "mine_target"
+ },
+ {
+  "id": "valw-063",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512040, 3, 512021), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-064",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "mine",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (511995, 3, 512044), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-065",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512016), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-066",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "mine",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (511998, 3, 512000), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: game:bone, game:feathers-chicken\nsince_last_step: no change\nlast_action: mining\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-067",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512014, 3, 512018), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-068",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512029, 3, 512029), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "valw-069",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "return",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512034, 3, 511997), near_target=no, near_base=no, marker_present=no\ncarrying: empty\nitems: game:bone\nsince_last_step: marker gone\nlast_action: mined\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-070",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (511994, 3, 512015), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: game:feathers-chicken\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "valw-071",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512026, 3, 512035), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-072",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "pickup",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512016, 3, 512028), near_target=no, near_base=no, crop_present=no\ncarrying: empty\nitems: game:crop-carrot, game:seeds-carrot\nsince_last_step: marker gone, ground item appeared\nlast_action: mined\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "valw-073",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "mine",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (512029, 3, 512007), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: game:seeds-carrot\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-074",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "done",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (512032, 3, 511999), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "valw-075",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "return",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512041, 3, 512032), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack\nitems: game:dirt\nsince_last_step: crop gone\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-076",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "travel",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512032, 3, 512003), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-077",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512028, 3, 512014), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: none\nsince_last_step: no change\nlast_action: harvesting\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-078",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512026, 3, 512030), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-079",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512025, 3, 512026), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-080",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "done",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512012, 3, 512005), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack, game:stone-granite\nitems: game:bone\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": "valw-081",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "travel",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512022, 3, 512033), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: game:rock-andesite\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-082",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "harvest",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512010, 3, 512000), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: game:flint\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "harvest_target",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": "valw-083",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (511991, 3, 512043), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-084",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "return",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512001, 3, 512029), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:seeds-carrot\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-granite\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-085",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "travel",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512013, 3, 512016), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-086",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "travel",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512013, 3, 512008), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-087",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512012, 3, 511998), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: game:rock-andesite, game:stone-basalt\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-088",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "mine",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512017, 3, 512029), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: game:bone, game:dirt\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-089",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "mine",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (512025, 3, 512007), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: game:flint\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "give_tool",
+  "proposed": "give_tool"
+ },
+ {
+  "id": "valw-090",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "return",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512019, 3, 512013), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack, game:dirt\nitems: game:stone-granite\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-granite\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-091",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "return",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512011, 3, 512008), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: game:feathers-chicken\nsince_last_step: crop gone\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_base",
+  "proposed": "goto_base"
+ },
+ {
+  "id": "valw-092",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "pickup",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (511992, 3, 512023), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: game:seeds-carrot\nsince_last_step: ground item appeared\nlast_action: picked 1x game:seeds-carrot\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "valw-093",
+  "source": "world-variety-2026-09-25",
+  "mission": "harvest",
+  "family": "travel",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512012, 3, 512028), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": "valw-094",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "pickup",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512001, 3, 511991), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:crop-carrot\nsince_last_step: ground item appeared\nlast_action: picked 1x game:seeds-carrot\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "pickup_item",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": "valw-095",
+  "source": "world-variety-2026-09-25",
+  "mission": "mine",
+  "family": "travel",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512014, 3, 512028), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "goto_target",
+  "proposed": "goto_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512006, 3, 512024), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 4 steps\nlast_action: goto failed: no path\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512023), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "harvest ",
+  "family": "abstain",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512008, 3, 512025), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack, game:crop-carrot\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512008, 3, 512021), near_target=yes, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "organize",
+  "family": "abstain",
+  "state": "task: organize the backpack, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512022), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack, game:dirt, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "check th",
+  "family": "abstain",
+  "state": "task: check the mine cart, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512021), near_target=no, near_base=yes, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "fix the ",
+  "family": "abstain",
+  "state": "task: fix the wooden fence, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512024), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:wood-log\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "feed the",
+  "family": "abstain",
+  "state": "task: feed the chickens, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512024), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "paint th",
+  "family": "abstain",
+  "state": "task: paint the wall, then return to base\ncurrent phase: done\nfacts: bot at (512008, 3, 512021), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "haul the",
+  "family": "abstain",
+  "state": "task: haul the clay, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512021), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512021), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 3 steps\nlast_action: goto failed: no path\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512004, 3, 512023), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 4 steps\nlast_action: goto failed: no path\nproposed action: place_block",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "place_block"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512024), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "mine_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "harvest ",
+  "family": "abstain",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512021), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack, game:crop-carrot\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512023), near_target=yes, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "harvest ",
+  "family": "abstain",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512008, 3, 512023), near_target=yes, near_base=yes, crop_present=no\ncarrying: game:linensack\nitems: game:crop-carrot\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "organize",
+  "family": "abstain",
+  "state": "task: organize the backpack, then return to base\ncurrent phase: done\nfacts: bot at (512007, 3, 512021), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack, game:dirt, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "check th",
+  "family": "abstain",
+  "state": "task: check the mine cart, then return to base\ncurrent phase: done\nfacts: bot at (512005, 3, 512021), near_target=no, near_base=yes, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "fix the ",
+  "family": "abstain",
+  "state": "task: fix the wooden fence, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512025), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:wood-log\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "feed the",
+  "family": "abstain",
+  "state": "task: feed the chickens, then return to base\ncurrent phase: done\nfacts: bot at (512008, 3, 512025), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "give_tool"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "paint th",
+  "family": "abstain",
+  "state": "task: paint the wall, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512024), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512006, 3, 512021), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 3 steps\nlast_action: goto failed: no path\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "harvest ",
+  "family": "abstain",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512007, 3, 512024), near_target=yes, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no progress for 3 steps\nlast_action: harvest failed: not mature\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512008, 3, 512022), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 4 steps\nlast_action: goto failed: no path\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512024), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: mine_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "mine_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "harvest ",
+  "family": "abstain",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512025), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack, game:crop-carrot\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512024), near_target=yes, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "harvest ",
+  "family": "abstain",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512007, 3, 512022), near_target=yes, near_base=yes, crop_present=no\ncarrying: game:linensack\nitems: game:crop-carrot\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "organize",
+  "family": "abstain",
+  "state": "task: organize the backpack, then return to base\ncurrent phase: done\nfacts: bot at (512007, 3, 512023), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack, game:dirt, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "check th",
+  "family": "abstain",
+  "state": "task: check the mine cart, then return to base\ncurrent phase: done\nfacts: bot at (512005, 3, 512025), near_target=no, near_base=yes, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "feed the",
+  "family": "abstain",
+  "state": "task: feed the chickens, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512021), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "give_tool"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "paint th",
+  "family": "abstain",
+  "state": "task: paint the wall, then return to base\ncurrent phase: done\nfacts: bot at (512007, 3, 512022), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "wait"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "harvest ",
+  "family": "abstain",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512005, 3, 512023), near_target=yes, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no progress for 3 steps\nlast_action: harvest failed: not mature\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512024), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 4 steps\nlast_action: goto failed: no path\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512024), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "give_tool"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "harvest ",
+  "family": "abstain",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512005, 3, 512022), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack, game:crop-carrot\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: harvest_target",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "harvest_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512006, 3, 512021), near_target=yes, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_target"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "harvest ",
+  "family": "abstain",
+  "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512006, 3, 512021), near_target=yes, near_base=yes, crop_present=no\ncarrying: game:linensack\nitems: game:crop-carrot\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "organize",
+  "family": "abstain",
+  "state": "task: organize the backpack, then return to base\ncurrent phase: done\nfacts: bot at (512006, 3, 512025), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack, game:dirt, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "check th",
+  "family": "abstain",
+  "state": "task: check the mine cart, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512022), near_target=no, near_base=yes, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "fix the ",
+  "family": "abstain",
+  "state": "task: fix the wooden fence, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512024), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:wood-log\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: place_block",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "place_block"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "feed the",
+  "family": "abstain",
+  "state": "task: feed the chickens, then return to base\ncurrent phase: done\nfacts: bot at (512005, 3, 512024), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "give_tool"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "paint th",
+  "family": "abstain",
+  "state": "task: paint the wall, then return to base\ncurrent phase: done\nfacts: bot at (512005, 3, 512022), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: pickup_item",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "pickup_item"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "haul the",
+  "family": "abstain",
+  "state": "task: haul the clay, then return to base\ncurrent phase: travel\nfacts: bot at (512008, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_base",
+  "options": [
+   "goto_target",
+   "harvest_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_base"
+ },
+ {
+  "id": null,
+  "source": "ft2-abstain-2026-09-26",
+  "mission": "mine the",
+  "family": "abstain",
+  "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512025), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 3 steps\nlast_action: goto failed: no path\nproposed action: goto_target",
+  "options": [
+   "goto_target",
+   "mine_target",
+   "pickup_item",
+   "place_block",
+   "give_tool",
+   "goto_base",
+   "wait"
+  ],
+  "oracle": "wait",
+  "proposed": "goto_target"
+ }
+]
