@@ -31,13 +31,18 @@ export const CONFIG = {
 };
 
 /**
- * Get API base from URL params, localStorage, or default
+ * Get API base from URL params, page origin, or stored value.
+ * Origin-first (2026-09-26): a stale stored base from an earlier
+ * session/host must never shadow the page's own origin - it broke
+ * remote access through the 8586 proxy ("Polis Disconnected" on a
+ * live server). An explicit ?api= param still wins; the stored base
+ * is a fallback only.
  */
 export function getApiBase() {
     const params = new URLSearchParams(window.location.search);
     const paramBase = params.get('api');
     const stored = localStorage.getItem('polis-api-base');
-    return normalizeUrl(paramBase || stored || CONFIG.API_BASE || window.location.origin);
+    return normalizeUrl(paramBase || window.location.origin || stored || CONFIG.API_BASE);
 }
 
 /**

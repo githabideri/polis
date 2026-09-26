@@ -63,6 +63,8 @@ public partial class PolisBuilderNpcSystem
                     return ExecuteSetTimeCommand(args, context);
                 case "time":
                     return ExecuteTimeCommand(args, context);
+                case "daylock":
+                    return ExecuteDayLockCommand(args, context);
                 case "activate":
                     return ExecuteActivateCommand(args, context);
                 case "ignite":
@@ -361,6 +363,15 @@ public partial class PolisBuilderNpcSystem
     // NOTE: IGameCalendar.SetTimeSpeedModifier sets the speed to the SUM of all modifiers
     // (an empty set would freeze the clock), so the polis-harness modifier is never removed;
     // restore vanilla with: settime 1.
+    // NOTE2 (measured 2026-09-26): the world carries an inherent base of 60 that is added
+    // to the named modifiers (ours=6000 observed SpeedOfTime 6060), and negative modifiers
+    // clamp to 0 — so the speed knob alone cannot freeze the clock (sum can never be < 60
+    // ... 60+0). factor 1 yields ~2x the vanilla 48-min day; factor 0 (ours=0, sum 60)
+    // is the true vanilla. Daylock (PolisBuilderNpcSystem.DaylockTick) therefore
+    // fast-forwards with the modifier and then freezes via the concrete
+    // Vintagestory.Common.GameCalendar: CalendarSpeedMul = 0 (true stop: no
+    // time, no date). NEVER call GameCalendar.SetDayTime in a tick loop —
+    // it corrupts the date counter (+years per minute, observed 2026-09-26).
     PolisTestHarness.CommandResult ExecuteSetTimeCommand(string[] args, PolisTestHarness.CommandContext context)
     {
         const float baseSpeed = 60f; // vanilla default SpeedOfTime (48-min day with CalendarSpeedMul 0.5)
@@ -394,6 +405,57 @@ public partial class PolisBuilderNpcSystem
                 speedOfTime = cal.SpeedOfTime,
                 seasonRel = cal.YearRel,
                 moonPhase = (int)cal.MoonPhaseExact
+            }
+        };
+    }
+
+    PolisTestHarness.CommandResult ExecuteDayLockCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        var sub = (args != null && args.Length > 0 ? args[0] : "status").ToLowerInvariant();
+        var cal = sapi?.World?.Calendar;
+        float hour = cal != null ? (float)cal.HourOfDay : -1f;
+        if (sub == "on")
+        {
+            if (cal == null) return new PolisTestHarness.CommandResult { Ok = false, Message = "no world loaded" };
+            int s = 3333, e = 6667;
+            if (args.Length >= 3 && int.TryParse(args[1], out var a) && int.TryParse(args[2], out var b))
+            {
+                s = Math.Max(0, Math.Min(9999, a));
+                e = Math.Max(0, Math.Min(9999, b));
+            }
+            if (e <= s) e = (s + 1 <= 9999) ? s + 1 : 1;
+            daylockWinStart = s; daylockWinEnd = e;
+            daylockOn = true; daylockFrozen = false;
+            cal.SetTimeSpeedModifier("polis-harness", 6000f);
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = $"daylock: fast-forwarding; will freeze once the clock enters {s/10000f*24f:F1}-{e/10000f*24f:F1}h",
+                Data = new { hourOfDay = (double)cal.HourOfDay, speedOfTime = (double)cal.SpeedOfTime, window = new { start = s, end = e } }
+            };
+        }
+        if (sub == "off")
+        {
+            daylockOn = false; daylockFrozen = false;
+            // base 60 is inherent (SpeedOfTime = 60 + named modifiers);
+            // ours=0 restores the vanilla 48-min day, and the calendar
+            // speed multiplier goes back to the vanilla 0.5 (daylock set 0).
+            cal?.SetTimeSpeedModifier("polis-harness", 0f);
+            if (cal is Vintagestory.Common.GameCalendar gcal)
+                gcal.CalendarSpeedMul = 0.5f;
+            return new PolisTestHarness.CommandResult { Ok = true, Message = "daylock off: vanilla 48-min day restored" };
+        }
+        double? so = cal != null ? (double)cal.SpeedOfTime : (double?)null;
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = daylockOn ? $"daylock ACTIVE (frozen={daylockFrozen})" : "daylock inactive",
+            Data = new
+            {
+                hourOfDay = (double)hour,
+                speedOfTime = so,
+                on = daylockOn, frozen = daylockFrozen,
+                window = new { start = daylockWinStart, end = daylockWinEnd }
             }
         };
     }

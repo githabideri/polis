@@ -231,6 +231,47 @@ public partial class PolisBuilderNpcSystem : ModSystem
         sapi.Logger.Notification($"[polis] Saved container registry: {containerRegistry.Containers.Count} container(s)");
     }
     
+    // --- daylock (permadey, 2026-09-26) ------------------------------------
+    // Keeps the test world's clock in the day window: fast-forwards (100x)
+    // until the window is reached, then stops the clock for real by setting
+    // GameCalendar.CalendarSpeedMul = 0 (time AND date freeze). Speed
+    // modifiers alone can't do it (inherent base 60; negatives clamp to 0),
+    // and calling GameCalendar.SetDayTime every tick corrupts the date
+    // counter (observed: +years per minute) - never do that.
+    // Enable: `daylock on [start end]` (time units 0-10000; default
+    // 3333-6667, i.e. ~08:00-16:00). Disable: `daylock off` restores the
+    // vanilla 48-min day (mul back to 0.5).
+    int daylockWinStart = 3333, daylockWinEnd = 6667;
+    bool daylockOn, daylockFrozen;
+    const float VanillaCalendarSpeedMul = 0.5f; // vanilla: 48-min day
+
+    void DaylockTick(float dt)
+    {
+        if (!daylockOn || sapi?.World?.Calendar == null) return;
+        var cal = sapi.World.Calendar;
+        if (daylockFrozen)
+        {
+            if (cal is Vintagestory.Common.GameCalendar gcal && gcal.CalendarSpeedMul != 0f)
+                gcal.CalendarSpeedMul = 0f; // re-assert (defensive)
+            return;
+        }
+        float h = (float)cal.HourOfDay;
+        float ws = daylockWinStart * 24f / 10000f;
+        float we = daylockWinEnd * 24f / 10000f;
+        if (h >= ws && h < we)
+        {
+            daylockFrozen = true;
+            cal.SetTimeSpeedModifier("polis-harness", 0f); // back to vanilla sum (harmless while stopped)
+            if (cal is Vintagestory.Common.GameCalendar gcal)
+                gcal.CalendarSpeedMul = 0f; // true freeze: no time, no date advance
+            sapi.Logger.Notification($"[polis] daylock: clock stopped at {h:F2}h (window {ws:F1}-{we:F1}h)");
+        }
+        else if (cal.SpeedOfTime < 100f)
+        {
+            cal.SetTimeSpeedModifier("polis-harness", 6000f); // ~100x until the window
+        }
+    }
+
     private void OnZoneTrackingTick(float dt)
     {
         if (zoneRegistry == null || zoneRegistry.Count == 0) return;
@@ -582,6 +623,7 @@ public partial class PolisBuilderNpcSystem : ModSystem
 
     void OnTick(float dt)
     {
+        DaylockTick(dt);
         hbAccum += dt;
         if (hbAccum >= 10f)
         {
