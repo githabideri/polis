@@ -128,6 +128,14 @@ class Polis:
                                                         "crop:"))
                    and b.get("pos") == [x, y, z]
                    for b in self.cell_blocks(bot, cell))
+    def site_filled(self, bot, cell):
+        """True if the exact cell holds any (non-air) block. Build mission:
+        the site starts EMPTY and place_block fills it (inverted fixture
+        compared to mine/harvest, where presence is the start state)."""
+        x, y, z = cell
+        return any(b.get("pos") == [x, y, z]
+                   and str(b.get("code") or "") not in ("", "air", "game:air")
+                   for b in self.cell_blocks(bot, cell))
 
 # --------------------------------------------------------------------------
 # Mission specs. The question text is part of the (model, question, state)
@@ -193,6 +201,40 @@ MISSIONS = {
             "place_block is only correct for build tasks - never for this "
             "harvesting task. Only answer wait when the facts are "
             "contradictory."),
+    },
+    "build": {
+        # 7-option tuple deliberately identical to harvest's (same letter
+        # positions) so the fine-tuned reflex sees an in-distribution option
+        # list; the novel parts are the task wording, the phase name "build"
+        # and the inverted fixture (site starts empty).
+        "task": "place a granite stone at the build site, then return to base",
+        "actions": ("goto_target", "harvest_target", "pickup_item", "place_block",
+                    "give_tool", "goto_base", "wait"),
+        "phase_action": {"travel": "goto_target", "build": "place_block",
+                         "return": "goto_base", "done": "wait"},
+        "laya_instructions": (
+            "Answer yes only if the proposed action matches the current "
+            "phase: travel phase needs goto_target, build phase needs "
+            "place_block (while the build site is still empty), return "
+            "phase needs goto_base, done phase needs wait, and the bot "
+            "carries the granite stone the phase needs. give_tool is "
+            "correct only when the bot lacks the granite stone its phase "
+            "needs. harvest_target, pickup_item and the other actions are "
+            "never correct for this building task. No otherwise - a "
+            "proposed action that contradicts the phase, skips an "
+            "unfinished step, or uses a missing item is no."),
+        "judge_rules": (
+            "Decide in this order. (1) First check the bot's inventory: if "
+            "it does NOT contain a granite stone (rock-granite), answer "
+            "give_tool - placing needs the block. (2) If the build site is "
+            "still empty: near it, answer place_block - the execution moves "
+            "the bot there first if it is not adjacent yet; far from it, "
+            "answer goto_target. (3) If the build site is filled: near the "
+            "base answer wait, otherwise answer goto_base - the mission is "
+            "the placement, and returning home is the last step. (4) "
+            "Proposing goto_target after the site is filled skips the "
+            "return - answer goto_base instead. Only answer wait when the "
+            "facts are contradictory."),
     },
 }
 
@@ -302,7 +344,8 @@ def goto_wait(pol, bot, cell, timeout=45):
     return {"ok": False, "msg": "goto timeout"}
 
 def execute(pol, bot, action, target, base, mission, autocollect=True,
-            marker="rock-granite", crop="crop-carrot-7"):
+            marker="rock-granite", crop="crop-carrot-7",
+            buildblock="rock-granite"):
     if action in ("goto_target", "goto_base"):
         if action == "goto_target":
             if mission == "harvest":
@@ -358,6 +401,14 @@ def execute(pol, bot, action, target, base, mission, autocollect=True,
             time.sleep(1)
         return {"ok": False, "msg": "harvest timeout"}
     if action == "give_tool":
+        if mission == "build":
+            # the build "tool" is the block itself
+            for _ in range(8):
+                pol.cmd("give", [buildblock, "1"], bot)
+                if any(buildblock in (c or "") for c in pol.carrying(bot)):
+                    return {"ok": True, "msg": buildblock + " given"}
+                time.sleep(1)
+            return {"ok": False, "msg": buildblock + " not carried after 8 gives"}
         # give the phase-required tool (pickaxe for mine) until it is carried
         for _ in range(8):
             pol.cmd("give", ["pickaxe-iron", "1"], bot)
@@ -395,7 +446,21 @@ def execute(pol, bot, action, target, base, mission, autocollect=True,
             time.sleep(1)
         return {"ok": False, "msg": "pickup timeout"}
     if action == "place_block":
-        # setblock at the target cell (the fixture's marker block type)
+        if mission == "build":
+            # REAL placement (harness place <block> x y z): finds the block
+            # in the bot's inventory, gootos the approach cell, places one.
+            r = pol.cmd("place", [buildblock, str(target[0]), str(target[1]),
+                                  str(target[2])], bot, timeout=180)
+            if not r.get("Ok"):
+                return {"ok": False, "msg": r.get("Message") or "place refused"}
+            t0 = time.time()
+            while time.time() - t0 < 90:
+                la = pol.state(bot).get("LastAction") or {}
+                if la.get("Name") == "place" and la.get("Ok") is not None:
+                    return {"ok": bool(la.get("Ok")), "msg": la.get("Msg") or ""}
+                time.sleep(2)
+            return {"ok": False, "msg": "place timeout"}
+        # non-build: setblock at the target cell (distractor path)
         code = crop if mission == "harvest" else marker
         r = pol.cmd("setblock", [code, str(target[0]), str(target[1]),
                                  str(target[2])], bot)
@@ -452,7 +517,7 @@ def setup_fixture(a, pol, mission, dist=8):
             if any("pickaxe" in (c or "") for c in pol.carrying(a.bot)):
                 break
             time.sleep(1)
-    else:
+    elif mission == "harvest":
         # farmland at ground level, mature crop one above
         farmland = (bx + dist, by, bz)
         target = (bx + dist, by + 1, bz)
@@ -460,6 +525,23 @@ def setup_fixture(a, pol, mission, dist=8):
         for _ in range(2):
             pol.cmd("setblock", [a.crop, str(target[0]), str(target[1]), str(target[2])], a.bot)
             if pol.crop_present(a.bot, target):
+                break
+            time.sleep(1)
+    else:
+        # build: the target is the air cell at the bot's foot level `dist`
+        # east; the cell below is ground (the place action clicks it, face
+        # up). Give the bot the block it will place.
+        target = (bx + dist, by, bz)
+        for _ in range(2):
+            if pol.site_filled(a.bot, target):
+                pol.cmd("setblock", ["air", str(target[0]), str(target[1]),
+                                     str(target[2])], a.bot)
+                time.sleep(1)
+            else:
+                break
+        for _ in range(8):
+            pol.cmd("give", [a.buildblock, "1"], a.bot)
+            if any(a.buildblock in (c or "") for c in pol.carrying(a.bot)):
                 break
             time.sleep(1)
     # baseline carry (after tool gives): harvest completion is "something
@@ -485,12 +567,20 @@ def run_once(a, pol, fault_phases):
     pol = Polis(a.harness, a.uid)
     time.sleep(2)
     base, target, base_carry = setup_fixture(a, pol, mission, a.dist)
-    fixture_check = (pol.crop_present if mission == "harvest"
-                     else lambda bot, cell: pol.marker_present(bot, cell, a.marker))
+    if mission == "harvest":
+        fixture_check = pol.crop_present
+    elif mission == "build":
+        fixture_check = pol.site_filled
+    else:
+        fixture_check = lambda bot, cell: pol.marker_present(bot, cell, a.marker)
     has_tool = any("pickaxe" in (c or "") for c in pol.carrying(a.bot))
+    setup_note = (("pickaxe=" + str(has_tool)) if mission == "mine"
+                  else ("block=" + str(any(a.buildblock in (c or "")
+                                           for c in pol.carrying(a.bot)))
+                       if mission == "build" else "crop"))
     print("setup: bot #%d base=%s target=%s mission=%s faults=%s %s fixture=%s" % (
         a.bot, base, target, mission, sorted(fault_phases),
-        ("pickaxe=" + str(has_tool)) if mission == "mine" else "crop",
+        setup_note,
         fixture_check(a.bot, target)), flush=True)
 
     rows, t_start, fired = [], time.time(), set()
@@ -509,6 +599,7 @@ def run_once(a, pol, fault_phases):
         fixture_gone = not fixture
         carrying = pol.carrying(a.bot)
         has_harvest = any("carrot" in (c or "") for c in carrying)
+        has_block = any(a.buildblock in (c or "") for c in carrying)
         # ground items within pickup reach (harness state Items, radius 5)
         ground_items = [i.get("Code") for i in (st.get("Items") or [])
                         if (i.get("Dist") or 99) <= 5]
@@ -519,6 +610,14 @@ def run_once(a, pol, fault_phases):
                 phase = "mine" if near_t else "travel"
             elif need_pickup:
                 phase = "pickup"
+            else:
+                phase = "done" if near_b else "return"
+        elif mission == "build":
+            # the build site starts EMPTY: while empty it needs travel/build
+            # (fixture = site_filled), once filled it needs return/done.
+            # No pickup phase - the placed block is consumed, never dropped.
+            if not fixture:
+                phase = "build" if near_t else "travel"
             else:
                 phase = "done" if near_b else "return"
         else:
@@ -546,11 +645,29 @@ def run_once(a, pol, fault_phases):
                     break
                 pol.cmd("drop", [], a.bot)
                 time.sleep(1)
+        elif injected and phase == "build":
+            # drop the build block from the hand: the correct answer becomes
+            # give_tool (mirror of the mine fault: mine with a missing tool)
+            pol.cmd("select", [str(a.bot)], a.bot)
+            pol.cmd("drop", [], a.bot)
+            t0 = time.time()
+            while time.time() - t0 < 10:
+                if not any(a.buildblock in (c or "") for c in pol.carrying(a.bot)):
+                    drop_done = True
+                    break
+                pol.cmd("drop", [], a.bot)
+                time.sleep(1)
 
         has_tool = any("pickaxe" in (c or "") for c in pol.carrying(a.bot))
+        # recompute after a possible fault injection (a dropped block changes
+        # what is correct, same as the mine tool-drop above)
+        has_block = any(a.buildblock in (c or "") for c in pol.carrying(a.bot))
         # Oracle: in the mine phase the correct action depends on tool state -
         # a bot without a pickaxe must get one (give_tool) before it can mine.
+        # Same for build: a bot without the block must get one before placing.
         if mission == "mine" and phase == "mine" and not has_tool:
+            correct = "give_tool"
+        elif mission == "build" and phase == "build" and not has_block:
             correct = "give_tool"
         elif phase == "pickup":
             correct = "pickup_item"
@@ -562,11 +679,18 @@ def run_once(a, pol, fault_phases):
             proposal = "goto_base"      # skip-goal
         elif injected and phase == "mine":
             proposal = "mine_target"    # mine with a missing tool
+        elif injected and phase == "build":
+            proposal = "place_block"    # place with a missing block
         changed = []
         if prev is not None:
             if fixture != prev["fixture"]:
-                what = "marker" if mission == "mine" else "crop"
-                changed.append("%s %s" % (what, "gone" if not fixture else "re-appeared"))
+                if mission == "build":
+                    changed.append("build site %s" % ("filled" if fixture else "emptied"))
+                else:
+                    what = "marker" if mission == "mine" else "crop"
+                    changed.append("%s %s" % (what, "gone" if not fixture else "re-appeared"))
+            if mission == "build" and has_block != prev["has_block"]:
+                changed.append("granite %s" % ("now carried" if has_block else "dropped"))
             if mission == "mine":
                 has_tool = any("pickaxe" in (c or "") for c in carrying)
                 if has_tool != prev["has_tool"]:
@@ -578,7 +702,12 @@ def run_once(a, pol, fault_phases):
             if phase != prev["phase"]:
                 changed.append("phase %s -> %s" % (prev["phase"], phase))
         since = ", ".join(changed) if changed else "no change"
-        fixture_label = "crop_present" if mission == "harvest" else "marker_present"
+        if mission == "harvest":
+            fixture_label = "crop_present"
+        elif mission == "build":
+            fixture_label = "build_site_filled"
+        else:
+            fixture_label = "marker_present"
         items_line = ", ".join(ground_items[:3]) or "none"
         state_text = (
             "task: %s\n"
@@ -658,7 +787,7 @@ def run_once(a, pol, fault_phases):
 
         ex = execute(pol, a.bot, final, target, base, mission,
                      autocollect=not a.no_autocollect,
-                     marker=a.marker, crop=a.crop)
+                     marker=a.marker, crop=a.crop, buildblock=a.buildblock)
         if (a.drop_after_harvest and mission == "harvest"
                 and final == "harvest_target" and ex["ok"]):
             # world event: the harvest's item(s) are dropped at the crop
@@ -733,6 +862,7 @@ def run_once(a, pol, fault_phases):
         })
         prev = {"fixture": fixture, "phase": phase,
                 "has_tool": any("pickaxe" in (c or "") for c in carrying),
+                "has_block": has_block,
                 "has_harvest": has_harvest, "has_items": bool(ground_items)}
         last_final = final
 
@@ -740,6 +870,8 @@ def run_once(a, pol, fault_phases):
         at_base = dist(st["Bot"]["Pos"], base) <= 2.5
         if mission == "mine":
             goal = (not pol.marker_present(a.bot, target)) and at_base
+        elif mission == "build":
+            goal = pol.site_filled(a.bot, target) and at_base
         else:
             goal = (any("carrot" in (c or "") for c in pol.carrying(a.bot))) and at_base
         if goal:
@@ -750,6 +882,8 @@ def run_once(a, pol, fault_phases):
     at_base = dist(st["Bot"]["Pos"], base) <= 2.5
     if mission == "mine":
         complete = (not pol.marker_present(a.bot, target, a.marker)) and at_base
+    elif mission == "build":
+        complete = pol.site_filled(a.bot, target) and at_base
     else:
         # crop-generic completion: a new non-tool item was acquired
         complete = at_base and any(
@@ -778,6 +912,10 @@ def main():
     ap.add_argument("--crop", default="crop-carrot-7",
                     help="harvest fixture: crop code set above the farmland "
                          "(R1: real crops, e.g. crop-wheat-12)")
+    ap.add_argument("--buildblock", default="rock-granite",
+                    help="build mission: the block the bot places and the "
+                         "one given by give_tool (1.22: rock-* are the "
+                         "placeable stones; item and block share the code)")
     ap.add_argument("--task", default=None,
                     help="override the state-text task line (R1: natural "
                          "mission phrasing, e.g. 'mine the coal ore, then "
