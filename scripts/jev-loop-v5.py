@@ -55,7 +55,7 @@ Usage:
 
 DECIDER_Q = ("Given the bot's current game state, choose the single best "
              "action for the bot to execute next.")
-import argparse, json, os, re, sys, time, urllib.request
+import argparse, base64, glob, hashlib, json, os, re, sys, time, urllib.request
 
 def http_json(url, payload=None, timeout=60):
     data = json.dumps(payload).encode() if payload is not None else None
@@ -283,26 +283,36 @@ def laya_noul(openjev, state_text, proposal, mission):
     a = ((r.get("answers") or {}).get("proposal_ok") or {})
     return {"p": a.get("noul"), "ms": int((time.time() - t0) * 1000), "error": r.get("_error")}
 
-def llm_judge(llm_url, model, state_text, proposal, mission):
+def llm_judge(llm_url, model, state_text, proposal, mission, frame_b64=None):
     """27B doubt-arbiter. Thinking off (measured 2026-09-22): ~124 ms,
-    direct single-word answer; thinking on: ~6.4 s and null content."""
+    direct single-word answer; thinking on: ~6.4 s and null content.
+    frame_b64 (dashcam): a PNG of the bot's scene rides along - the 27B
+    is vision-capable (the video-assist path) and sees what text cannot
+    express: terrain, where items actually are, wedges."""
     acts = MISSIONS[mission]["actions"]
     t0 = time.time()
+    system = ("You are the action judge of a game-agent safety loop. The "
+              "deterministic policy proposed an action; a fast reflex model "
+              "was not confident. Given the state, answer with exactly one of: "
+              + ", ".join(acts) + ".")
+    user = (state_text + "\n\nPolicy proposal: " + proposal +
+            " (the reflex was unsure). Which single action should the bot take now?"
+            "\n\nOperational rules: " + MISSIONS[mission]["judge_rules"])
+    if frame_b64:
+        system += (" A screenshot taken at the bot's position accompanies "
+                   "the state; use it for what the text channel cannot "
+                   "express (terrain, where items actually are, wedges).")
+        user = ([{"type": "text", "text": user},
+                 {"type": "image_url", "image_url":
+                  {"url": "data:image/png;base64," + frame_b64}}])
     r = http_json(llm_url + "/v1/chat/completions", {
         "model": model,
         "temperature": 0,
         "max_tokens": 128,
         "chat_template_kwargs": {"enable_thinking": False},
         "messages": [
-            {"role": "system", "content":
-                "You are the action judge of a game-agent safety loop. The "
-                "deterministic policy proposed an action; a fast reflex model "
-                "was not confident. Given the state, answer with exactly one of: "
-                + ", ".join(acts) + "."},
-            {"role": "user", "content":
-                state_text + "\n\nPolicy proposal: " + proposal +
-                " (the reflex was unsure). Which single action should the bot take now?"
-                "\n\nOperational rules: " + MISSIONS[mission]["judge_rules"]},
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
         ],
     }, timeout=120)
     ms = int((time.time() - t0) * 1000)
@@ -316,6 +326,115 @@ def llm_judge(llm_url, model, state_text, proposal, mission):
     m = re.search(r"\b(" + "|".join(acts) + r")\b", text)
     return {"choice": m.group(1) if m else None, "ms": ms, "raw": text[:80],
             "error": None if m else "unparseable: " + text[:60]}
+
+# --- Dashcam: the visual second line (2026-09-26) --------------------------
+# The structured state is the record; the dashcam is what the world LOOKED
+# like. Every frame is an observer-screenshot placed at the bot's position
+# (explicit x/y/z/yaw/pitch - deterministic placement, no camera
+# calibration; the harness briefly moves the idle player to the viewpoint
+# and restores it, the bot itself is untouched). Captures are non-fatal:
+# a failed shot degrades to "no frame", never to a failed run.
+
+def dashcam_frame(pol, outdir, name, pos, yaw, pitch=-10, timeout=20):
+    """One observer frame from the bot's position. Writes name into
+    outdir; returns (base64_png_or_None, error_or_None)."""
+    q = ("/polis/observer-screenshot?playerUid=%s&x=%g&y=%g&z=%g"
+         "&yaw=%g&pitch=%g&save=false" % (pol.uid, pos[0], pos[1] + 1,
+                                          pos[2], yaw, pitch))
+    try:
+        r = http_json(pol.base + q, None, timeout)
+    except Exception as e:
+        return None, repr(e)[:80]
+    b = r.get("base64Png")
+    if not r.get("ok") or not b:
+        return None, (r.get("error") or "observer capture failed")[:80]
+    if outdir and name:
+        os.makedirs(outdir, exist_ok=True)
+        open(os.path.join(outdir, name), "wb").write(base64.b64decode(b))
+    return b, None
+
+
+def dashcam_yaw_to(pos, cell):
+    """Approximate observer yaw facing the mission cell (cosmetic - the
+    end-of-run six-view panorama covers all bearings either way)."""
+    import math
+    return math.degrees(math.atan2(cell[0] - pos[0], cell[2] - pos[2]))
+
+
+def dashcam_wedge(pol, outdir, tag, pos, yaw, timeout=15):
+    """Frozen-world probe (the 2026-09-21 wedge signature, no model):
+    two frames 3 s apart from the same viewpoint; identical PNG bytes
+    (same scene, deterministic encoder) mean the world rendered no
+    change at all. Returns True/False, or None if the capture failed."""
+    b1, _ = dashcam_frame(pol, None, None, pos, yaw, timeout=timeout)
+    time.sleep(3)
+    b2, _ = dashcam_frame(pol, outdir, "wedge-%s.png" % tag, pos, yaw,
+                          timeout=timeout)
+    if not b2:
+        return None
+    return b1 == b2
+
+
+def dashcam_panorama(pol, outdir, pos, prefix, timeout=20):
+    """End-of-run six views from the bot's position: four bearings plus
+    straight up/down (the canyon check)."""
+    files = []
+    for yaw, nm in ((0, "v0"), (90, "v90"), (180, "v180"), (270, "v270")):
+        b, _ = dashcam_frame(pol, outdir, "%s-%s.png" % (prefix, nm), pos,
+                             yaw, timeout=timeout)
+        if b:
+            files.append("%s-%s.png" % (prefix, nm))
+    for pitch, nm in ((-90, "up"), (90, "down")):
+        b, _ = dashcam_frame(pol, outdir, "%s-%s.png" % (prefix, nm), pos,
+                             0, pitch=pitch, timeout=timeout)
+        if b:
+            files.append("%s-%s.png" % (prefix, nm))
+    return files
+
+
+def dashcam_sheet(outdir, rows):
+    """The annotated contact sheet: open index.html and watch the run.
+    Each captured frame gets the decision data of the step that took it."""
+    import html as _html
+    by_name = {}
+    for r in rows:
+        if r.get("dashcam"):
+            by_name.setdefault(r["dashcam"], r)
+    sections = []
+    for f in sorted(glob.glob(os.path.join(outdir, "*.png"))):
+        name = os.path.basename(f)
+        r = by_name.get(name)
+        if r:
+            cap = ("run %s \u00b7 step %s \u00b7 phase %s \u00b7 path %s \u00b7 p=%s \u00b7 "
+                   "p_dec=%s \u00b7 judge=%s \u00b7 executed %s \u00b7 oracle %s%s"
+                   % (r.get("run"), r["step"], r["phase"], r["path"],
+                      ("%.3f" % r["p"]) if r.get("p") is not None else "?",
+                      ("%.3f" % r["p_decider"])
+                      if r.get("p_decider") is not None else "n/a",
+                      r.get("judge_choice") or "-", r["executed"],
+                      r["oracle"],
+                      " \u00b7 FROZEN-WORLD" if r.get("dashcam_frozen") else ""))
+        elif name.startswith("wedge-"):
+            cap = ("wedge probe (two frames 3 s apart; identical bytes = "
+                   "the world rendered no change at all)")
+        elif "-end-" in name:
+            cap = "end-of-run panorama (%s)" % name.split("-end-")[-1]
+        else:
+            cap = name
+        sections.append(
+            '<div class="f"><img src="%s"><div class="c">%s</div></div>'
+            % (_html.escape(name), _html.escape(cap)))
+    page = ('<!doctype html><title>polis dashcam</title>'
+            '<style>body{background:#111;color:#eee;font:13px monospace;'
+            'margin:24px}.f{display:inline-block;width:31.5%%;margin:0.8%%;'
+            'vertical-align:top}img{width:100%%;border:1px solid #444}'
+            '.c{color:#9cf;font-size:12px;padding-top:4px;'
+            'white-space:pre-wrap}</style>'
+            '<h2>polis dashcam \u2014 %d frames</h2>%s'
+            % (len(sections), "".join(sections)))
+    open(os.path.join(outdir, "index.html"), "w").write(page)
+    return len(sections)
+
 
 def adjacent_to(pol, bot, cell, ground_y=None):
     x, y, z = cell
@@ -726,6 +845,25 @@ def run_once(a, pol, fault_phases):
             proposal,
         )
 
+        # Dashcam (always mode): one frame per step - the scene before
+        # this step's decision. Non-fatal; a failed shot is "no frame".
+        step_b64 = None
+        if a.dashcam == "always":
+            step_b64, _ = dashcam_frame(a.dashcam_dir,
+                                        "r%02d-step%02d.png" % (a.run, i + 1),
+                                        pos, dashcam_yaw_to(pos, target))
+
+        def _judge_frame():
+            """The image the doubt-arbiter sees for this step (auto mode
+            captures one; always mode reuses the per-step frame)."""
+            if getattr(a, "dashcam_dir", None) is None:
+                return None
+            if a.dashcam == "always" and step_b64:
+                return step_b64
+            return dashcam_frame(a.dashcam_dir,
+                                 "r%02d-judge%02d.png" % (a.run, i + 1),
+                                 pos, dashcam_yaw_to(pos, target))[0]
+
         # Three-tier cascade, cheapest first:
         #   1) Laya noul pre-filter (anchored yes/no on the proposal)
         #        p < tau_yes  -> 27B doubt-arbiter
@@ -743,7 +881,8 @@ def run_once(a, pol, fault_phases):
         path = None
         if reflex["error"] or p is None or p < a.tau_yes:
             path = ("reflex-err:" + str(reflex["error"])[:16]) if reflex["error"] else "judge"
-            judge = llm_judge(a.llm, a.llm_model, state_text, proposal, mission)
+            judge = llm_judge(a.llm, a.llm_model, state_text, proposal,
+                              mission, frame_b64=_judge_frame())
             final = judge["choice"] or proposal
         elif a.decider or a.decider_fast:
             if a.decider_fast:
@@ -765,11 +904,13 @@ def run_once(a, pol, fault_phases):
                     path = "reflex+decider"                 # confident consensus
                 else:
                     path = "reflex+decider->judge"          # Laya borderline: doubt
-                    judge = llm_judge(a.llm, a.llm_model, state_text, proposal, mission)
+                    judge = llm_judge(a.llm, a.llm_model, state_text, proposal,
+                                      mission, frame_b64=_judge_frame())
                     final = judge["choice"] or proposal
             else:
                 path = "reflex->judge"
-                judge = llm_judge(a.llm, a.llm_model, state_text, proposal, mission)
+                judge = llm_judge(a.llm, a.llm_model, state_text, proposal,
+                                  mission, frame_b64=_judge_frame())
                 final = judge["choice"] or proposal
         else:
             path = "reflex"
@@ -780,14 +921,31 @@ def run_once(a, pol, fault_phases):
         # control returns to the deterministic policy (the arbiter latches
         # to `wait` after visible failures - measured, prompt-resistant).
         stall_bypass = False
+        dashcam_frozen = None
         if final == "wait" and last_final == "wait":
             stall_bypass = True
             final = proposal
+            if a.dashcam == "auto":
+                dashcam_frozen = dashcam_wedge(
+                    a.dashcam_dir, "r%02d-s%02d" % (a.run, i + 1),
+                    pos, dashcam_yaw_to(pos, target))
         last_final = final
 
         ex = execute(pol, a.bot, final, target, base, mission,
                      autocollect=not a.no_autocollect,
                      marker=a.marker, crop=a.crop, buildblock=a.buildblock)
+        dashcam_fail = None
+        if a.dashcam == "auto" and not ex["ok"]:
+            pos_f = pol.state(a.bot)["Bot"]["Pos"]
+            dashcam_fail = "r%02d-fail%02d.png" % (a.run, i + 1)
+            dashcam_frame(a.dashcam_dir, dashcam_fail, pos_f,
+                          dashcam_yaw_to(pos_f, target))
+        if a.dashcam == "always" and step_b64:
+            dashcam_name = "r%02d-step%02d.png" % (a.run, i + 1)
+        elif a.dashcam == "auto" and judge is not None:
+            dashcam_name = "r%02d-judge%02d.png" % (a.run, i + 1)
+        else:
+            dashcam_name = dashcam_fail
         if (a.drop_after_harvest and mission == "harvest"
                 and final == "harvest_target" and ex["ok"]):
             # world event: the harvest's item(s) are dropped at the crop
@@ -853,6 +1011,8 @@ def run_once(a, pol, fault_phases):
             "judge_ms": judge["ms"] if judge else None,
             "executed": final, "exec_ok": ex["ok"], "exec_msg": ex["msg"],
             "stall_bypass": stall_bypass,
+            "dashcam": dashcam_name, "dashcam_frozen": dashcam_frozen,
+            "run": a.run,
             "oracle": correct, "match": match, "fault_corrected": fault_corrected,
             "last_resort_repair": last_resort,
             "since_last_step": since,
@@ -890,6 +1050,11 @@ def run_once(a, pol, fault_phases):
             (c not in base_carry)
             and not any(t in (c or "") for t in ("pickaxe", "linensack"))
             for c in pol.carrying(a.bot))
+    if getattr(a, "dashcam_dir", None):
+        # end-of-run six views from where the bot ended up (the canyon
+        # check: up/down included)
+        dashcam_panorama(pol, a.dashcam_dir, st["Bot"]["Pos"],
+                         "r%02d-end" % a.run)
     return rows, {
         "mission_complete": complete,
         "steps_to_complete": next((r["step"] for r in reversed(rows) if r["match"]), None)
@@ -920,6 +1085,15 @@ def main():
                     help="override the state-text task line (R1: natural "
                          "mission phrasing, e.g. 'mine the coal ore, then "
                          "return to base')")
+    ap.add_argument("--dashcam", choices=["off", "auto", "always"],
+                    default="off",
+                    help="visual second line: auto = a frame on doubt rows "
+                         "(sent to the 27B judge as an image), on failed "
+                         "executions, a frozen-world wedge probe on stall "
+                         "bypass, and a six-view panorama at run end; "
+                         "always = one frame per step as well. Frames go to "
+                         "<out>-dashcam/ with an annotated index.html "
+                         "contact sheet. off = structured data only.")
     ap.add_argument("--pocket", action="store_true",
                     help="mine fixture: surround the target cell with a 3x3 "
                          "stone-limestone cluster (natural ore-pocket "
@@ -987,11 +1161,32 @@ def main():
         a.uid = ((p.get("Data") or p).get("players") or [{}])[0].get("uid")
     pol = Polis(a.harness, a.uid)
 
+    if a.dashcam != "off":
+        if a.out:
+            a.dashcam_dir = os.path.join(os.path.dirname(a.out) or ".",
+                                         os.path.splitext(
+                                             os.path.basename(a.out))[0]
+                                         + "-dashcam")
+        else:
+            a.dashcam_dir = os.path.join(
+                "data", "v5-%s-%s-dashcam"
+                % (a.mission, time.strftime("%Y-%m-%d")))
+        os.makedirs(a.dashcam_dir, exist_ok=True)
+        print("dashcam %s on: frames -> %s" % (a.dashcam, a.dashcam_dir),
+              flush=True)
+    else:
+        a.dashcam_dir = None
+
     all_rows, all_outcomes = [], []
     for a.run in range(1, a.repeat + 1):
         rows, outcome = run_once(a, pol, fault_phases)
         all_rows.extend(rows)
         all_outcomes.append(outcome)
+
+    if a.dashcam_dir:
+        nf = dashcam_sheet(a.dashcam_dir, all_rows)
+        print("dashcam sheet: %d frames -> %s/index.html"
+              % (nf, a.dashcam_dir), flush=True)
 
     n = len(all_rows)
     faults = [r for r in all_rows if r["injected"]]
@@ -1020,6 +1215,12 @@ def main():
         "avg_decider_ms": (int(sum(r["decider_ms"] or 0 for r in dec_calls) / len(dec_calls))
                            if dec_calls else None),
         "stall_bypasses": sum(1 for r in all_rows if r.get("stall_bypass")),
+        "dashcam": a.dashcam + (" -> " + a.dashcam_dir
+                                if a.dashcam_dir else ""),
+        "dashcam_frames": sum(1 for r in all_rows if r.get("dashcam"))
+                          + (2 * sum(1 for r in all_rows
+                                     if r.get("dashcam_frozen") is not None)
+                             if a.dashcam_dir else 0),
         "judge_calls": len(judge_calls),
         "false_waits": len(false_waits),
         "judge_oracle_match": "%d/%d" % (sum(1 for r in judge_calls if r["match"]), len(judge_calls)) if judge_calls else "0/0",
