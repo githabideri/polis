@@ -3,115 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polis Web UI</title>
-    <link rel="stylesheet" href="css/main.css?v=20260302e">
+    <title>Polis</title>
+    <link rel="stylesheet" href="fonts/fonts.css">
+    <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-    <div id="app">
-        <!-- Status Bar -->
-        <header id="statusbar">
-            <div class="status-left">
-                <span class="app-title">Polis</span>
-                <span id="connection-indicator" class="indicator disconnected">Disconnected</span>
-            </div>
-            <div class="status-center">
-                <span id="world-name">-</span>
-            </div>
-            <div class="status-right">
-                <span id="selected-entity">No selection</span>
-            </div>
-        </header>
 
-        <!-- Main Layout -->
-        <div id="main-layout">
-            <!-- Entity Panel (Left Sidebar) -->
-            <aside id="entity-panel" class="panel">
-                <div class="panel-header">
-                    <h2>Entities</h2>
-                    <button id="refresh-entities" class="icon-btn" title="Refresh">&#x21bb;</button>
-                </div>
-                <div class="panel-content">
-                    <section class="entity-section" id="bots-section">
-                        <h3>Bots</h3>
-                        <div id="bots-list" class="entity-list">
-                            <div class="placeholder">Loading...</div>
-                        </div>
-                    </section>
-                    <section class="entity-section" id="players-section">
-                        <h3>Players</h3>
-                        <div id="players-list" class="entity-list">
-                            <div class="placeholder">Loading...</div>
-                        </div>
-                    </section>
-                </div>
-            </aside>
-
-            <!-- Main View Area -->
-            <main id="main-view">
-                <div class="panel">
-                    <div class="panel-header">
-                        <h2>View</h2>
-                    </div>
-                    <div class="panel-content">
-                        <div id="screenshot-container">
-                            <iframe id="novnc-frame" src="" allow="fullscreen"></iframe>
-                            <div id="stream-controls" class="stream-controls">
-                                <label class="stream-toggle"><input type="checkbox" id="stream-enabled" checked> Stream</label>
-                                <span id="stream-status" class="stream-status">Disconnected</span>
-                            </div>
-                            <div id="shot-pane">
-                                <img id="shot-img" alt="point-of-view screenshot">
-                                <div class="stream-controls">
-                                    <button id="shot-take">Screenshot</button>
-                                    <label class="stream-toggle"><input type="checkbox" id="shot-auto"> Auto (5s)</label>
-                                    <span id="shot-status" class="stream-status"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Context Panel -->
-                <aside id="context-panel" class="panel">
-                    <div class="panel-header">
-                        <h2>Context</h2>
-                    </div>
-                    <div class="panel-content">
-                        <div id="context-details" class="placeholder">
-                            Select an entity to view details
-                        </div>
-                        <div id="context-actions" class="action-buttons">
-                            <!-- Action buttons will be populated based on selection -->
-                        </div>
-                    </div>
-                </aside>
-            </main>
+    <!-- ── Top bar: identity, world state, connection ─────────────────── -->
+    <header id="topbar">
+        <div class="tb-left">
+            <span class="wordmark">POLIS</span>
+            <span id="conn-badge" class="conn disconnected"><span class="dot"></span><span id="conn-label">OFFLINE</span></span>
         </div>
-
-        <!-- Command Bar -->
-        <div id="command-bar" class="panel">
-            <input type="text" id="command-input" placeholder="Type a command... (e.g., spawn, bots, status)" autocomplete="off">
-            <button id="command-submit">Run</button>
+        <div class="tb-mid">
+            <span id="world-name" class="world-name">—</span>
+            <span id="world-clock" class="world-clock mono">—</span>
         </div>
+        <div class="tb-right" id="selection-info">no selection</div>
+    </header>
 
-        <!-- Event Log -->
-        <footer id="event-log" class="panel">
-            <div class="panel-header">
-                <h2>Log</h2>
-                <div class="log-controls">
-                    <button id="log-pause" class="icon-btn" title="Pause auto-scroll">&#x23f8;</button>
-                    <button id="log-clear" class="icon-btn" title="Clear log">&#x2715;</button>
+    <main id="layout">
+        <!-- ── Left rail: who/what exists ─────────────────────────────── -->
+        <aside class="rail" id="world-rail">
+            <section class="rail-section" id="bots-section">
+                <h2 class="rail-title">Bots <span id="bot-count" class="count mono">0</span></h2>
+                <div id="bots-list" class="entity-list"></div>
+            </section>
+            <section class="rail-section" id="players-section">
+                <h2 class="rail-title">Players <span id="player-count" class="count mono">0</span></h2>
+                <div id="players-list" class="entity-list"></div>
+            </section>
+        </aside>
+
+        <!-- ── Center: the stage (live game image) ────────────────────── -->
+        <section class="stage" id="stage">
+            <div class="stage-bar">
+                <div class="stage-tabs" id="stage-tabs">
+                    <button class="stage-tab active" data-view="vnc">Live</button>
+                    <button class="stage-tab" data-view="frames">Frames</button>
+                </div>
+                <div class="stage-tools" id="tools-vnc">
+                    <label class="chip"><input type="checkbox" id="stream-enabled" checked>stream</label>
+                    <span id="stream-status" class="stream-status dim">connecting</span>
+                </div>
+                <div class="stage-tools" id="tools-frames" hidden>
+                    <button id="btn-screenshot" class="chip chip-btn">capture frame</button>
+                    <label class="chip"><input type="checkbox" id="frames-auto">auto 5s</label>
+                    <span id="shot-status" class="stream-status dim"></span>
                 </div>
             </div>
-            <div id="log-entries" class="log-content">
-                <div class="log-entry info">
-                    <span class="log-time">--:--:--</span>
-                    <span class="log-msg">Polis Web UI initializing...</span>
-                </div>
+            <div class="stage-body">
+                <iframe id="novnc-frame" class="stage-vnc" allow="fullscreen"></iframe>
+                <img id="screenshot-img" class="stage-frames" alt="last captured frame" hidden>
             </div>
-        </footer>
-    </div>
+        </section>
 
-    <script type="module" src="js/app.js?v=20260302e"></script>
+        <!-- ── Right rail: control ────────────────────────────────────── -->
+        <aside class="rail" id="control-rail">
+            <section class="rail-section">
+                <h2 class="rail-title">View <button id="btn-resync" class="ghost" title="Re-sync pose from server">&#x21bb;</button></h2>
+                <div id="player-meta" class="meta mono">no player online</div>
+                <div class="pad pad-view">
+                    <button class="pad-btn" data-hold="lookup" title="Look up (hold)">↑</button>
+                    <button class="pad-btn" data-hold="turnleft" title="Turn left (hold)">←</button>
+                    <button class="pad-btn pad-turnaround" data-oneshot="turn180" title="Turn around">180&#176;</button>
+                    <button class="pad-btn" data-hold="turnright" title="Turn right (hold)">→</button>
+                    <button class="pad-btn" data-hold="lookdown" title="Look down (hold)">↓</button>
+                </div>
+            </section>
+
+            <section class="rail-section">
+                <h2 class="rail-title">Move <span class="meta-inline mono">0.5 b</span></h2>
+                <div class="pad pad-move">
+                    <button class="pad-btn pad-w"    data-hold="forward"  title="Forward (W / &#8593;)">W</button>
+                    <button class="pad-btn pad-a"    data-hold="left"     title="Left (A / &#8592;)">A</button>
+                    <button class="pad-btn pad-s"    data-hold="backward" title="Back (S / &#8595;)">S</button>
+                    <button class="pad-btn pad-d"    data-hold="right"    title="Right (D / &#8594;)">D</button>
+                    <button class="pad-btn pad-up"   data-hold="up"       title="Up (+Y)">+Y</button>
+                    <button class="pad-btn pad-down" data-hold="down"     title="Down (&#8722;Y)">&#8722;Y</button>
+                </div>
+                <div class="keys-hint">hold to repeat &#183; keys: WASD / arrows</div>
+            </section>
+
+            <section class="rail-section">
+                <h2 class="rail-title">Bot <span id="bot-id-label" class="count mono"></span></h2>
+                <div id="bot-actions" class="action-list">
+                    <div class="placeholder">select a bot</div>
+                </div>
+            </section>
+
+            <details class="rail-section" id="advanced-section">
+                <summary class="rail-title">Advanced</summary>
+                <div class="action-list" id="advanced-actions">
+                    <button class="act" data-oneshot="possess">possess selected bot</button>
+                    <button class="act" data-oneshot="unpossess">unpossess</button>
+                    <button class="act" data-oneshot="screenshot-obs">observer screenshot</button>
+                    <button class="act" data-oneshot="scan">scan (state dump)</button>
+                </div>
+            </details>
+        </aside>
+    </main>
+
+    <!-- ── Bottom: console ───────────────────────────────────────────── -->
+    <footer id="console">
+        <div id="log-entries" class="mono"></div>
+        <div class="cmd-row">
+            <span class="prompt">&#8250;</span>
+            <input id="command-input" class="mono" type="text"
+                   placeholder="command&#8195;&#8212;&#8195;e.g. time &#183; daylock on &#183; spawnentity playerbot"
+                   autocomplete="off" spellcheck="false">
+            <button id="command-submit" class="ghost" title="Run">&#8629;</button>
+        </div>
+    </footer>
+
+    <script type="module" src="js/api.js"></script>
+    <script type="module" src="js/state.js"></script>
+    <script type="module" src="js/db.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>

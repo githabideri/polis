@@ -7,9 +7,8 @@ export const CONFIG = {
     API_BASE: null,
 
     // Polling intervals (milliseconds)
-    POLL_STATUS_MS: 5000,      // Connection/status check
-    POLL_EVENTS_MS: 1000,      // Event polling
-    POLL_BOTS_MS: 5000,        // Bot list refresh
+    POLL_STATUS_MS: 1500,     // status/bots/players (also resyncs the UI shadow pose)
+    POLL_EVENTS_MS: 1000,     // Event polling
 
     // IndexedDB settings
     DB_NAME: 'polis-webui-v2',
