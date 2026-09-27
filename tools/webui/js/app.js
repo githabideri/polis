@@ -120,8 +120,11 @@ async function sendTeleport(pose, logQuiet = true) {
 const holdKinds = {
     'forward':  (p) => ({ ...p, x: p.x + Math.sin(p.yaw) * STEP.move.blocks, z: p.z + Math.cos(p.yaw) * STEP.move.blocks }),
     'backward': (p) => ({ ...p, x: p.x - Math.sin(p.yaw) * STEP.move.blocks, z: p.z - Math.cos(p.yaw) * STEP.move.blocks }),
-    'left':     (p) => ({ ...p, x: p.x - Math.cos(p.yaw) * STEP.move.blocks, z: p.z + Math.sin(p.yaw) * STEP.move.blocks }),
-    'right':    (p) => ({ ...p, x: p.x + Math.cos(p.yaw) * STEP.move.blocks, z: p.z - Math.sin(p.yaw) * STEP.move.blocks }),
+    // left/right: measured 2026-09-27 against the game's own keyboard
+    // movement (xdotool W/A through the VNC) — left = (cos, -sin) at the
+    // reported yaw; these were swapped before, so A walked right.
+    'left':     (p) => ({ ...p, x: p.x + Math.cos(p.yaw) * STEP.move.blocks, z: p.z - Math.sin(p.yaw) * STEP.move.blocks }),
+    'right':    (p) => ({ ...p, x: p.x - Math.cos(p.yaw) * STEP.move.blocks, z: p.z + Math.sin(p.yaw) * STEP.move.blocks }),
     'up':       (p) => ({ ...p, y: p.y + STEP.move.blocks }),
     'down':     (p) => ({ ...p, y: p.y - STEP.move.blocks }),
     'turnleft':  (p) => ({ ...p, yaw: p.yaw - STEP.turn.deg * RAD }),
