@@ -76,9 +76,25 @@ def http_json(url, payload=None, timeout=60):
 def dist(a, b):
     return ((a[0] - b[0]) ** 2 + (a[2] - b[2]) ** 2) ** 0.5
 
+def carrying_from(state_resp):
+    """All item codes on the bot: hands + cargo grid (state Backpack
+    only covers grid slots - hands are separate fields). Pure over the
+    /polis/state payload (2026-09-27: split out of Polis.carrying for the
+    T4 state-construction golden - the construction must be replayable
+    from the recorded raw context alone)."""
+    b = (state_resp or {}).get("Bot", {})
+    items = []
+    for k in ("RightHand", "LeftHand"):
+        it = b.get(k)
+        if it and it.get("Code"):
+            items.append(it["Code"])
+    items += [x.get("Code") for x in (b.get("Backpack") or [])]
+    return items
+
 class Polis:
     def __init__(self, base, uid):
-        self.base, self.uid = base, uid
+        self.base, self.uid = base
+        self.last_scan = None  # last /polis/command scan response (T4 raw context), uid
     def get(self, path, timeout=15):
         return http_json(self.base + path, None, timeout)
     def cmd(self, cmd, args, bot, timeout=60):
@@ -93,16 +109,8 @@ class Polis:
             time.sleep(1)
         return r
     def carrying(self, bot):
-        """All item codes on the bot: hands + cargo grid (state Backpack
-        only covers grid slots - hands are separate fields)."""
-        b = self.state(bot).get("Bot", {})
-        items = []
-        for k in ("RightHand", "LeftHand"):
-            it = b.get(k)
-            if it and it.get("Code"):
-                items.append(it["Code"])
-        items += [x.get("Code") for x in (b.get("Backpack") or [])]
-        return items
+        """All item codes on the bot (see carrying_from)."""
+        return carrying_from(self.state(bot))
     def sweep_bots(self, keep=None):
         """Despawn all other bots. Persisted idle bots accumulate across
         runs (StoreWithChunk) and a large batch of them was measured to
@@ -120,6 +128,7 @@ class Polis:
         x, y, z = cell
         r = self.cmd("scan", [str(x - pad), "2", str(z - pad),
                               str(x + pad), str(y + 2), str(z + pad)], bot)
+        self.last_scan = r
         return (r.get("Data") or {}).get("blocks", [])
     def marker_present(self, bot, cell, marker=None):
         x, y, z = cell
@@ -800,6 +809,7 @@ def run_once(a, pol, fault_phases):
     rows, t_start, fired = [], time.time(), set()
     prev, last_final = None, None
     tool_fails = 0
+    goal_step = None
     for i in range(a.steps):
         st = pol.state(a.bot)
         pos = st["Bot"]["Pos"]
@@ -811,7 +821,9 @@ def run_once(a, pol, fault_phases):
         near_b = dist(pos, base) <= 2.5
         fixture = fixture_check(a.bot, target)
         fixture_gone = not fixture
-        carrying = pol.carrying(a.bot)
+        carry_resp = pol.state(a.bot)
+        carrying = carrying_from(carry_resp)
+        scan_resp = pol.last_scan
         has_harvest = any("carrot" in (c or "") for c in carrying)
         has_block = any(a.buildblock in (c or "") for c in carrying)
         # ground items within pickup reach (harness state Items, radius 5)
@@ -923,10 +935,24 @@ def run_once(a, pol, fault_phases):
         else:
             fixture_label = "marker_present"
         items_line = ", ".join(ground_items[:3]) or "none"
+        last_msg = (st.get("LastAction") or {}).get("Msg") or "none"
+        # T4 (review round 2, 2026-09-27): the reflex-state DTO - the exact
+        # inputs build_state_text consumes. Recorded per step together with
+        # the raw context ("raw" below) so a later implementation can be
+        # proven to construct the SAME state from the SAME observations.
+        reflex_state = {
+            "task": a.task or MISSIONS[mission]["task"],
+            "phase": phase, "pos": pos,
+            "near_t": near_t, "near_b": near_b,
+            "fixture_label": fixture_label, "fixture": fixture,
+            "carrying": carrying, "items_line": items_line,
+            "since": since, "last_msg": last_msg,
+            "proposal": proposal,
+        }
         state_text = build_state_text(
-            a.task or MISSIONS[mission]["task"], phase, pos, near_t, near_b,
+            reflex_state["task"], phase, pos, near_t, near_b,
             fixture_label, fixture, carrying, items_line, since,
-            (st.get("LastAction") or {}).get("Msg") or "none", proposal)
+            last_msg, proposal)
 
         # Dashcam (always mode): one frame per step - the scene before
         # this step's decision. Non-fatal; a failed shot is "no frame".
@@ -1076,6 +1102,15 @@ def run_once(a, pol, fault_phases):
             "options": list(MISSIONS[mission]["actions"]),
             "items": ground_items,
             "state_text": state_text, "laya_ms": reflex_ms,
+            "reflex_state": reflex_state,
+            "raw": {
+                "mission": mission, "task": a.task, "dist": a.dist,
+                "marker": a.marker, "crop": a.crop,
+                "buildblock": a.buildblock,
+                "target": target, "base": base,
+                "state": st, "carry_state": carry_resp,
+                "scan": scan_resp, "prev": prev,
+            },
         })
         prev = {"fixture": fixture, "phase": phase,
                 "has_tool": any("pickaxe" in (c or "") for c in carrying),
@@ -1092,6 +1127,7 @@ def run_once(a, pol, fault_phases):
         else:
             goal = (any("carrot" in (c or "") for c in pol.carrying(a.bot))) and at_base
         if goal:
+            goal_step = i + 1
             print("run %d: GOAL at step %d (%.0fs)" % (a.run, i + 1, time.time() - t_start), flush=True)
             break
 
@@ -1116,6 +1152,12 @@ def run_once(a, pol, fault_phases):
         "mission_complete": complete,
         "steps_to_complete": next((r["step"] for r in reversed(rows) if r["match"]), None)
         if complete else None,
+        # T2b (review round 2): run-level transitions are part of the
+        # frozen contract - a run that decides identically but ends one
+        # step early/late (or completes where the oracle didn't) is a
+        # gate failure.
+        "goal_step": goal_step,
+        "steps_run": len(rows),
         "total_sec": int(time.time() - t_start),
     }
 
@@ -1262,6 +1304,8 @@ def main():
                                     ", drop-after-mine" if a.drop_after_mine else ""),
         "runs": a.repeat, "bot": a.bot, "steps_total": n,
         "mission_complete": [o["mission_complete"] for o in all_outcomes],
+        "goal_steps": [o["goal_step"] for o in all_outcomes],
+        "steps_runs": [o["steps_run"] for o in all_outcomes],
         "mission_complete_rate": "%d/%d" % (sum(1 for o in all_outcomes if o["mission_complete"]), len(all_outcomes)),
         "avg_steps_to_complete": (sum(o["steps_to_complete"] or a.steps for o in all_outcomes
                                        if o["mission_complete"]) / max(sum(1 for o in all_outcomes if o["mission_complete"]), 1)),
