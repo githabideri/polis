@@ -197,8 +197,8 @@ details.rail-section[open] > summary::before { content: '\2013'; }
 .entity-item .e-dot.warn { background: var(--warn); }
 .entity-item .e-dot.err { background: var(--err); }
 
-.entity-item .e-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.entity-item .e-state { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+.entity-item .e-name { flex: 0 0 auto; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entity-item .e-state { flex: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
 
 .placeholder { color: var(--text-faint); font-size: 12px; padding: 4px 2px; }
 

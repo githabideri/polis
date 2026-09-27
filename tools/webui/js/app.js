@@ -33,7 +33,7 @@ const RAD = Math.PI / 180;
 const $ = (id) => document.getElementById(id);
 const el = {
     conn: $('conn-badge'), connLabel: $('conn-label'),
-    worldName: $('world-name'), worldClock: $('world-clock'),
+    worldClock: $('world-clock'),
     selectionInfo: $('selection-info'),
     botsList: $('bots-list'), botCount: $('bot-count'),
     playersList: $('players-list'), playerCount: $('player-count'),
@@ -257,7 +257,6 @@ function renderTopbar() {
     el.conn.classList.toggle('connected', c.connected);
     el.conn.classList.toggle('disconnected', !c.connected);
     el.connLabel.textContent = c.connected ? 'ONLINE' : 'OFFLINE';
-    el.worldName.textContent = (c.connected && c.worldName) ? c.worldName : (c.connected ? 'world loading' : '—');
     renderSelectionInfo();
 }
 
