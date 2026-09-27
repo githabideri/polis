@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Polis</title>
+    <script>
+        // Theme bootstrap before first paint (full logic in js/app.js).
+        // auto = follow the OS preference; persisted choice wins.
+        (function () {
+            var p = localStorage.getItem('polis-theme');
+            var t = (p === 'dark' || p === 'light' || p === 'auto') ? p : 'auto';
+            if (t === 'auto') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            document.documentElement.dataset.theme = t;
+        })();
+    </script>
     <link rel="stylesheet" href="fonts/fonts.css">
     <link rel="stylesheet" href="css/main.css">
 </head>
@@ -18,7 +28,14 @@
         <div class="tb-mid">
             <span id="world-clock" class="world-clock mono">—</span>
         </div>
-        <div class="tb-right" id="selection-info">no selection</div>
+        <div class="tb-right">
+            <div class="theme-toggle" id="theme-toggle" title="Theme — auto follows your OS">
+                <button data-theme-pick="auto"  title="Auto (follow OS)">&#9681;</button>
+                <button data-theme-pick="dark"  title="Dark">&#9679;</button>
+                <button data-theme-pick="light" title="Light">&#9675;</button>
+            </div>
+            <span id="selection-info">no selection</span>
+        </div>
     </header>
 
     <main id="layout">
@@ -112,6 +129,7 @@
                    placeholder="command&#8195;&#8212;&#8195;e.g. time &#183; daylock on &#183; spawnentity playerbot"
                    autocomplete="off" spellcheck="false">
             <button id="command-submit" class="ghost" title="Run">&#8629;</button>
+            <button id="btn-diag" class="chip chip-btn" title="Export a JSON diagnostics blob (network, errors, state) — attach it when reporting a bug">diag</button>
         </div>
     </footer>
 

@@ -35,6 +35,31 @@
     --console-min: 170px;
 }
 
+/* Light theme (data-theme="light" on <html>; "auto" resolves to one of the
+ * two in JS via prefers-color-scheme). Cool neutral paper — deliberately
+ * NOT the beige/serif "anti-slop" palette (see the design contract). The
+ * stage stays black in both themes: it shows game footage, not chrome. */
+:root[data-theme="light"] {
+    --bg0: #e9ebee;
+    --bg1: #f5f6f8;
+    --bg2: #ffffff;
+    --bg3: #e2e5e9;
+    --line: #cfd4d9;
+    --line-soft: #dde1e5;
+
+    --text: #23282d;
+    --text-dim: #5d646b;
+    --text-faint: #9aa0a6;
+
+    --accent: #9c6414;
+    --ok: #2e7d4f;
+    --warn: #9c6414;
+    --err: #b3423f;
+}
+:root[data-theme="light"] .stage {
+    border-color: var(--line);
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -95,7 +120,16 @@ input[type="checkbox"] { accent-color: var(--accent); }
 
 .tb-left { display: flex; align-items: center; gap: 14px; }
 .tb-mid { text-align: center; }
-.tb-right { text-align: right; color: var(--text-dim); font-size: 12px; }
+.tb-right { text-align: right; color: var(--text-dim); font-size: 12px; display: flex; align-items: center; justify-content: flex-end; gap: 14px; }
+
+.theme-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.theme-toggle button {
+    border: none; border-radius: 0; padding: 4px 9px; background: transparent;
+    color: var(--text-faint); font-size: 10px; line-height: 1; margin: 0;
+}
+.theme-toggle button + button { border-left: 1px solid var(--line); }
+.theme-toggle button:hover { background: var(--bg2); color: var(--text-dim); }
+.theme-toggle button.active { background: var(--bg3); color: var(--accent); }
 
 .wordmark {
     font-weight: 600;

@@ -505,6 +505,108 @@ function wireConsole() {
     });
 }
 
+/* ── theme (auto / dark / light; auto follows the OS) ─────────────────── */
+
+const themeEl = $('theme-toggle');
+let themePick = (() => {
+    const p = localStorage.getItem('polis-theme');
+    return (p === 'dark' || p === 'light' || p === 'auto') ? p : 'auto';
+})();
+
+function applyTheme() {
+    const resolved = themePick === 'auto'
+        ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : themePick;
+    document.documentElement.dataset.theme = resolved;
+    themeEl.querySelectorAll('button').forEach(b =>
+        b.classList.toggle('active', b.dataset.themePick === themePick));
+}
+function wireTheme() {
+    themeEl.querySelectorAll('button').forEach(b => {
+        b.addEventListener('click', () => {
+            themePick = b.dataset.themePick;
+            localStorage.setItem('polis-theme', themePick);
+            applyTheme();
+        });
+    });
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (themePick === 'auto') applyTheme();
+    });
+    applyTheme();
+}
+
+/* ── diagnostics: the bug-report artifact ───────────────────────────────
+ * Every network call this page makes, every JS error/rejection, the log
+ * tail and the current state. One click → JSON file + clipboard. This is
+ * what a bug report looks like: an artifact, not a prose guess.          */
+
+const DIAG = { net: [], err: [] };
+const _realFetch = window.fetch.bind(window);
+function _shortUrl(u) {
+    try { return new URL(u, location.href).pathname; } catch (e) { return String(u).slice(0, 120); }
+}
+window.fetch = async (input, init) => {
+    const t0 = performance.now();
+    const url = typeof input === 'string' ? input : (input && input.url) || '';
+    const method = (init && init.method) || (input && input.method) || 'GET';
+    const rec = { t: Date.now(), method, url: _shortUrl(url) };
+    try {
+        const res = await _realFetch(input, init);
+        rec.status = res.status;
+        rec.ms = Math.round(performance.now() - t0);
+        if (rec.status >= 400) {
+            try { rec.body = (await res.clone().text()).slice(0, 300); } catch (e) { /* ignore */ }
+        }
+        DIAG.net.push(rec);
+        if (DIAG.net.length > 400) DIAG.net.shift();
+        return res;
+    } catch (e) {
+        rec.error = String(e && e.message || e);
+        rec.ms = Math.round(performance.now() - t0);
+        DIAG.net.push(rec);
+        if (DIAG.net.length > 400) DIAG.net.shift();
+        throw e;
+    }
+};
+window.addEventListener('error', (e) => {
+    DIAG.err.push({ t: Date.now(), type: 'error', msg: e.message, at: `${e.filename || ''}:${e.lineno || ''}` });
+    if (DIAG.err.length > 200) DIAG.err.shift();
+});
+window.addEventListener('unhandledrejection', (e) => {
+    DIAG.err.push({ t: Date.now(), type: 'unhandledrejection', msg: String(e.reason && e.reason.message || e.reason).slice(0, 400) });
+    if (DIAG.err.length > 200) DIAG.err.shift();
+});
+
+function exportDiagnostics() {
+    const blob = {
+        app: 'polis-webui',
+        built: '2026-09-27',
+        ts: new Date().toISOString(),
+        url: location.href,
+        viewport: `${innerWidth}x${innerHeight}`,
+        theme: { pick: themePick, resolved: document.documentElement.dataset.theme },
+        connection: {
+            connected: state.connection.connected,
+            worldReady: state.connection.worldReady,
+            lastCheck: state.connection.lastCheck || null,
+        },
+        selection: { type: state.selection.type, id: state.selection.id },
+        bots: [...state.bots.values()].map(b => ({ id: b.id, loaded: b.loaded, pos: b.pos })),
+        players: [...state.players.values()].map(p => ({ uid: p.uid, name: p.name, pos: p.pos, yaw: p.yaw, pitch: p.pitch })),
+        jsErrors: DIAG.err,
+        network: DIAG.net.slice(-120),
+        logTail: [...el.log.children].slice(-40).map(n => n.textContent),
+    };
+    const s = JSON.stringify(blob, null, 1);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([s], { type: 'application/json' }));
+    a.download = `polis-ui-diag-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(s).catch(() => {});
+    log('diagnostics exported (file + clipboard)', 'success');
+}
+
 /* ── init ─────────────────────────────────────────────────────────────── */
 
 async function init() {
@@ -519,6 +621,8 @@ async function init() {
     wireKeys();
     wireStage();
     wireConsole();
+    wireTheme();
+    $('btn-diag').addEventListener('click', exportDiagnostics);
 
     state.onChange((type) => {
         if (['bots', 'players', 'selection'].includes(type)) renderEntityLists();
