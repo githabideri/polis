@@ -1196,6 +1196,11 @@ def run_once(a, pol, fault_phases):
             "items": ground_items,
             "state_text": state_text, "laya_ms": reflex_ms,
             "reflex_state": reflex_state,
+            # T4 (review round 2, 2026-09-27): the raw context the DTO was
+            # constructed from. Note: ctx["scan"] - NOT pol.last_scan here;
+            # the post-execute goal check re-issues the scan and would
+            # otherwise clobber the recorded pre-decision snapshot (caught
+            # by the first T4 verification, 2026-09-28).
             "raw": {
                 "mission": mission, "task": a.task, "dist": a.dist,
                 "marker": a.marker, "crop": a.crop,
@@ -1203,7 +1208,7 @@ def run_once(a, pol, fault_phases):
                 "target": target, "base": base,
                 "state": st, "carry_state": carry_resp,
                 "post_state": post_resp,
-                "scan": pol.last_scan, "prev": prev,
+                "scan": ctx["scan"], "prev": prev,
             },
         })
         prev = {"fixture": fixture, "phase": phase,
