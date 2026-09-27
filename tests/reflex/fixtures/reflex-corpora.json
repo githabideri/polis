@@ -1,0 +1,6178 @@
+{
+ "header": {
+  "what": "reflex prompt + decider-readout golden corpus (Phase 0 contract)",
+  "captured": "2026-09-27",
+  "sources": {
+   "valworld": "valworld-2026-09-26.json (nightly canary corpus, 96)",
+   "oov": "r1-probe-rows-2026-09-25.json (OOV generalization probes, 96)",
+   "abstain": "ft2-rows-2026-09-26/val.json, source ft2-abstain-2026-09-26 (held-out abstention, 45)",
+   "measurements": "ft2-ab/qwen35-decider-2b-ft2-{valworld,oov,abstain}.jsonl"
+  },
+  "model": "qwen35-decider-2b-ft2 (deployed reflex; GGUF Q8_0 on the 3060 card; readout temp 1.0, max_tokens 1)",
+  "note": "states are FROZEN goldens: build_state_text() must re-render each byte-identically (tests/reflex/contract.py T1); measured blocks are recorded readout outputs used as decision inputs (T2/T3)"
+ },
+ "rows": [
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512023, 3, 512025), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:bone, game:seeds-carrot\nsince_last_step: no change\nlast_action: done\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.9997255074138128,
+    "choice": "mine_target",
+    "max_p": 0.9997255074138128,
+    "ok": true,
+    "error": "",
+    "ms": 5564,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "mine",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (512023, 3, 512030), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9965547960384082,
+    "choice": "give_tool",
+    "max_p": 0.9965547960384082,
+    "ok": true,
+    "error": "",
+    "ms": 328,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "return",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512008, 3, 512053), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-granite\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9998964556829526,
+    "choice": "goto_base",
+    "max_p": 0.9998964556829526,
+    "ok": true,
+    "error": "",
+    "ms": 330,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "return",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512000, 3, 512009), near_target=no, near_base=no, crop_present=no\ncarrying: empty\nitems: game:wood-log\nsince_last_step: harvested item now carried\nlast_action: harvested crop\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999066545765503,
+    "choice": "goto_base",
+    "max_p": 0.9999066545765503,
+    "ok": true,
+    "error": "",
+    "ms": 324,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "pickup",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512028, 3, 512023), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: game:stone-granite\nsince_last_step: ground item appeared\nlast_action: picked 1x game:seeds-carrot\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9996893848146347,
+    "choice": "pickup_item",
+    "max_p": 0.9996893848146347,
+    "ok": true,
+    "error": "",
+    "ms": 316,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512018, 3, 512038), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999687982277043,
+    "choice": "goto_target",
+    "max_p": 0.9999687982277043,
+    "ok": true,
+    "error": "",
+    "ms": 305,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "pickup",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512024, 3, 512022), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: game:crop-carrot, game:seeds-carrot\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9999626022110579,
+    "choice": "pickup_item",
+    "max_p": 0.9999626022110579,
+    "ok": true,
+    "error": "",
+    "ms": 294,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "travel",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512003, 3, 512010), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: game:stone-granite\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999607128922928,
+    "choice": "goto_target",
+    "max_p": 0.9999607128922928,
+    "ok": true,
+    "error": "",
+    "ms": 303,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "harvest",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (511997, 3, 512016), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9997430041780307,
+    "choice": "harvest_target",
+    "max_p": 0.9997430041780307,
+    "ok": true,
+    "error": "",
+    "ms": 312,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "travel",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512033, 3, 512052), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999847881571257,
+    "choice": "goto_target",
+    "max_p": 0.9999847881571257,
+    "ok": true,
+    "error": "",
+    "ms": 299,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512009, 3, 512035), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:rock-andesite\nsince_last_step: no change\nlast_action: mining\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.999811244191989,
+    "choice": "mine_target",
+    "max_p": 0.999811244191989,
+    "ok": true,
+    "error": "",
+    "ms": 313,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (511989, 3, 512031), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: game:dirt, game:flint\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.999984802171635,
+    "choice": "goto_target",
+    "max_p": 0.999984802171635,
+    "ok": true,
+    "error": "",
+    "ms": 300,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "mine",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (511994, 3, 512038), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: mining\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9982195518687202,
+    "choice": "give_tool",
+    "max_p": 0.9982195518687202,
+    "ok": true,
+    "error": "",
+    "ms": 292,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "travel",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512012, 3, 512033), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: game:dirt, game:wood-log\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999425282491818,
+    "choice": "goto_target",
+    "max_p": 0.9999425282491818,
+    "ok": true,
+    "error": "",
+    "ms": 312,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512019, 3, 512016), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: mining\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.999288847775797,
+    "choice": "give_tool",
+    "max_p": 0.999288847775797,
+    "ok": true,
+    "error": "",
+    "ms": 309,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512049, 3, 512030), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: mining\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.9577696825864425,
+    "choice": "mine_target",
+    "max_p": 0.9577696825864425,
+    "ok": true,
+    "error": "",
+    "ms": 310,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512029, 3, 512005), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999610880059792,
+    "choice": "goto_target",
+    "max_p": 0.9999610880059792,
+    "ok": true,
+    "error": "",
+    "ms": 431,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "pickup",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512030, 3, 512048), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: game:crop-carrot, game:seeds-carrot\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9999608745965035,
+    "choice": "pickup_item",
+    "max_p": 0.9999608745965035,
+    "ok": true,
+    "error": "",
+    "ms": 295,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512038, 3, 512035), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9992804987825955,
+    "choice": "give_tool",
+    "max_p": 0.9992804987825955,
+    "ok": true,
+    "error": "",
+    "ms": 283,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (511997, 3, 512000), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999749833656093,
+    "choice": "goto_target",
+    "max_p": 0.9999749833656093,
+    "ok": true,
+    "error": "",
+    "ms": 303,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 3, 512005), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9989330571314643,
+    "choice": "give_tool",
+    "max_p": 0.9989330571314643,
+    "ok": true,
+    "error": "",
+    "ms": 299,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512024, 3, 512020), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: game:dirt, game:rock-andesite\nsince_last_step: no change\nlast_action: mined\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9408118249974987,
+    "choice": "give_tool",
+    "max_p": 0.9408118249974987,
+    "ok": true,
+    "error": "",
+    "ms": 319,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512009, 3, 512026), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: mining\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.8830616421160805,
+    "choice": "give_tool",
+    "max_p": 0.8830616421160805,
+    "ok": true,
+    "error": "",
+    "ms": 306,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512016, 3, 512010), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: game:wood-log\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999761958129341,
+    "choice": "goto_target",
+    "max_p": 0.9999761958129341,
+    "ok": true,
+    "error": "",
+    "ms": 311,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "harvest",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512048, 3, 512035), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9997300501618336,
+    "choice": "harvest_target",
+    "max_p": 0.9997300501618336,
+    "ok": true,
+    "error": "",
+    "ms": 323,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "return",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512038, 3, 512038), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: harvested item now carried\nlast_action: harvested crop\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.999948640920842,
+    "choice": "goto_base",
+    "max_p": 0.999948640920842,
+    "ok": true,
+    "error": "",
+    "ms": 313,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "harvest",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512011, 3, 512017), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: game:wood-log, game:stone-granite\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.989440696472308,
+    "choice": "harvest_target",
+    "max_p": 0.989440696472308,
+    "ok": true,
+    "error": "",
+    "ms": 289,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512035, 3, 511994), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999625101054295,
+    "choice": "goto_target",
+    "max_p": 0.9999625101054295,
+    "ok": true,
+    "error": "",
+    "ms": 294,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "pickup",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512025, 3, 512043), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack\nitems: game:stone-granite\nsince_last_step: ground item appeared\nlast_action: picked 1x game:seeds-carrot\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9992432778798396,
+    "choice": "pickup_item",
+    "max_p": 0.9992432778798396,
+    "ok": true,
+    "error": "",
+    "ms": 303,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512032, 3, 512041), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: game:feathers-chicken\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9986405282520066,
+    "choice": "give_tool",
+    "max_p": 0.9986405282520066,
+    "ok": true,
+    "error": "",
+    "ms": 287,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "done",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (511993, 3, 512041), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack\nitems: game:rock-andesite\nsince_last_step: no change\nlast_action: arrived\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9929781849710239,
+    "choice": "wait",
+    "max_p": 0.9929781849710239,
+    "ok": true,
+    "error": "",
+    "ms": 316,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "return",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512007, 3, 511989), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-granite\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999197808031809,
+    "choice": "goto_base",
+    "max_p": 0.9999197808031809,
+    "ok": true,
+    "error": "",
+    "ms": 296,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "travel",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512027, 3, 512017), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: game:dirt, game:feathers-chicken\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999009078048422,
+    "choice": "goto_target",
+    "max_p": 0.9999009078048422,
+    "ok": true,
+    "error": "",
+    "ms": 301,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "harvest",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512009, 3, 512002), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9996465131510892,
+    "choice": "harvest_target",
+    "max_p": 0.9996465131510892,
+    "ok": true,
+    "error": "",
+    "ms": 299,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512015, 3, 511999), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:stone-granite\nsince_last_step: no change\nlast_action: done\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.9998488041211201,
+    "choice": "mine_target",
+    "max_p": 0.9998488041211201,
+    "ok": true,
+    "error": "",
+    "ms": 298,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "travel",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512030, 3, 511995), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999796899389208,
+    "choice": "goto_target",
+    "max_p": 0.9999796899389208,
+    "ok": true,
+    "error": "",
+    "ms": 298,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "done",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (511993, 3, 512033), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9998918995577787,
+    "choice": "wait",
+    "max_p": 0.9998918995577787,
+    "ok": true,
+    "error": "",
+    "ms": 320,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512037, 3, 512003), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: game:rock-andesite, game:rock-andesite\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999855117351936,
+    "choice": "goto_target",
+    "max_p": 0.9999855117351936,
+    "ok": true,
+    "error": "",
+    "ms": 291,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "harvest",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512051, 3, 512010), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9997697906234498,
+    "choice": "harvest_target",
+    "max_p": 0.9997697906234498,
+    "ok": true,
+    "error": "",
+    "ms": 321,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512021, 3, 512041), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:bone, game:flint\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.99996577710049,
+    "choice": "goto_target",
+    "max_p": 0.99996577710049,
+    "ok": true,
+    "error": "",
+    "ms": 296,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "return",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (511997, 3, 512007), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: game:bone\nsince_last_step: harvested item now carried\nlast_action: harvested crop\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999244259078548,
+    "choice": "goto_base",
+    "max_p": 0.9999244259078548,
+    "ok": true,
+    "error": "",
+    "ms": 314,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512049, 3, 512007), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999532029581537,
+    "choice": "goto_target",
+    "max_p": 0.9999532029581537,
+    "ok": true,
+    "error": "",
+    "ms": 299,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "travel",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512009, 3, 512055), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999745090274467,
+    "choice": "goto_target",
+    "max_p": 0.9999745090274467,
+    "ok": true,
+    "error": "",
+    "ms": 290,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512003, 3, 512013), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:stone-granite, game:dirt\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999807731714263,
+    "choice": "goto_target",
+    "max_p": 0.9999807731714263,
+    "ok": true,
+    "error": "",
+    "ms": 297,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "mine",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (512021, 3, 512032), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: game:stone-granite, game:stone-granite\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9986142610689014,
+    "choice": "give_tool",
+    "max_p": 0.9986142610689014,
+    "ok": true,
+    "error": "",
+    "ms": 309,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512023, 3, 512030), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:wood-log\nsince_last_step: no change\nlast_action: mining\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.9151550461573179,
+    "choice": "mine_target",
+    "max_p": 0.9151550461573179,
+    "ok": true,
+    "error": "",
+    "ms": 286,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "return",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512015, 3, 512047), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-granite\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999176290883469,
+    "choice": "goto_base",
+    "max_p": 0.9999176290883469,
+    "ok": true,
+    "error": "",
+    "ms": 322,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "return",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512044, 3, 512041), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: marker gone\nlast_action: mined\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.999915652084006,
+    "choice": "goto_base",
+    "max_p": 0.999915652084006,
+    "ok": true,
+    "error": "",
+    "ms": 418,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "pickup",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512031, 3, 512006), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack\nitems: game:seeds-carrot\nsince_last_step: marker gone, ground item appeared\nlast_action: mined\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9999812440363846,
+    "choice": "pickup_item",
+    "max_p": 0.9999812440363846,
+    "ok": true,
+    "error": "",
+    "ms": 297,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512045, 3, 512033), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999824009993061,
+    "choice": "goto_target",
+    "max_p": 0.9999824009993061,
+    "ok": true,
+    "error": "",
+    "ms": 315,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "pickup",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (511996, 3, 512042), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: game:stone-granite\nsince_last_step: ground item appeared\nlast_action: picked 1x game:seeds-carrot\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9996180920187343,
+    "choice": "pickup_item",
+    "max_p": 0.9996180920187343,
+    "ok": true,
+    "error": "",
+    "ms": 299,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512011, 3, 512046), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:cloth\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999719058367016,
+    "choice": "goto_target",
+    "max_p": 0.9999719058367016,
+    "ok": true,
+    "error": "",
+    "ms": 295,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "harvest",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512016, 3, 512047), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: game:bone, game:stone-granite\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9997750169402366,
+    "choice": "harvest_target",
+    "max_p": 0.9997750169402366,
+    "ok": true,
+    "error": "",
+    "ms": 322,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512038, 3, 512025), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: game:flint, game:feathers-chicken\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999428929111039,
+    "choice": "goto_target",
+    "max_p": 0.9999428929111039,
+    "ok": true,
+    "error": "",
+    "ms": 292,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "mine",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (512023, 3, 512056), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: game:feathers-chicken\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9977926006001716,
+    "choice": "give_tool",
+    "max_p": 0.9977926006001716,
+    "ok": true,
+    "error": "",
+    "ms": 318,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512004, 3, 512044), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:stone-granite, game:stone-granite\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999823282074146,
+    "choice": "goto_target",
+    "max_p": 0.9999823282074146,
+    "ok": true,
+    "error": "",
+    "ms": 307,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "mine",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (511999, 3, 512032), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: game:seeds-carrot, game:bone\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9951267148946004,
+    "choice": "give_tool",
+    "max_p": 0.9951267148946004,
+    "ok": true,
+    "error": "",
+    "ms": 308,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512023, 3, 512055), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999752611243214,
+    "choice": "goto_target",
+    "max_p": 0.9999752611243214,
+    "ok": true,
+    "error": "",
+    "ms": 307,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512010, 3, 512019), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:dirt, game:wood-log\nsince_last_step: no change\nlast_action: mining\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.9995001626948905,
+    "choice": "mine_target",
+    "max_p": 0.9995001626948905,
+    "ok": true,
+    "error": "",
+    "ms": 332,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "mine",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (512025, 3, 512010), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9993051267317026,
+    "choice": "give_tool",
+    "max_p": 0.9993051267317026,
+    "ok": true,
+    "error": "",
+    "ms": 309,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512039, 3, 512038), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999604967724036,
+    "choice": "goto_target",
+    "max_p": 0.9999604967724036,
+    "ok": true,
+    "error": "",
+    "ms": 305,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "pickup",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512042, 3, 512029), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack\nitems: game:stone-granite\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9999356803228139,
+    "choice": "pickup_item",
+    "max_p": 0.9999356803228139,
+    "ok": true,
+    "error": "",
+    "ms": 313,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512021, 3, 512012), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:seeds-carrot\nsince_last_step: no change\nlast_action: mining\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.99971853436179,
+    "choice": "mine_target",
+    "max_p": 0.99971853436179,
+    "ok": true,
+    "error": "",
+    "ms": 284,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512040, 3, 512021), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999798264940821,
+    "choice": "goto_target",
+    "max_p": 0.9999798264940821,
+    "ok": true,
+    "error": "",
+    "ms": 311,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "mine",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (511995, 3, 512044), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9945241313960145,
+    "choice": "give_tool",
+    "max_p": 0.9945241313960145,
+    "ok": true,
+    "error": "",
+    "ms": 298,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512016), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9992917677120515,
+    "choice": "give_tool",
+    "max_p": 0.9992917677120515,
+    "ok": true,
+    "error": "",
+    "ms": 295,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "mine",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (511998, 3, 512000), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: game:bone, game:feathers-chicken\nsince_last_step: no change\nlast_action: mining\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.937963080898326,
+    "choice": "give_tool",
+    "max_p": 0.937963080898326,
+    "ok": true,
+    "error": "",
+    "ms": 276,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512014, 3, 512018), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999570443603852,
+    "choice": "goto_target",
+    "max_p": 0.9999570443603852,
+    "ok": true,
+    "error": "",
+    "ms": 300,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "harvest",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512029, 3, 512029), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9997507428815795,
+    "choice": "harvest_target",
+    "max_p": 0.9997507428815795,
+    "ok": true,
+    "error": "",
+    "ms": 289,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "return",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512034, 3, 511997), near_target=no, near_base=no, marker_present=no\ncarrying: empty\nitems: game:bone\nsince_last_step: marker gone\nlast_action: mined\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9998858796471131,
+    "choice": "goto_base",
+    "max_p": 0.9998858796471131,
+    "ok": true,
+    "error": "",
+    "ms": 303,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "harvest",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (511994, 3, 512015), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: game:feathers-chicken\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9998400085379212,
+    "choice": "harvest_target",
+    "max_p": 0.9998400085379212,
+    "ok": true,
+    "error": "",
+    "ms": 299,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512026, 3, 512035), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999703078316358,
+    "choice": "goto_target",
+    "max_p": 0.9999703078316358,
+    "ok": true,
+    "error": "",
+    "ms": 291,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "pickup",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512016, 3, 512028), near_target=no, near_base=no, crop_present=no\ncarrying: empty\nitems: game:crop-carrot, game:seeds-carrot\nsince_last_step: marker gone, ground item appeared\nlast_action: mined\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9998312960214335,
+    "choice": "pickup_item",
+    "max_p": 0.9998312960214335,
+    "ok": true,
+    "error": "",
+    "ms": 319,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "mine",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (512029, 3, 512007), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: game:seeds-carrot\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9980791587209851,
+    "choice": "give_tool",
+    "max_p": 0.9980791587209851,
+    "ok": true,
+    "error": "",
+    "ms": 278,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "done",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (512032, 3, 511999), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9997030940432017,
+    "choice": "wait",
+    "max_p": 0.9997030940432017,
+    "ok": true,
+    "error": "",
+    "ms": 292,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "return",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512041, 3, 512032), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack\nitems: game:dirt\nsince_last_step: crop gone\nlast_action: harvested crop\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999100482967241,
+    "choice": "goto_base",
+    "max_p": 0.9999100482967241,
+    "ok": true,
+    "error": "",
+    "ms": 297,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "travel",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512032, 3, 512003), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999649231469789,
+    "choice": "goto_target",
+    "max_p": 0.9999649231469789,
+    "ok": true,
+    "error": "",
+    "ms": 287,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "harvest",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512028, 3, 512014), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: none\nsince_last_step: no change\nlast_action: harvesting\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9969026938891643,
+    "choice": "harvest_target",
+    "max_p": 0.9969026938891643,
+    "ok": true,
+    "error": "",
+    "ms": 290,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512026, 3, 512030), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9993740631256419,
+    "choice": "give_tool",
+    "max_p": 0.9993740631256419,
+    "ok": true,
+    "error": "",
+    "ms": 289,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512025, 3, 512026), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999693530881266,
+    "choice": "goto_target",
+    "max_p": 0.9999693530881266,
+    "ok": true,
+    "error": "",
+    "ms": 305,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "done",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512012, 3, 512005), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack, game:stone-granite\nitems: game:bone\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9993567606643063,
+    "choice": "wait",
+    "max_p": 0.9993567606643063,
+    "ok": true,
+    "error": "",
+    "ms": 308,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "travel",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512022, 3, 512033), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: game:rock-andesite\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999788191176511,
+    "choice": "goto_target",
+    "max_p": 0.9999788191176511,
+    "ok": true,
+    "error": "",
+    "ms": 301,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "harvest",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512010, 3, 512000), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: game:flint\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.999443504229687,
+    "choice": "harvest_target",
+    "max_p": 0.999443504229687,
+    "ok": true,
+    "error": "",
+    "ms": 302,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (511991, 3, 512043), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.99997920745468,
+    "choice": "goto_target",
+    "max_p": 0.99997920745468,
+    "ok": true,
+    "error": "",
+    "ms": 303,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "return",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512001, 3, 512029), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:seeds-carrot\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-granite\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999003832883165,
+    "choice": "goto_base",
+    "max_p": 0.9999003832883165,
+    "ok": true,
+    "error": "",
+    "ms": 308,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "travel",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512013, 3, 512016), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999748661086998,
+    "choice": "goto_target",
+    "max_p": 0.9999748661086998,
+    "ok": true,
+    "error": "",
+    "ms": 279,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "travel",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512013, 3, 512008), near_target=no, near_base=no, crop_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999832918015595,
+    "choice": "goto_target",
+    "max_p": 0.9999832918015595,
+    "ok": true,
+    "error": "",
+    "ms": 292,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512012, 3, 511998), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: game:rock-andesite, game:stone-basalt\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.999967193457351,
+    "choice": "goto_target",
+    "max_p": 0.999967193457351,
+    "ok": true,
+    "error": "",
+    "ms": 305,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "mine",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512017, 3, 512029), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: game:bone, game:dirt\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9995696640322119,
+    "choice": "give_tool",
+    "max_p": 0.9995696640322119,
+    "ok": true,
+    "error": "",
+    "ms": 290,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "mine",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: mine\nfacts: bot at (512025, 3, 512007), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:dirt\nitems: game:flint\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9961662822726591,
+    "choice": "give_tool",
+    "max_p": 0.9961662822726591,
+    "ok": true,
+    "error": "",
+    "ms": 292,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "return",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512019, 3, 512013), near_target=no, near_base=no, crop_present=no\ncarrying: game:linensack, game:dirt\nitems: game:stone-granite\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-granite\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9998744932790758,
+    "choice": "goto_base",
+    "max_p": 0.9998744932790758,
+    "ok": true,
+    "error": "",
+    "ms": 289,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "return",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512011, 3, 512008), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: game:feathers-chicken\nsince_last_step: crop gone\nlast_action: harvested crop\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999126965751237,
+    "choice": "goto_base",
+    "max_p": 0.9999126965751237,
+    "ok": true,
+    "error": "",
+    "ms": 282,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "pickup",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (511992, 3, 512023), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: game:seeds-carrot\nsince_last_step: ground item appeared\nlast_action: picked 1x game:seeds-carrot\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.999569027651042,
+    "choice": "pickup_item",
+    "max_p": 0.999569027651042,
+    "ok": true,
+    "error": "",
+    "ms": 292,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "harvest",
+   "family": "travel",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512012, 3, 512028), near_target=no, near_base=no, crop_present=yes\ncarrying: game:linensack, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999737092377553,
+    "choice": "goto_target",
+    "max_p": 0.9999737092377553,
+    "ok": true,
+    "error": "",
+    "ms": 298,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "pickup",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512001, 3, 511991), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:dirt\nitems: game:crop-carrot\nsince_last_step: ground item appeared\nlast_action: picked 1x game:seeds-carrot\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9991861148744439,
+    "choice": "pickup_item",
+    "max_p": 0.9991861148744439,
+    "ok": true,
+    "error": "",
+    "ms": 353,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "world-variety-2026-09-25",
+   "mission": "mine",
+   "family": "travel",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512014, 3, 512028), near_target=no, near_base=no, marker_present=yes\ncarrying: empty\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999745165588463,
+    "choice": "goto_target",
+    "max_p": 0.9999745165588463,
+    "ok": true,
+    "error": "",
+    "ms": 299,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512022, 3, 511993), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-willow, game:stone-copper\nitems: game:stone-silver\nsince_last_step: ground item appeared\nlast_action: picked 1x game:stone-copper\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.999884573536543,
+    "choice": "pickup_item",
+    "max_p": 0.999884573536543,
+    "ok": true,
+    "error": "",
+    "ms": 279,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512016, 3, 512050), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-barley\nitems: game:crop-potato\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999477627279562,
+    "choice": "goto_target",
+    "max_p": 0.9999477627279562,
+    "ok": true,
+    "error": "",
+    "ms": 273,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the coal ore, then return to base\ncurrent phase: done\nfacts: bot at (512023, 3, 512035), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack, game:stone-gold\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9998488064799925,
+    "choice": "wait",
+    "max_p": 0.9998488064799925,
+    "ok": true,
+    "error": "",
+    "ms": 294,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the oats, then return to base\ncurrent phase: return\nfacts: bot at (512021, 3, 512027), near_target=no, near_base=no, crop_present=no\ncarrying: game:feathers-dove\nitems: game:flint\nsince_last_step: ground item picked up\nlast_action: picked 1x game:crop-potato\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9996511846448647,
+    "choice": "goto_base",
+    "max_p": 0.9996511846448647,
+    "ok": true,
+    "error": "",
+    "ms": 286,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (512022, 3, 512022), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:stone-iron\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9997110085316003,
+    "choice": "wait",
+    "max_p": 0.9997110085316003,
+    "ok": true,
+    "error": "",
+    "ms": 295,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512010, 3, 512001), near_target=no, near_base=no, crop_present=yes\ncarrying: game:wool-sheep\nitems: game:crop-rye\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9995401082901588,
+    "choice": "harvest_target",
+    "max_p": 0.9995401082901588,
+    "ok": true,
+    "error": "",
+    "ms": 288,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the granite ore, then return to base\ncurrent phase: return\nfacts: bot at (512010, 3, 512006), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:wool-sheep\nitems: game:stone-coal\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.999860058808123,
+    "choice": "goto_base",
+    "max_p": 0.999860058808123,
+    "ok": true,
+    "error": "",
+    "ms": 298,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the barley, then return to base\ncurrent phase: travel\nfacts: bot at (512017, 3, 512013), near_target=no, near_base=no, crop_present=yes\ncarrying: game:seeds-oat\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999506841388098,
+    "choice": "goto_target",
+    "max_p": 0.9999506841388098,
+    "ok": true,
+    "error": "",
+    "ms": 289,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512011, 3, 512010), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:wool-sheep\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999576746999688,
+    "choice": "goto_target",
+    "max_p": 0.9999576746999688,
+    "ok": true,
+    "error": "",
+    "ms": 292,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512033, 3, 512045), near_target=no, near_base=no, crop_present=yes\ncarrying: game:wool-sheep\nitems: game:crop-barley, game:wool-sheep\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9996602064194835,
+    "choice": "harvest_target",
+    "max_p": 0.9996602064194835,
+    "ok": true,
+    "error": "",
+    "ms": 307,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the tin ore, then return to base\ncurrent phase: return\nfacts: bot at (512024, 3, 512025), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:stone-tin\nitems: game:stone-gold\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999077026505367,
+    "choice": "goto_base",
+    "max_p": 0.9999077026505367,
+    "ok": true,
+    "error": "",
+    "ms": 296,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the wheat, then return to base\ncurrent phase: travel\nfacts: bot at (511995, 3, 512033), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-barley, game:seeds-oat\nitems: game:crop-rye, game:flint\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999034674324498,
+    "choice": "goto_target",
+    "max_p": 0.9999034674324498,
+    "ok": true,
+    "error": "",
+    "ms": 287,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512004, 3, 512018), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-pine, game:stone-silver\nitems: game:stone-coal\nsince_last_step: ground item appeared\nlast_action: picked 1x game:stone-copper\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.99918552771176,
+    "choice": "pickup_item",
+    "max_p": 0.99918552771176,
+    "ok": true,
+    "error": "",
+    "ms": 284,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512026, 3, 512010), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-rye, game:seeds-potato\nitems: game:crop-rye\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9997446176313979,
+    "choice": "harvest_target",
+    "max_p": 0.9997446176313979,
+    "ok": true,
+    "error": "",
+    "ms": 357,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the coal ore, then return to base\ncurrent phase: return\nfacts: bot at (512035, 3, 512025), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.999934115587839,
+    "choice": "goto_base",
+    "max_p": 0.999934115587839,
+    "ok": true,
+    "error": "",
+    "ms": 311,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the potato patch, then return to base\ncurrent phase: harvest\nfacts: bot at (512011, 3, 512035), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-barley\nitems: game:crop-potato, game:wool-sheep\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9992102073085514,
+    "choice": "harvest_target",
+    "max_p": 0.9992102073085514,
+    "ok": true,
+    "error": "",
+    "ms": 313,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (512041, 3, 512040), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:feathers-dove\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9998150918707697,
+    "choice": "wait",
+    "max_p": 0.9998150918707697,
+    "ok": true,
+    "error": "",
+    "ms": 275,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512035, 3, 512031), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-potato, game:seeds-potato\nitems: game:crop-oat, game:wool-sheep\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999598465018202,
+    "choice": "goto_target",
+    "max_p": 0.9999598465018202,
+    "ok": true,
+    "error": "",
+    "ms": 298,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the copper ore, then return to base\ncurrent phase: return\nfacts: bot at (512005, 3, 512009), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999145669791814,
+    "choice": "goto_base",
+    "max_p": 0.9999145669791814,
+    "ok": true,
+    "error": "",
+    "ms": 285,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the barley, then return to base\ncurrent phase: pickup\nfacts: bot at (512017, 3, 511995), near_target=no, near_base=no, crop_present=no\ncarrying: game:seeds-barley\nitems: game:crop-potato\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9998977746590872,
+    "choice": "pickup_item",
+    "max_p": 0.9998977746590872,
+    "ok": true,
+    "error": "",
+    "ms": 278,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (512030, 3, 512047), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack, game:stone-copper\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9998794375706583,
+    "choice": "wait",
+    "max_p": 0.9998794375706583,
+    "ok": true,
+    "error": "",
+    "ms": 297,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512042, 3, 512015), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-potato\nitems: game:crop-rye\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9995032372888459,
+    "choice": "pickup_item",
+    "max_p": 0.9995032372888459,
+    "ok": true,
+    "error": "",
+    "ms": 278,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the copper ore, then return to base\ncurrent phase: done\nfacts: bot at (512006, 3, 512037), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:stone-tin\nitems: game:stone-copper\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9990176570767735,
+    "choice": "wait",
+    "max_p": 0.9990176570767735,
+    "ok": true,
+    "error": "",
+    "ms": 294,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the potato patch, then return to base\ncurrent phase: return\nfacts: bot at (512014, 3, 512024), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-potato, game:seeds-potato\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:crop-potato\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999521602426975,
+    "choice": "goto_base",
+    "max_p": 0.9999521602426975,
+    "ok": true,
+    "error": "",
+    "ms": 289,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512014, 3, 512051), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack, game:stone-coal\nitems: game:stone-copper\nsince_last_step: no change\nlast_action: mining\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9995975647238703,
+    "choice": "give_tool",
+    "max_p": 0.9995975647238703,
+    "ok": true,
+    "error": "",
+    "ms": 283,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512020, 3, 512025), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-barley\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9995311966597904,
+    "choice": "wait",
+    "max_p": 0.9995311966597904,
+    "ok": true,
+    "error": "",
+    "ms": 292,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the granite ore, then return to base\ncurrent phase: done\nfacts: bot at (512021, 3, 512042), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-pine, game:stone-gold\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9996098753811167,
+    "choice": "wait",
+    "max_p": 0.9996098753811167,
+    "ok": true,
+    "error": "",
+    "ms": 291,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the potato patch, then return to base\ncurrent phase: pickup\nfacts: bot at (512030, 3, 512003), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-rye, game:seeds-rye\nitems: game:crop-oat\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9999530942274251,
+    "choice": "pickup_item",
+    "max_p": 0.9999530942274251,
+    "ok": true,
+    "error": "",
+    "ms": 306,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512017, 3, 512028), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:stone-gold\nitems: none\nsince_last_step: marker gone\nlast_action: mined\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999551898117348,
+    "choice": "goto_base",
+    "max_p": 0.9999551898117348,
+    "ok": true,
+    "error": "",
+    "ms": 281,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512027, 3, 512011), near_target=no, near_base=no, crop_present=no\ncarrying: game:wool-sheep\nitems: game:crop-oat\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9999330281838668,
+    "choice": "pickup_item",
+    "max_p": 0.9999330281838668,
+    "ok": true,
+    "error": "",
+    "ms": 338,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the copper ore, then return to base\ncurrent phase: mine\nfacts: bot at (512046, 3, 512013), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack, game:stone-tin\nitems: game:stone-copper\nsince_last_step: no change\nlast_action: mined\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9984276254209234,
+    "choice": "give_tool",
+    "max_p": 0.9984276254209234,
+    "ok": true,
+    "error": "",
+    "ms": 271,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the potato patch, then return to base\ncurrent phase: travel\nfacts: bot at (512041, 3, 512015), near_target=no, near_base=no, crop_present=yes\ncarrying: game:wool-sheep\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999481940791132,
+    "choice": "goto_target",
+    "max_p": 0.9999481940791132,
+    "ok": true,
+    "error": "",
+    "ms": 297,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512016, 3, 512021), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:stone-silver\nitems: none\nsince_last_step: no change\nlast_action: mining\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.9996278393744142,
+    "choice": "mine_target",
+    "max_p": 0.9996278393744142,
+    "ok": true,
+    "error": "",
+    "ms": 294,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512009, 3, 512028), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-potato, game:seeds-potato\nitems: game:crop-oat\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9992018045672113,
+    "choice": "pickup_item",
+    "max_p": 0.9992018045672113,
+    "ok": true,
+    "error": "",
+    "ms": 302,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the copper ore, then return to base\ncurrent phase: done\nfacts: bot at (512026, 3, 512049), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:stone-tin\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9996896400306626,
+    "choice": "wait",
+    "max_p": 0.9996896400306626,
+    "ok": true,
+    "error": "",
+    "ms": 269,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the wheat, then return to base\ncurrent phase: pickup\nfacts: bot at (512030, 3, 512021), near_target=no, near_base=no, crop_present=no\ncarrying: game:feathers-dove\nitems: game:crop-barley\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9982623300373474,
+    "choice": "pickup_item",
+    "max_p": 0.9982623300373474,
+    "ok": true,
+    "error": "",
+    "ms": 299,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512036, 3, 512040), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: marker gone\nlast_action: mined\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999516578463781,
+    "choice": "goto_base",
+    "max_p": 0.9999516578463781,
+    "ok": true,
+    "error": "",
+    "ms": 292,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512014, 3, 512018), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-potato, game:seeds-potato\nitems: game:crop-rye\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9995350973192697,
+    "choice": "pickup_item",
+    "max_p": 0.9995350973192697,
+    "ok": true,
+    "error": "",
+    "ms": 303,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the copper ore, then return to base\ncurrent phase: done\nfacts: bot at (512007, 3, 512012), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-linden, game:stone-copper\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9993241706555098,
+    "choice": "wait",
+    "max_p": 0.9993241706555098,
+    "ok": true,
+    "error": "",
+    "ms": 282,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the barley, then return to base\ncurrent phase: pickup\nfacts: bot at (512015, 3, 512021), near_target=no, near_base=no, crop_present=no\ncarrying: game:feathers-dove\nitems: game:crop-rye\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9998947789096492,
+    "choice": "pickup_item",
+    "max_p": 0.9998947789096492,
+    "ok": true,
+    "error": "",
+    "ms": 301,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: done\nfacts: bot at (512020, 3, 512013), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:feathers-dove\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9997773467144271,
+    "choice": "wait",
+    "max_p": 0.9997773467144271,
+    "ok": true,
+    "error": "",
+    "ms": 282,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512020, 3, 512017), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-rye, game:seeds-oat\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9995285473500761,
+    "choice": "wait",
+    "max_p": 0.9995285473500761,
+    "ok": true,
+    "error": "",
+    "ms": 291,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the copper ore, then return to base\ncurrent phase: mine\nfacts: bot at (512003, 3, 512016), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack, game:stone-gold\nitems: none\nsince_last_step: no change\nlast_action: mining\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "give_tool",
+   "measured": {
+    "p_oracle": 0.9990710080513086,
+    "choice": "give_tool",
+    "max_p": 0.9990710080513086,
+    "ok": true,
+    "error": "",
+    "ms": 306,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the wheat, then return to base\ncurrent phase: harvest\nfacts: bot at (512005, 3, 511996), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-potato\nitems: none\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9996816643948412,
+    "choice": "harvest_target",
+    "max_p": 0.9996816643948412,
+    "ok": true,
+    "error": "",
+    "ms": 274,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512008, 3, 512032), near_target=no, near_base=no, marker_present=yes\ncarrying: game:wood-willow, game:stone-coal\nitems: game:stone-coal, game:wool-sheep\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999524458235093,
+    "choice": "goto_target",
+    "max_p": 0.9999524458235093,
+    "ok": true,
+    "error": "",
+    "ms": 346,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512037, 3, 512019), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-potato, game:seeds-oat\nitems: game:crop-oat\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999483524317624,
+    "choice": "goto_target",
+    "max_p": 0.9999483524317624,
+    "ok": true,
+    "error": "",
+    "ms": 269,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the coal ore, then return to base\ncurrent phase: return\nfacts: bot at (512001, 3, 512026), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack, game:stone-tin\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999550664519014,
+    "choice": "goto_base",
+    "max_p": 0.9999550664519014,
+    "ok": true,
+    "error": "",
+    "ms": 291,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the barley, then return to base\ncurrent phase: pickup\nfacts: bot at (512011, 3, 512023), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-oat\nitems: game:crop-oat\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9981936538410975,
+    "choice": "pickup_item",
+    "max_p": 0.9981936538410975,
+    "ok": true,
+    "error": "",
+    "ms": 287,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (511998, 3, 512026), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:stone-coal, game:feathers-dove\nsince_last_step: no change\nlast_action: done\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.9998782904923337,
+    "choice": "mine_target",
+    "max_p": 0.9998782904923337,
+    "ok": true,
+    "error": "",
+    "ms": 281,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512016, 3, 512003), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-oat\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9996678715224776,
+    "choice": "wait",
+    "max_p": 0.9996678715224776,
+    "ok": true,
+    "error": "",
+    "ms": 279,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the tin ore, then return to base\ncurrent phase: done\nfacts: bot at (512018, 3, 512034), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-birch, game:stone-copper\nitems: game:wool-sheep\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9993852827627823,
+    "choice": "wait",
+    "max_p": 0.9993852827627823,
+    "ok": true,
+    "error": "",
+    "ms": 302,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the barley, then return to base\ncurrent phase: travel\nfacts: bot at (512017, 3, 512017), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-potato\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999382439299862,
+    "choice": "goto_target",
+    "max_p": 0.9999382439299862,
+    "ok": true,
+    "error": "",
+    "ms": 298,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512013, 3, 512045), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:stone-tin\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999545525487992,
+    "choice": "goto_target",
+    "max_p": 0.9999545525487992,
+    "ok": true,
+    "error": "",
+    "ms": 286,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512031, 3, 512032), near_target=no, near_base=no, crop_present=no\ncarrying: game:flint\nitems: game:crop-rye\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9999304558439214,
+    "choice": "pickup_item",
+    "max_p": 0.9999304558439214,
+    "ok": true,
+    "error": "",
+    "ms": 341,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the coal ore, then return to base\ncurrent phase: done\nfacts: bot at (512005, 3, 511999), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-birch, game:stone-copper\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9998392428437066,
+    "choice": "wait",
+    "max_p": 0.9998392428437066,
+    "ok": true,
+    "error": "",
+    "ms": 272,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the wheat, then return to base\ncurrent phase: harvest\nfacts: bot at (512030, 3, 512037), near_target=no, near_base=no, crop_present=yes\ncarrying: game:seeds-rye\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9989261161294022,
+    "choice": "harvest_target",
+    "max_p": 0.9989261161294022,
+    "ok": true,
+    "error": "",
+    "ms": 293,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512017, 3, 512018), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:stone-copper\nsince_last_step: no change\nlast_action: done\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.9998414290896386,
+    "choice": "mine_target",
+    "max_p": 0.9998414290896386,
+    "ok": true,
+    "error": "",
+    "ms": 409,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512037, 3, 512029), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-rye, game:seeds-rye\nitems: none\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9998710396341617,
+    "choice": "harvest_target",
+    "max_p": 0.9998710396341617,
+    "ok": true,
+    "error": "",
+    "ms": 291,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the tin ore, then return to base\ncurrent phase: return\nfacts: bot at (512018, 3, 512037), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack, game:stone-silver\nitems: none\nsince_last_step: marker gone\nlast_action: mined\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9998245682637655,
+    "choice": "goto_base",
+    "max_p": 0.9998245682637655,
+    "ok": true,
+    "error": "",
+    "ms": 281,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the potato patch, then return to base\ncurrent phase: done\nfacts: bot at (512021, 3, 512027), near_target=no, near_base=no, crop_present=no\ncarrying: game:feathers-dove\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9997458778775962,
+    "choice": "wait",
+    "max_p": 0.9997458778775962,
+    "ok": true,
+    "error": "",
+    "ms": 275,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: pickup\nfacts: bot at (512020, 3, 512027), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-willow, game:stone-coal\nitems: game:stone-gold\nsince_last_step: ground item appeared\nlast_action: picked 1x game:stone-copper\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9996354457590904,
+    "choice": "pickup_item",
+    "max_p": 0.9996354457590904,
+    "ok": true,
+    "error": "",
+    "ms": 298,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512038, 3, 512039), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-oat, game:seeds-oat\nitems: game:crop-rye\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9998767853618024,
+    "choice": "pickup_item",
+    "max_p": 0.9998767853618024,
+    "ok": true,
+    "error": "",
+    "ms": 282,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the coal ore, then return to base\ncurrent phase: travel\nfacts: bot at (512040, 3, 512000), near_target=no, near_base=no, marker_present=yes\ncarrying: game:wood-birch, game:stone-tin\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999335505534838,
+    "choice": "goto_target",
+    "max_p": 0.9999335505534838,
+    "ok": true,
+    "error": "",
+    "ms": 341,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the barley, then return to base\ncurrent phase: harvest\nfacts: bot at (512026, 3, 512043), near_target=no, near_base=no, crop_present=yes\ncarrying: game:feathers-dove\nitems: none\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9998850951375946,
+    "choice": "harvest_target",
+    "max_p": 0.9998850951375946,
+    "ok": true,
+    "error": "",
+    "ms": 287,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512021, 3, 512047), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:stone-gold\nitems: game:stone-silver, game:flint\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999696679987775,
+    "choice": "goto_target",
+    "max_p": 0.9999696679987775,
+    "ok": true,
+    "error": "",
+    "ms": 280,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512023, 3, 512022), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-barley, game:seeds-oat\nitems: game:crop-oat\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9980841598707323,
+    "choice": "wait",
+    "max_p": 0.9980841598707323,
+    "ok": true,
+    "error": "",
+    "ms": 275,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the granite ore, then return to base\ncurrent phase: travel\nfacts: bot at (512012, 3, 512015), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:wool-sheep\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.99990683009751,
+    "choice": "goto_target",
+    "max_p": 0.99990683009751,
+    "ok": true,
+    "error": "",
+    "ms": 277,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the potato patch, then return to base\ncurrent phase: pickup\nfacts: bot at (512012, 3, 512043), near_target=no, near_base=no, crop_present=no\ncarrying: game:feathers-dove\nitems: game:crop-oat\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9993671543816924,
+    "choice": "pickup_item",
+    "max_p": 0.9993671543816924,
+    "ok": true,
+    "error": "",
+    "ms": 287,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512024, 3, 512035), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack, game:stone-coal\nitems: none\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999335232764831,
+    "choice": "goto_base",
+    "max_p": 0.9999335232764831,
+    "ok": true,
+    "error": "",
+    "ms": 285,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512007, 3, 512036), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-rye\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.999788047313684,
+    "choice": "wait",
+    "max_p": 0.999788047313684,
+    "ok": true,
+    "error": "",
+    "ms": 290,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the granite ore, then return to base\ncurrent phase: return\nfacts: bot at (512015, 3, 512029), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-birch, game:stone-silver\nitems: game:stone-gold\nsince_last_step: marker gone\nlast_action: mined\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9997903050079798,
+    "choice": "goto_base",
+    "max_p": 0.9997903050079798,
+    "ok": true,
+    "error": "",
+    "ms": 295,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the wheat, then return to base\ncurrent phase: done\nfacts: bot at (512003, 3, 512011), near_target=no, near_base=no, crop_present=no\ncarrying: game:wool-sheep\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9995707540811609,
+    "choice": "wait",
+    "max_p": 0.9995707540811609,
+    "ok": true,
+    "error": "",
+    "ms": 293,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512003, 3, 512037), near_target=no, near_base=no, marker_present=yes\ncarrying: game:wood-linden, game:stone-iron\nitems: game:stone-copper, game:wool-sheep\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999536282866421,
+    "choice": "goto_target",
+    "max_p": 0.9999536282866421,
+    "ok": true,
+    "error": "",
+    "ms": 286,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512028, 3, 512002), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-barley, game:seeds-barley\nitems: game:flint\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9983090444231193,
+    "choice": "wait",
+    "max_p": 0.9983090444231193,
+    "ok": true,
+    "error": "",
+    "ms": 295,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the granite ore, then return to base\ncurrent phase: done\nfacts: bot at (512028, 3, 512006), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-linden, game:stone-iron\nitems: game:stone-tin\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9988640758716155,
+    "choice": "wait",
+    "max_p": 0.9988640758716155,
+    "ok": true,
+    "error": "",
+    "ms": 276,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the oats, then return to base\ncurrent phase: return\nfacts: bot at (512030, 3, 512004), near_target=no, near_base=no, crop_present=no\ncarrying: game:seeds-rye\nitems: game:flint\nsince_last_step: ground item picked up\nlast_action: picked 1x game:crop-potato\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9995941617898487,
+    "choice": "goto_base",
+    "max_p": 0.9995941617898487,
+    "ok": true,
+    "error": "",
+    "ms": 288,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512026, 3, 512034), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: none\nsince_last_step: no change\nlast_action: mined\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.9996640076289309,
+    "choice": "mine_target",
+    "max_p": 0.9996640076289309,
+    "ok": true,
+    "error": "",
+    "ms": 283,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512036, 3, 512009), near_target=no, near_base=no, crop_present=yes\ncarrying: game:wool-sheep\nitems: none\nsince_last_step: no change\nlast_action: harvesting\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "harvest_target",
+   "measured": {
+    "p_oracle": 0.9997570961751295,
+    "choice": "harvest_target",
+    "max_p": 0.9997570961751295,
+    "ok": true,
+    "error": "",
+    "ms": 307,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the granite ore, then return to base\ncurrent phase: travel\nfacts: bot at (512021, 3, 511997), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:stone-tin, game:wool-sheep\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9998969316082104,
+    "choice": "goto_target",
+    "max_p": 0.9998969316082104,
+    "ok": true,
+    "error": "",
+    "ms": 301,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the barley, then return to base\ncurrent phase: return\nfacts: bot at (512044, 3, 512023), near_target=no, near_base=no, crop_present=no\ncarrying: game:flint\nitems: none\nsince_last_step: crop gone\nlast_action: harvested crop\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.999587053149499,
+    "choice": "goto_base",
+    "max_p": 0.999587053149499,
+    "ok": true,
+    "error": "",
+    "ms": 279,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (511992, 3, 512016), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:feathers-dove\nitems: game:stone-tin\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999626636181861,
+    "choice": "goto_target",
+    "max_p": 0.9999626636181861,
+    "ok": true,
+    "error": "",
+    "ms": 289,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: pickup\nfacts: bot at (512025, 3, 512024), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-oat\nitems: game:crop-rye\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9998952213518689,
+    "choice": "pickup_item",
+    "max_p": 0.9998952213518689,
+    "ok": true,
+    "error": "",
+    "ms": 279,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the granite ore, then return to base\ncurrent phase: travel\nfacts: bot at (512014, 3, 512023), near_target=no, near_base=no, marker_present=yes\ncarrying: game:linensack, game:stone-iron\nitems: game:stone-silver, game:wool-sheep\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.999912288536461,
+    "choice": "goto_target",
+    "max_p": 0.999912288536461,
+    "ok": true,
+    "error": "",
+    "ms": 285,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the potato patch, then return to base\ncurrent phase: return\nfacts: bot at (512008, 3, 512017), near_target=no, near_base=no, crop_present=no\ncarrying: game:seeds-potato\nitems: game:crop-potato\nsince_last_step: crop gone\nlast_action: harvested crop\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999366854611994,
+    "choice": "goto_base",
+    "max_p": 0.9999366854611994,
+    "ok": true,
+    "error": "",
+    "ms": 272,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512038, 3, 512014), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack, game:stone-copper\nitems: game:stone-iron\nsince_last_step: no change\nlast_action: done\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.9997515371800362,
+    "choice": "mine_target",
+    "max_p": 0.9997515371800362,
+    "ok": true,
+    "error": "",
+    "ms": 345,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512028, 3, 512015), near_target=no, near_base=no, crop_present=yes\ncarrying: game:feathers-dove\nitems: game:crop-potato, game:wool-sheep\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.999968318818786,
+    "choice": "goto_target",
+    "max_p": 0.999968318818786,
+    "ok": true,
+    "error": "",
+    "ms": 293,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the granite ore, then return to base\ncurrent phase: pickup\nfacts: bot at (512029, 3, 512019), near_target=no, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:flint\nitems: game:stone-tin\nsince_last_step: ground item appeared\nlast_action: picked 1x game:stone-copper\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9992186253636217,
+    "choice": "pickup_item",
+    "max_p": 0.9992186253636217,
+    "ok": true,
+    "error": "",
+    "ms": 305,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the oats, then return to base\ncurrent phase: travel\nfacts: bot at (511995, 3, 512026), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-oat\nitems: game:crop-potato, game:wool-sheep\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9998752790950155,
+    "choice": "goto_target",
+    "max_p": 0.9998752790950155,
+    "ok": true,
+    "error": "",
+    "ms": 285,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: mine\nfacts: bot at (512004, 3, 512006), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron\nitems: game:stone-gold, game:flint\nsince_last_step: no change\nlast_action: mined\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.9998143496431356,
+    "choice": "mine_target",
+    "max_p": 0.9998143496431356,
+    "ok": true,
+    "error": "",
+    "ms": 289,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512021, 3, 512015), near_target=no, near_base=no, crop_present=no\ncarrying: game:wool-sheep\nitems: game:crop-rye\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9982139180063012,
+    "choice": "wait",
+    "max_p": 0.9982139180063012,
+    "ok": true,
+    "error": "",
+    "ms": 275,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the coal ore, then return to base\ncurrent phase: mine\nfacts: bot at (512012, 3, 512031), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:wool-sheep\nitems: game:stone-tin, game:feathers-dove\nsince_last_step: no change\nlast_action: mining\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "mine_target",
+   "measured": {
+    "p_oracle": 0.999523415655135,
+    "choice": "mine_target",
+    "max_p": 0.999523415655135,
+    "ok": true,
+    "error": "",
+    "ms": 289,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the barley, then return to base\ncurrent phase: pickup\nfacts: bot at (511995, 3, 512036), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-barley\nitems: game:crop-rye\nsince_last_step: ground item appeared\nlast_action: picked 1x game:crop-potato\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9982395411768046,
+    "choice": "pickup_item",
+    "max_p": 0.9982395411768046,
+    "ok": true,
+    "error": "",
+    "ms": 288,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-id",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512018, 3, 512036), near_target=no, near_base=no, marker_present=no\ncarrying: game:linensack, game:stone-silver\nitems: game:stone-coal\nsince_last_step: ground item picked up\nlast_action: picked 1x game:stone-copper\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "goto_base",
+   "measured": {
+    "p_oracle": 0.9999043481495128,
+    "choice": "goto_base",
+    "max_p": 0.9999043481495128,
+    "ok": true,
+    "error": "",
+    "ms": 299,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-id",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (512014, 3, 512014), near_target=no, near_base=no, crop_present=yes\ncarrying: game:crop-barley\nitems: game:crop-potato, game:feathers-dove\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "goto_target",
+   "measured": {
+    "p_oracle": 0.9999570199928545,
+    "choice": "goto_target",
+    "max_p": 0.9999570199928545,
+    "ok": true,
+    "error": "",
+    "ms": 290,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "mine",
+   "family": "oov-task",
+   "state": "task: mine the granite ore, then return to base\ncurrent phase: pickup\nfacts: bot at (512013, 3, 512019), near_target=no, near_base=no, marker_present=no\ncarrying: game:wood-willow, game:stone-tin\nitems: game:stone-iron\nsince_last_step: ground item appeared\nlast_action: picked 1x game:stone-copper\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "pickup_item",
+   "measured": {
+    "p_oracle": 0.9973944861414165,
+    "choice": "pickup_item",
+    "max_p": 0.9973944861414165,
+    "ok": true,
+    "error": "",
+    "ms": 284,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "r1-probe-2026-09-25",
+   "mission": "harvest",
+   "family": "oov-task",
+   "state": "task: harvest the potato patch, then return to base\ncurrent phase: done\nfacts: bot at (512035, 3, 512018), near_target=no, near_base=no, crop_present=no\ncarrying: game:crop-rye\nitems: game:crop-rye\nsince_last_step: no change\nlast_action: arrived\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9988785924936086,
+    "choice": "wait",
+    "max_p": 0.9988785924936086,
+    "ok": true,
+    "error": "",
+    "ms": 286,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512006, 3, 512024), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 4 steps\nlast_action: goto failed: no path\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9999201641479535,
+    "choice": "wait",
+    "max_p": 0.9999201641479535,
+    "ok": true,
+    "error": "",
+    "ms": 282,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512023), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9969544280492904,
+    "choice": "wait",
+    "max_p": 0.9969544280492904,
+    "ok": true,
+    "error": "",
+    "ms": 274,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "harvest ",
+   "family": "abstain",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512008, 3, 512025), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack, game:crop-carrot\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9940996149591097,
+    "choice": "wait",
+    "max_p": 0.9940996149591097,
+    "ok": true,
+    "error": "",
+    "ms": 270,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512008, 3, 512021), near_target=yes, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.991106297362102,
+    "choice": "wait",
+    "max_p": 0.991106297362102,
+    "ok": true,
+    "error": "",
+    "ms": 297,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "organize",
+   "family": "abstain",
+   "state": "task: organize the backpack, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512022), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack, game:dirt, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9999099774264408,
+    "choice": "wait",
+    "max_p": 0.9999099774264408,
+    "ok": true,
+    "error": "",
+    "ms": 286,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "check th",
+   "family": "abstain",
+   "state": "task: check the mine cart, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512021), near_target=no, near_base=yes, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9997760590901161,
+    "choice": "wait",
+    "max_p": 0.9997760590901161,
+    "ok": true,
+    "error": "",
+    "ms": 295,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "fix the ",
+   "family": "abstain",
+   "state": "task: fix the wooden fence, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512024), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:wood-log\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9967728420227694,
+    "choice": "wait",
+    "max_p": 0.9967728420227694,
+    "ok": true,
+    "error": "",
+    "ms": 274,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "feed the",
+   "family": "abstain",
+   "state": "task: feed the chickens, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512024), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9996898968274113,
+    "choice": "wait",
+    "max_p": 0.9996898968274113,
+    "ok": true,
+    "error": "",
+    "ms": 286,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "paint th",
+   "family": "abstain",
+   "state": "task: paint the wall, then return to base\ncurrent phase: done\nfacts: bot at (512008, 3, 512021), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9999045551591162,
+    "choice": "wait",
+    "max_p": 0.9999045551591162,
+    "ok": true,
+    "error": "",
+    "ms": 273,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "haul the",
+   "family": "abstain",
+   "state": "task: haul the clay, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512021), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9981050367463077,
+    "choice": "wait",
+    "max_p": 0.9981050367463077,
+    "ok": true,
+    "error": "",
+    "ms": 310,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512021), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 3 steps\nlast_action: goto failed: no path\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9999200160902256,
+    "choice": "wait",
+    "max_p": 0.9999200160902256,
+    "ok": true,
+    "error": "",
+    "ms": 284,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512004, 3, 512023), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 4 steps\nlast_action: goto failed: no path\nproposed action: place_block",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "place_block",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9995280253067121,
+    "choice": "wait",
+    "max_p": 0.9995280253067121,
+    "ok": true,
+    "error": "",
+    "ms": 299,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512024), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9943791842451828,
+    "choice": "wait",
+    "max_p": 0.9943791842451828,
+    "ok": true,
+    "error": "",
+    "ms": 292,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "harvest ",
+   "family": "abstain",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512021), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack, game:crop-carrot\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9914925609614955,
+    "choice": "wait",
+    "max_p": 0.9914925609614955,
+    "ok": true,
+    "error": "",
+    "ms": 291,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512023), near_target=yes, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9956706001405214,
+    "choice": "wait",
+    "max_p": 0.9956706001405214,
+    "ok": true,
+    "error": "",
+    "ms": 294,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "harvest ",
+   "family": "abstain",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512008, 3, 512023), near_target=yes, near_base=yes, crop_present=no\ncarrying: game:linensack\nitems: game:crop-carrot\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9978393652588072,
+    "choice": "wait",
+    "max_p": 0.9978393652588072,
+    "ok": true,
+    "error": "",
+    "ms": 276,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "organize",
+   "family": "abstain",
+   "state": "task: organize the backpack, then return to base\ncurrent phase: done\nfacts: bot at (512007, 3, 512021), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack, game:dirt, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9999362268333282,
+    "choice": "wait",
+    "max_p": 0.9999362268333282,
+    "ok": true,
+    "error": "",
+    "ms": 289,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "check th",
+   "family": "abstain",
+   "state": "task: check the mine cart, then return to base\ncurrent phase: done\nfacts: bot at (512005, 3, 512021), near_target=no, near_base=yes, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9997881760051778,
+    "choice": "wait",
+    "max_p": 0.9997881760051778,
+    "ok": true,
+    "error": "",
+    "ms": 267,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "fix the ",
+   "family": "abstain",
+   "state": "task: fix the wooden fence, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512025), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:wood-log\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9968551881557822,
+    "choice": "wait",
+    "max_p": 0.9968551881557822,
+    "ok": true,
+    "error": "",
+    "ms": 304,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "feed the",
+   "family": "abstain",
+   "state": "task: feed the chickens, then return to base\ncurrent phase: done\nfacts: bot at (512008, 3, 512025), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9989536517408905,
+    "choice": "wait",
+    "max_p": 0.9989536517408905,
+    "ok": true,
+    "error": "",
+    "ms": 289,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "paint th",
+   "family": "abstain",
+   "state": "task: paint the wall, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512024), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.999923675333607,
+    "choice": "wait",
+    "max_p": 0.999923675333607,
+    "ok": true,
+    "error": "",
+    "ms": 291,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512006, 3, 512021), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 3 steps\nlast_action: goto failed: no path\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9999175643188726,
+    "choice": "wait",
+    "max_p": 0.9999175643188726,
+    "ok": true,
+    "error": "",
+    "ms": 276,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "harvest ",
+   "family": "abstain",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512007, 3, 512024), near_target=yes, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no progress for 3 steps\nlast_action: harvest failed: not mature\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9987777569843318,
+    "choice": "wait",
+    "max_p": 0.9987777569843318,
+    "ok": true,
+    "error": "",
+    "ms": 270,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512008, 3, 512022), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 4 steps\nlast_action: goto failed: no path\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9995895612711418,
+    "choice": "wait",
+    "max_p": 0.9995895612711418,
+    "ok": true,
+    "error": "",
+    "ms": 278,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512024), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: mine_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "mine_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9955708474284777,
+    "choice": "wait",
+    "max_p": 0.9955708474284777,
+    "ok": true,
+    "error": "",
+    "ms": 343,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "harvest ",
+   "family": "abstain",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512025), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack, game:crop-carrot\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9935714123937351,
+    "choice": "wait",
+    "max_p": 0.9935714123937351,
+    "ok": true,
+    "error": "",
+    "ms": 286,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512024), near_target=yes, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9939147592928758,
+    "choice": "wait",
+    "max_p": 0.9939147592928758,
+    "ok": true,
+    "error": "",
+    "ms": 298,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "harvest ",
+   "family": "abstain",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512007, 3, 512022), near_target=yes, near_base=yes, crop_present=no\ncarrying: game:linensack\nitems: game:crop-carrot\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9978094608290645,
+    "choice": "wait",
+    "max_p": 0.9978094608290645,
+    "ok": true,
+    "error": "",
+    "ms": 298,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "organize",
+   "family": "abstain",
+   "state": "task: organize the backpack, then return to base\ncurrent phase: done\nfacts: bot at (512007, 3, 512023), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack, game:dirt, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9999147024228551,
+    "choice": "wait",
+    "max_p": 0.9999147024228551,
+    "ok": true,
+    "error": "",
+    "ms": 325,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "check th",
+   "family": "abstain",
+   "state": "task: check the mine cart, then return to base\ncurrent phase: done\nfacts: bot at (512005, 3, 512025), near_target=no, near_base=yes, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9997952139900546,
+    "choice": "wait",
+    "max_p": 0.9997952139900546,
+    "ok": true,
+    "error": "",
+    "ms": 296,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "feed the",
+   "family": "abstain",
+   "state": "task: feed the chickens, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512021), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9986154814022644,
+    "choice": "wait",
+    "max_p": 0.9986154814022644,
+    "ok": true,
+    "error": "",
+    "ms": 297,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "paint th",
+   "family": "abstain",
+   "state": "task: paint the wall, then return to base\ncurrent phase: done\nfacts: bot at (512007, 3, 512022), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: wait",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "wait",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9999285128476956,
+    "choice": "wait",
+    "max_p": 0.9999285128476956,
+    "ok": true,
+    "error": "",
+    "ms": 348,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "harvest ",
+   "family": "abstain",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512005, 3, 512023), near_target=yes, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no progress for 3 steps\nlast_action: harvest failed: not mature\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9993082162471272,
+    "choice": "wait",
+    "max_p": 0.9993082162471272,
+    "ok": true,
+    "error": "",
+    "ms": 293,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512024), near_target=no, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 4 steps\nlast_action: goto failed: no path\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9998006776123924,
+    "choice": "wait",
+    "max_p": 0.9998006776123924,
+    "ok": true,
+    "error": "",
+    "ms": 305,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512024), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.976371664589343,
+    "choice": "wait",
+    "max_p": 0.976371664589343,
+    "ok": true,
+    "error": "",
+    "ms": 269,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "harvest ",
+   "family": "abstain",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: done\nfacts: bot at (512005, 3, 512022), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack, game:crop-carrot\nitems: none\nsince_last_step: no change\nlast_action: arrived\nproposed action: harvest_target",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "harvest_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9943428493005777,
+    "choice": "wait",
+    "max_p": 0.9943428493005777,
+    "ok": true,
+    "error": "",
+    "ms": 266,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512006, 3, 512021), near_target=yes, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9917114969023031,
+    "choice": "wait",
+    "max_p": 0.9917114969023031,
+    "ok": true,
+    "error": "",
+    "ms": 274,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "harvest ",
+   "family": "abstain",
+   "state": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512006, 3, 512021), near_target=yes, near_base=yes, crop_present=no\ncarrying: game:linensack\nitems: game:crop-carrot\nsince_last_step: crop gone, ground item appeared\nlast_action: harvested crop\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9964330210638132,
+    "choice": "wait",
+    "max_p": 0.9964330210638132,
+    "ok": true,
+    "error": "",
+    "ms": 273,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "organize",
+   "family": "abstain",
+   "state": "task: organize the backpack, then return to base\ncurrent phase: done\nfacts: bot at (512006, 3, 512025), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack, game:dirt, game:stone-granite\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9999392944069851,
+    "choice": "wait",
+    "max_p": 0.9999392944069851,
+    "ok": true,
+    "error": "",
+    "ms": 276,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "check th",
+   "family": "abstain",
+   "state": "task: check the mine cart, then return to base\ncurrent phase: done\nfacts: bot at (512004, 3, 512022), near_target=no, near_base=yes, marker_present=no\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9997545571202068,
+    "choice": "wait",
+    "max_p": 0.9997545571202068,
+    "ok": true,
+    "error": "",
+    "ms": 279,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "fix the ",
+   "family": "abstain",
+   "state": "task: fix the wooden fence, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512024), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack, game:wood-log\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: place_block",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "place_block",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9989474117465005,
+    "choice": "wait",
+    "max_p": 0.9989474117465005,
+    "ok": true,
+    "error": "",
+    "ms": 270,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "feed the",
+   "family": "abstain",
+   "state": "task: feed the chickens, then return to base\ncurrent phase: done\nfacts: bot at (512005, 3, 512024), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: give_tool",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "give_tool",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9987518492543365,
+    "choice": "wait",
+    "max_p": 0.9987518492543365,
+    "ok": true,
+    "error": "",
+    "ms": 291,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "paint th",
+   "family": "abstain",
+   "state": "task: paint the wall, then return to base\ncurrent phase: done\nfacts: bot at (512005, 3, 512022), near_target=no, near_base=yes, marker_present=no\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: pickup_item",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "pickup_item",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9997675543894654,
+    "choice": "wait",
+    "max_p": 0.9997675543894654,
+    "ok": true,
+    "error": "",
+    "ms": 276,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "haul the",
+   "family": "abstain",
+   "state": "task: haul the clay, then return to base\ncurrent phase: travel\nfacts: bot at (512008, 3, 512022), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: walked\nproposed action: goto_base",
+   "options": [
+    "goto_target",
+    "harvest_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_base",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.99883163602636,
+    "choice": "wait",
+    "max_p": 0.99883163602636,
+    "ok": true,
+    "error": "",
+    "ms": 295,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  },
+  {
+   "source": "ft2-abstain-2026-09-26",
+   "mission": "mine the",
+   "family": "abstain",
+   "state": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (512007, 3, 512025), near_target=yes, near_base=no, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no progress for 3 steps\nlast_action: goto failed: no path\nproposed action: goto_target",
+   "options": [
+    "goto_target",
+    "mine_target",
+    "pickup_item",
+    "place_block",
+    "give_tool",
+    "goto_base",
+    "wait"
+   ],
+   "proposed": "goto_target",
+   "oracle": "wait",
+   "measured": {
+    "p_oracle": 0.9999082732851315,
+    "choice": "wait",
+    "max_p": 0.9999082732851315,
+    "ok": true,
+    "error": "",
+    "ms": 287,
+    "model": "qwen35-decider-2b-ft2"
+   }
+  }
+ ]
+}

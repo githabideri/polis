@@ -39,6 +39,12 @@ action, reflex p, path, judge answer, executed, outcome) - the raw
 material for re-deriving the threshold when the model or question
 changes (calibration protocol, llmlab docs/decision-classifiers.md).
 
+PHASE 0 CONTRACT: build_state_text() (the FT-trained 8-line reflex
+prompt) and decide_cascade() (the three-tier decision rule) are pure
+functions frozen as the behavioral contract of this loop; golden
+fixtures + the replay gate live in tests/reflex/contract.py, the
+nightly canary guards the prompt against model drift.
+
 Max-stall safety valve: after two consecutive executed `wait`s control
 returns to the deterministic policy (the 27B arbiter latches to `wait`
 after visible failures - measured pass 3/4, prompt-resistant).
@@ -669,6 +675,95 @@ def setup_fixture(a, pol, mission, dist=8):
     base_carry = set(c for c in pol.carrying(a.bot) if c)
     return base, target, base_carry
 
+def build_state_text(task, phase, pos, near_t, near_b, fixture_label, fixture,
+                     carrying, items_line, since, last_action_msg, proposal):
+    """The reflex prompt - the 8-line format the 2B decider was fine-tuned on.
+
+    PHASE 0 CONTRACT (docs/design/2026-09-26-job-system-r2.md, §5.4):
+    given identical inputs this function must stay BYTE-IDENTICAL. The FT
+    model was trained on exactly this representation; changing wording is a
+    model regression, not a refactor (gates: tests/reflex/contract.py,
+    nightly canary, abstain corpus).
+    """
+    return (
+        "task: %s\n"
+        "current phase: %s\n"
+        "facts: bot at (%.0f, %d, %.0f), near_target=%s, near_base=%s, %s=%s\n"
+        "carrying: %s\nitems: %s\n"
+        "since_last_step: %s\nlast_action: %s\nproposed action: %s"
+    ) % (
+        task, phase, pos[0], pos[1], pos[2],
+        "yes" if near_t else "no", "yes" if near_b else "no",
+        fixture_label, "yes" if fixture else "no",
+        ", ".join((c or "?") for c in carrying[:5]) or "empty",
+        items_line,
+        since,
+        last_action_msg,
+        proposal,
+    )
+
+def needs_judge(reflex, dref, proposal, tau_yes, tau_dec, tau_strong):
+    """True exactly when the original cascade would call the 27B for this
+    step (pure predicate over recorded tier outputs; see decide_cascade).
+    """
+    p = (reflex or {}).get("p")
+    if (reflex is None) or (reflex or {}).get("error") \
+            or (p is None) or (p < tau_yes):
+        return True
+    if dref is None or dref.get("error"):
+        return False
+    p_dec = dref["probs"].get(proposal) if dref.get("probs") is not None else None
+    if p_dec is None or p_dec < tau_dec:
+        return True
+    return p < tau_strong
+
+def decide_cascade(reflex, dref, judge, proposal, valid_actions, last_final,
+                   tau_yes, tau_dec, tau_strong):
+    """The three-tier decision rule as a PURE function over recorded model
+    outputs - the Phase 0 contract (tests/reflex/contract.py replays
+    fixtures through this and must reproduce the recorded path/final).
+
+    reflex: {"p": float|None, "error": ...} | None (Laya noul tier)
+    dref:   {"probs": dict|None, "error": ...} | None (Decider tier)
+    judge:  {"choice": ...} | None (27B; the caller fetches it only when
+            needs_judge() says so, so a None here means "not called")
+
+    Returns (path, final, stall_bypass, p_dec).
+    """
+    p = (reflex or {}).get("p")
+    p_dec = None
+    path, final = None, proposal
+    if (reflex is None) or (reflex or {}).get("error") \
+            or (p is None) or (p < tau_yes):
+        path = ("reflex-err:" + str((reflex or {}).get("error"))[:16]) \
+            if (reflex or {}).get("error") else "judge"
+        final = judge["choice"] or proposal if judge is not None else proposal
+    elif dref is not None:
+        p_dec = dref["probs"].get(proposal) \
+            if dref.get("probs") is not None else None
+        if dref.get("error"):
+            path = "decider-err:" + str(dref["error"])[:16] # service down: execute via Laya only
+        elif p_dec is not None and p_dec >= tau_dec:
+            if p >= tau_strong:
+                path = "reflex+decider" # confident consensus
+            else:
+                path = "reflex+decider->judge" # Laya borderline: doubt
+                final = judge["choice"] or proposal if judge is not None else proposal
+        else:
+            path = "reflex->judge"
+            final = judge["choice"] or proposal if judge is not None else proposal
+    else:
+        path = "reflex"
+    final = final if final in valid_actions else "wait"
+    # Max-stall safety valve: after two consecutive executed `wait`s control
+    # returns to the deterministic policy (the arbiter latches to `wait`
+    # after visible failures - measured, prompt-resistant).
+    stall_bypass = False
+    if final == "wait" and last_final == "wait":
+        stall_bypass = True
+        final = proposal
+    return path, final, stall_bypass, p_dec
+
 def run_once(a, pol, fault_phases):
     mission = a.mission
     # sweep all persisted bots first (accumulated idle bots can wedge the
@@ -828,22 +923,10 @@ def run_once(a, pol, fault_phases):
         else:
             fixture_label = "marker_present"
         items_line = ", ".join(ground_items[:3]) or "none"
-        state_text = (
-            "task: %s\n"
-            "current phase: %s\n"
-            "facts: bot at (%.0f, %d, %.0f), near_target=%s, near_base=%s, %s=%s\n"
-            "carrying: %s\nitems: %s\n"
-            "since_last_step: %s\nlast_action: %s\nproposed action: %s"
-        ) % (
-            a.task or MISSIONS[mission]["task"], phase, pos[0], pos[1], pos[2],
-            "yes" if near_t else "no", "yes" if near_b else "no",
-            fixture_label, "yes" if fixture else "no",
-            ", ".join((c or "?") for c in carrying[:5]) or "empty",
-            items_line,
-            since,
-            (st.get("LastAction") or {}).get("Msg") or "none",
-            proposal,
-        )
+        state_text = build_state_text(
+            a.task or MISSIONS[mission]["task"], phase, pos, near_t, near_b,
+            fixture_label, fixture, carrying, items_line, since,
+            (st.get("LastAction") or {}).get("Msg") or "none", proposal)
 
         # Dashcam (always mode): one frame per step - the scene before
         # this step's decision. Non-fatal; a failed shot is "no frame".
@@ -877,14 +960,8 @@ def run_once(a, pol, fault_phases):
         # that catches Laya false-yes. The 27B only runs on disagreement.
         reflex = laya_noul(a.openjev, state_text, proposal, mission)
         p, reflex_ms = reflex["p"], reflex["ms"]
-        judge, final = None, proposal
-        path = None
-        if reflex["error"] or p is None or p < a.tau_yes:
-            path = ("reflex-err:" + str(reflex["error"])[:16]) if reflex["error"] else "judge"
-            judge = llm_judge(a.llm, a.llm_model, state_text, proposal,
-                              mission, frame_b64=_judge_frame())
-            final = judge["choice"] or proposal
-        elif a.decider or a.decider_fast:
+        dref = None
+        if a.decider or a.decider_fast:
             if a.decider_fast:
                 dref = decider_readout_fast(a.prompt or a.decider,
                                             a.decider_fast,
@@ -895,40 +972,20 @@ def run_once(a, pol, fault_phases):
                                            MISSIONS[mission]["actions"]) # CPU fallback
             else:
                 dref = decider_readout(a.decider, state_text, MISSIONS[mission]["actions"])
-            p_dec = (dref["probs"].get(proposal)
-                     if dref and dref["probs"] is not None else None)
-            if dref and dref["error"]:
-                path = "decider-err:" + dref["error"][:16] # service down: execute via Laya only
-            elif p_dec is not None and p_dec >= a.tau_dec:
-                if p >= a.tau_strong:
-                    path = "reflex+decider" # confident consensus
-                else:
-                    path = "reflex+decider->judge" # Laya borderline: doubt
-                    judge = llm_judge(a.llm, a.llm_model, state_text, proposal,
-                                      mission, frame_b64=_judge_frame())
-                    final = judge["choice"] or proposal
-            else:
-                path = "reflex->judge"
-                judge = llm_judge(a.llm, a.llm_model, state_text, proposal,
-                                  mission, frame_b64=_judge_frame())
-                final = judge["choice"] or proposal
-        else:
-            path = "reflex"
-        p_dec = locals().get("p_dec") # None unless the decider tier ran
-        final = final if final in MISSIONS[mission]["actions"] else "wait"
+        judge = None
+        if needs_judge(reflex, dref, proposal, a.tau_yes, a.tau_dec, a.tau_strong):
+            judge = llm_judge(a.llm, a.llm_model, state_text, proposal,
+                              mission, frame_b64=_judge_frame())
+        path, final, stall_bypass, p_dec = decide_cascade(
+            reflex, dref, judge, proposal, MISSIONS[mission]["actions"],
+            last_final, a.tau_yes, a.tau_dec, a.tau_strong)
 
-        # Max-stall safety valve: after two consecutive executed `wait`s
-        # control returns to the deterministic policy (the arbiter latches
-        # to `wait` after visible failures - measured, prompt-resistant).
-        stall_bypass = False
+        # The stall-bypass wedge shot (decide_cascade flagged the bypass).
         dashcam_frozen = None
-        if final == "wait" and last_final == "wait":
-            stall_bypass = True
-            final = proposal
-            if a.dashcam == "auto":
-                dashcam_frozen = dashcam_wedge(
-                    a.dashcam_dir, "r%02d-s%02d" % (a.run, i + 1),
-                    pos, dashcam_yaw_to(pos, target))
+        if stall_bypass and a.dashcam == "auto":
+            dashcam_frozen = dashcam_wedge(
+                a.dashcam_dir, "r%02d-s%02d" % (a.run, i + 1),
+                pos, dashcam_yaw_to(pos, target))
         last_final = final
 
         ex = execute(pol, a.bot, final, target, base, mission,
