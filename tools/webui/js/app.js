@@ -208,10 +208,11 @@ async function oneshot(kind) {
         if (botId == null) { log('select a bot to scan', 'error'); return; }
         try {
             const s = await api.getState(botId);
-            if (s) state.updateFromState(s);
-            const b = state.bots.get(botId) || {};
-            const bp = Array.isArray(b.backpack) ? b.backpack.length : null;
-            log(`bot #${botId}: health ${b.health ?? '?'} | right ${b.rightHand ?? '—'} | left ${b.leftHand ?? '—'} | backpack ${bp ?? '?'} item(s)`, 'success');
+            const b = s?.Bot ?? s?.bot ?? {};
+            const contents = b.BackpackContents ?? b.backpackContents;
+            const bp = Array.isArray(contents) ? contents.length
+                : (b.Backpack ?? b.backpack ? 'has backpack' : '—');
+            log(`bot #${botId}: hp ${b.CurrentHealth ?? b.currentHealth ?? '?'} | right ${b.RightHand ?? b.rightHand ?? '—'} | left ${b.LeftHand ?? b.leftHand ?? '—'} | backpack ${bp}`, 'success');
         } catch (e) { log(`scan #${botId}: ${e.message}`, 'error'); }
     }
 }
