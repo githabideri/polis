@@ -600,7 +600,6 @@ function wireOikistes() {
     oik.input().addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
     loadAutonomy();
 }
-}
 
 /* ── theme (auto / dark / light; auto follows the OS) ─────────────────── */
 
