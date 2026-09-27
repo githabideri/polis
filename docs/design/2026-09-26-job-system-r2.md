@@ -439,13 +439,18 @@ constructs the same S. That is the one remaining semantic hole before
 Phase 1, and it is closed with two additions to `tests/reflex/contract.py`:
 
 - **T4 — reflex-state construction identity.** New fixture: per step, the
-  RAW harness observation (`/polis/state` payload) plus the mission context
-  (mission, fixture identity, step index, previous action + its outcome)
-  → the **constructed reflex-state DTO** (the exact input dict
+  RAW harness observation (`/polis/state` payload) **and** the constructed
+  reflex-state DTO (the exact input dict
   `build_state_text` receives — target name, phase, distance, carrying,
-  inventory counts, since/last lines, options). The full frozen chain
-  becomes: raw facts → ReflexState (T4) → prompt bytes (T1) → cascade
-  decision (T2) → action request + **run-level transitions (T2b)**: same
+  inventory counts, since/last lines, options), plus the mission context
+  (mission, fixture identity, step index, previous action + its outcome).
+  **Both raw payload and DTO are goldens, deliberately** — three clean
+  diagnostic boundaries for any later regression: harness semantics
+  changed (raw differs) vs normalization changed (raw same, DTO differs)
+  vs prompt projection changed (DTO same, bytes differ). The full frozen
+  chain becomes: raw facts → ReflexState (T4) → prompt bytes (T1) →
+  cascade decision (T2) → action request + **run-level transitions
+  (T2b)**: same
   run length, same completion step, same completion/abort reason, same
   budget accounting. Per-step decisions matching while the run ends one
   step early is a gate failure.
@@ -528,11 +533,23 @@ must not become silent weirdness.
 > Only fresh game observations may prove completion or immediate action
 > preconditions.
 
+Stronger formulation frozen alongside it:
+
+> WorldModel records may be stale.
+> Action preconditions and completion checks must never be satisfied from
+> cached records alone.
+
+That covers the immediate-execution decisions, not just completion:
+*target still exists, site still empty, resource still mineable, bot still
+holds the required item.* The division of labor: the WorldModel answers
+**"what should I consider?"**; the live game must still answer **"may I do
+this now?"** and **"did it succeed?"** The next likely architectural risk in
+R2 is no longer the reflex contract — it is accidentally letting cached
+world knowledge acquire authority while `ResourceRecord`s start looking
+temptingly authoritative.
+
 Once `ResourceRecord`/`FixtureRecord` exist, using "known state" where
 the old code used "current state" becomes a one-line developer error with
-no visible per-step regression. This invariant is the design-level
-defense: WorldModel output is advisory (nomination, planning input);
-completion and action preconditions always come from a fresh query to the
-game. Phase 2's gate includes a dedicated check for it (no fixture or
-completion path reads a WorldModel record without a same-step fresh
-observation).
+no visible per-step regression. Phase 2's gate includes a dedicated check
+for both invariants (no fixture, completion, or action-precondition path
+reads a WorldModel record without a same-step fresh observation).
