@@ -19,10 +19,15 @@ export const CONFIG = {
     SCREENSHOT_AUTO_REFRESH: false,
     SCREENSHOT_INTERVAL_MS: 5000,
 
-    // noVNC stream settings
-    NOVNC_BASE: null,  // null = auto-detect: http://<current-hostname>:6080
-    NOVNC_PATH: '/vnc.html',
-    NOVNC_PARAMS: 'autoconnect=true&view_only=true&resize=scale&reconnect=true&reconnect_delay=2000',
+    // noVNC stream settings — always same-origin via the 8586 proxy's
+    // /vnc passthrough (2026-09-27): over the TLS front the page is https
+    // and the websocket wss, so noVNC's secure-context warning is gone;
+    // over plain LAN/TS http it works identically through the proxy.
+    // path=vnc/websockify matches the page's directory and is routed to
+    // websockify's own /websockify by the proxy.
+    NOVNC_BASE: null,  // null = window.location.origin (see getNovncBase)
+    NOVNC_PATH: '/vnc/vnc.html',
+    NOVNC_PARAMS: 'autoconnect=true&view_only=true&resize=scale&reconnect=true&reconnect_delay=2000&path=vnc/websockify',
 
     // Feature flags
     ENABLE_SOUND: false,

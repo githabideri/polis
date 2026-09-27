@@ -384,7 +384,9 @@ function setStageView(view) {
 }
 
 function connectStream() {
-    const base = CONFIG.NOVNC_BASE || `http://${window.location.hostname}:6080`;
+    // same-origin through the proxy (see config.js) — the old <host>:6080
+    // auto-detect is gone; the 8586 proxy routes /vnc/* to websockify.
+    const base = CONFIG.NOVNC_BASE || window.location.origin;
     el.novnc.src = `${base}${CONFIG.NOVNC_PATH}?${CONFIG.NOVNC_PARAMS}`;
     el.streamStatus.textContent = 'connecting';
     el.streamStatus.className = 'stream-status dim';
