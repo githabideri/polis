@@ -835,12 +835,16 @@ public class PolisTestHarness : IDisposable
                     // In-flight guard: reject concurrent captures — nested
                     // teleport-capture-restore sequences are the NaN-motion
                     // trigger (crash family 2026-09-21/09-26/09-27).
-                    if (Interlocked.Exchange(ref observerShotInFlight, 1) == 1)
+                    bool shotFree = Interlocked.Exchange(ref observerShotInFlight, 1) != 1;
+                    if (!shotFree)
                     {
+                        // No early return: the JSON response is written below the big
+                        // if/else chain, after tcs.Task.Wait() — returning here would
+                        // close the connection with an empty body.
                         tcs.SetResult(new { ok = false, error = "observer screenshot already in flight; try again shortly" });
-                        return;
                     }
-                    sapi.Event.EnqueueMainThreadTask(() =>
+                    if (shotFree)
+                        sapi.Event.EnqueueMainThreadTask(() =>
                     {
                         try
                         {
