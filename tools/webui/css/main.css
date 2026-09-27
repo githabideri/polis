@@ -463,3 +463,24 @@ details.rail-section[open] > summary::before { content: '\2013'; }
     }
     .stage { min-height: 320px; }
 }
+
+/* ── Oikistes panel (2026-09-27 re-scope) ─────────────────────────────────
+   The settlement agent's cockpit card. Autonomy is live (writes the
+   mod-owned world-config value the decision runtime injects + enforces);
+   the chat log is a stub until the R2 job system + runtime exist. */
+#oikistes-section .ov-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+#oikistes-section .ov-k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint); white-space: nowrap; }
+#oikistes-section select.sel { flex: 1; min-width: 0; background: var(--bg3); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12.5px; font-family: var(--sans); }
+#oikistes-section select.sel:focus { border-color: var(--accent); outline: none; }
+.chat-log { max-height: 150px; overflow-y: auto; border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; margin-bottom: 8px; font-size: 11.5px; line-height: 1.5; }
+.chat-log .log-line { margin: 2px 0; }
+.chat-row { display: flex; gap: 6px; }
+.chat-row input { flex: 1; min-width: 0; background: var(--bg3); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px; font-size: 12.5px; font-family: var(--mono); }
+.chat-row input:focus { border-color: var(--accent); outline: none; }
+
+/* actor badges in the log / chat (who did what — 2026-09-27) */
+.ev-actor { display: inline-block; font-size: 9.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; border: 1px solid; border-radius: 3px; padding: 0 4px; margin-right: 6px; }
+.ev-actor-user { color: var(--accent); border-color: rgba(217,160,95,.45); }
+.ev-actor-agent { color: #7fd1cc; border-color: rgba(127,209,204,.45); }
+.ev-actor-devops { color: var(--ok); border-color: rgba(127,191,143,.45); }
+.ev-actor-harness { color: var(--text-dim); border-color: var(--line); }

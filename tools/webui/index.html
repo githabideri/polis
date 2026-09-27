@@ -108,6 +108,30 @@
                 </div>
             </section>
 
+            <!-- Oikistes (2026-09-27 re-scope): the settlement agent. The chat
+                 is a stub until the R2 job system + runtime exist; the autonomy
+                 control is live — it writes the mod's world-config value that
+                 the decision runtime injects into its context each turn and
+                 enforces in the execution path (mod owns it; UI reads/writes). -->
+            <section class="rail-section" id="oikistes-section">
+                <h2 class="rail-title">Oikistes <span class="meta-inline">agent</span></h2>
+                <div class="ov-row">
+                    <span class="ov-k">autonomy</span>
+                    <select id="autonomySelect" class="sel" title="The agent's action authority. Owned by the mod (world config 'polis_oikistes_autonomy'); the UI and, later, a cultural/tech-tree system write it — the agent only reads it.">
+                        <option value="free">free</option>
+                        <option value="guarded" selected>guarded</option>
+                        <option value="strict">strict</option>
+                    </select>
+                </div>
+                <div class="chat-log" id="oikistesLog">
+                    <div class="log-line"><span class="t">—</span>Not yet inaugurated. This channel is the agent's future home (R2 job system, then the conversational loop). The autonomy level above is already live.</div>
+                </div>
+                <div class="chat-row">
+                    <input id="oikistesInput" class="input" placeholder="message the Oikistes…" autocomplete="off" spellcheck="false"/>
+                    <button id="oikistesSend" class="ghost" title="Send">&#8629;</button>
+                </div>
+            </section>
+
             <details class="rail-section" id="advanced-section">
                 <summary class="rail-title">Advanced</summary>
                 <div class="action-list" id="advanced-actions">

@@ -999,6 +999,20 @@ public class PolisTestHarness : IDisposable
                         try
                         {
                             var cmdResult = executeCommandFunc(cmdReq.Cmd, cmdReq.Args ?? Array.Empty<string>(), cmdReq.Context);
+                            // Actor-tagged command event (2026-09-27): every
+                            // command lands in the event stream / history so
+                            // the web-ui action feed shows who did what.
+                            try
+                            {
+                                broadcaster?.QueueEvent(new PolisEvent("command", PolisLogLevel.Info, new
+                                {
+                                    actor = string.IsNullOrEmpty(cmdReq.Context?.Actor) ? "harness" : cmdReq.Context.Actor,
+                                    cmd = cmdReq.Cmd,
+                                    ok = cmdResult.Ok,
+                                    msg = cmdResult.Message
+                                }));
+                            }
+                            catch { /* events are advisory */ }
                             tcs.SetResult(cmdResult);
                         }
                         catch (Exception ex)
@@ -1354,6 +1368,11 @@ public class PolisTestHarness : IDisposable
         public double[] SpawnOffset { get; set; }
         public double[] GotoOffset { get; set; }
         public string Profession { get; set; }
+        // Who issued the command: "user" (web ui / manual), "agent" (the
+        // Oikistes decision layer), "devops" (maintenance), default "harness".
+        // Surfaced in the "command" event so the action stream shows who did
+        // what — the transparency seam for the Oikistes (2026-09-27).
+        public string Actor { get; set; }
     }
 
     public class CommandResult

@@ -50,11 +50,16 @@ const el = {
 
 /* ── log / helpers ────────────────────────────────────────────────────── */
 
-function log(message, type = 'info') {
+function log(message, type = 'info', actor = null) {
     const line = document.createElement('div');
     line.className = `log-line ${type}`;
     const t = new Date().toLocaleTimeString('en-GB', { hour12: false });
-    line.innerHTML = `<span class="t">${t}</span>${escapeHtml(message)}`;
+    // actor badge (2026-09-27): who issued the line — user / agent / devops
+    // / harness. "harness" is shown too: it is the v5 decision loop talking.
+    const badge = actor
+        ? `<span class="ev-actor ev-actor-${escapeHtml(actor)}">${escapeHtml(actor)}</span>`
+        : '';
+    line.innerHTML = `<span class="t">${t}</span>${badge}${escapeHtml(message)}`;
     el.log.appendChild(line);
     while (el.log.children.length > CONFIG.LOG_MAX_ENTRIES) el.log.firstChild.remove();
     el.log.scrollTop = el.log.scrollHeight;
@@ -191,7 +196,7 @@ async function oneshot(kind) {
         const p = getPrimaryPlayer();
         if (!botId || !p) { log('select a bot first', 'error'); return; }
         try {
-            const ctx = { playerUid: p.uid };
+            const ctx = { playerUid: p.uid, botId: Number(botId), actor: 'user' };
             await api.command('select', [String(botId)], ctx);
             const r = await api.command('possess', [], ctx);
             log(`possess #${botId}: ${r?.Message || 'ok'}`, r?.Ok ?? r?.ok ? 'success' : 'error');
@@ -199,7 +204,7 @@ async function oneshot(kind) {
     } else if (kind === 'unpossess') {
         const p = getPrimaryPlayer();
         if (!p) return;
-        const r = await api.command('unpossess', [], { playerUid: p.uid }).catch(e => ({ Ok: false, Message: e.message }));
+        const r = await api.command('unpossess', [], { playerUid: p.uid, actor: 'user' }).catch(e => ({ Ok: false, Message: e.message }));
         log(`unpossess: ${r.Message || 'ok'}`, r.Ok ? 'success' : 'error');
     } else if (kind === 'screenshot-obs') {
         await captureFrame();
@@ -358,10 +363,12 @@ function renderBotActions() {
 
 async function oneshotBotAction(kind, botId) {
     if (kind === 'despawn') {
-        // the C# despawn only honors the SELECTION context — select first
-        // (same pattern as possess), then despawn.
-        await api.command('select', [String(botId)], null).catch(() => null);
-        const r = await api.command('despawn', [String(botId)], null).catch(e => ({ Ok: false, Message: e.message }));
+        // explicit botId in context (C# TryGetHarnessBot prefers it over
+        // selection); the select-first keeps the game's own selection state
+        // in sync for anyone watching in the world.
+        const ctx = { botId: Number(botId), actor: 'user' };
+        await api.command('select', [String(botId)], ctx).catch(() => null);
+        const r = await api.command('despawn', [String(botId)], ctx).catch(e => ({ Ok: false, Message: e.message }));
         log(`despawn #${botId}: ${r.Message || 'ok'}`, r.Ok ? 'success' : 'error');
         renderBotActions();
     } else {
@@ -477,6 +484,17 @@ function handleEvent(ev) {
     const { type, data } = ev;
     const pos = (p) => p ? `(${p.map(n => +n).map(n => n.toFixed(1)).join(', ')})` : '';
     switch (type) {
+        // Actor-tagged command event (2026-09-27): the action stream.
+        // UI-originated commands are already logged by the button handlers
+        // (avoid double lines); everything else — the v5 loop ("harness"),
+        // the Oikistes ("agent"), devops — lands here with a badge.
+        case 'command': {
+            if (data.actor === 'user') break;
+            const ok = data.ok;
+            const msg = ok ? (data.msg || `cmd ${data.cmd}`) : `${data.cmd} — ${data.msg || 'failed'}`;
+            log(msg, ok ? '' : 'error', data.actor);
+            break;
+        }
         case 'action_complete':  log(`[action] ${data.action}: ${data.msg}`, data.ok ? 'success' : 'error'); pollStatus(); break;
         case 'bot_spawned':      log(`[spawn] #${data.botId} ${pos(data.pos)}`); pollStatus(); break;
         case 'bot_died':         log(`[death] #${data.botId} ${data.cause || ''}`, 'error'); pollStatus(); break;
@@ -503,7 +521,9 @@ async function executeCommand(raw) {
     const parts = trimmed.split(/\s+/);
     log(`> ${trimmed}`, 'cmd');
     try {
-        const r = await api.command(parts[0], parts.slice(1));
+        // actor: "user" (2026-09-27) — the command event carries who did it;
+        // the UI suppresses echoing user-tagged events (we log locally).
+        const r = await api.command(parts[0], parts.slice(1), { actor: 'user' });
         state.recordAction(parts[0], parts.slice(1), r);
         const msg = r?.Message || r?.message || JSON.stringify(r);
         log(`${parts[0]}: ${msg}`, (r?.Ok ?? r?.ok) ? 'success' : 'error');
@@ -523,6 +543,63 @@ function wireConsole() {
         pollStatus();
         log('pose re-synced from server');
     });
+}
+
+/* ── Oikistes (2026-09-27 re-scope) ────────────────────────────────────────
+   The settlement agent. Today: the autonomy control is LIVE (it writes the
+   mod's world-config value the decision runtime injects + enforces) and the
+   chat is a stub that becomes the conversational loop once the R2 job system
+   exists. The panel shape is the final one — what grows is what it does. */
+
+const oik = {
+    log: () => $('oikistesLog'),
+    input: () => $('oikistesInput'),
+    send: () => $('oikistesSend'),
+    select: () => $('autonomySelect'),
+    state: () => $('oikistesState'),
+};
+
+function oikLog(text, cls = '') {
+    const box = oik.log();
+    const line = document.createElement('div');
+    line.className = `log-line ${cls}`;
+    line.innerHTML = `<span class="t">${new Date().toLocaleTimeString('en-GB', { hour12: false })}</span>${escapeHtml(text)}`;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+}
+
+async function loadAutonomy() {
+    try {
+        const r = await api.command('autonomy', ['get']);
+        const sel = oik.select();
+        if (r?.Ok && r?.Data?.preset) {
+            sel.value = r.Data.preset;
+            oikLog(`autonomy: ${r.Data.preset} (mod-owned, world config)`, 'success');
+        }
+    } catch (e) { oikLog(`autonomy: ${e.message}`, 'error'); }
+}
+
+async function setAutonomy(preset) {
+    try {
+        const r = await api.command('autonomy', ['set', preset], { actor: 'user' });
+        oikLog(r?.Ok ? `autonomy → ${preset}` : `autonomy set failed: ${r?.Message}`, r?.Ok ? 'success' : 'error');
+    } catch (e) { oikLog(`autonomy set failed: ${e.message}`, 'error'); }
+}
+
+function wireOikistes() {
+    oik.select().addEventListener('change', (e) => setAutonomy(e.target.value));
+    const send = () => {
+        const t = oik.input().value.trim();
+        if (!t) return;
+        oikLog(`you: ${t}`);
+        // The runtime is not inaugurated yet — be honest about that.
+        oikLog('The Oikistes is not yet inaugurated (R2 job system first). Your message was not sent.');
+        oik.input().value = '';
+    };
+    oik.send().addEventListener('click', send);
+    oik.input().addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+    loadAutonomy();
+}
 }
 
 /* ── theme (auto / dark / light; auto follows the OS) ─────────────────── */
@@ -655,6 +732,7 @@ async function init() {
     statusTimer = setInterval(pollStatus, CONFIG.POLL_STATUS_MS);
     eventTimer = setInterval(pollEvents, CONFIG.POLL_EVENTS_MS);
     clockTimer = setInterval(pollClock, 5000);
+    wireOikistes();
     pollStatus(); pollEvents(); pollClock();
 
     renderTopbar();

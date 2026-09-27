@@ -65,6 +65,8 @@ public partial class PolisBuilderNpcSystem
                     return ExecuteTimeCommand(args, context);
                 case "daylock":
                     return ExecuteDayLockCommand(args, context);
+                case "autonomy":
+                    return ExecuteAutonomyCommand(args, context);
                 case "activate":
                     return ExecuteActivateCommand(args, context);
                 case "ignite":
@@ -163,7 +165,7 @@ public partial class PolisBuilderNpcSystem
                     return ExecuteViewpointScreenshotCommand(args, context);
                 default:
                     result.Ok = false;
-                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, break, harvest, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, animate, teleport, place, setblock, equip, scan, verify, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot";
+                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, break, harvest, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, animate, teleport, place, setblock, equip, scan, verify, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot";
                     break;
             }
         }
@@ -560,6 +562,53 @@ public partial class PolisBuilderNpcSystem
 
         bot.Entity.Die(EnumDespawnReason.Removed);
         return new PolisTestHarness.CommandResult { Ok = true, Message = $"Despawned bot #{bot.Entity.EntityId}" };
+    }
+
+    /// <summary>
+    /// Oikistes autonomy level (2026-09-27): mod-owned, world-config-persisted
+    /// (key `polis_oikistes_autonomy`), agent-reads / UI-and-culture-write.
+    /// The decision runtime injects the current level into its context each
+    /// turn AND enforces it in the execution path — the LLM never carries
+    /// the policy itself. Presets are global shortcuts over a per-domain map
+    /// (free / guarded / strict) so a later cultural/tech-tree system can set
+    /// per-domain levels without a migration.
+    /// </summary>
+    PolisTestHarness.CommandResult ExecuteAutonomyCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        const string KEY = "polis_oikistes_autonomy";
+        string[] presets = { "free", "guarded", "strict" };
+        if (sapi.World?.Config == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "No world loaded" };
+        }
+
+        string sub = args.Length > 0 ? args[0].ToLowerInvariant() : "get";
+        if (sub == "get")
+        {
+            string preset = sapi.World.Config.GetString(KEY, "guarded");
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = $"autonomy: {preset}",
+                Data = new { preset, key = KEY, presets }
+            };
+        }
+        if (sub == "set")
+        {
+            string preset = args.Length > 1 ? args[1].ToLowerInvariant() : "";
+            if (!presets.Contains(preset))
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = $"Unknown preset '{preset}' — expected: {string.Join(", ", presets)}" };
+            }
+            sapi.World.Config.SetString(KEY, preset);
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = $"autonomy set: {preset}",
+                Data = new { preset, key = KEY }
+            };
+        }
+        return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: autonomy get | autonomy set <free|guarded|strict>" };
     }
 
     PolisTestHarness.CommandResult ExecuteStopCommand(string[] args, PolisTestHarness.CommandContext context)
