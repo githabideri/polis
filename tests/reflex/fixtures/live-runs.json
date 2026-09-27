@@ -1,7 +1,7 @@
 {
  "header": {
   "what": "live full-cascade step records (Phase 0 decision-replay goldens)",
-  "captured": "2026-09-27 (live runs of 2026-09-25/26, pre-extraction v5)",
+  "captured": "2026-09-27 (runs of 2026-09-25/26 pre-extraction; runs of 2026-09-27 post-extraction, all completed)",
   "note": "each row is one executed loop step; decide_cascade() replayed on (p, p_decider, judge_choice, last_final, proposal, options, tau) must reproduce (path, executed) exactly; judge_choice!=None must agree with needs_judge(); runs missing the options field were restored from the frozen MISSIONS action sets"
  },
  "runs": [
@@ -816,6 +816,334 @@
      ],
      "p": 0.4002,
      "p_decider": 0.9406497478485107,
+     "decider_choice": "goto_base",
+     "judge_choice": "goto_base",
+     "path": "reflex+decider->judge",
+     "executed": "goto_base",
+     "exec_ok": true,
+     "stall_bypass": false,
+     "last_final": "mine_target",
+     "last_resort_repair": false,
+     "oracle": "goto_base",
+     "match": true
+    }
+   ]
+  },
+  {
+   "file": "v5-p0-build-2026-09-27.json",
+   "mission": "build",
+   "world": "dist=12",
+   "bot": 178,
+   "tau": {
+    "dec": 0.5,
+    "yes": 0.35,
+    "strong": 0.4
+   },
+   "mission_complete": [
+    true
+   ],
+   "rows": [
+    {
+     "step": 1,
+     "phase": "travel",
+     "proposal": "goto_base",
+     "injected": true,
+     "state_text": "task: place a granite stone at the build site, then return to base\ncurrent phase: travel\nfacts: bot at (511996, 3, 512018), near_target=no, near_base=yes, build_site_filled=no\ncarrying: game:rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+     "options": [
+      "goto_target",
+      "harvest_target",
+      "pickup_item",
+      "place_block",
+      "give_tool",
+      "goto_base",
+      "wait"
+     ],
+     "p": 0.5146,
+     "p_decider": 2.380021541423768e-06,
+     "decider_choice": "goto_target",
+     "judge_choice": "goto_base",
+     "path": "reflex->judge",
+     "executed": "goto_base",
+     "exec_ok": true,
+     "stall_bypass": false,
+     "last_final": null,
+     "last_resort_repair": false,
+     "oracle": "goto_target",
+     "match": false
+    },
+    {
+     "step": 2,
+     "phase": "travel",
+     "proposal": "goto_target",
+     "injected": false,
+     "state_text": "task: place a granite stone at the build site, then return to base\ncurrent phase: travel\nfacts: bot at (511996, 3, 512017), near_target=no, near_base=yes, build_site_filled=no\ncarrying: game:rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+     "options": [
+      "goto_target",
+      "harvest_target",
+      "pickup_item",
+      "place_block",
+      "give_tool",
+      "goto_base",
+      "wait"
+     ],
+     "p": 0.3381,
+     "p_decider": null,
+     "decider_choice": "goto_target",
+     "judge_choice": "goto_target",
+     "path": "judge",
+     "executed": "goto_target",
+     "exec_ok": true,
+     "stall_bypass": false,
+     "last_final": "goto_base",
+     "last_resort_repair": false,
+     "oracle": "goto_target",
+     "match": true
+    },
+    {
+     "step": 3,
+     "phase": "travel",
+     "proposal": "goto_target",
+     "injected": false,
+     "state_text": "task: place a granite stone at the build site, then return to base\ncurrent phase: travel\nfacts: bot at (511996, 3, 512017), near_target=no, near_base=yes, build_site_filled=no\ncarrying: game:rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+     "options": [
+      "goto_target",
+      "harvest_target",
+      "pickup_item",
+      "place_block",
+      "give_tool",
+      "goto_base",
+      "wait"
+     ],
+     "p": 0.3381,
+     "p_decider": null,
+     "decider_choice": "goto_target",
+     "judge_choice": "goto_target",
+     "path": "judge",
+     "executed": "goto_target",
+     "exec_ok": true,
+     "stall_bypass": false,
+     "last_final": "goto_target",
+     "last_resort_repair": false,
+     "oracle": "goto_target",
+     "match": true
+    },
+    {
+     "step": 4,
+     "phase": "travel",
+     "proposal": "goto_target",
+     "injected": false,
+     "state_text": "task: place a granite stone at the build site, then return to base\ncurrent phase: travel\nfacts: bot at (512005, 3, 512017), near_target=no, near_base=no, build_site_filled=no\ncarrying: game:rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: done\nproposed action: goto_target",
+     "options": [
+      "goto_target",
+      "harvest_target",
+      "pickup_item",
+      "place_block",
+      "give_tool",
+      "goto_base",
+      "wait"
+     ],
+     "p": 0.3216,
+     "p_decider": null,
+     "decider_choice": "goto_target",
+     "judge_choice": "goto_target",
+     "path": "judge",
+     "executed": "goto_target",
+     "exec_ok": true,
+     "stall_bypass": false,
+     "last_final": "goto_target",
+     "last_resort_repair": false,
+     "oracle": "goto_target",
+     "match": true
+    },
+    {
+     "step": 5,
+     "phase": "build",
+     "proposal": "place_block",
+     "injected": false,
+     "state_text": "task: place a granite stone at the build site, then return to base\ncurrent phase: build\nfacts: bot at (512007, 3, 512017), near_target=yes, near_base=no, build_site_filled=no\ncarrying: game:rock-granite, game:linensack\nitems: none\nsince_last_step: phase travel -> build\nlast_action: done\nproposed action: place_block",
+     "options": [
+      "goto_target",
+      "harvest_target",
+      "pickup_item",
+      "place_block",
+      "give_tool",
+      "goto_base",
+      "wait"
+     ],
+     "p": 0.4256,
+     "p_decider": 0.9997991608359968,
+     "decider_choice": "place_block",
+     "judge_choice": null,
+     "path": "reflex+decider",
+     "executed": "place_block",
+     "exec_ok": true,
+     "stall_bypass": false,
+     "last_final": "goto_target",
+     "last_resort_repair": false,
+     "oracle": "place_block",
+     "match": true
+    },
+    {
+     "step": 6,
+     "phase": "return",
+     "proposal": "goto_base",
+     "injected": false,
+     "state_text": "task: place a granite stone at the build site, then return to base\ncurrent phase: return\nfacts: bot at (512008, 3, 512018), near_target=yes, near_base=no, build_site_filled=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: build site filled, granite dropped, phase build -> return\nlast_action: placed\nproposed action: goto_base",
+     "options": [
+      "goto_target",
+      "harvest_target",
+      "pickup_item",
+      "place_block",
+      "give_tool",
+      "goto_base",
+      "wait"
+     ],
+     "p": 0.5545,
+     "p_decider": 0.9999575614813371,
+     "decider_choice": "goto_base",
+     "judge_choice": null,
+     "path": "reflex+decider",
+     "executed": "goto_base",
+     "exec_ok": true,
+     "stall_bypass": false,
+     "last_final": "place_block",
+     "last_resort_repair": false,
+     "oracle": "goto_base",
+     "match": true
+    }
+   ]
+  },
+  {
+   "file": "v5-p0-harvest-2026-09-27.json",
+   "mission": "harvest",
+   "world": "dist=12",
+   "bot": 177,
+   "tau": {
+    "dec": 0.5,
+    "yes": 0.35,
+    "strong": 0.4
+   },
+   "mission_complete": [
+    true
+   ],
+   "rows": [
+    {
+     "step": 1,
+     "phase": "travel",
+     "proposal": "goto_base",
+     "injected": true,
+     "state_text": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (511996, 3, 512017), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+     "options": [
+      "goto_target",
+      "harvest_target",
+      "pickup_item",
+      "place_block",
+      "give_tool",
+      "goto_base",
+      "wait"
+     ],
+     "p": 0.3934,
+     "p_decider": 3.7235691027130045e-06,
+     "decider_choice": "goto_target",
+     "judge_choice": "harvest_target",
+     "path": "reflex->judge",
+     "executed": "harvest_target",
+     "exec_ok": true,
+     "stall_bypass": false,
+     "last_final": null,
+     "last_resort_repair": false,
+     "oracle": "goto_target",
+     "match": false
+    },
+    {
+     "step": 2,
+     "phase": "return",
+     "proposal": "goto_base",
+     "injected": false,
+     "state_text": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512007, 3, 512017), near_target=yes, near_base=no, crop_present=no\ncarrying: game:seeds-carrot, game:vegetable-carrot, game:linensack\nitems: none\nsince_last_step: crop gone, harvested item now carried, phase travel -> return\nlast_action: harvested game:crop-carrot-7 with collection\nproposed action: goto_base",
+     "options": [
+      "goto_target",
+      "harvest_target",
+      "pickup_item",
+      "place_block",
+      "give_tool",
+      "goto_base",
+      "wait"
+     ],
+     "p": 0.4095,
+     "p_decider": 0.9989876085620957,
+     "decider_choice": "goto_base",
+     "judge_choice": null,
+     "path": "reflex+decider",
+     "executed": "goto_base",
+     "exec_ok": true,
+     "stall_bypass": false,
+     "last_final": "harvest_target",
+     "last_resort_repair": false,
+     "oracle": "goto_base",
+     "match": true
+    }
+   ]
+  },
+  {
+   "file": "v5-p0-mine-2026-09-27.json",
+   "mission": "mine",
+   "world": "dist=12",
+   "bot": 176,
+   "tau": {
+    "dec": 0.5,
+    "yes": 0.35,
+    "strong": 0.4
+   },
+   "mission_complete": [
+    true
+   ],
+   "rows": [
+    {
+     "step": 1,
+     "phase": "travel",
+     "proposal": "goto_base",
+     "injected": true,
+     "state_text": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (511997, 3, 512018), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_base",
+     "options": [
+      "goto_target",
+      "mine_target",
+      "pickup_item",
+      "place_block",
+      "give_tool",
+      "goto_base",
+      "wait"
+     ],
+     "p": 0.364,
+     "p_decider": 1.2721763463624558e-06,
+     "decider_choice": "goto_target",
+     "judge_choice": "mine_target",
+     "path": "reflex->judge",
+     "executed": "mine_target",
+     "exec_ok": true,
+     "stall_bypass": false,
+     "last_final": null,
+     "last_resort_repair": false,
+     "oracle": "goto_target",
+     "match": false
+    },
+    {
+     "step": 2,
+     "phase": "return",
+     "proposal": "goto_base",
+     "injected": false,
+     "state_text": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512008, 3, 512017), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:stone-granite, game:linensack\nitems: none\nsince_last_step: marker gone, phase travel -> return\nlast_action: mining started\nproposed action: goto_base",
+     "options": [
+      "goto_target",
+      "mine_target",
+      "pickup_item",
+      "place_block",
+      "give_tool",
+      "goto_base",
+      "wait"
+     ],
+     "p": 0.3825,
+     "p_decider": 0.999642660115424,
      "decider_choice": "goto_base",
      "judge_choice": "goto_base",
      "path": "reflex+decider->judge",

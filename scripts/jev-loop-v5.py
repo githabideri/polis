@@ -93,7 +93,7 @@ def carrying_from(state_resp):
 
 class Polis:
     def __init__(self, base, uid):
-        self.base, self.uid = base
+        self.base, self.uid = base, uid
         self.last_scan = None  # last /polis/command scan response (T4 raw context), uid
     def get(self, path, timeout=15):
         return http_json(self.base + path, None, timeout)
