@@ -1,5 +1,5 @@
 /**
- * Polis Web UI v2 - State Management
+ * Polis Web UI - State Management
  *
  * In-memory world model with change notifications.
  */

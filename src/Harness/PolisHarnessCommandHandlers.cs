@@ -4084,8 +4084,12 @@ public partial class PolisBuilderNpcSystem
     private static float NormalizeTeleportPitch(float inputPitch)
     {
         float vsPitch = (float)Math.PI - inputPitch;
-        const float MinPitch = 1.5707964f;  // π/2 (looking straight up)
-        const float MaxPitch = 4.712389f;   // 3π/2 (looking straight down)
+        // ~3° short of the poles: AT exactly ±90° (π/2, 3π/2) the client's
+        // view-direction math degenerates and the physics step produces NaN
+        // (process crash 2026-09-26, rapid UI camera clicks). The UI clamps
+        // the input to the same margin (app.js).
+        const float MinPitch = 1.62f;  // π/2 + 0.05
+        const float MaxPitch = 4.66f;  // 3π/2 - 0.05
         return Math.Clamp(vsPitch, MinPitch, MaxPitch);
     }
 

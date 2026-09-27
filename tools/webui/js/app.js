@@ -1,5 +1,5 @@
 /**
- * Polis Web UI v2 - Main Application
+ * Polis Web UI - Main Application
  *
  * Initialization, polling loops, and coordination.
  */
@@ -22,6 +22,18 @@ let lastEventTs = 0;
 // Step-control tuning
 const MOVE_STEP_BLOCKS = 0.5;
 const TURN_STEP_RAD = (15 * Math.PI) / 180;
+// Camera-command debounce: spamming the view buttons used to crash the game
+// (client prediction NaN at exact ±90° pitch; 2026-09-26). The server clamps
+// pitch the same way (PITCH_LIMIT below, ~3° short of the poles).
+const PITCH_LIMIT = Math.PI / 2 - 0.05;
+const CAMERA_CMD_MIN_INTERVAL_MS = 150;
+let lastCameraCmdTs = 0;
+function cameraCmdGate() {
+    const now = Date.now();
+    if (now - lastCameraCmdTs < CAMERA_CMD_MIN_INTERVAL_MS) return false;
+    lastCameraCmdTs = now;
+    return true;
+}
 const LOOK_STEP_RAD = (10 * Math.PI) / 180;
 const VERTICAL_STEP_BLOCKS = 0.5;
 const CONTROL_PULSE_MS = 160;
@@ -205,7 +217,8 @@ function getPlayerPose(player) {
     // Harness reports VS internal pitch: π = level, π/2 up, 3π/2 down
     const pitchInternal = Number.isFinite(player.pitch) ? Number(player.pitch) : Math.PI;
     // Teleport command expects intuitive pitch: 0 = level, +up, -down
-    const pitchInput = clamp(Math.PI - pitchInternal, -Math.PI / 2, Math.PI / 2);
+    // (clamped ~3° short of the poles — see PITCH_LIMIT above)
+    const pitchInput = clamp(Math.PI - pitchInternal, -PITCH_LIMIT, PITCH_LIMIT);
 
     return { x, y, z, yaw, pitchInput };
 }
@@ -246,6 +259,7 @@ async function teleportPlayer(uid, x, y, z, yaw, pitchInput) {
 }
 
 async function movePlayerStep(direction) {
+    if (!cameraCmdGate()) return;
     const player = getPrimaryPlayer();
     if (!player) {
         log('Select a player first (or keep exactly one online player)', 'error');
@@ -311,6 +325,7 @@ async function movePlayerStep(direction) {
 }
 
 async function rotateView(direction) {
+    if (!cameraCmdGate()) return;
     const player = getPrimaryPlayer();
     if (!player) {
         log('Select a player first', 'error');
@@ -333,6 +348,7 @@ async function rotateView(direction) {
 }
 
 async function tiltView(direction) {
+    if (!cameraCmdGate()) return;
     const player = getPrimaryPlayer();
     if (!player) {
         log('Select a player first', 'error');
@@ -789,7 +805,7 @@ function initStream() {
  * Main initialization
  */
 async function init() {
-    console.log('Polis Web UI v2 initializing...');
+    console.log('Polis Polis Web UI initializing...');
 
     try {
         // Initialize IndexedDB
@@ -836,7 +852,7 @@ async function init() {
         startPolling();
         initStream();
 
-        log('Web UI v2 initialized');
+        log('Polis Web UI initialized');
         console.log('Initialization complete');
 
     } catch (e) {

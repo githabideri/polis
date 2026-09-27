@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using HarmonyLib;
 using Vintagestory.API.Common;
+using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.Essentials;
@@ -43,8 +44,7 @@ internal static class PolisBuilderNpcHarmony
 }
 
 [HarmonyPatch(typeof(AStar), "traversable")]
-internal static class PolisBuilderNpcAStarTraversablePatch
-{
+internal static class PolisBuilderNpcAStarTraversablePatch{
     static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
     {
         var isColliding = AccessTools.Method(
@@ -181,4 +181,44 @@ internal static class PolisBuilderNpcAStarTraversablePatch
         return path.StartsWith("tallgrass", StringComparison.Ordinal) ||
                path.StartsWith("frostedtallgrass", StringComparison.Ordinal);
     }
+}
+
+// Crash guard (2026-09-26): rapid view/teleport commands can make the CLIENT'S
+// prediction/interpolation produce a NaN position; vanilla then throws
+// ArgumentException ("Given pos contained NaN") in the physics step and kills
+// the whole process (the 09/21 polisbot crash and the 09/26 player crash both
+// died here). Sanitize the incoming pos instead: restore the entity's last
+// known-good position (or zero) so the throw never happens.
+[HarmonyPatch(typeof(EntityBehaviorControlledPhysics), "ApplyTests")]
+internal static class PolisNanPosGuardPatch
+{
+    static int sanitizeCount;
+
+    static bool Prefix(EntityBehaviorControlledPhysics __instance, ref EntityPos pos, EntityControls controls, float dt, bool remote)
+    {
+        if (!HasNan(pos))
+        {
+            return true;
+        }
+        sanitizeCount++;
+        var entity = __instance?.Entity;
+        var last = entity != null ? entity.Pos : default;
+        if (!HasNan(last))
+        {
+            pos = last;
+        }
+        else
+        {
+            pos = new EntityPos(0, 0, 0, 0, 0f);
+        }
+        if (sanitizeCount <= 5 || sanitizeCount % 100 == 0)
+        {
+            entity?.Log($"[polis] NaN physics pos sanitized (occurrence {sanitizeCount}); restored last known pos", LogLevel.Warning);
+        }
+        return true;
+    }
+
+    static bool HasNan(EntityPos p)
+        => float.IsNaN(p.Pos.X) || float.IsNaN(p.Pos.Y) || float.IsNaN(p.Pos.Z)
+        || float.IsNaN(p.YPR.Yaw) || float.IsNaN(p.YPR.Pitch) || float.IsNaN(p.YPR.Roll);
 }

@@ -1,5 +1,5 @@
 /**
- * Polis Web UI v2 - Layout Manager
+ * Polis Web UI - Layout Manager
  *
  * Panel management and responsive handling.
  */

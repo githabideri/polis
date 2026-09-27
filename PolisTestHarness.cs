@@ -1045,10 +1045,10 @@ public class PolisTestHarness : IDisposable
                     }
                 });
             }
-            else if (path.StartsWith("/polis/ui2/") && request.HttpMethod == "GET")
+            else if (path.StartsWith("/polis/ui/") && request.HttpMethod == "GET")
             {
-                var subPath = path.Substring("/polis/ui2/".Length);
-                var relativePath = string.IsNullOrEmpty(subPath) ? "tools/webui-v2/index.html" : "tools/webui-v2/" + subPath;
+                var subPath = path.Substring("/polis/ui/".Length);
+                var relativePath = string.IsNullOrEmpty(subPath) ? "tools/webui/index.html" : "tools/webui/" + subPath;
                 var ext = Path.GetExtension(relativePath).ToLower();
                 var contentType = ext switch {
                     ".html" => "text/html",
@@ -1062,17 +1062,18 @@ public class PolisTestHarness : IDisposable
                 ServeStaticFile(response, relativePath, contentType);
                 return;
             }
-            else if (path == "/polis/ui2" && request.HttpMethod == "GET")
+            else if ((path == "/polis/ui" || path == "/polis/ui2" || path == "/polis/ui2/") && request.HttpMethod == "GET")
             {
-                // Redirect to trailing slash so relative URLs resolve correctly
+                // The web UI is at /polis/ui/ (ui2 was an accidental version
+                // number in the URL; 2026-09-26). Old links keep working.
                 response.StatusCode = 301;
-                response.Headers.Set("Location", "/polis/ui2/");
+                response.Headers.Set("Location", "/polis/ui/");
                 response.Close();
                 return;
             }
-            else if (path == "/polis/ui" && request.HttpMethod == "GET")
+            else if (path == "/polis/ui-test" && request.HttpMethod == "GET")
             {
-                // Serve test UI HTML file
+                // Legacy bring-up test page (was /polis/ui before the real UI took the name)
                 ServeStaticFile(response, "tools/test-ui.html", "text/html");
                 return; // Already handled response
             }

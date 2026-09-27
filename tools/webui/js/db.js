@@ -1,5 +1,5 @@
 /**
- * Polis Web UI v2 - IndexedDB Layer
+ * Polis Web UI - IndexedDB Layer
  *
  * Persistent storage for entities, blocks, actions, and settings.
  */

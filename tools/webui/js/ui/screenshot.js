@@ -1,5 +1,5 @@
 /**
- * Polis Web UI v2 - Screenshot Pane
+ * Polis Web UI - Screenshot Pane
  *
  * Still-image view via /polis/observer-screenshot. The harness sets the
  * player's view, captures, and restores; passing the player's CURRENT

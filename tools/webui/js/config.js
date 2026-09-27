@@ -1,5 +1,5 @@
 /**
- * Polis Web UI v2 - Configuration
+ * Polis Web UI - Configuration
  */
 
 export const CONFIG = {

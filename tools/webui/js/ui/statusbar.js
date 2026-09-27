@@ -1,5 +1,5 @@
 /**
- * Polis Web UI v2 - Status Bar
+ * Polis Web UI - Status Bar
  *
  * Connection status indicator and selection display.
  */

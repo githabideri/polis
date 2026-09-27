@@ -1,5 +1,5 @@
 /**
- * Polis Web UI v2 - API Client
+ * Polis Web UI - API Client
  *
  * HTTP client for communicating with the polis harness.
  */
