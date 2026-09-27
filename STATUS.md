@@ -1,6 +1,6 @@
 # STATUS.md — the single source of state
 
-Updated: 2026-09-27 (~12:00 CEST, 13th pass — **Web UI reworked** (user: current UI looked bad aesthetically AND functionally; the click-to-turn controls were the root of the 12th-pass crash pain). Research first: the community "unslop" skill (`unslop-ui`, dataset `vibecoded-design-tells` — 3.2M posts) lists the actual AI-slop tells (purple/indigo primary, gradients, neon glow, emoji icons, Inter, shadcn-default, hero+3-cards); its community critique decided the approach — anti-slop defaults (beige/serif) are now themselves a tell, so the redesign follows neither: it's derived from the function (an ops console around a live game image). Design contract: `docs/design/webui-design.md` (stable identity: dark instrument panel, self-hosted IBM Plex, warm off-white on charcoal, single amber accent, semantic status colors, four areas: Stage/World/Control/Console). **Controls root-cause fix**: movement and view are now **hold-to-repeat** (pointer hold or WASD/arrows; 12°/120 ms turns, 0.5b/150 ms moves, 8°/110 ms pitch) with a one-shot **180° turnaround** — "look around" is continuous, not 8 clicks. Pose comes from a local shadow projected per step, resynced from a 1.5 s server poll (the old 5 s poll made every step feel stale). Screenshot pane now uses the real `/polis/observer-screenshot` GET endpoint (player POV, no-op teleport); old ui modules folded into `app.js`; mission buttons stay out (missions live in the v5 script, not the harness). Verified live: 180° one-shot + hold burst, game alive. **Left known**: noVNC still wants a TLS front (secure-context warning; docs). Same-day sweep (dev→debug→dev loop now runs: pre-handoff click-through + in-UI **diagnostics export** — a bug report is a JSON artifact of every network call/error, not prose): three UI bugs found & fixed (unguarded setPointerCapture silently swallowed the hold start; the bot "scan" button called the region-scanner command instead of /polis/state; raw response shape). Theme system (auto/dark/light, auto follows the OS and is the default). NPM front for the UI is **proposed, not built** (name/cert/auth/TLS + same-origin /vnc pass-through that fixes the noVNC secure-context problem; lives in the 13th-pass conversation, durable records go to the private homelab repo if adopted — this repo is staged for public release and takes no internal identifiers).
+Updated: 2026-09-27 (~23:50 CEST, 15th pass — **Phase 0 of the R2 plan executed** (behavioral contract frozen: v5's reflex prompt builder + three-tier decision rule extracted into pure functions and pinned by `tests/reflex/contract.py` — 237/237 prompt byte-identity, 45/45 decision replays, 237/237 readout coherence; three live missions re-ran on the extracted code, all completed) **and the 23:13 crash root-caused & closed**: the NaN that killed the game was in `pos.Motion` (velocity), which the vanilla `ApplyTests` check inspects but `pos.ToString()` never prints — the original guard (XYZ/YPR only) let it through. Guard extended (NaN motion detected + zeroed), the `/polis/observer-screenshot` teleport-capture-restore round trip hardened (one in flight at a time; restore skips a disconnecting entity), and the webui frame renderer rewritten canvas-based after a sysadmin heads-up that the per-frame `data:`-URL flow had grown to 7.5 GB in a long-lived headless page (OOM-risked the box running the session daemon). Verified live: concurrent captures reject cleanly with JSON; two viewer disconnect/reconnect cycles survived with the world intact — previously every viewer disconnect was a process death.) Research first: the community "unslop" skill (`unslop-ui`, dataset `vibecoded-design-tells` — 3.2M posts) lists the actual AI-slop tells (purple/indigo primary, gradients, neon glow, emoji icons, Inter, shadcn-default, hero+3-cards); its community critique decided the approach — anti-slop defaults (beige/serif) are now themselves a tell, so the redesign follows neither: it's derived from the function (an ops console around a live game image). Design contract: `docs/design/webui-design.md` (stable identity: dark instrument panel, self-hosted IBM Plex, warm off-white on charcoal, single amber accent, semantic status colors, four areas: Stage/World/Control/Console). **Controls root-cause fix**: movement and view are now **hold-to-repeat** (pointer hold or WASD/arrows; 12°/120 ms turns, 0.5b/150 ms moves, 8°/110 ms pitch) with a one-shot **180° turnaround** — "look around" is continuous, not 8 clicks. Pose comes from a local shadow projected per step, resynced from a 1.5 s server poll (the old 5 s poll made every step feel stale). Screenshot pane now uses the real `/polis/observer-screenshot` GET endpoint (player POV, no-op teleport); old ui modules folded into `app.js`; mission buttons stay out (missions live in the v5 script, not the harness). Verified live: 180° one-shot + hold burst, game alive. **Left known**: noVNC still wants a TLS front (secure-context warning; docs). Same-day sweep (dev→debug→dev loop now runs: pre-handoff click-through + in-UI **diagnostics export** — a bug report is a JSON artifact of every network call/error, not prose): three UI bugs found & fixed (unguarded setPointerCapture silently swallowed the hold start; the bot "scan" button called the region-scanner command instead of /polis/state; raw response shape). Theme system (auto/dark/light, auto follows the OS and is the default). NPM front for the UI is **proposed, not built** (name/cert/auth/TLS + same-origin /vnc pass-through that fixes the noVNC secure-context problem; lives in the 13th-pass conversation, durable records go to the private homelab repo if adopted — this repo is staged for public release and takes no internal identifiers).
 Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected before end of 2026.
 
 ## Overall state
@@ -181,6 +181,15 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
     end-to-end (execute() exists); (e) **unblocked** — gentle fine-tune
     (r 4-8, lr 1-3e-5, p-oracle-plateau early-stop) on the 363-row
     corpus (B-family 0/12 is the target).
+15. **R2 Phase 0 — freeze the behavioral contract** — done 2026-09-27: v5's
+    `build_state_text` (the 8-line FT-trained prompt) and `decide_cascade`/
+    `needs_judge` (three-tier decision rule + stall valve) extracted into pure
+    functions; `tests/reflex/contract.py` pins them against pre-extraction
+    goldens (237 corpus states + 44 live cascade steps incl. all five path
+    branches and 4 stall bypasses + 1 synthetic decider-err). Gate green both
+    before and after the extraction; three live missions (mine/harvest/build)
+    completed on the extracted code. Next: Phase 1 (executor extraction,
+    same gate).
 
 ## 14th pass — 2026-09-27 — cockpit groundwork + the module-kill incident
 
@@ -230,3 +239,64 @@ public TLS front (clock, bots, players, stream state).
 
 **Still to do (next passes):** R2 job system → Oikistes runtime (this panel
 is its home); FT-3 corpus; dashcam demo run under the TLS front.
+
+## 15th pass — 2026-09-27 — Phase 0 (behavioral contract) + the 23:13 NaN-motion crash
+
+**Phase 0 of the R2 plan (`docs/design/2026-09-26-job-system-r2.md`) is done.**
+The inline decision flow of `scripts/jev-loop-v5.py` was frozen as a
+behavioral contract before any refactoring: `build_state_text(...)` (the
+8-line FT-trained reflex prompt) and `needs_judge(...)` / `decide_cascade(...)`
+(the Laya→Decider→27B rule plus stall valve) are now pure functions; the loop
+calls them unchanged. The gate is `tests/reflex/contract.py` with fixtures
+captured from **pre-extraction** artifacts (v5 run JSONs of 09-25/09-26 + ft2-ab
+measurements), so a green run is the behavior-identity proof:
+- T1 prompt byte-identity: 237/237 (96 val-world + 96 OOV + 45 abstain rows)
+- T2 decision replay: 45/45 (44 live steps covering all five path branches,
+  4 stall bypasses, 1 last-resort repair; +1 synthetic decider-err case)
+- T3 recorded readout coherence: 237/237
+Post-extraction live check: mine/harvest/build d12 missions all completed
+(injected travel faults corrected by the cascade; build's `place_block` at
+p_decider=1.00 via reflex+decider). The `--impl v5|r2` hook on the gate is
+Phase 1's cross-implementation comparison point.
+
+**The 23:13 crash — root-caused and closed.** The vsgame process died at
+23:13:23 while a web viewer was attached. The `client-crash.log` said
+`ArgumentException: Given pos contained NaN` in `ApplyTests` — but the printed
+pos was **clean** (511996.9/3/512018.1, YPR finite). Decompiling VSEssentials
+1.22.7 (ilspycmd) showed why: the vanilla check inspects `pos.Motion`
+(velocity) in addition to XYZ, and `pos.ToString()` only prints XYZ/YPR/Dim —
+so the NaN sat in the field the message never shows. The 09-26 guard only
+checked XYZ/Yaw/Pitch/Roll and let it through. NaN motion is a client-prediction
+artefact of rapid/nested server→client position updates; the generator in this
+deployment is the `/polis/observer-screenshot` teleport-capture-restore round
+trip (the crash landed exactly on a viewer disconnect mid-capture; the same
+family killed the 09-21 and 09-26 incidents).
+
+**Fixes (all verified live):**
+- `PolisNanPosGuardPatch` now detects NaN motion too and zeroes it (position
+  restore only when the position itself is NaN) — a NaN event is now a logged
+  `[polis] NaN physics pos sanitized ... motion-zeroed=True`, not a death.
+- `observer-screenshot`: atomic in-flight guard (one capture at a time;
+  concurrent requests get `ok:false` JSON — the harness serves each request on
+  its own thread-pool thread, and rejected requests must not early-return:
+  the JSON writer sits below the big if/else chain); the restore now skips the
+  teleport when the player no longer holds the exact entity (viewer gone
+  mid-capture → entity mid-disposal with NaN marks).
+- **Viewer disconnect is now safe:** two consecutive disconnect/reconnect
+cycles with a live page survived, world intact. Previously every viewer
+disconnect was a process death.
+
+**Web UI frame memory bomb (sysadmin heads-up).** The capture flow set a fresh
+`data:` URL per frame; Blink's renderer keeps every unique `data:` bitmap until
+the page dies — one long-lived headless page grew to **7.5 GB** (~1 MB/min)
+and OOM-risked the 12 GB box running the session daemon. `agent-browser` has
+no auto-close (upstream #885/#1334). The renderer is now canvas-based
+(`renderFrameImage()`: offscreen buffer + letterbox composite, in place,
+zero `data:` URLs); the payload is a genuine PNG (an earlier build served
+JPEG under `base64Png` — checked, current build is PNG/SkiaSharp). Discipline
+for agents: kill the browser after UI work; keep capture loops ≥ 2 s apart.
+
+**Left:** the in-flight guard's rejection is untested under sustained load
+(one concurrent pair verified); a viewer disconnect *while the restore
+callback is queued but not yet run* is the one residual NaN-motion window the
+restore-skip closes but that is not yet covered by a forced repro.

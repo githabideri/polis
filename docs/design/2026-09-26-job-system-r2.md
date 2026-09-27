@@ -1,6 +1,6 @@
 # R2: the job system + world model — goals become job lists, the cascade stays the reflex
 
-**Status: design (frozen 2026-09-27, 14th pass).** Started 2026-09-26 (11th pass);
+**Status: design (frozen 2026-09-27, 14th pass); Phase 0 executed 2026-09-27 (15th pass — see status log below).** Started 2026-09-26 (11th pass);
 extended 2026-09-27 with the world-model layer after external review. Extends
 `archive/VISION.md` (phase 2) with the model stack as measured through 14 passes.
 
@@ -404,3 +404,17 @@ no WorkGivers.
 - Planner model choice: the 27B judge model as of R2 (whatever the
   inference hub resolves at the time); the prompt/contract is
   model-agnostic by design (projections are versioned, §7).
+
+## Status log (append-only)
+
+- **2026-09-27 (15th pass) — Phase 0 done.** The behavioral contract is
+  frozen and gated: `build_state_text` / `needs_judge` / `decide_cascade`
+  extracted from v5 into pure functions (the loop calls them unchanged), and
+  `tests/reflex/contract.py` pins them against goldens captured **before**
+  the extraction — 237/237 prompt byte-identity (96 val-world + 96 OOV +
+  45 abstain), 45/45 decision replays (all five cascade path branches, 4
+  stall bypasses, 1 last-resort repair, 1 synthetic decider-err), 237/237
+  readout coherence. Post-extraction, mine/harvest/build d12 missions all
+  completed live (faults corrected by the cascade as before). The gate's
+  `--impl v5|r2` hook is the Phase 1 comparison point. Phase 1 (executor
+  extraction) is next.
