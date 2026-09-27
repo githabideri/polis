@@ -181,3 +181,52 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
     end-to-end (execute() exists); (e) **unblocked** — gentle fine-tune
     (r 4-8, lr 1-3e-5, p-oracle-plateau early-stop) on the 363-row
     corpus (B-family 0/12 is the target).
+
+## 14th pass — 2026-09-27 — cockpit groundwork + the module-kill incident
+
+**NPM front (homelab side, done & verified):** `REDACTED-UI-DOMAIN` (NPM host
+29 → REDACTED-CT-IP:8586; wildcard cert, force-SSL, WS). The 8586 proxy gained a
+**basic-auth gate** (all non-WS requests; `/etc/polis-ui-auth` on the CT, constant-
+time, re-read per request; credentials in the homelab `services/polis/.env`) and
+**`/vnc/*` → websockify 6080** passthrough (prefix-stripped; `/websockify`
+unstripped). noVNC in the UI is now **same-origin** (`/vnc/vnc.html?path=
+vnc/websockify`) — over the TLS front the stream is **wss** and the
+secure-context warning is gone. Dashy: "Polis" item in the LLM & AI section.
+Public: https://REDACTED-UI-DOMAIN/polis/ui/ (basic auth).
+
+**Cockpit (C# — built, deployed, game restarted):**
+- `CommandContext.Actor` — every `/polis/command` now emits a
+  `PolisEvent("command")` with `actor` (user/agent/devops/harness) + cmd +
+  result into the event stream/history. The action stream shows **who did
+  what**; the UI dedupes its own user-tagged events (logged locally).
+- **`autonomy get | autonomy set <free|guarded|strict>`** — the Oikistes'
+  autonomy level, **mod-owned** (world config key `polis_oikistes_autonomy`,
+  default `guarded`; persisted with the world save). The decision runtime
+  injects the current level into its context each turn and enforces it in
+  the execution path — the LLM never carries the policy. The UI (new
+  Oikistes rail section) reads/writes it live; later a cultural/tech-tree
+  system will too.
+- `TryGetHarnessBot` already prefers an explicit `context.BotId` — the UI now
+  sends it for all bot-scoped actions (the despawn select-first hack is
+  superseded, kept only to keep the game's selection state in sync).
+
+**Web UI:** Oikistes rail section (live autonomy select + chat stub — honest
+"not yet inaugurated" until R2), actor badges in the console log,
+`node --check` → **`tools/webui/syntax-check.sh`** (acorn ESM parse) as the
+pre-deploy gate.
+
+**The incident (why the gate exists):** the Oikistes-panel edit left a stray
+top-level `}` in app.js. `node --check` passed (script-mode parse); the
+browser's module parser killed the whole module — the UI loaded **dead**
+(no polling, no wiring, no visible error; "disconnected" badge). Diagnosis:
+a dynamic-import trap page surfaced `Unexpected token '}'`; acorn pinpointed
+the line. Lesson recorded: for ESM, the browser's parser is the source of
+truth; the gate runs before every webui deploy.
+
+**Verified live:** autonomy roundtrip UI→C#→world-config (guarded→free→
+guarded) with log feedback; devops actor tag appears in the console from a
+curl-issued command; chat stub exchanges; page fully connected through the
+public TLS front (clock, bots, players, stream state).
+
+**Still to do (next passes):** R2 job system → Oikistes runtime (this panel
+is its home); FT-3 corpus; dashcam demo run under the TLS front.
