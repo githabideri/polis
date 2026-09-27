@@ -406,7 +406,6 @@ no WorkGivers.
   model-agnostic by design (projections are versioned, §7).
 
 ## Status log (append-only)
-
 - **2026-09-27 (15th pass) — Phase 0 done.** The behavioral contract is
   frozen and gated: `build_state_text` / `needs_judge` / `decide_cascade`
   extracted from v5 into pure functions (the loop calls them unchanged), and
@@ -418,3 +417,122 @@ no WorkGivers.
   completed live (faults corrected by the cascade as before). The gate's
   `--impl v5|r2` hook is the Phase 1 comparison point. Phase 1 (executor
   extraction) is next.
+- **2026-09-27 (15th pass, review round 2) — amendments below adopted.**
+  External review of the Phase 0 shape; adopted: the state-construction
+  seam (T4) and run-level transition assertions join the Phase 1 gate;
+  the visual-sensor service moves to Phase 2 (no new consumer exists
+  until then — the C# endpoint already serializes/rejects/lifecycle-guards
+  today); the NaN policy is formalized as a layered hierarchy with a
+  predicate-mirroring rule (IsNaN, not IsFinite — see §11.3); the Phase 2
+  staleness invariant is adopted verbatim (§11.4).
+
+## 11. Amendments — review round 2 (2026-09-27, after Phase 0)
+
+Additive to the frozen §1–§10. Where this section and an earlier section
+disagree, this section wins for the phases it names.
+
+### 11.1 The gate gains the state-construction seam (T4) and run-level transitions
+
+The Phase 0 gate proves: given state object S, rendering and deciding S is
+unchanged. It does not prove: given game observation O, the executor
+constructs the same S. That is the one remaining semantic hole before
+Phase 1, and it is closed with two additions to `tests/reflex/contract.py`:
+
+- **T4 — reflex-state construction identity.** New fixture: per step, the
+  RAW harness observation (`/polis/state` payload) plus the mission context
+  (mission, fixture identity, step index, previous action + its outcome)
+  → the **constructed reflex-state DTO** (the exact input dict
+  `build_state_text` receives — target name, phase, distance, carrying,
+  inventory counts, since/last lines, options). The full frozen chain
+  becomes: raw facts → ReflexState (T4) → prompt bytes (T1) → cascade
+  decision (T2) → action request + **run-level transitions (T2b)**: same
+  run length, same completion step, same completion/abort reason, same
+  budget accounting. Per-step decisions matching while the run ends one
+  step early is a gate failure.
+- **Capture procedure:** v5's per-step recorder gains two additive fields
+  (raw observation + constructed DTO) — recording only, no behavior
+  change (the pure-function gate stays green; one live run after the
+  change confirms it). One daylight capture pass per mission type
+  (mine/harvest/build) produces the T4 goldens; they are captured
+  **before** any Phase 1 code exists, same rule as Phase 0's goldens. No
+  "v6 fixture set": the same fixtures run against both implementations
+  until Phase 1 passes.
+- Known construction hazards the seam is built to catch (from review):
+  wrong normalized item code with identical rendering; stale fixture
+  state reused one extra step; previous-action outcome sourced from the
+  wrong action; distance/LOS computed before vs after the state refresh;
+  reordered refresh→verify→construct; completion checked one step
+  early/late; budget-decrement timing; target/claim ID rebind under an
+  identical-looking prompt.
+
+### 11.2 Visual sensor: one owned service, scheduled at Phase 2 (not Phase 1)
+
+The `/polis/observer-screenshot` endpoint is treated as a **scarce
+visual sensor**, not an HTTP detail: one capture in flight, ~0.6–1 s,
+viewer can disappear, capture has teleport/restore side effects (all now
+enforced in C#: atomic in-flight guard, JSON rejection, restore skips a
+disconnecting/unloaded entity). The Python-side **ObservationService**
+(capture queue, request ids, timeout, disconnect outcome, coalescing with
+`maxAgeMs` + `reason`, capture timestamps, result provenance) is a **Phase
+2** deliverable alongside the WorldModel observation layer — not Phase 1:
+Phase 1 introduces no new consumers (today's three — UI auto-capture,
+dashcam, judge-image attachment — already run safely through the hardened
+endpoint), and freezing the service before the executor exists would
+freeze implementation accidents. Phase 2 target shape:
+
+- Semantic sensors (`/polis/state`, scan, verify, action outcomes) stay
+  on the direct-query path — **fixtures and completion verification never
+  depend on the visual sensor** (a deterministic completion oracle must
+  not hang on a serialized 1-second sensor).
+- Only the screenshot path goes through the serialized service; consumers
+  request with `{maxAgeMs, reason}` and the service may coalesce
+  (judge ≈ 100 ms, debug UI ≈ 500 ms, dashcam ≈ 1000 ms).
+
+### 11.3 NaN policy: layered, and the guard mirrors the engine — never IsFinite
+
+Recovery hierarchy (most to least preferred):
+
+1. **Prevent the bad update** — at the issue boundary: one capture in
+   flight; the restore skips when the player no longer holds the exact,
+   loaded, world-member entity (lifecycle guard: entity reference +
+   alive + world membership + capture token).
+2. **Restore a recent same-lifecycle finite pose** — position only,
+   when the position itself is NaN. Motion is *not* restored from an old
+   snapshot: position-from-t-200ms + velocity-from-t-200ms against
+   current collisions creates a second bad integration step.
+3. **Crash containment** — zero non-finite motion (vanilla rejects it,
+   we log and continue instead of dying). Worst case: one tick of stalled
+   physics.
+
+**Predicate-mirroring rule:** the guard mirrors the engine's *actual*
+checks, decompiled (VSEssentials 1.22.7, `ApplyTests`): `double.IsNaN`
+on pos.X/Y/Z **and** motion.X/Y/Z (the throw prints `pos.ToString()`,
+which shows XYZ/YPR/Dim — hence the 09-27 "clean-looking" crash),
+`float.IsNaN(dt)` (dt is the server tick delta; we never perturb it, so
+no dt action), plus the EntityPos-level NaN checks (X+Y+Z, roll+yaw+pitch,
+motion) — the installed guard is the union of these. **Explicitly not
+`IsFinite`**: the engine accepts ±Infinity; sanitizing it would diverge
+from vanilla behavior and hide the fact that an infinite value is a
+different (real) bug. If Vintage Story adds a pose field to a NaN check
+in a later version, the mirror is extended deliberately — that is a
+versioned, reviewed change, not a generalized clamp.
+
+**Observability:** every guard event logs entity, capture token, the
+invalid field(s), the policy taken (dropped/restored/zeroed), entity
+alive state, and viewer-connected state. A NaN that is no longer fatal
+must not become silent weirdness.
+
+### 11.4 The Phase 2 staleness invariant (adopted verbatim)
+
+> WorldModel may nominate targets.
+> Only fresh game observations may prove completion or immediate action
+> preconditions.
+
+Once `ResourceRecord`/`FixtureRecord` exist, using "known state" where
+the old code used "current state" becomes a one-line developer error with
+no visible per-step regression. This invariant is the design-level
+defense: WorldModel output is advisory (nomination, planning input);
+completion and action preconditions always come from a fresh query to the
+game. Phase 2's gate includes a dedicated check for it (no fixture or
+completion path reads a WorldModel record without a same-step fresh
+observation).
