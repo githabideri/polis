@@ -76,7 +76,7 @@ public class PolisTestHarness : IDisposable
     // updates that the client's prediction can turn into NaN motion (crash
     // family of 2026-09-21 / 09-26 / 09-27). One capture at a time; concurrent
     // callers get an error instead of a nested teleport.
-    private bool observerShotInFlight;
+    private int observerShotInFlight; // 0 = free, 1 = capture in flight (Interlocked)
 
     private HttpListener listener;
     private CancellationTokenSource cts;
@@ -835,12 +835,11 @@ public class PolisTestHarness : IDisposable
                     // In-flight guard: reject concurrent captures — nested
                     // teleport-capture-restore sequences are the NaN-motion
                     // trigger (crash family 2026-09-21/09-26/09-27).
-                    if (observerShotInFlight)
+                    if (Interlocked.Exchange(ref observerShotInFlight, 1) == 1)
                     {
                         tcs.SetResult(new { ok = false, error = "observer screenshot already in flight; try again shortly" });
                         return;
                     }
-                    observerShotInFlight = true;
                     sapi.Event.EnqueueMainThreadTask(() =>
                     {
                         try
@@ -848,7 +847,7 @@ public class PolisTestHarness : IDisposable
                             var player = sapi.World.PlayerByUid(playerUid) as IServerPlayer;
                             if (player?.Entity == null)
                             {
-                                observerShotInFlight = false;
+                                Interlocked.Exchange(ref observerShotInFlight, 0);
                                 tcs.SetResult(new { error = "Player not found or entity not loaded" });
                                 return;
                             }
@@ -902,7 +901,7 @@ public class PolisTestHarness : IDisposable
                                         }
                                         finally
                                         {
-                                            observerShotInFlight = false;
+                                            Interlocked.Exchange(ref observerShotInFlight, 0);
                                         }
 
                                         if (result == null)
@@ -932,7 +931,7 @@ public class PolisTestHarness : IDisposable
                         }
                         catch (Exception ex)
                         {
-                            observerShotInFlight = false;
+                            Interlocked.Exchange(ref observerShotInFlight, 0);
                             tcs.SetResult(new { error = ex.Message });
                         }
                     }, "polis-observer-screenshot");
