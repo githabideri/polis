@@ -193,15 +193,18 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
 
 ## 14th pass — 2026-09-27 — cockpit groundwork + the module-kill incident
 
-**NPM front (homelab side, done & verified):** `REDACTED-UI-DOMAIN` (NPM host
-29 → REDACTED-CT-IP:8586; wildcard cert, force-SSL, WS). The 8586 proxy gained a
-**basic-auth gate** (all non-WS requests; `/etc/polis-ui-auth` on the CT, constant-
-time, re-read per request; credentials in the homelab `services/polis/.env`) and
+**NPM front (homelab side, done & verified):** a public TLS front for the UI
+(`REDACTED-UI-DOMAIN`, wildcard cert, force-SSL, WS → the 8586 proxy on the
+game container; the address is a homelab-side detail — private service docs).
+The 8586 proxy gained a
+**basic-auth gate** (all non-WS requests; a file-based auth store on the
+CT, constant-time, re-read per request; credentials in the private
+homelab service docs) and
 **`/vnc/*` → websockify 6080** passthrough (prefix-stripped; `/websockify`
 unstripped). noVNC in the UI is now **same-origin** (`/vnc/vnc.html?path=
 vnc/websockify`) — over the TLS front the stream is **wss** and the
 secure-context warning is gone. Dashy: "Polis" item in the LLM & AI section.
-Public: https://REDACTED-UI-DOMAIN/polis/ui/ (basic auth).
+Public: `https://REDACTED-UI-DOMAIN/polis/ui/` (basic auth).
 
 **Cockpit (C# — built, deployed, game restarted):**
 - `CommandContext.Actor` — every `/polis/command` now emits a
