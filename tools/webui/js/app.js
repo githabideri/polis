@@ -201,11 +201,18 @@ async function oneshot(kind) {
     } else if (kind === 'screenshot-obs') {
         await captureFrame();
     } else if (kind === 'scan') {
+        // "scan" the SELECTED BOT = its state endpoint (/polis/state?botId=).
+        // (The harness `scan` command is a world-REGION scanner taking a
+        // cube — 2026-09-27 sweep: calling it with a bot id errors.)
         const botId = getSelectedBotId();
         if (botId == null) { log('select a bot to scan', 'error'); return; }
-        const r = await api.command('scan', [String(botId)], null).catch(e => ({ Ok: false, Message: e.message }));
-        const s = JSON.stringify(r?.Data ?? r?.data ?? r) || 'ok';
-        log(`scan #${botId}: ${s.length > 400 ? s.slice(0, 400) + '…' : s}`);
+        try {
+            const s = await api.getState(botId);
+            if (s) state.updateFromState(s);
+            const b = state.bots.get(botId) || {};
+            const bp = Array.isArray(b.backpack) ? b.backpack.length : null;
+            log(`bot #${botId}: health ${b.health ?? '?'} | right ${b.rightHand ?? '—'} | left ${b.leftHand ?? '—'} | backpack ${bp ?? '?'} item(s)`, 'success');
+        } catch (e) { log(`scan #${botId}: ${e.message}`, 'error'); }
     }
 }
 function getSelectedBotId() {
@@ -217,7 +224,11 @@ function getSelectedBotId() {
 function wireHolds() {
     document.querySelectorAll('[data-hold]').forEach(btn => {
         const kind = btn.dataset.hold;
-        btn.addEventListener('pointerdown', (e) => { e.preventDefault(); btn.setPointerCapture?.(e.pointerId); startHold(kind); });
+        btn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            try { btn.setPointerCapture?.(e.pointerId); } catch (err) { /* synthetic/invalid id: proceed without capture */ }
+            startHold(kind);
+        });
         btn.addEventListener('pointerup',    () => stopHold(kind));
         btn.addEventListener('pointercancel',() => stopHold(kind));
         btn.addEventListener('pointerleave', () => stopHold(kind));
@@ -644,7 +655,7 @@ async function init() {
     log('Polis UI ready', 'success');
 }
 
-window.polis = { api, state, log, pollStatus };
+window.polis = { api, state, log, pollStatus, DIAG, startHold, stopHold };
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
 else init();
