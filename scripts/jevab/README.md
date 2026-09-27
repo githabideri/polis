@@ -12,7 +12,7 @@ Verdict lands in `docs/reports/2026-09-22-bot-cargo-and-decision-harness.md`
 
 ## Where it runs
 
-Dedicated unprivileged LXC **the CPU batch box** on  (4 cores, 16 G since
+Dedicated unprivileged LXC **the CPU batch box** on (4 cores, 16 G since
 2026-09-24, IP the CPU batch box). No GPU — this is an offline batch verdict, not
 a live service; deployment latency for a winning model is a GPU question
 decided after the accuracy verdict. Not the vLLM CT (324): prod inference
@@ -22,14 +22,14 @@ boxes do not host bench work.
 
 ```
 /var/jevab/
-  ab-runner.py            # this dir's copy (Decider: device="cpu"; SemIf: bf16)
-  supervisor2.sh          # serial: decider -> semif; gated on markers; 30-min recheck
-  setup-venvs2.sh         # idempotent venv build (py3.13, torch-CPU, transformers)
-  src/SemIf/src/          # TheoLeeCJ/SemIf (worktree restored from the 2026-09-22 clone)
-  corpus/data/*.json      # the labeled sets (canonical copies from data/)
-  weights/decider-2b -> /models/jevab/decider-2b    # symlinks
-  weights/qwen3.5-4b -> /models/jevab/qwen3.5-4b
-  results/<model>.json    # summary; <model>.json.rows.json = per-row sidecar
+ ab-runner.py # this dir's copy (Decider: device="cpu"; SemIf: bf16)
+ supervisor2.sh # serial: decider -> semif; gated on markers; 30-min recheck
+ setup-venvs2.sh # idempotent venv build (py3.13, torch-CPU, transformers)
+ src/SemIf/src/ # TheoLeeCJ/SemIf (worktree restored from the 2026-09-22 clone)
+ corpus/data/*.json # the labeled sets (canonical copies from data/)
+ weights/decider-2b -> /models/jevab/decider-2b # symlinks
+ weights/qwen3.5-4b -> /models/jevab/qwen3.5-4b
+ results/<model>.json # summary; <model>.json.rows.json = per-row sidecar
 ```
 
 ## Model provenance (weights: shared store, NOT CT rootfs)
@@ -47,27 +47,27 @@ Host-side `hf download` writes them; completion markers
 ## Operational notes
 
 - **The `weights/` entries must be real symlinks, not directories.** The 2026-09-22
-  session left plain directories there; `ln -sfn target weights/x` then *adds a
-  symlink inside* the existing directory instead of replacing it, and model
-  loading fails with FileNotFoundError on the (empty) old dir. Rebuild recipe:
-  `mv weights/x weights/x.old && ln -s /models/jevab/x weights/x`.
+ session left plain directories there; `ln -sfn target weights/x` then *adds a
+ symlink inside* the existing directory instead of replacing it, and model
+ loading fails with FileNotFoundError on the (empty) old dir. Rebuild recipe:
+ `mv weights/x weights/x.old && ln -s /models/jevab/x weights/x`.
 - The CT must be **restarted after adding the `mp0` mount** (PVE applies `mp*`
-  at container start; a bind taken while the host dir was mid-replacement goes
-  stale and the container sees a frozen dir view).
+ at container start; a bind taken while the host dir was mid-replacement goes
+ stale and the container sees a frozen dir view).
 - `systemctl start jevab2` runs the supervisor; the old 4-model
-  `jevab-supervisor` unit is stopped+disabled (superseded; its 2026-09-22
-  skip placeholders are kept in `results/skipped-2026-09-22/`).
+ `jevab-supervisor` unit is stopped+disabled (superseded; its 2026-09-22
+ skip placeholders are kept in `results/skipped-2026-09-22/`).
 - Re-run a single model: delete `results/<model>.json` and let the 30-min
-  recheck pick it up, or run the runner line by hand (see `supervisor2.sh`).
+ recheck pick it up, or run the runner line by hand (see `supervisor2.sh`).
 - Collecting results: copy `results/<model>.json{,.rows.json}` to
-  `../../data/` as `ab-<model>-2026-09-24.json` and commit.
+ `../../data/` as `ab-<model>-2026-09-24.json` and commit.
 - If the box must be rebuilt: `./setup-venvs2.sh` (idempotent) is the only
-  in-CT setup; SemIf source re-clones from `https://github.com/TheoLeeCJ/SemIf`
-  (2026-09-22 clone was at `1f2dea3`).
+ in-CT setup; SemIf source re-clones from `https://github.com/TheoLeeCJ/SemIf`
+ (2026-09-22 clone was at `1f2dea3`).
 - The Decider/SemIf run originally attempted on the 27B box (2026-09-22/23) never
-  produced results: HF weight downloads stalled and the host was reinstalled
-  2026-09-23 (the toolchain was recovered from the old rpool, now imported
-  read-only as `oldrpool` on the 5600X host).
+ produced results: HF weight downloads stalled and the host was reinstalled
+ 2026-09-23 (the toolchain was recovered from the old rpool, now imported
+ read-only as `oldrpool` on the 5600X host).
 
 ## GGUF / llama.cpp path (2026-09-24, 2nd session) — quantization floor + valid 4B
 
@@ -113,17 +113,17 @@ this CT, check the host-side subvol first; the data is safe.
 Two more scripts round out the deployment path:
 
 - **`decider-service.py`** — thin HTTP wrapper over the *same* in-process
-  llama.cpp Q8 readout as `gguf-runner.py` (one model load, requests
-  serialized, `/health` + `/readout` with the `decider_readout()` schema).
-  Runs as `decider.service` on the CPU batch box:8091 (CPU, ~3-4 s/row on 4 cores).
-  Validated **bit-identical** to the batch results (four replayed corpus
-  rows, e.g. p(oracle) 0.1512/0.9484). This is the interim endpoint while
-  the tailnet path to the the 3060 card (0.3 s/row, report §14) is pending the
-  the game testbed node approval.
-- **`decider-http-client.py`** — the the 3060 host-card client (report §14):
-  `/v1/completions` with `n_probs` over the letter slots, T=1.3 recovered
-  from the T=1 wire distribution, `ensure_loaded` on the mux. Importable
-  (`decider_readout()`) or standalone CLI. Used by `../jev-loop-v5.py`.
+ llama.cpp Q8 readout as `gguf-runner.py` (one model load, requests
+ serialized, `/health` + `/readout` with the `decider_readout()` schema).
+ Runs as `decider.service` on the CPU batch box:8091 (CPU, ~3-4 s/row on 4 cores).
+ Validated **bit-identical** to the batch results (four replayed corpus
+ rows, e.g. p(oracle) 0.1512/0.9484). This is the interim endpoint while
+ the tailnet path to the 3060 card (0.3 s/row, report §14) is pending the
+ the game testbed node approval.
+- **`decider-http-client.py`** — the 3060 host-card client (report §14):
+ `/v1/completions` with `n_probs` over the letter slots, T=1.3 recovered
+ from the T=1 wire distribution, `ensure_loaded` on the mux. Importable
+ (`decider_readout()`) or standalone CLI. Used by `../jev-loop-v5.py`.
 
 `../jev-loop-v5.py` (same tree) is the live three-tier loop built on these:
 Laya noul pre-filter -> Decider choice confirm -> 27B doubt-arbiter with a
@@ -137,17 +137,17 @@ naive gate would trust). It also carries the **`give_tool` action**
 `data/v5-*-2026-09-25*.json`; full account in report §15.
 
 - **`gen-give-tool-rows.py`** — builds the `give_tool` labeled grid (5-option
-  readout) around the live no-tool states: 12 A-rows (no tool,
-  `give_tool` proposed → oracle `give_tool`), 12 B-rows (no tool,
-  `mine_target` proposed → oracle `give_tool` — the 27B's own failure
-  mode), 6 C-controls (with pickaxe → oracle `mine_target`). Measured on
-  the CPU batch box (`data/give-tool-rows-2026-09-25.json`, report §15 finding 3):
-  controls unshifted (0.921-0.926); p(`give_tool`) 0.255 / 0.060 / 0.009
-  across A/B/C — the 2B **detects** the no-tool state but never **selects**
-  `give_tool` (0/30 choice; the trained phase action owns the argmax).
-  A-rows read below tau_dec (doubt → 27B endorses: the self-repair path);
-  B-rows read 0.843 *confirmed* (the Decider does not flag its own tier's
-  failure mode — that is the Laya-veto + last-resort-repair regime).
-  The generated A/B rows are the fine-tune input to make the 2B a
-  `give_tool` selector.
+ readout) around the live no-tool states: 12 A-rows (no tool,
+ `give_tool` proposed → oracle `give_tool`), 12 B-rows (no tool,
+ `mine_target` proposed → oracle `give_tool` — the 27B's own failure
+ mode), 6 C-controls (with pickaxe → oracle `mine_target`). Measured on
+ the CPU batch box (`data/give-tool-rows-2026-09-25.json`, report §15 finding 3):
+ controls unshifted (0.921-0.926); p(`give_tool`) 0.255 / 0.060 / 0.009
+ across A/B/C — the 2B **detects** the no-tool state but never **selects**
+ `give_tool` (0/30 choice; the trained phase action owns the argmax).
+ A-rows read below tau_dec (doubt → 27B endorses: the self-repair path);
+ B-rows read 0.843 *confirmed* (the Decider does not flag its own tier's
+ failure mode — that is the Laya-veto + last-resort-repair regime).
+ The generated A/B rows are the fine-tune input to make the 2B a
+ `give_tool` selector.
 `../botview.py` is the one-command live overview (follow + JSONL sidecar).
