@@ -62,6 +62,17 @@ Usage:
 DECIDER_Q = ("Given the bot's current game state, choose the single best "
              "action for the bot to execute next.")
 import argparse, base64, glob, hashlib, json, os, re, sys, time, urllib.request
+# R2 extraction (Phase 1-A, 2026-09-28): the pure reflex core lives in
+# the r2/ package (types/projection/executor) - ONE implementation for
+# both the v5 live loop and the future r2 executor. This file is the
+# live orchestration: harness I/O, services, dashcam, the run loop.
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from r2.types import (MISSIONS, dist, carrying_from, fixture_bool,
+                     oracle_action, build_reflex_state)
+from r2.projection import build_state_text
+from r2.executor import needs_judge, decide_cascade
+
 
 def http_json(url, payload=None, timeout=60):
     data = json.dumps(payload).encode() if payload is not None else None

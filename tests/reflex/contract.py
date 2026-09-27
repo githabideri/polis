@@ -16,6 +16,16 @@ What it freezes (docs/design/2026-09-26-job-system-r2.md, §5.4):
   T3  readout   recorded decider readouts are coherent: the choice is a
                 valid option, and when it equals the oracle its
                 probability equals the max probability.
+  T4  state     (review round 2, 11.1) build_reflex_state() reconstructs
+                the frozen reflex-state DTO - and through it the exact
+                8-line prompt - from the recorded raw observation
+                (state + carry + scan + prev + injected). This is the
+                seam T1 cannot cover: T1 freezes the projection, T4
+                freezes the construction feeding it.
+  T2b run       (review round 2, 11.1) run-level transitions are
+                consistent: a run ends at its goal step or at the step
+                budget; completion implies the goal was seen; the
+                recorded completion step matches the transition rule.
 
 The implementation under test is selected with --impl:
 
@@ -37,6 +47,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, REPO)
 
 
 def load_impl(name):
@@ -44,13 +55,19 @@ def load_impl(name):
         path = os.path.join(REPO, "scripts", "jev-loop-v5.py")
     elif name == "r2":
         # Phase 1: the extracted modules. projection exposes
-        # build_state_text, executor exposes decide_cascade/needs_judge.
+        # build_state_text, executor exposes decide_cascade/needs_judge,
+        # types exposes the T4 seam (build_reflex_state, oracle_action,
+        # carrying_from, MISSIONS) - same names as v5.
         proj = importlib.import_module("r2.projection")
         execm = importlib.import_module("r2.executor")
         ns = type("NS", (), {})()
         ns.build_state_text = proj.build_state_text
         ns.decide_cascade = execm.decide_cascade
         ns.needs_judge = execm.needs_judge
+        ns.build_reflex_state = importlib.import_module("r2.types").build_reflex_state
+        ns.oracle_action = importlib.import_module("r2.types").oracle_action
+        ns.carrying_from = importlib.import_module("r2.types").carrying_from
+        ns.MISSIONS = importlib.import_module("r2.types").MISSIONS
         return ns
     else:
         raise SystemExit("unknown impl %r (v5 | r2)" % name)
@@ -234,6 +251,75 @@ def test_readout(rows):
     return fails, n
 
 
+# ---------------------------------------------------------------- T4 ----
+
+def test_state_construction(impl, t4):
+    """T4 (review round 2, 11.1): raw observation -> reflex-state DTO.
+
+    Replay the implementation's constructor over the recorded context of
+    every captured step and require the frozen DTO (and, chained, the
+    exact prompt text) back. The oracle-carry rule mirrors the loop's
+    fetch semantics: the oracle derives from the post-injection fetch
+    when present (rows captured before that field exist fall back to
+    the pre-injection fetch, which clean runs made equivalent).
+    """
+    fails, n = 0, 0
+    for fdoc in t4:
+        for r in fdoc["rows"]:
+            n += 1
+            ctx = r["ctx"]
+            oracle_carry = impl.carrying_from(
+                ctx.get("post_state") or ctx["carry_state"])
+            dto = impl.build_reflex_state(ctx, r["prev"],
+                                          injected=r["injected"],
+                                          oracle_carry=oracle_carry)
+            ok = (dto == r["golden"])
+            if ok:
+                got = impl.build_state_text(
+                    dto["task"], dto["phase"], dto["pos"], dto["near_t"],
+                    dto["near_b"], dto["fixture_label"], dto["fixture"],
+                    dto["carrying"], dto["items_line"], dto["since"],
+                    dto["last_msg"], dto["proposal"])
+                ok = (got == r["state_text"])
+            if not ok:
+                fails += 1
+                if fails <= 5:
+                    print("T4 MISMATCH [%s step %d]" % (fdoc["mission"], r["step"]))
+                    want = r["golden"]
+                    for k in sorted(set(want) | set(dto)):
+                        if want.get(k) != dto.get(k):
+                            print("   dto[%s]: got %r want %r" % (
+                                k, dto.get(k), want.get(k)))
+    return fails, n
+
+
+def test_run_transitions(t4):
+    """T2b (review round 2, 11.1): run-level transition consistency.
+
+    A run ends at its goal step or at the step budget, whichever comes
+    first; completion implies the goal was seen; the recorded
+    completion step equals the goal step on completed runs.
+    """
+    fails, n = 0, 0
+    for fdoc in t4:
+        for run in fdoc["runs"]:
+            n += 1
+            gs, sr = run["goal_step"], run["steps_run"]
+            sb, mc = run["steps_budget"], run["mission_complete"]
+            ok = (sr == gs) if gs is not None else (sr == sb)
+            if ok and mc:
+                ok = (gs is not None)
+            if ok and mc and gs is not None:
+                ok = (run["steps_to_complete"] == gs)
+            if not ok:
+                fails += 1
+                print("T2b TRANSITION [%s run %d]: goal=%r run=%r budget=%r"
+                      " complete=%r stc=%r" % (
+                          fdoc["mission"], run["run"], gs, sr, sb, mc,
+                          run["steps_to_complete"]))
+    return fails, n
+
+
 # ---------------------------------------------------------------- main ----
 
 def main():
@@ -245,18 +331,23 @@ def main():
     impl = load_impl(args.impl)
     corpora = json.load(open(os.path.join(args.fixdir, "reflex-corpora.json")))
     live = json.load(open(os.path.join(args.fixdir, "live-runs.json")))
+    t4 = json.load(open(os.path.join(args.fixdir, "reflex-state-t4.json")))
 
     f1, n1 = test_prompt(impl, corpora["rows"])
     f2, n2 = test_decision(impl, live["runs"])
     f2s, n2s = test_decision_synthetic(impl)
     f3, n3 = test_readout(corpora["rows"])
+    f4, n4 = test_state_construction(impl, t4)
+    f2b, n2b = test_run_transitions(t4)
 
-    total_fail = f1 + f2 + f2s + f3
+    total_fail = f1 + f2 + f2s + f3 + f4 + f2b
     print("impl=%s" % args.impl)
     print("T1 prompt    %3d/%3d byte-identical" % (n1 - f1, n1))
     print("T2 decision  %3d/%3d replayed exactly" % (
         n2 + n2s - f2 - f2s, n2 + n2s))
     print("T3 readout   %3d/%3d coherent" % (n3 - f3, n3))
+    print("T4 state     %3d/%3d reconstructed exactly" % (n4 - f4, n4))
+    print("T2b run      %3d/%3d transitions consistent" % (n2b - f2b, n2b))
     if total_fail:
         print("CONTRACT BROKEN: %d failure(s)" % total_fail)
         sys.exit(1)

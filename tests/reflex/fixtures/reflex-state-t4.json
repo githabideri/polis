@@ -1,0 +1,2122 @@
+[
+ {
+  "mission": "mine",
+  "captured": "2026-09-28, 3rd re-capture (raw.scan = ctx-captured pre-decision scan; full observation triple incl. post_state)",
+  "steps_budget": 12,
+  "runs": [
+   {
+    "run": 1,
+    "mission_complete": true,
+    "goal_step": 2,
+    "steps_run": 2,
+    "steps_budget": 12,
+    "steps_to_complete": 2
+   }
+  ],
+  "rows": [
+   {
+    "step": 1,
+    "run": 1,
+    "injected": false,
+    "ctx": {
+     "mission": "mine",
+     "task": "mine the marker block, then return to base",
+     "target": [
+      512009,
+      3,
+      512018
+     ],
+     "base": [
+      511997,
+      3,
+      512018
+     ],
+     "state": {
+      "Bot": {
+       "Id": 186,
+       "Pos": [
+        511997.2795410156,
+        3,
+        512018.2702026367
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:pickaxe-iron",
+        "Qty": 1
+       },
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": null,
+      "LastActionMs": 0,
+      "LastActionId": 0,
+      "Error": null
+     },
+     "carry_state": {
+      "Bot": {
+       "Id": 186,
+       "Pos": [
+        511997.2795410156,
+        3,
+        512018.2702026367
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:pickaxe-iron",
+        "Qty": 1
+       },
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": null,
+      "LastActionMs": 0,
+      "LastActionId": 0,
+      "Error": null
+     },
+     "scan": {
+      "Ok": true,
+      "Message": "Scanned 12 blocks",
+      "Data": {
+       "from": [
+        512008,
+        2,
+        512017
+       ],
+       "to": [
+        512010,
+        5,
+        512019
+       ],
+       "blockCount": 12,
+       "blocks": [
+        {
+         "pos": [
+          512008,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-verysparse"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512017
+         ],
+         "code": "game:tallgrass-medium-free"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512018
+         ],
+         "code": "game:farmland-dry-verylow"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          3,
+          512018
+         ],
+         "code": "game:rock-granite"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        }
+       ]
+      }
+     },
+     "marker": "rock-granite",
+     "crop": "crop-carrot-7",
+     "buildblock": "rock-granite",
+     "post_state": {
+      "Bot": {
+       "Id": 186,
+       "Pos": [
+        511997.2795410156,
+        3,
+        512018.2702026367
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:pickaxe-iron",
+        "Qty": 1
+       },
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": null,
+      "LastActionMs": 0,
+      "LastActionId": 0,
+      "Error": null
+     }
+    },
+    "prev": null,
+    "golden": {
+     "task": "mine the marker block, then return to base",
+     "phase": "travel",
+     "pos": [
+      511997.2795410156,
+      3,
+      512018.2702026367
+     ],
+     "near_t": false,
+     "near_b": true,
+     "fixture_label": "marker_present",
+     "fixture": true,
+     "carrying": [
+      "game:pickaxe-iron",
+      "game:linensack"
+     ],
+     "items_line": "none",
+     "since": "no change",
+     "last_msg": "none",
+     "proposal": "goto_target"
+    },
+    "state_text": "task: mine the marker block, then return to base\ncurrent phase: travel\nfacts: bot at (511997, 3, 512018), near_target=no, near_base=yes, marker_present=yes\ncarrying: game:pickaxe-iron, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+    "path": "judge",
+    "executed": "mine_target"
+   },
+   {
+    "step": 2,
+    "run": 1,
+    "injected": false,
+    "ctx": {
+     "mission": "mine",
+     "task": "mine the marker block, then return to base",
+     "target": [
+      512009,
+      3,
+      512018
+     ],
+     "base": [
+      511997,
+      3,
+      512018
+     ],
+     "state": {
+      "Bot": {
+       "Id": 186,
+       "Pos": [
+        512009.5250049501,
+        3,
+        512018.53811116214
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:pickaxe-iron",
+        "Qty": 1
+       },
+       "LeftHand": {
+        "Code": "game:stone-granite",
+        "Qty": 2
+       },
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "mine",
+       "Ok": true,
+       "Msg": "mining started"
+      },
+      "LastActionMs": 3883019,
+      "LastActionId": 3,
+      "Error": null
+     },
+     "carry_state": {
+      "Bot": {
+       "Id": 186,
+       "Pos": [
+        512009.5250049501,
+        3,
+        512018.53811116214
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:pickaxe-iron",
+        "Qty": 1
+       },
+       "LeftHand": {
+        "Code": "game:stone-granite",
+        "Qty": 2
+       },
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "mine",
+       "Ok": true,
+       "Msg": "mining started"
+      },
+      "LastActionMs": 3883019,
+      "LastActionId": 3,
+      "Error": null
+     },
+     "scan": {
+      "Ok": true,
+      "Message": "Scanned 11 blocks",
+      "Data": {
+       "from": [
+        512008,
+        2,
+        512017
+       ],
+       "to": [
+        512010,
+        5,
+        512019
+       ],
+       "blockCount": 11,
+       "blocks": [
+        {
+         "pos": [
+          512008,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-verysparse"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512017
+         ],
+         "code": "game:tallgrass-medium-free"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512018
+         ],
+         "code": "game:farmland-dry-verylow"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        }
+       ]
+      }
+     },
+     "marker": "rock-granite",
+     "crop": "crop-carrot-7",
+     "buildblock": "rock-granite",
+     "post_state": {
+      "Bot": {
+       "Id": 186,
+       "Pos": [
+        512009.5250049501,
+        3,
+        512018.53811116214
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:pickaxe-iron",
+        "Qty": 1
+       },
+       "LeftHand": {
+        "Code": "game:stone-granite",
+        "Qty": 2
+       },
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "mine",
+       "Ok": true,
+       "Msg": "mining started"
+      },
+      "LastActionMs": 3883019,
+      "LastActionId": 3,
+      "Error": null
+     }
+    },
+    "prev": {
+     "fixture": true,
+     "phase": "travel",
+     "has_tool": true,
+     "has_block": false,
+     "has_harvest": false,
+     "has_items": false
+    },
+    "golden": {
+     "task": "mine the marker block, then return to base",
+     "phase": "return",
+     "pos": [
+      512009.5250049501,
+      3,
+      512018.53811116214
+     ],
+     "near_t": true,
+     "near_b": false,
+     "fixture_label": "marker_present",
+     "fixture": false,
+     "carrying": [
+      "game:pickaxe-iron",
+      "game:stone-granite",
+      "game:linensack"
+     ],
+     "items_line": "none",
+     "since": "marker gone, phase travel -> return",
+     "last_msg": "mining started",
+     "proposal": "goto_base"
+    },
+    "state_text": "task: mine the marker block, then return to base\ncurrent phase: return\nfacts: bot at (512010, 3, 512019), near_target=yes, near_base=no, marker_present=no\ncarrying: game:pickaxe-iron, game:stone-granite, game:linensack\nitems: none\nsince_last_step: marker gone, phase travel -> return\nlast_action: mining started\nproposed action: goto_base",
+    "path": "reflex+decider->judge",
+    "executed": "goto_base"
+   }
+  ]
+ },
+ {
+  "mission": "harvest",
+  "captured": "2026-09-28, 3rd re-capture (raw.scan = ctx-captured pre-decision scan; full observation triple incl. post_state)",
+  "steps_budget": 12,
+  "runs": [
+   {
+    "run": 1,
+    "mission_complete": true,
+    "goal_step": 3,
+    "steps_run": 3,
+    "steps_budget": 12,
+    "steps_to_complete": 3
+   }
+  ],
+  "rows": [
+   {
+    "step": 1,
+    "run": 1,
+    "injected": false,
+    "ctx": {
+     "mission": "harvest",
+     "task": "harvest the crop, then return to base",
+     "target": [
+      512009,
+      4,
+      512018
+     ],
+     "base": [
+      511997,
+      3,
+      512018
+     ],
+     "state": {
+      "Bot": {
+       "Id": 187,
+       "Pos": [
+        511997.3527845952,
+        3,
+        512018.31537474506
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": null,
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": null,
+      "LastActionMs": 0,
+      "LastActionId": 0,
+      "Error": null
+     },
+     "carry_state": {
+      "Bot": {
+       "Id": 187,
+       "Pos": [
+        511997.1372409836,
+        3,
+        512018.1728967646
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": null,
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": null,
+      "LastActionMs": 0,
+      "LastActionId": 0,
+      "Error": null
+     },
+     "scan": {
+      "Ok": true,
+      "Message": "Scanned 13 blocks",
+      "Data": {
+       "from": [
+        512008,
+        2,
+        512017
+       ],
+       "to": [
+        512010,
+        6,
+        512019
+       ],
+       "blockCount": 13,
+       "blocks": [
+        {
+         "pos": [
+          512008,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-verysparse"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512017
+         ],
+         "code": "game:tallgrass-medium-free"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512018
+         ],
+         "code": "game:farmland-dry-verylow"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          3,
+          512018
+         ],
+         "code": "game:farmland-dry-medium"
+        },
+        {
+         "pos": [
+          512009,
+          4,
+          512018
+         ],
+         "code": "game:crop-carrot-7"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        }
+       ]
+      }
+     },
+     "marker": "rock-granite",
+     "crop": "crop-carrot-7",
+     "buildblock": "rock-granite",
+     "post_state": {
+      "Bot": {
+       "Id": 187,
+       "Pos": [
+        511997.07847804186,
+        3,
+        512018.13405346416
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": null,
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": null,
+      "LastActionMs": 0,
+      "LastActionId": 0,
+      "Error": null
+     }
+    },
+    "prev": null,
+    "golden": {
+     "task": "harvest the crop, then return to base",
+     "phase": "travel",
+     "pos": [
+      511997.3527845952,
+      3,
+      512018.31537474506
+     ],
+     "near_t": false,
+     "near_b": true,
+     "fixture_label": "crop_present",
+     "fixture": true,
+     "carrying": [
+      "game:linensack"
+     ],
+     "items_line": "none",
+     "since": "no change",
+     "last_msg": "none",
+     "proposal": "goto_target"
+    },
+    "state_text": "task: harvest the crop, then return to base\ncurrent phase: travel\nfacts: bot at (511997, 3, 512018), near_target=no, near_base=yes, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+    "path": "reflex+decider",
+    "executed": "goto_target"
+   },
+   {
+    "step": 2,
+    "run": 1,
+    "injected": false,
+    "ctx": {
+     "mission": "harvest",
+     "task": "harvest the crop, then return to base",
+     "target": [
+      512009,
+      4,
+      512018
+     ],
+     "base": [
+      511997,
+      3,
+      512018
+     ],
+     "state": {
+      "Bot": {
+       "Id": 187,
+       "Pos": [
+        512008,
+        3,
+        512018
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": null,
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "goto",
+       "Ok": true,
+       "Msg": "done"
+      },
+      "LastActionMs": 3904849,
+      "LastActionId": 1,
+      "Error": null
+     },
+     "carry_state": {
+      "Bot": {
+       "Id": 187,
+       "Pos": [
+        512008,
+        3,
+        512018
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": null,
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "goto",
+       "Ok": true,
+       "Msg": "done"
+      },
+      "LastActionMs": 3904849,
+      "LastActionId": 1,
+      "Error": null
+     },
+     "scan": {
+      "Ok": true,
+      "Message": "Scanned 13 blocks",
+      "Data": {
+       "from": [
+        512008,
+        2,
+        512017
+       ],
+       "to": [
+        512010,
+        6,
+        512019
+       ],
+       "blockCount": 13,
+       "blocks": [
+        {
+         "pos": [
+          512008,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-verysparse"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512017
+         ],
+         "code": "game:tallgrass-medium-free"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512018
+         ],
+         "code": "game:farmland-dry-verylow"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          3,
+          512018
+         ],
+         "code": "game:farmland-dry-verylow"
+        },
+        {
+         "pos": [
+          512009,
+          4,
+          512018
+         ],
+         "code": "game:crop-carrot-7"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        }
+       ]
+      }
+     },
+     "marker": "rock-granite",
+     "crop": "crop-carrot-7",
+     "buildblock": "rock-granite",
+     "post_state": {
+      "Bot": {
+       "Id": 187,
+       "Pos": [
+        512008,
+        3,
+        512018
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": null,
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "goto",
+       "Ok": true,
+       "Msg": "done"
+      },
+      "LastActionMs": 3904849,
+      "LastActionId": 1,
+      "Error": null
+     }
+    },
+    "prev": {
+     "fixture": true,
+     "phase": "travel",
+     "has_tool": false,
+     "has_block": false,
+     "has_harvest": false,
+     "has_items": false
+    },
+    "golden": {
+     "task": "harvest the crop, then return to base",
+     "phase": "harvest",
+     "pos": [
+      512008,
+      3,
+      512018
+     ],
+     "near_t": true,
+     "near_b": false,
+     "fixture_label": "crop_present",
+     "fixture": true,
+     "carrying": [
+      "game:linensack"
+     ],
+     "items_line": "none",
+     "since": "phase travel -> harvest",
+     "last_msg": "done",
+     "proposal": "harvest_target"
+    },
+    "state_text": "task: harvest the crop, then return to base\ncurrent phase: harvest\nfacts: bot at (512008, 3, 512018), near_target=yes, near_base=no, crop_present=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: phase travel -> harvest\nlast_action: done\nproposed action: harvest_target",
+    "path": "judge",
+    "executed": "harvest_target"
+   },
+   {
+    "step": 3,
+    "run": 1,
+    "injected": false,
+    "ctx": {
+     "mission": "harvest",
+     "task": "harvest the crop, then return to base",
+     "target": [
+      512009,
+      4,
+      512018
+     ],
+     "base": [
+      511997,
+      3,
+      512018
+     ],
+     "state": {
+      "Bot": {
+       "Id": 187,
+       "Pos": [
+        512008,
+        3,
+        512018
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:seeds-carrot",
+        "Qty": 1
+       },
+       "LeftHand": {
+        "Code": "game:vegetable-carrot",
+        "Qty": 10
+       },
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "harvestcrop",
+       "Ok": true,
+       "Msg": "harvested game:crop-carrot-7 with collection"
+      },
+      "LastActionMs": 3909538,
+      "LastActionId": 2,
+      "Error": null
+     },
+     "carry_state": {
+      "Bot": {
+       "Id": 187,
+       "Pos": [
+        512008,
+        3,
+        512018
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:seeds-carrot",
+        "Qty": 1
+       },
+       "LeftHand": {
+        "Code": "game:vegetable-carrot",
+        "Qty": 10
+       },
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "harvestcrop",
+       "Ok": true,
+       "Msg": "harvested game:crop-carrot-7 with collection"
+      },
+      "LastActionMs": 3909538,
+      "LastActionId": 2,
+      "Error": null
+     },
+     "scan": {
+      "Ok": true,
+      "Message": "Scanned 12 blocks",
+      "Data": {
+       "from": [
+        512008,
+        2,
+        512017
+       ],
+       "to": [
+        512010,
+        6,
+        512019
+       ],
+       "blockCount": 12,
+       "blocks": [
+        {
+         "pos": [
+          512008,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-verysparse"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512017
+         ],
+         "code": "game:tallgrass-medium-free"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512018
+         ],
+         "code": "game:farmland-dry-verylow"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          3,
+          512018
+         ],
+         "code": "game:farmland-dry-verylow"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        }
+       ]
+      }
+     },
+     "marker": "rock-granite",
+     "crop": "crop-carrot-7",
+     "buildblock": "rock-granite",
+     "post_state": {
+      "Bot": {
+       "Id": 187,
+       "Pos": [
+        512008,
+        3,
+        512018
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:seeds-carrot",
+        "Qty": 1
+       },
+       "LeftHand": {
+        "Code": "game:vegetable-carrot",
+        "Qty": 10
+       },
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "harvestcrop",
+       "Ok": true,
+       "Msg": "harvested game:crop-carrot-7 with collection"
+      },
+      "LastActionMs": 3909538,
+      "LastActionId": 2,
+      "Error": null
+     }
+    },
+    "prev": {
+     "fixture": true,
+     "phase": "harvest",
+     "has_tool": false,
+     "has_block": false,
+     "has_harvest": false,
+     "has_items": false
+    },
+    "golden": {
+     "task": "harvest the crop, then return to base",
+     "phase": "return",
+     "pos": [
+      512008,
+      3,
+      512018
+     ],
+     "near_t": true,
+     "near_b": false,
+     "fixture_label": "crop_present",
+     "fixture": false,
+     "carrying": [
+      "game:seeds-carrot",
+      "game:vegetable-carrot",
+      "game:linensack"
+     ],
+     "items_line": "none",
+     "since": "crop gone, harvested item now carried, phase harvest -> return",
+     "last_msg": "harvested game:crop-carrot-7 with collection",
+     "proposal": "goto_base"
+    },
+    "state_text": "task: harvest the crop, then return to base\ncurrent phase: return\nfacts: bot at (512008, 3, 512018), near_target=yes, near_base=no, crop_present=no\ncarrying: game:seeds-carrot, game:vegetable-carrot, game:linensack\nitems: none\nsince_last_step: crop gone, harvested item now carried, phase harvest -> return\nlast_action: harvested game:crop-carrot-7 with collection\nproposed action: goto_base",
+    "path": "reflex+decider",
+    "executed": "goto_base"
+   }
+  ]
+ },
+ {
+  "mission": "build",
+  "captured": "2026-09-28, 3rd re-capture (raw.scan = ctx-captured pre-decision scan; full observation triple incl. post_state)",
+  "steps_budget": 12,
+  "runs": [
+   {
+    "run": 1,
+    "mission_complete": true,
+    "goal_step": 3,
+    "steps_run": 3,
+    "steps_budget": 12,
+    "steps_to_complete": 3
+   }
+  ],
+  "rows": [
+   {
+    "step": 1,
+    "run": 1,
+    "injected": false,
+    "ctx": {
+     "mission": "build",
+     "task": "place a granite stone at the build site, then return to base",
+     "target": [
+      512009,
+      3,
+      512018
+     ],
+     "base": [
+      511997,
+      3,
+      512018
+     ],
+     "state": {
+      "Bot": {
+       "Id": 188,
+       "Pos": [
+        511997.24755374127,
+        3,
+        512018.108364577
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:rock-granite",
+        "Qty": 1
+       },
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": null,
+      "LastActionMs": 0,
+      "LastActionId": 0,
+      "Error": null
+     },
+     "carry_state": {
+      "Bot": {
+       "Id": 188,
+       "Pos": [
+        511997.24755374127,
+        3,
+        512018.108364577
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:rock-granite",
+        "Qty": 1
+       },
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": null,
+      "LastActionMs": 0,
+      "LastActionId": 0,
+      "Error": null
+     },
+     "scan": {
+      "Ok": true,
+      "Message": "Scanned 11 blocks",
+      "Data": {
+       "from": [
+        512008,
+        2,
+        512017
+       ],
+       "to": [
+        512010,
+        5,
+        512019
+       ],
+       "blockCount": 11,
+       "blocks": [
+        {
+         "pos": [
+          512008,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-verysparse"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512017
+         ],
+         "code": "game:tallgrass-medium-free"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512018
+         ],
+         "code": "game:farmland-dry-verylow"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        }
+       ]
+      }
+     },
+     "marker": "rock-granite",
+     "crop": "crop-carrot-7",
+     "buildblock": "rock-granite",
+     "post_state": {
+      "Bot": {
+       "Id": 188,
+       "Pos": [
+        511997.24755374127,
+        3,
+        512018.108364577
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:rock-granite",
+        "Qty": 1
+       },
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": null,
+      "LastActionMs": 0,
+      "LastActionId": 0,
+      "Error": null
+     }
+    },
+    "prev": null,
+    "golden": {
+     "task": "place a granite stone at the build site, then return to base",
+     "phase": "travel",
+     "pos": [
+      511997.24755374127,
+      3,
+      512018.108364577
+     ],
+     "near_t": false,
+     "near_b": true,
+     "fixture_label": "build_site_filled",
+     "fixture": false,
+     "carrying": [
+      "game:rock-granite",
+      "game:linensack"
+     ],
+     "items_line": "none",
+     "since": "no change",
+     "last_msg": "none",
+     "proposal": "goto_target"
+    },
+    "state_text": "task: place a granite stone at the build site, then return to base\ncurrent phase: travel\nfacts: bot at (511997, 3, 512018), near_target=no, near_base=yes, build_site_filled=no\ncarrying: game:rock-granite, game:linensack\nitems: none\nsince_last_step: no change\nlast_action: none\nproposed action: goto_target",
+    "path": "judge",
+    "executed": "goto_target"
+   },
+   {
+    "step": 2,
+    "run": 1,
+    "injected": false,
+    "ctx": {
+     "mission": "build",
+     "task": "place a granite stone at the build site, then return to base",
+     "target": [
+      512009,
+      3,
+      512018
+     ],
+     "base": [
+      511997,
+      3,
+      512018
+     ],
+     "state": {
+      "Bot": {
+       "Id": 188,
+       "Pos": [
+        512008,
+        3,
+        512018
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:rock-granite",
+        "Qty": 1
+       },
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "goto",
+       "Ok": true,
+       "Msg": "done"
+      },
+      "LastActionMs": 3931967,
+      "LastActionId": 1,
+      "Error": null
+     },
+     "carry_state": {
+      "Bot": {
+       "Id": 188,
+       "Pos": [
+        512008,
+        3,
+        512018
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:rock-granite",
+        "Qty": 1
+       },
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "goto",
+       "Ok": true,
+       "Msg": "done"
+      },
+      "LastActionMs": 3931967,
+      "LastActionId": 1,
+      "Error": null
+     },
+     "scan": {
+      "Ok": true,
+      "Message": "Scanned 11 blocks",
+      "Data": {
+       "from": [
+        512008,
+        2,
+        512017
+       ],
+       "to": [
+        512010,
+        5,
+        512019
+       ],
+       "blockCount": 11,
+       "blocks": [
+        {
+         "pos": [
+          512008,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-verysparse"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512017
+         ],
+         "code": "game:tallgrass-medium-free"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512018
+         ],
+         "code": "game:farmland-dry-verylow"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        }
+       ]
+      }
+     },
+     "marker": "rock-granite",
+     "crop": "crop-carrot-7",
+     "buildblock": "rock-granite",
+     "post_state": {
+      "Bot": {
+       "Id": 188,
+       "Pos": [
+        512008,
+        3,
+        512018
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": {
+        "Code": "game:rock-granite",
+        "Qty": 1
+       },
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "goto",
+       "Ok": true,
+       "Msg": "done"
+      },
+      "LastActionMs": 3931967,
+      "LastActionId": 1,
+      "Error": null
+     }
+    },
+    "prev": {
+     "fixture": false,
+     "phase": "travel",
+     "has_tool": false,
+     "has_block": true,
+     "has_harvest": false,
+     "has_items": false
+    },
+    "golden": {
+     "task": "place a granite stone at the build site, then return to base",
+     "phase": "build",
+     "pos": [
+      512008,
+      3,
+      512018
+     ],
+     "near_t": true,
+     "near_b": false,
+     "fixture_label": "build_site_filled",
+     "fixture": false,
+     "carrying": [
+      "game:rock-granite",
+      "game:linensack"
+     ],
+     "items_line": "none",
+     "since": "phase travel -> build",
+     "last_msg": "done",
+     "proposal": "place_block"
+    },
+    "state_text": "task: place a granite stone at the build site, then return to base\ncurrent phase: build\nfacts: bot at (512008, 3, 512018), near_target=yes, near_base=no, build_site_filled=no\ncarrying: game:rock-granite, game:linensack\nitems: none\nsince_last_step: phase travel -> build\nlast_action: done\nproposed action: place_block",
+    "path": "reflex+decider",
+    "executed": "place_block"
+   },
+   {
+    "step": 3,
+    "run": 1,
+    "injected": false,
+    "ctx": {
+     "mission": "build",
+     "task": "place a granite stone at the build site, then return to base",
+     "target": [
+      512009,
+      3,
+      512018
+     ],
+     "base": [
+      511997,
+      3,
+      512018
+     ],
+     "state": {
+      "Bot": {
+       "Id": 188,
+       "Pos": [
+        512008.5,
+        3,
+        512018.5
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": null,
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "place",
+       "Ok": true,
+       "Msg": "placed"
+      },
+      "LastActionMs": 3934439,
+      "LastActionId": 2,
+      "Error": null
+     },
+     "carry_state": {
+      "Bot": {
+       "Id": 188,
+       "Pos": [
+        512008.5,
+        3,
+        512018.5
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": null,
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "place",
+       "Ok": true,
+       "Msg": "placed"
+      },
+      "LastActionMs": 3934439,
+      "LastActionId": 2,
+      "Error": null
+     },
+     "scan": {
+      "Ok": true,
+      "Message": "Scanned 12 blocks",
+      "Data": {
+       "from": [
+        512008,
+        2,
+        512017
+       ],
+       "to": [
+        512010,
+        5,
+        512019
+       ],
+       "blockCount": 12,
+       "blocks": [
+        {
+         "pos": [
+          512008,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-verysparse"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512017
+         ],
+         "code": "game:tallgrass-medium-free"
+        },
+        {
+         "pos": [
+          512008,
+          3,
+          512018
+         ],
+         "code": "game:farmland-dry-verylow"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512009,
+          3,
+          512018
+         ],
+         "code": "game:rock-granite"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512017
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512018
+         ],
+         "code": "game:soil-medium-normal"
+        },
+        {
+         "pos": [
+          512010,
+          2,
+          512019
+         ],
+         "code": "game:soil-medium-normal"
+        }
+       ]
+      }
+     },
+     "marker": "rock-granite",
+     "crop": "crop-carrot-7",
+     "buildblock": "rock-granite",
+     "post_state": {
+      "Bot": {
+       "Id": 188,
+       "Pos": [
+        512008.5,
+        3,
+        512018.5
+       ],
+       "CurrentHealth": 20,
+       "MaxHealth": 20,
+       "RightHand": null,
+       "LeftHand": null,
+       "Backpack": [
+        {
+         "Code": "game:linensack",
+         "Qty": 1
+        }
+       ],
+       "BackpackContents": null
+      },
+      "Items": [],
+      "LastAction": {
+       "Name": "place",
+       "Ok": true,
+       "Msg": "placed"
+      },
+      "LastActionMs": 3934439,
+      "LastActionId": 2,
+      "Error": null
+     }
+    },
+    "prev": {
+     "fixture": false,
+     "phase": "build",
+     "has_tool": false,
+     "has_block": true,
+     "has_harvest": false,
+     "has_items": false
+    },
+    "golden": {
+     "task": "place a granite stone at the build site, then return to base",
+     "phase": "return",
+     "pos": [
+      512008.5,
+      3,
+      512018.5
+     ],
+     "near_t": true,
+     "near_b": false,
+     "fixture_label": "build_site_filled",
+     "fixture": true,
+     "carrying": [
+      "game:linensack"
+     ],
+     "items_line": "none",
+     "since": "build site filled, granite dropped, phase build -> return",
+     "last_msg": "placed",
+     "proposal": "goto_base"
+    },
+    "state_text": "task: place a granite stone at the build site, then return to base\ncurrent phase: return\nfacts: bot at (512008, 3, 512018), near_target=yes, near_base=no, build_site_filled=yes\ncarrying: game:linensack\nitems: none\nsince_last_step: build site filled, granite dropped, phase build -> return\nlast_action: placed\nproposed action: goto_base",
+    "path": "reflex+decider",
+    "executed": "goto_base"
+   }
+  ]
+ }
+]
