@@ -773,6 +773,165 @@ def decide_cascade(reflex, dref, judge, proposal, valid_actions, last_final,
         final = proposal
     return path, final, stall_bypass, p_dec
 
+def fixture_bool(mission, scan_resp, cell, marker=None):
+    """(T4, 2026-09-27) Pure fixture predicate over a recorded
+    /polis/command scan response - the same checks the harness methods
+    apply (marker_present / crop_present / site_filled), split out so
+    state construction is replayable from the recorded raw context.
+    cell is [x, y, z]."""
+    blocks = (scan_resp.get("Data") or {}).get("blocks", [])
+    x, y, z = cell
+    if mission == "harvest":
+        return any(str(b.get("code") or "").startswith(("crop-", "game:crop-",
+                                                         "crop:"))
+                   and b.get("pos") == [x, y, z]
+                   for b in blocks)
+    if mission == "build":
+        # the exact cell holds any (non-air) block - the build site starts
+        # EMPTY; place_block fills it (inverted fixture vs mine/harvest).
+        return any(b.get("pos") == [x, y, z]
+                   and str(b.get("code") or "") not in ("", "air", "game:air")
+                   for b in blocks)
+    codes = ((marker, "game:" + marker) if marker
+             else ("rock-granite", "game:rock-granite"))
+    return any(b.get("code") in codes and b.get("pos") == [x, y, z]
+               for b in blocks)
+
+def oracle_action(mission, phase, has_tool, has_block):
+    """(T4, 2026-09-27) The per-phase correct action (the labeled oracle
+    the loop records per step). In the mine phase the correct action
+    depends on tool state - a bot without a pickaxe must get one
+    (give_tool) before it can mine. Same for build: a bot without the
+    block must get one before placing."""
+    if mission == "mine" and phase == "mine" and not has_tool:
+        return "give_tool"
+    if mission == "build" and phase == "build" and not has_block:
+        return "give_tool"
+    if phase == "pickup":
+        return "pickup_item"
+    return MISSIONS[mission]["phase_action"][phase]
+
+def build_reflex_state(ctx, prev, injected=False, oracle_carry=None):
+    """(T4, review round 2, 2026-09-27) THE state-construction contract.
+
+    Pure over its inputs: the recorded raw context (ctx), the previous
+    step's summary (prev), and two flags. Returns the reflex-state DTO -
+    the exact dict build_state_text consumes.
+
+    ctx: mission, task, target, base, marker, crop, buildblock, and the
+         observation triple - state (1st /polis/state fetch), carry_state
+         (2nd fetch), post_state (3rd fetch, taken after a possible fault
+         injection), plus the fixture scan response.
+    oracle_carry: the carry list the ORACLE derives from; defaults to the
+         3rd fetch when present, else the 2nd.
+
+    Deliberate quirks pinned by the contract (exactly what the
+    pre-extraction inline code did):
+      - the DTO's carrying/items/last_msg display comes from the 1st/2nd
+        (pre-injection) fetches;
+      - the oracle and the build-branch since-diff use the post-injection
+        3rd fetch;
+      - the mine-branch since-diff uses the 2nd fetch (not the 3rd);
+      - the original code made two separate refetches (has_tool, then
+        has_block); they are merged into the single 3rd fetch - one
+        instant is at least as consistent as two.
+    The T4 golden was captured from the pre-extraction code, so any
+    implementation that must stay behavior-identical has to reproduce
+    this DTO from the same ctx (gate: tests/reflex/contract.py).
+    """
+    mission = ctx["mission"]
+    st = ctx["state"]
+    pos = st["Bot"]["Pos"]
+    # mine: the target is a solid block and goto stops one cell short,
+    # so the "near" radius must cover that; harvest: the bot walks the
+    # air cell next to the crop and arrives exactly.
+    radius = 3.5 if mission == "mine" else 2.5
+    near_t = dist(pos, ctx["target"]) <= radius
+    near_b = dist(pos, ctx["base"]) <= 2.5
+    fixture = fixture_bool(mission, ctx["scan"], ctx["target"],
+                           ctx.get("marker"))
+    fixture_gone = not fixture
+    c2 = carrying_from(ctx["carry_state"])
+    co = (oracle_carry if oracle_carry is not None
+          else carrying_from(ctx.get("post_state") or ctx["carry_state"]))
+    has_tool2 = any("pickaxe" in (c or "") for c in c2)
+    has_block2 = any(ctx["buildblock"] in (c or "") for c in c2)
+    has_harvest2 = any("carrot" in (c or "") for c in c2)
+    has_toolO = any("pickaxe" in (c or "") for c in co)
+    has_blockO = any(ctx["buildblock"] in (c or "") for c in co)
+    # ground items within pickup reach (harness state Items, radius 5)
+    ground_items = [i.get("Code") for i in (st.get("Items") or [])
+                    if (i.get("Dist") or 99) <= 5]
+    need_pickup = fixture_gone and not near_b and bool(ground_items) \
+        and (mission == "mine" or not has_harvest2)
+    if mission == "mine":
+        if not fixture_gone:
+            phase = "mine" if near_t else "travel"
+        elif need_pickup:
+            phase = "pickup"
+        else:
+            phase = "done" if near_b else "return"
+    elif mission == "build":
+        # the build site starts EMPTY: while empty it needs travel/build
+        # (fixture = site_filled), once filled it needs return/done.
+        # No pickup phase - the placed block is consumed, never dropped.
+        if not fixture:
+            phase = "build" if near_t else "travel"
+        else:
+            phase = "done" if near_b else "return"
+    else:
+        if not fixture_gone:
+            phase = "harvest" if near_t else "travel"
+        elif need_pickup:
+            phase = "pickup"
+        else:
+            phase = "done" if near_b else "return"
+    correct = oracle_action(mission, phase, has_toolO, has_blockO)
+    proposal = correct
+    if injected and (phase == "travel" or phase == "harvest"):
+        proposal = "goto_base" # skip-goal
+    elif injected and phase == "mine":
+        proposal = "mine_target" # mine with a missing tool
+    elif injected and phase == "build":
+        proposal = "place_block" # place with a missing block
+    changed = []
+    if prev is not None:
+        if fixture != prev["fixture"]:
+            if mission == "build":
+                changed.append("build site %s" % ("filled" if fixture else "emptied"))
+            else:
+                what = "marker" if mission == "mine" else "crop"
+                changed.append("%s %s" % (what, "gone" if not fixture else "re-appeared"))
+        if mission == "build" and has_blockO != prev["has_block"]:
+            changed.append("granite %s" % ("now carried" if has_blockO else "dropped"))
+        if mission == "mine":
+            if has_tool2 != prev["has_tool"]:
+                changed.append("pickaxe %s" % ("re-given" if has_tool2 else "dropped"))
+        if has_harvest2 != prev["has_harvest"]:
+            changed.append("harvested item %s" % ("now carried" if has_harvest2 else "lost"))
+        if bool(ground_items) != prev["has_items"]:
+            changed.append("ground item %s" % ("appeared" if ground_items else "picked up"))
+        if phase != prev["phase"]:
+            changed.append("phase %s -> %s" % (prev["phase"], phase))
+    since = ", ".join(changed) if changed else "no change"
+    if mission == "harvest":
+        fixture_label = "crop_present"
+    elif mission == "build":
+        fixture_label = "build_site_filled"
+    else:
+        fixture_label = "marker_present"
+    items_line = ", ".join(ground_items[:3]) or "none"
+    last_msg = (st.get("LastAction") or {}).get("Msg") or "none"
+    return {
+        "task": ctx["task"],
+        "phase": phase, "pos": pos,
+        "near_t": near_t, "near_b": near_b,
+        "fixture_label": fixture_label, "fixture": fixture,
+        "carrying": c2, "items_line": items_line,
+        "since": since, "last_msg": last_msg,
+        "proposal": proposal,
+    }
+
 def run_once(a, pol, fault_phases):
     mission = a.mission
     # sweep all persisted bots first (accumulated idle bots can wedge the
@@ -812,47 +971,24 @@ def run_once(a, pol, fault_phases):
     goal_step = None
     for i in range(a.steps):
         st = pol.state(a.bot)
-        pos = st["Bot"]["Pos"]
-        # mine: the target is a solid block and goto stops one cell short,
-        # so the "near" radius must cover that; harvest: the bot walks the
-        # air cell next to the crop and arrives exactly.
-        radius = 3.5 if mission == "mine" else 2.5
-        near_t = dist(pos, target) <= radius
-        near_b = dist(pos, base) <= 2.5
-        fixture = fixture_check(a.bot, target)
-        fixture_gone = not fixture
-        carry_resp = pol.state(a.bot)
-        carrying = carrying_from(carry_resp)
-        scan_resp = pol.last_scan
-        has_harvest = any("carrot" in (c or "") for c in carrying)
-        has_block = any(a.buildblock in (c or "") for c in carrying)
-        # ground items within pickup reach (harness state Items, radius 5)
-        ground_items = [i.get("Code") for i in (st.get("Items") or [])
-                        if (i.get("Dist") or 99) <= 5]
-        need_pickup = fixture_gone and not near_b and bool(ground_items) \
-            and (mission == "mine" or not has_harvest)
-        if mission == "mine":
-            if not fixture_gone:
-                phase = "mine" if near_t else "travel"
-            elif need_pickup:
-                phase = "pickup"
-            else:
-                phase = "done" if near_b else "return"
-        elif mission == "build":
-            # the build site starts EMPTY: while empty it needs travel/build
-            # (fixture = site_filled), once filled it needs return/done.
-            # No pickup phase - the placed block is consumed, never dropped.
-            if not fixture:
-                phase = "build" if near_t else "travel"
-            else:
-                phase = "done" if near_b else "return"
-        else:
-            if not fixture_gone:
-                phase = "harvest" if near_t else "travel"
-            elif need_pickup:
-                phase = "pickup"
-            else:
-                phase = "done" if near_b else "return"
+        fixture_check(a.bot, target)  # issues the fixture scan (pol.last_scan)
+        carry_resp = pol.state(a.bot)          # 2nd fetch (the DTO's carrying)
+        # T4 (review round 2, 2026-09-27): state construction is the pure
+        # function build_reflex_state(ctx, prev, injected, oracle_carry).
+        # It consumes exactly what the recorder stores as this step's
+        # "raw" context and yields the reflex-state DTO; the T4 golden was
+        # captured from the PRE-extraction inline code, so any
+        # implementation must reproduce that DTO from the same ctx (gate:
+        # tests/reflex/contract.py). See the function's docstring for the
+        # pinned fetch-quirk semantics.
+        ctx = {"mission": mission,
+               "task": a.task or MISSIONS[mission]["task"],
+               "target": target, "base": base,
+               "state": st, "carry_state": carry_resp,
+               "scan": pol.last_scan,
+               "marker": a.marker, "crop": a.crop,
+               "buildblock": a.buildblock}
+        phase = build_reflex_state(ctx, prev)["phase"]
         # Inject a known-wrong proposal at the FIRST step of chosen phases,
         # BEFORE deriving the oracle (a dropped tool changes what is correct).
         injected = phase in fault_phases and phase not in fired
@@ -883,76 +1019,33 @@ def run_once(a, pol, fault_phases):
                     break
                 pol.cmd("drop", [], a.bot)
                 time.sleep(1)
-
-        has_tool = any("pickaxe" in (c or "") for c in pol.carrying(a.bot))
-        # recompute after a possible fault injection (a dropped block changes
-        # what is correct, same as the mine tool-drop above)
-        has_block = any(a.buildblock in (c or "") for c in pol.carrying(a.bot))
-        # Oracle: in the mine phase the correct action depends on tool state -
-        # a bot without a pickaxe must get one (give_tool) before it can mine.
-        # Same for build: a bot without the block must get one before placing.
-        if mission == "mine" and phase == "mine" and not has_tool:
-            correct = "give_tool"
-        elif mission == "build" and phase == "build" and not has_block:
-            correct = "give_tool"
-        elif phase == "pickup":
-            correct = "pickup_item"
-        else:
-            correct = MISSIONS[mission]["phase_action"][phase]
-
-        proposal = correct
-        if injected and (phase == "travel" or phase == "harvest"):
-            proposal = "goto_base" # skip-goal
-        elif injected and phase == "mine":
-            proposal = "mine_target" # mine with a missing tool
-        elif injected and phase == "build":
-            proposal = "place_block" # place with a missing block
-        changed = []
-        if prev is not None:
-            if fixture != prev["fixture"]:
-                if mission == "build":
-                    changed.append("build site %s" % ("filled" if fixture else "emptied"))
-                else:
-                    what = "marker" if mission == "mine" else "crop"
-                    changed.append("%s %s" % (what, "gone" if not fixture else "re-appeared"))
-            if mission == "build" and has_block != prev["has_block"]:
-                changed.append("granite %s" % ("now carried" if has_block else "dropped"))
-            if mission == "mine":
-                has_tool = any("pickaxe" in (c or "") for c in carrying)
-                if has_tool != prev["has_tool"]:
-                    changed.append("pickaxe %s" % ("re-given" if has_tool else "dropped"))
-            if has_harvest != prev["has_harvest"]:
-                changed.append("harvested item %s" % ("now carried" if has_harvest else "lost"))
-            if bool(ground_items) != prev["has_items"]:
-                changed.append("ground item %s" % ("appeared" if ground_items else "picked up"))
-            if phase != prev["phase"]:
-                changed.append("phase %s -> %s" % (prev["phase"], phase))
-        since = ", ".join(changed) if changed else "no change"
-        if mission == "harvest":
-            fixture_label = "crop_present"
-        elif mission == "build":
-            fixture_label = "build_site_filled"
-        else:
-            fixture_label = "marker_present"
-        items_line = ", ".join(ground_items[:3]) or "none"
-        last_msg = (st.get("LastAction") or {}).get("Msg") or "none"
-        # T4 (review round 2, 2026-09-27): the reflex-state DTO - the exact
-        # inputs build_state_text consumes. Recorded per step together with
-        # the raw context ("raw" below) so a later implementation can be
-        # proven to construct the SAME state from the SAME observations.
-        reflex_state = {
-            "task": a.task or MISSIONS[mission]["task"],
-            "phase": phase, "pos": pos,
-            "near_t": near_t, "near_b": near_b,
-            "fixture_label": fixture_label, "fixture": fixture,
-            "carrying": carrying, "items_line": items_line,
-            "since": since, "last_msg": last_msg,
-            "proposal": proposal,
-        }
+        # Post-injection fetch: the oracle derives from it (a dropped tool
+        # or block changes what is correct) - the 3rd state observation
+        # of this step, recorded as raw.post_state.
+        post_resp = pol.state(a.bot)
+        reflex_state = build_reflex_state(ctx, prev, injected=injected,
+                                          oracle_carry=carrying_from(post_resp))
+        phase, proposal = reflex_state["phase"], reflex_state["proposal"]
+        correct = oracle_action(mission, phase,
+                                any("pickaxe" in (c or "")
+                                    for c in carrying_from(post_resp)),
+                                any(a.buildblock in (c or "")
+                                    for c in carrying_from(post_resp)))
+        pos = reflex_state["pos"]
+        near_t, near_b = reflex_state["near_t"], reflex_state["near_b"]
+        fixture = reflex_state["fixture"]
+        fixture_gone = not fixture
+        carrying = carrying_from(carry_resp)
+        has_harvest = any("carrot" in (c or "") for c in carrying)
+        # ground items within pickup reach (harness state Items, radius 5)
+        ground_items = [i.get("Code") for i in (st.get("Items") or [])
+                        if (i.get("Dist") or 99) <= 5]
+        since = reflex_state["since"]
         state_text = build_state_text(
             reflex_state["task"], phase, pos, near_t, near_b,
-            fixture_label, fixture, carrying, items_line, since,
-            last_msg, proposal)
+            reflex_state["fixture_label"], fixture, carrying,
+            reflex_state["items_line"], since,
+            reflex_state["last_msg"], proposal)
 
         # Dashcam (always mode): one frame per step - the scene before
         # this step's decision. Non-fatal; a failed shot is "no frame".
@@ -1109,12 +1202,14 @@ def run_once(a, pol, fault_phases):
                 "buildblock": a.buildblock,
                 "target": target, "base": base,
                 "state": st, "carry_state": carry_resp,
-                "scan": scan_resp, "prev": prev,
+                "post_state": post_resp,
+                "scan": pol.last_scan, "prev": prev,
             },
         })
         prev = {"fixture": fixture, "phase": phase,
                 "has_tool": any("pickaxe" in (c or "") for c in carrying),
-                "has_block": has_block,
+                "has_block": any(a.buildblock in (c or "")
+                                 for c in carrying_from(post_resp)),
                 "has_harvest": has_harvest, "has_items": bool(ground_items)}
         last_final = final
 
@@ -1158,6 +1253,7 @@ def run_once(a, pol, fault_phases):
         # gate failure.
         "goal_step": goal_step,
         "steps_run": len(rows),
+        "steps_budget": a.steps,
         "total_sec": int(time.time() - t_start),
     }
 
@@ -1306,6 +1402,7 @@ def main():
         "mission_complete": [o["mission_complete"] for o in all_outcomes],
         "goal_steps": [o["goal_step"] for o in all_outcomes],
         "steps_runs": [o["steps_run"] for o in all_outcomes],
+        "steps_budgets": [o["steps_budget"] for o in all_outcomes],
         "mission_complete_rate": "%d/%d" % (sum(1 for o in all_outcomes if o["mission_complete"]), len(all_outcomes)),
         "avg_steps_to_complete": (sum(o["steps_to_complete"] or a.steps for o in all_outcomes
                                        if o["mission_complete"]) / max(sum(1 for o in all_outcomes if o["mission_complete"]), 1)),
