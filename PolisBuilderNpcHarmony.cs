@@ -22,6 +22,7 @@ internal static class PolisBuilderNpcHarmony
         }
 
         harmony = new Harmony("polis-builder-npc");
+        PolisNanPosGuardPatch.logger = api.Logger;
         harmony.PatchAll();
         applied = true;
 
@@ -192,6 +193,7 @@ internal static class PolisBuilderNpcAStarTraversablePatch{
 [HarmonyPatch(typeof(EntityBehaviorControlledPhysics), "ApplyTests")]
 internal static class PolisNanPosGuardPatch
 {
+    internal static Vintagestory.API.Common.ILogger logger; // set by PolisBuilderNpcHarmony.Apply
     static int sanitizeCount;
 
     static bool Prefix(EntityBehaviorControlledPhysics __instance, ref EntityPos pos, EntityControls controls, float dt, bool remote)
@@ -213,12 +215,13 @@ internal static class PolisNanPosGuardPatch
         }
         if (sanitizeCount <= 5 || sanitizeCount % 100 == 0)
         {
-            entity?.Log($"[polis] NaN physics pos sanitized (occurrence {sanitizeCount}); restored last known pos", LogLevel.Warning);
+            logger?.Notification(
+                $"[polis] NaN physics pos sanitized (occurrence {sanitizeCount}); restored last known pos");
         }
         return true;
     }
 
     static bool HasNan(EntityPos p)
-        => float.IsNaN(p.Pos.X) || float.IsNaN(p.Pos.Y) || float.IsNaN(p.Pos.Z)
-        || float.IsNaN(p.YPR.Yaw) || float.IsNaN(p.YPR.Pitch) || float.IsNaN(p.YPR.Roll);
+        => double.IsNaN(p.X) || double.IsNaN(p.Y) || double.IsNaN(p.Z)
+        || float.IsNaN(p.Yaw) || float.IsNaN(p.Pitch) || float.IsNaN(p.Roll);
 }

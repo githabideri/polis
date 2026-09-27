@@ -53,7 +53,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>tools/test-ui.html</Link>
     </Content>
-    <Content Include="tools/webui-v2/**">
+    <Content Include="tools/webui/**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
