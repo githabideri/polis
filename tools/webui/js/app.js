@@ -358,6 +358,9 @@ function renderBotActions() {
 
 async function oneshotBotAction(kind, botId) {
     if (kind === 'despawn') {
+        // the C# despawn only honors the SELECTION context — select first
+        // (same pattern as possess), then despawn.
+        await api.command('select', [String(botId)], null).catch(() => null);
         const r = await api.command('despawn', [String(botId)], null).catch(e => ({ Ok: false, Message: e.message }));
         log(`despawn #${botId}: ${r.Message || 'ok'}`, r.Ok ? 'success' : 'error');
         renderBotActions();
