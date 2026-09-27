@@ -28,23 +28,23 @@ Verified live: give/drop/select work on hands and grid; state now reports
 ## 2. 1.22 loot routing (why mines "succeeded" without collecting)
 
 - `IBlockAccessor.BreakBlock` has **only an `IPlayer` overload**; the game's
- break path gives loot to the *player's* `InventoryManager`
- (`TryGiveItemstack`, ground fallback) — the harness drives breaks as the
- context player, so mined items vanished into the player's inventory.
+  break path gives loot to the *player's* `InventoryManager`
+  (`TryGiveItemstack`, ground fallback) — the harness drives breaks as the
+  context player, so mined items vanished into the player's inventory.
 - Fix: `PolisMineBlockAction.BreakBlockAsBot` breaks via
- `SetBlock(0, pos)` (air) and computes loot itself from
- `Block.GetDrops(world, pos, null, 1.0f)` — the virtual the game calls
- (rock blocks override it with per-clutter-type drops; the plain `Drops`
- field is empty for them) — inserting drops into the bot's cargo, spawning
- overflow on the ground for the existing autocollect.
+  `SetBlock(0, pos)` (air) and computes loot itself from
+  `Block.GetDrops(world, pos, null, 1.0f)` — the virtual the game calls
+  (rock blocks override it with per-clutter-type drops; the plain `Drops`
+  field is empty for them) — inserting drops into the bot's cargo, spawning
+  overflow on the ground for the existing autocollect.
 - **Set-placed rocks yield no drops**: the clutter-type property comes from
- worldgen block entities; a `setblock`-placed `rock-granite`/
- `crackedrock-granite` has no type, so `GetDrops` is empty. Consequence:
+  worldgen block entities; a `setblock`-placed `rock-granite`/
+  `crackedrock-granite` has no type, so `GetDrops` is empty. Consequence:
  the mission's success criterion is **marker block removed** (verified by
- `scan`), not "item in backpack". Carrying drops is best-effort for
- blocks that do define drops.
+  `scan`), not "item in backpack". Carrying drops is best-effort for
+  blocks that do define drops.
 - Tool gate confirmed live: cracked rocks need tier 2 — a bot without a
- pickaxe gets "Tool required: block needs tier 2".
+  pickaxe gets "Tool required: block needs tier 2".
 
 ## 3. Claims bypass (test world)
 
@@ -59,17 +59,17 @@ queryable. New env flag **`POLIS_SKIP_CLAIMS=1`** (set in
 `scripts/jev-loop-v4.py` is now a repeatable benchmark pass:
 
 - **Two tiers**: policy proposes → Laya noul pre-filter (anchored
- yes/no) → `p >= tau` executes directly, else the 27B doubt-arbiter
- (thinking off, single-word 4-action answer, ~0.2 s) executes.
+  yes/no) → `p >= tau` executes directly, else the 27B doubt-arbiter
+  (thinking off, single-word 4-action answer, ~0.2 s) executes.
 - **Phase-relative positive controls**: `--faults travel,mine` inject a
- known-wrong proposal on the first step of the named phase
- (skip-goal; tool-drop + mine).
+  known-wrong proposal on the first step of the named phase
+  (skip-goal; tool-drop + mine).
 - **Labeled set**: every step records (state text, proposal, oracle action,
- reflex p, path, judge answer, executed, exec outcome) — the raw material
- for re-deriving `tau` when the model or wording changes (calibration
- protocol: llmlab `docs/decision-classifiers.md`).
+  reflex p, path, judge answer, executed, exec outcome) — the raw material
+  for re-deriving `tau` when the model or wording changes (calibration
+  protocol: llmlab `docs/decision-classifiers.md`).
 - **Mission outcome**: marker removed (scan-verified) + bot at base;
- per-run completion, steps-to-complete, wall time; `--repeat N`.
+  per-run completion, steps-to-complete, wall time; `--repeat N`.
 
 ### Five passes, what each taught
 
@@ -84,54 +84,54 @@ queryable. New env flag **`POLIS_SKIP_CLAIMS=1`** (set in
 ### Findings for the method record
 
 1. **The doubt-arbiter stall is a real, reproducible failure mode of a
- thinking-off 27B placed per-step**: once a step fails, the judge's
- conservative prior dominates and it waits indefinitely, even after the
- failure is repaired. Prompt-level recovery clauses did not fix it.
- Candidates: (a) state-level "failure cleared" signal after repair,
- (b) a max-stall policy (N identical waits → force the oracle action),
- (c) a diff-based judge input ("what changed since last step").
+   thinking-off 27B placed per-step**: once a step fails, the judge's
+   conservative prior dominates and it waits indefinitely, even after the
+   failure is repaired. Prompt-level recovery clauses did not fix it.
+   Candidates: (a) state-level "failure cleared" signal after repair,
+   (b) a max-stall policy (N identical waits → force the oracle action),
+   (c) a diff-based judge input ("what changed since last step").
 2. **Thresholds drift with the state text.** Rewording the state moved Laya's
- p-band from ~0.6 to ~0.35–0.48; the tiers only work at the re-derived tau.
- Per the calibration protocol this is expected — the threshold is a
- property of (model, question, state format), re-derived on the labeled
- set, never guessed.
+   p-band from ~0.6 to ~0.35–0.48; the tiers only work at the re-derived tau.
+   Per the calibration protocol this is expected — the threshold is a
+   property of (model, question, state format), re-derived on the labeled
+   set, never guessed.
 3. **At 421M the correct/faulty p-bands overlap** (correct 0.35–0.48, faulty
- 0.32–0.43 across passes) — no single threshold separates the two
- populations. The tiers are complementary, not separable: the cheap tier
- carries the common case, the arbiter adds (imperfect) conservatism where
+   0.32–0.43 across passes) — no single threshold separates the two
+   populations. The tiers are complementary, not separable: the cheap tier
+   carries the common case, the arbiter adds (imperfect) conservatism where
  the reflex is unsure. This is the polis row of the regime map's
- concrete-observable case with its measured limits.
+   concrete-observable case with its measured limits.
 
 ## 5. Ops
 
 - `/etc/vsgame.env`: `POLIS_SKIP_CLAIMS=1` (test-world claim bypass).
 - Build ritual unchanged: `set -a && source.env && set +a && rm -rf obj bin
- && dotnet build -c Release &&./build.sh --deploy`; restart = stop, wait
- for port 8585 to clear, start (TIME_WAIT).
+  && dotnet build -c Release &&./build.sh --deploy`; restart = stop, wait
+  for port 8585 to clear, start (TIME_WAIT).
 - Bot ids increment monotonically; fresh respawn per harness run.
 
 ## Next
 
 - Doubt-arbiter stall: implement (a)/(b)/(c) above and re-run the harness
- (a sixth pass with the same labeled protocol makes the comparison clean).
+  (a sixth pass with the same labeled protocol makes the comparison clean).
 - Harvest pipeline: crop blocks have the same setblock-without-BE-state
- problem; the mine-action loot pattern is the template.
+  problem; the mine-action loot pattern is the template.
 - Send the labeled set + question JSON to the openjev/llmlab side for the
- use-case catalog entry and the decision-classifiers page (their request,
- 2026-09-22).
+  use-case catalog entry and the decision-classifiers page (their request,
+  2026-09-22).
 
 ## 6. Pass 6: the stall fix works (2026-09-22, second session)
 
 Two changes, both deterministic and testable:
 
 1. **Diff-based state line** — every step's state now carries
- `since_last_step:` (marker removed / pickaxe dropped or re-given /
- phase change / no change). The judge sees *changes*, not just
- accumulated failure history.
+   `since_last_step:` (marker removed / pickaxe dropped or re-given /
+   phase change / no change). The judge sees *changes*, not just
+   accumulated failure history.
 2. **Max-stall safety valve** — after two consecutive executed `wait`s,
- control returns to the deterministic policy (`path=stall-bypass`). The
- arbiter gets exactly two says; an infinite wait loop is structurally
- impossible.
+   control returns to the deterministic policy (`path=stall-bypass`). The
+   arbiter gets exactly two says; an infinite wait loop is structurally
+   impossible.
 
 Result (same protocol as pass 5: tau 0.35, faults travel+mine, 2 runs):
 mission **2/2**, 5 steps, **25 s** each (pass 5: 68 s — its time went to a
@@ -153,28 +153,28 @@ phase oracle only works on clean steps.
 - Clean steps: the cheap reflex carries them (6/10 at the re-derived tau);
  the 27B is consulted only on the unsure minority (~0.2 s per call).
 - Fault steps: the 27B now handles both fault classes correctly (conservative
- wait), and the loop self-heals (repair → next step succeeds) — the
- positive controls pass.
+  wait), and the loop self-heals (repair → next step succeeds) — the
+  positive controls pass.
 - Known residual: the judge is conservative *by prior*; with more labeled
- data the (question, state-format) pair can be re-derived again, and the
- fine-tune path in the method doc is the long-term route from
- "conservative arbiter" to "fast pre-filter".
+  data the (question, state-format) pair can be re-derived again, and the
+  fine-tune path in the method doc is the long-term route from
+  "conservative arbiter" to "fast pre-filter".
 
 ## 8. Harvest pipeline + second mission (same day, second session)
 
 ### 8.1 The 1.22 crop system (decompiled/asset survey)
 
 - Crops are one block code **`crop`** with variant groups `type`
- (carrot, cabbage, wheat, rye, onion, … 17 types) and `stage` (1..7);
- mature = stage 7 (`crop-carrot-7`). Growth is time-based (carrot:
- ~1.03 months over 7 stages, nutrient-gated via the farmland BE).
+  (carrot, cabbage, wheat, rye, onion, … 17 types) and `stage` (1..7);
+  mature = stage 7 (`crop-carrot-7`). Growth is time-based (carrot:
+  ~1.03 months over 7 stages, nutrient-gated via the farmland BE).
 - Farmland: code **`farmland`**, variants `state` (dry/moist) x
- `fertility` (verylow..high), BE `BlockEntityFarmland` (soil
- nutrition); a crop sits in the cell **above** the farmland.
+  `fertility` (verylow..high), BE `BlockEntityFarmland` (soil
+  nutrition); a crop sits in the cell **above** the farmland.
 - Drops are declared in the block JSON `dropsByType`: mature carrot =
- ~1x `seeds-carrot` + ~11x `vegetable-carrot` (stage 6: ~3 carrots).
- `BlockCrop.GetDrops` honors this - so the same break-as-bot pattern
- as the mine action works for harvest.
+  ~1x `seeds-carrot` + ~11x `vegetable-carrot` (stage 6: ~3 carrots).
+  `BlockCrop.GetDrops` honors this - so the same break-as-bot pattern
+  as the mine action works for harvest.
 
 ### 8.2 The harvest action fix (mod)
 
@@ -206,27 +206,27 @@ temperature). Suggested tau 0.408 re-derives cleanly.
 ### 8.4 Findings for the method record
 
 1. **The oracle measures fidelity, not optimality.** The judge's
- `harvest_target` on a `travel`-phase skip-fault is *better* than the
- oracle (`goto_target`): fewer steps, same goal. The labeled set
- should record "better-than-oracle" as its own class - an
- oracle-match metric alone would score the judge's best answer as
- wrong.
+   `harvest_target` on a `travel`-phase skip-fault is *better* than the
+   oracle (`goto_target`): fewer steps, same goal. The labeled set
+   should record "better-than-oracle" as its own class - an
+   oracle-match metric alone would score the judge's best answer as
+   wrong.
 2. **Mission-level success is the right top metric.** Both mine (marker
- removed) and harvest (item carried home) missions complete under
- fault injection, with self-repair where the tiers let a fault
- through. The loop is now a *useful* game process, not just a
- decision benchmark: it moves, works, and brings produce home.
+   removed) and harvest (item carried home) missions complete under
+   fault injection, with self-repair where the tiers let a fault
+   through. The loop is now a *useful* game process, not just a
+   decision benchmark: it moves, works, and brings produce home.
 3. **p-band overlap is mission- and wording-specific.** Mine: correct
- 0.46-0.79 vs faulty 0.36-0.47 at the re-derived tau (overlapping -
- faults self-repair; at high tau the judge tier catches 4/4).
- Harvest: clean separation (0.21 vs 0.41+) - the 4-action set with
+   0.46-0.79 vs faulty 0.36-0.47 at the re-derived tau (overlapping -
+   faults self-repair; at high tau the judge tier catches 4/4).
+   Harvest: clean separation (0.21 vs 0.41+) - the 4-action set with
  the crop fact gives the small model something concrete to latch on.
- Question design (which facts are in the state text, how many
- actions) is a first-class lever on separability.
+   Question design (which facts are in the state text, how many
+   actions) is a first-class lever on separability.
 4. **File-rewrite gotcha (harness ops)**: a rewritten script's
- `if __name__ == "__main__":` guard lost its trailing `__` in
- transit - valid Python that silently never runs `main()` (exit 0,
- no output). Verify the guard after any whole-file rewrite.
+   `if __name__ == "__main__":` guard lost its trailing `__` in
+   transit - valid Python that silently never runs `main()` (exit 0,
+   no output). Verify the guard after any whole-file rewrite.
 
 ### 8.5 Openjev catalog
 
@@ -265,20 +265,20 @@ harness is self-cleaning.
 ### 9.2 Baselines measured while diagnosing
 
 - The client renders at a steady **~1.5 FPS** in this headless
- iGPU/Xvnc setup - that is the *normal* state (constant since world
- load, including all the successful mission runs). The server clock
- still runs near real time (a full in-game day ~ 10 real minutes).
- Mission wall-times above are at this rate.
+  iGPU/Xvnc setup - that is the *normal* state (constant since world
+  load, including all the successful mission runs). The server clock
+  still runs near real time (a full in-game day ~ 10 real minutes).
+  Mission wall-times above are at this rate.
 - `setblock` does not accept `0` for air ("Unknown block: 0"); the
- code **`air`** works and is the fixture-clearing primitive.
+  code **`air`** works and is the fixture-clearing primitive.
 - **Set-placed crops do not grow**: a `crop-carrot-1` on a set-placed
- `farmland` stayed at stage 1 for ~7 in-game days (the farmland BE
- immediately flips to `farmland-dry-verylow` and the crop's
- nutrient-gated growth rate stays ~0). Set-placed mature crops
- (stage 7) are the right fixture for the harvest mission; real
- growth would need worldgen farmland or an explicit nutrient state.
+  `farmland` stayed at stage 1 for ~7 in-game days (the farmland BE
+  immediately flips to `farmland-dry-verylow` and the crop's
+  nutrient-gated growth rate stays ~0). Set-placed mature crops
+  (stage 7) are the right fixture for the harvest mission; real
+  growth would need worldgen farmland or an explicit nutrient state.
 - The goto arrival **snap** (the old vspolis overshoot fix) is intact:
- after arrival the bot sits at the exact requested cell center.
+  after arrival the bot sits at the exact requested cell center.
 
 ## 10. Lighting control for visual proof (photo-run pattern)
 
@@ -288,22 +288,22 @@ harvests -> crop gone with drops -> bot returns with loot), in stable daylight.
 Findings:
 
 1. **Server-side `Calendar.Timelapse` does not change rendered light.** The property
- is in *days* (the cinematic `/timelapse <speed> <days>` feature) and the client
- overwrites it every frame from its own local value (`GameWorldCalendar.Timelapse =
- timelapsedCurrent` in `MainRenderLoop`). Setting it from the server (a harness
- `timelapse` command tried both raw-hour and day-fraction values) left the scene
- unchanged; the command was removed again after the finding.
+   is in *days* (the cinematic `/timelapse <speed> <days>` feature) and the client
+   overwrites it every frame from its own local value (`GameWorldCalendar.Timelapse =
+   timelapsedCurrent` in `MainRenderLoop`). Setting it from the server (a harness
+   `timelapse` command tried both raw-hour and day-fraction values) left the scene
+   unchanged; the command was removed again after the finding.
 2. **The working pattern (proven, viz8 run):** temporarily `settime 50`, poll `time`
- until `fullHour` enters a chosen window (10-15h), then `settime 1` and shoot.
- Full wait-to-shoot: ~3.5 real minutes. At the 2x effective speed of this world
- (unknown second +60 modifier, see wedge report), a 3-minute shoot at `settime 1`
- drifts ~5 in-game hours - enough to stay in daylight from a 10:00 start.
+   until `fullHour` enters a chosen window (10-15h), then `settime 1` and shoot.
+   Full wait-to-shoot: ~3.5 real minutes. At the 2x effective speed of this world
+   (unknown second +60 modifier, see wedge report), a 3-minute shoot at `settime 1`
+   drifts ~5 in-game hours - enough to stay in daylight from a 10:00 start.
 3. **Elevated cameras (y=5-6) beat ground-level ones here**: the mine-fixture
- geometry (2-high stone walls) repeatedly swallowed y=4 observers; elevated
- positions are immune and give a readable wide shot of the whole fixture.
+   geometry (2-high stone walls) repeatedly swallowed y=4 observers; elevated
+   positions are immune and give a readable wide shot of the whole fixture.
 4. **VS twilight/night skies are dramatic** (flat red gradient at dusk, star field
- at night) - a shot that "looks wrong" is usually just night, not corruption.
- Verify with the `time` command before blaming a broken world.
+   at night) - a shot that "looks wrong" is usually just night, not corruption.
+   Verify with the `time` command before blaming a broken world.
 
 Frames (this run, bot #98, world time ~10:00-13:00):
 
@@ -334,13 +334,13 @@ magnitude above the live loop's 1–2 s decision cadence.
 Two independent, both disqualifying for the live-loop role:
 
 1. **Domain shift, not just error.** Laya was trained in our loop on
- mine-format state text; it has never seen harvest-format states. 0/14 is
+   mine-format state text; it has never seen harvest-format states. 0/14 is
  the expected result for a 421M model outside its training distribution,
- and 63% inside it. One classifier per state schema — or training on the
- merged corpus — is what a general-purpose Jev needs.
+   and 63% inside it. One classifier per state schema — or training on the
+   merged corpus — is what a general-purpose Jev needs.
 2. **Latency.** Even where it is right, 10 s/decision on small-CPU hardware
- puts Laya out of the live loop. Its honest role stays the one v3 measured:
- a conservative off-line/low-rate safety net, not the per-step decider.
+   puts Laya out of the live loop. Its honest role stays the one v3 measured:
+   a conservative off-line/low-rate safety net, not the per-step decider.
 
 **Hosting note (sanitized).** The 2B (Decider, gated-delta-net architecture)
 and 4B (Qwen3.5-4B as the SemIf base) models do not fit the 4-core/4G box:
@@ -365,8 +365,8 @@ choice questions over the mission action set.
 **Hosting.** The 2026-09-22/23 attempt on the 27B box (2x3090 box) never produced
 results: HF weight downloads stalled all night, and the host was reinstalled
 2026-09-23 (the toolchain was recovered from the old rpool, imported
-read-only as `oldrpool` on the 5600X host). The runs were re-homed on **the CPU batch box
-"jevab" (, 4-core i5-8500T, 16 G after the 2026-09-24 bump — the 4 G
+read-only as `oldrpool` on the 5600X host). The runs were re-homed on **CPU batch box
+"jevab" ( 4-core i5-8500T, 16 G after the 2026-09-24 bump — the 4 G
 cgroup was the original disqualifier)** with weights on the host's shared
 model store `/models/jevab/`. the 27B box stays production vLLM; bench work no
 longer sits on a prod inference box. Both models ran CPU bf16 on the
@@ -392,37 +392,37 @@ By mission (Decider): mine top-1 0.815 (p_or 0.712), harvest 0.500 (p_or 0.547)
 **Reading.**
 
 1. **Decider 2B fixes the p-band overlap problem.** That overlap (Laya:
- confident on both correct and wrong answers, §11 and the doubt-arbiter
- analysis) was what disqualified the 421M reflex for the
- concrete-observable regime. Decider separates cleanly: p(oracle) > 0.5 on
- 27/29 correct rows and **0/12** wrong rows; mean p(oracle) 0.870 correct
- vs 0.136 wrong. Its remaining 12 errors are not noise — they are **one
- systematic bias**: `goto_base` chosen where the oracle is `goto_target`
- (travel-phase rows, p(oracle) ≈ 0.13 throughout). A single fixable habit
- (base-preference in the travel phase), the kind of thing a prompt/label
- tweak or a small fine-tune targets — not a capacity wall.
+   confident on both correct and wrong answers, §11 and the doubt-arbiter
+   analysis) was what disqualified the 421M reflex for the
+   concrete-observable regime. Decider separates cleanly: p(oracle) > 0.5 on
+   27/29 correct rows and **0/12** wrong rows; mean p(oracle) 0.870 correct
+   vs 0.136 wrong. Its remaining 12 errors are not noise — they are **one
+   systematic bias**: `goto_base` chosen where the oracle is `goto_target`
+   (travel-phase rows, p(oracle) ≈ 0.13 throughout). A single fixable habit
+   (base-preference in the travel phase), the kind of thing a prompt/label
+   tweak or a small fine-tune targets — not a capacity wall.
 2. **Harvest sensitivity survived** (0% → 50%), at roughly the same level as
  the mine improvement — the 2B generalizes across the two state schemas,
- which a 421M fine-tune could not.
+   which a 421M fine-tune could not.
 3. **SemIf 4B is not a measurement.** p(oracle) = exactly 0.000 on all 41
- rows (Brier 1.0, all probability mass collapsed onto a single
- argmax action, `goto_target`, even on the 27 mine rows the small models
- handle). The letter-slot readout produced a degenerate distribution on
- this stack — most plausibly a mismatch between the readout and this
- model/tokenizer build (or bf16-CPU collapse of the reference
- gated-delta-net path), not "the 4B is bad". We **cannot claim the 4B is
- worse than the 2B** on this evidence. Harness follow-up: pin the
- transformers version to the SemIf development era, verify the
- letter-slot mapping against Qwen3.5's tokenizer, and run one fp32 probe
- before re-judging.
+   rows (Brier 1.0, all probability mass collapsed onto a single
+   argmax action, `goto_target`, even on the 27 mine rows the small models
+   handle). The letter-slot readout produced a degenerate distribution on
+   this stack — most plausibly a mismatch between the readout and this
+   model/tokenizer build (or bf16-CPU collapse of the reference
+   gated-delta-net path), not "the 4B is bad". We **cannot claim the 4B is
+   worse than the 2B** on this evidence. Harness follow-up: pin the
+   transformers version to the SemIf development era, verify the
+   letter-slot mapping against Qwen3.5's tokenizer, and run one fp32 probe
+   before re-judging.
 4. **Latency is the deployment question, not the accuracy question.**
- Reference-path CPU: Decider 18.4 s/question on the 4-core i5-8500T (the
- 09-22 handoff's "10.4 s" Laya figure was the same story — choice-type
- questions, small CPU; the live loop's noul questions run ~1.1 s on the
- 2-core openjev box). For a per-step reflex the 2B needs the fast kernels
- (`fla`/`causal_conv1d`) on a GPU or a quantized GGUF on CPU; that
- latency measurement is the next step (the 12 GB 3060, campaign handoff) before
- anyone calls the 2B "the Jev".
+   Reference-path CPU: Decider 18.4 s/question on the 4-core i5-8500T (the
+   09-22 handoff's "10.4 s" Laya figure was the same story — choice-type
+   questions, small CPU; the live loop's noul questions run ~1.1 s on the
+   2-core openjev box). For a per-step reflex the 2B needs the fast kernels
+   (`fla`/`causal_conv1d`) on a GPU or a quantized GGUF on CPU; that
+   latency measurement is the next step (the 12 GB 3060, campaign handoff) before
+   anyone calls the 2B "the Jev".
 
 **Verdict (accuracy-only, 41 rows):** Decider 2B is the Jev candidate —
 clearly better than Laya 421M on every axis that mattered, with its residual
@@ -454,7 +454,7 @@ last prompt position, `softmax(logits/1.3)` over the ≤16 letter tokens.
 Tokenization verified token-for-token against the reference tokenizer
 (0 mismatches across all rows). SemIf 4B ran through its own `llamacpp_backend`
 on the unsloth `UD-Q4_K_XL` GGUF (2.9 GB), T=1 native readout. 4 threads,
-i5-8500T (the CPU batch box, ).
+i5-8500T (the CPU batch box).
 
 **Decider 2B, same 41 rows:**
 
@@ -465,21 +465,21 @@ i5-8500T (the CPU batch box, ).
 | Q4_K_M (1.27 GB) | 0.5366 | 0.5449 | 0.5804 | 0.900 / 0.627 | 4 077 |
 
 - **Q8_0 is numerically indistinguishable from bf16**: Δtop-1 = 0,
- Δp(oracle) = +0.002, ΔBrier = −0.006, while running 5.2× faster. The
- authors' "within evaluation noise" claim holds on CPU at 8-bit. One real
- side effect: on the 12 systematically-wrong rows (§12's `goto_base` travel
- bias) Q8 makes the *wrong* choice confidently (0.746) where bf16 was flat
- (0.136). Top-1 and Brier are untouched, so any threshold-on-p(oracle)
- decision is unaffected — but "model confidence in its choice" is not a
- stable signal across quantizations.
+  Δp(oracle) = +0.002, ΔBrier = −0.006, while running 5.2× faster. The
+  authors' "within evaluation noise" claim holds on CPU at 8-bit. One real
+  side effect: on the 12 systematically-wrong rows (§12's `goto_base` travel
+  bias) Q8 makes the *wrong* choice confidently (0.746) where bf16 was flat
+  (0.136). Top-1 and Brier are untouched, so any threshold-on-p(oracle)
+  decision is unaffected — but "model confidence in its choice" is not a
+  stable signal across quantizations.
 - **Q4_K_M degrades this readout**: top-1 −17 pp (mine 0.81 → 0.56),
- p(oracle) 0.655 → 0.545, Brier 0.43 → 0.58. The letter-logit contrast this
- use case depends on is more quantization-sensitive than text generation
- (where 4-bit is fine). **8-bit is the quantization floor; 4-bit is ruled
- out** for the Decider readout (matches the authors' FP8-only production
- choice).
+  p(oracle) 0.655 → 0.545, Brier 0.43 → 0.58. The letter-logit contrast this
+  use case depends on is more quantization-sensitive than text generation
+  (where 4-bit is fine). **8-bit is the quantization floor; 4-bit is ruled
+  out** for the Decider readout (matches the authors' FP8-only production
+  choice).
 - 4-bit also didn't help latency (4.1 vs 3.6 s/row) — no reason to take the
- accuracy hit even if it had.
+  accuracy hit even if it had.
 
 **SemIf 4B, first valid measurement.** The §12 bf16-torch run was degenerate
 (p(oracle) = 0.000, Brier 1.0) — that turned out to be an artifact of that
@@ -490,7 +490,7 @@ the four letter answer slots — the frozen 4B genuinely answers in-slot),
 p(oracle) 0.298, conf right 0.544 vs wrong 0.535. The judgment itself is weak:
 top-1 **0.463** (chance = 0.25; Decider 2B fine-tuned = 0.707), p(oracle) 0.298
 vs 0.658. The §12 conclusion stands, now with the 4B leg actually measured:
-**the 2B task-tuned model beats the 2×-larger frozen base** on this readout,
+**2B task-tuned model beats the 2×-larger frozen base** on this readout,
 exactly the Jev premise (small tuned model + narrow question beats big
 untuned one). Latency: 12.2 s/row on 4C — the 4B is not a reflex candidate
 on this hardware anyway.
@@ -510,7 +510,7 @@ reference/measurement machine; the deployment box is still an open decision
 
 ## 14. Deployment: the Decider on the 12 GB 3060 (2026-09-25) — the reflex is real
 
-**Placement decision (owner):** the Decider runs on the **the 12 GB 3060** —
+**Placement decision (owner):** the Decider runs on the **12 GB 3060** —
 the llama-mux card of the Freistadt GPU server. The 3090 pair is explicitly out
 (it is the production 27B vLLM TP2), llama-backup's 3060 is the box the user
 does not want touched, and the 5600X 12T would only buy another ~2× over the
@@ -538,7 +538,7 @@ llama-server's OAI `top_logprobs` body key only feeds the *chat* path; on
 row, no temperature, no sampler filtering). The Decider's T=1.3 option readout
 is recovered exactly:
 
- p_T(i) = p_1(i)^(1/1.3) / Σ_j p_1(j)^(1/1.3) (over the option letters)
+    p_T(i) = p_1(i)^(1/1.3) / Σ_j p_1(j)^(1/1.3) (over the option letters)
 
 (the partition-function constant cancels in the ratio). Client:
 `scripts/jevab/decider-http-client.py` (imports `decider_readout()`; the live
@@ -578,16 +578,16 @@ OpenClaw use on the same card ping-pong the switch).
 `scripts/jev-loop-v5.py` puts the §14 Decider into the live loop and
 re-orders the tiers cheapest-first:
 
- policy proposes an action for the current phase
- -> 1) Laya 421M noul pre-filter (anchored yes/no, ~1.3-1.5 s)
- p < tau_yes (0.35) -> straight to the 27B
- p >= tau_yes -> 2) Decider-2B choice readout
- p(proposal) < tau_dec (0.5) -> 27B (doubt)
- p(proposal) >= tau_dec:
- Laya p >= tau_strong (0.6) -> execute the proposal
- Laya p < tau_strong -> 27B (borderline doubt)
- -> 3) 27B doubt-arbiter (thinking off, 272 ms measured) answers the
- same choice; fallback: the proposal. Stall valve unchanged.
+    policy proposes an action for the current phase
+      -> 1) Laya 421M noul pre-filter (anchored yes/no, ~1.3-1.5 s)
+             p < tau_yes (0.35) -> straight to the 27B
+             p >= tau_yes -> 2) Decider-2B choice readout
+                  p(proposal) < tau_dec (0.5) -> 27B (doubt)
+                  p(proposal) >= tau_dec:
+                       Laya p >= tau_strong (0.6) -> execute the proposal
+                       Laya p < tau_strong -> 27B (borderline doubt)
+      -> 3) 27B doubt-arbiter (thinking off, 272 ms measured) answers the
+             same choice; fallback: the proposal. Stall valve unchanged.
 
 The **strong-gate** is the load-bearing addition. In the first v5 run the
 injected skip-goal fault passed *both* small tiers in consensus: Laya yes
@@ -599,7 +599,7 @@ for genuinely confident steps. Every step is still labeled (both p's, the
 path, the judge answer, executed, oracle) — the threshold re-derivation
 protocol applies to tau_dec and tau_strong alike.
 
-The Decider endpoint for these runs was **the CPU batch box** (the A/B box):
+The Decider endpoint for these runs was **CPU batch box** (the A/B box):
 `scripts/jevab/decider-service.py` is a thin HTTP wrapper over the
 validated in-process llama.cpp Q8 readout (same code path as `gguf-runner.py`,
 one model load, requests serialized). Four corpus rows replayed through it
@@ -629,93 +629,93 @@ correct action *proposed* to endorse it.
 ### Findings
 
 1. **The 27B is goal-first, not phase-first — and it is the dominant live pattern.** Because actions include
- their own approach (goto is part of mine/harvest execution), the arbiter
- completes the whole mission in one action; on the follow-up runs this
- happened on *every* 27B contact (five of the last six runs: the mine
- fixture was consumed in step 1, from base, 24 blocks away — 25 s wall
- including the walk). Consequence: the mission collapses to two steps
- (act, return) and the injected phase faults often never fire, because
+   their own approach (goto is part of mine/harvest execution), the arbiter
+   completes the whole mission in one action; on the follow-up runs this
+   happened on *every* 27B contact (five of the last six runs: the mine
+   fixture was consumed in step 1, from base, 24 blocks away — 25 s wall
+   including the walk). Consequence: the mission collapses to two steps
+   (act, return) and the injected phase faults often never fire, because
  the phase they belong to is skipped. Mission completion is the true
- metric; the phase oracle stays conservative by construction. (Also
- found the same night: with *both* model tiers unreachable — the
- defaults were unresolvable placeholder hosts — the loop ran on policy
- alone and still completed the mine mission in 5 steps, the give_tool
- oracle proposal doing the repair. The deterministic policy is the
- floor, not the failure mode.)
+   metric; the phase oracle stays conservative by construction. (Also
+   found the same night: with *both* model tiers unreachable — the
+   defaults were unresolvable placeholder hosts — the loop ran on policy
+   alone and still completed the mine mission in 5 steps, the give_tool
+   oracle proposal doing the repair. The deterministic policy is the
+   floor, not the failure mode.)
 2. **The 27B's tool rule is conditional, not substitutive.** It endorses a
- proposed `give_tool` but does not proactively replace a tool-less
- `mine_target` proposal even when told "never mine_target without a
- pickaxe". The fix is a substitution-form rule ("no pickaxe in inventory
- ⇒ answer give_tool"), not a stronger warning.
+   proposed `give_tool` but does not proactively replace a tool-less
+   `mine_target` proposal even when told "never mine_target without a
+   pickaxe". The fix is a substitution-form rule ("no pickaxe in inventory
+   ⇒ answer give_tool"), not a stronger warning.
 3. **The Decider generalizes to a new 5th option as a detector, not a selector.**
- 30 labeled rows built around the live no-tool states
- (`scripts/jevab/gen-give-tool-rows.py`, `data/give-tool-rows-2026-09-25.json`):
- with-pickaxe controls stay at 0.921–0.926 (no 5-option drift in the
- trained readout); p(give_tool) separates cleanly by state — 0.255 (no
- tool, give_tool proposed), 0.060 (no tool, mine proposed), 0.009
- (with tool) — but the *choice* is mine_target on 30/30: the trained
- phase action owns the argmax, the new option only gets probability
- mass. Loop consequence: a proposed `give_tool` reads 0.255 < tau_dec
- 0.5, so the Decider correctly raises doubt and the 27B endorses it
- (the self-repair path); but a proposed tool-less `mine_target` reads
- 0.843 — *confirmed* — so the Decider does not flag the 27B's own
- failure mode. B-type rows are the Laya-veto + last-resort-repair
- regime (exactly how v5e completed); fine-tuning on the generated
- A/B rows is the path to make the 2B a give_tool selector.
+   30 labeled rows built around the live no-tool states
+   (`scripts/jevab/gen-give-tool-rows.py`, `data/give-tool-rows-2026-09-25.json`):
+   with-pickaxe controls stay at 0.921–0.926 (no 5-option drift in the
+   trained readout); p(give_tool) separates cleanly by state — 0.255 (no
+   tool, give_tool proposed), 0.060 (no tool, mine proposed), 0.009
+   (with tool) — but the *choice* is mine_target on 30/30: the trained
+   phase action owns the argmax, the new option only gets probability
+   mass. Loop consequence: a proposed `give_tool` reads 0.255 < tau_dec
+   0.5, so the Decider correctly raises doubt and the 27B endorses it
+   (the self-repair path); but a proposed tool-less `mine_target` reads
+   0.843 — *confirmed* — so the Decider does not flag the 27B's own
+   failure mode. B-type rows are the Laya-veto + last-resort-repair
+   regime (exactly how v5e completed); fine-tuning on the generated
+   A/B rows is the path to make the 2B a give_tool selector.
 4. **Live Laya noul sits lower than its corpus band**: 0.21-0.48 across
- these runs (vs up to ~0.9 in the 09-22 sets). Mostly below tau-strong
- 0.6, so with the strong-gate the 27B is the actual decider on most
- steps. At 272 ms that is acceptable. **Re-derived overnight from the
- 21 dual-p rows** (15 carrying both Laya-noul and Decider readings):
+   these runs (vs up to ~0.9 in the 09-22 sets). Mostly below tau-strong
+   0.6, so with the strong-gate the 27B is the actual decider on most
+   steps. At 272 ms that is acceptable. **Re-derived overnight from the
+   21 dual-p rows** (15 carrying both Laya-noul and Decider readings):
  the false-yes cap is 0.371 (the injected skip-goal, twice — the
- Decider's travel bias at 0.76 confirmed it, so both p's looked
- "confident") vs the correct floor 0.400. `--tau-strong` now defaults
- to **0.40** (advisory: a thin 0.029 gap on N=15): short-circuits 9/15
- vs 4/15 at 0.6 with **zero short-circuit errors** on the data, while
- every 0.371 false consensus still escalates. `--tau-yes` default
- likewise set to its 09-22 derived 0.35 (faulty 0.29-0.32 vs correct
- 0.36-0.39).
+   Decider's travel bias at 0.76 confirmed it, so both p's looked
+   "confident") vs the correct floor 0.400. `--tau-strong` now defaults
+   to **0.40** (advisory: a thin 0.029 gap on N=15): short-circuits 9/15
+   vs 4/15 at 0.6 with **zero short-circuit errors** on the data, while
+   every 0.371 false consensus still escalates. `--tau-yes` default
+   likewise set to its 09-22 derived 0.35 (faulty 0.29-0.32 vs correct
+   0.36-0.39).
 5. **The travel bias is live and caught by design**: the Decider's
- p(goto_base)~0.76 for the injected skip passes a borderline Laya yes;
+   p(goto_base)~0.76 for the injected skip passes a borderline Laya yes;
  the strong-gate routes that exact consensus to the 27B, which answers
- goto_target. The §12/§14 "gate on p(oracle), never on argmax confidence"
- rule is what makes this catch possible.
+   goto_target. The §12/§14 "gate on p(oracle), never on argmax confidence"
+   rule is what makes this catch possible.
 6. **Action granularity sets which tier does the work.** With
- self-approaching actions the mine/harvest missions are 2-step
- (act, return); "travel" is at most one step (or zero, when the 27B
- jumps). The small tiers therefore mostly see *veto* opportunities
- (a proposed skip-goal) and *return/done* confirmations — exactly the
- decisions the 421M noul question was built for — while goal selection
- goes to the 27B. The Decider's corpus-measured strength (phase
- selection, 70.7%) has little live surface on this action set; its
- live role is the calibrated p(proposal) that feeds the strong-gate.
- If the loop ever needs the small tiers to *drive* (not just veto),
+   self-approaching actions the mine/harvest missions are 2-step
+   (act, return); "travel" is at most one step (or zero, when the 27B
+   jumps). The small tiers therefore mostly see *veto* opportunities
+   (a proposed skip-goal) and *return/done* confirmations — exactly the
+   decisions the 421M noul question was built for — while goal selection
+   goes to the 27B. The Decider's corpus-measured strength (phase
+   selection, 70.7%) has little live surface on this action set; its
+   live role is the calibrated p(proposal) that feeds the strong-gate.
+   If the loop ever needs the small tiers to *drive* (not just veto),
  the action set has to be decomposed (goto and mine as separate
- actions) — that trades steps and latency for small-tier utilization.
- On the current substrate (27B at 272 ms) the coarse action set is the
- better deal.
+   actions) — that trades steps and latency for small-tier utilization.
+   On the current substrate (27B at 272 ms) the coarse action set is the
+   better deal.
 
 ### Infrastructure notes (same night)
 
-- **the CPU batch box**: the stale-rootfs-bind anomaly recurred (the CT-side
- it (third occurrence — this is the pattern, not a one-off).
- `decider.service` (the live readout) and `jevab2` (batch supervisor) are
- both active. The Q8 GGUF lives at `/var/jevab/weights/decider-2b-Q8_0.gguf`
- (conversion output, CT rootfs); the safetensors stay in `/models/jevab/`.
- trixie repo is stale at 1.90.6 — the bookworm pool.deb is the working
- source; the Debian tailscaled unit also needs `/etc/default/tailscaled`,
- its EnvironmentFile has no `-`). The node `polis` is **registered in the
- tailnet** (the testnet address, `--accept-routes=false` per the 09-17
- invariants); the one pending step is a user click on the login URL
- (it regenerates on every `tailscale up` re-run — the current one is in
+  `/models/jevab` showed the pre-Decider tree); `a container restart` restored
+  it (third occurrence — this is the pattern, not a one-off).
+  `decider.service` (the live readout) and `jevab2` (batch supervisor) are
+  both active. The Q8 GGUF lives at `/var/jevab/weights/decider-2b-Q8_0.gguf`
+  (conversion output, CT rootfs); the safetensors stay in `/models/jevab/`.
+  trixie repo is stale at 1.90.6 — the bookworm pool.deb is the working
+  source; the Debian tailscaled unit also needs `/etc/default/tailscaled`,
+  its EnvironmentFile has no `-`). The node `polis` is **registered in the
+  tailnet** (the testbed's tailnet address, `--accept-routes=false` per the 09-17
+  invariants); the one pending step is a user click on the login URL
+  (it regenerates on every `tailscale up` re-run — the current one is in
 - **`scripts/botview.py`**: one-command live overview (player/bots/zones/
- last events in one line; `--follow N` streams ticks with move detection
- and appends a JSONL sidecar to `data/botview.jsonl`; optional single
- `--screenshot`).
+  last events in one line; `--follow N` streams ticks with move detection
+  and appends a JSONL sidecar to `data/botview.jsonl`; optional single
+  `--screenshot`).
 
 ### Fast decider path over the tailnet (done this morning, 2026-09-25)
 
-The tailnet node was approved; the Decider now runs on the **the 3060 card**
+The tailnet node was approved; the Decider now runs on the **3060 card**
 for the live loop. Because the polis testbed box does not carry the
 decider package/tokenizer, the path is split in two:
 `decider-service.py` gained a **`/prompt`** endpoint (returns the exact
@@ -763,7 +763,7 @@ controls per family) plus everything already labeled, remapped into the
 Decider checkpoint (r16/α32, "all-linear", 16.8M trainable = 0.89% of
 1.9B, lr 1e-4, 4 epochs, 102 train / 21 grouped holdout, 3060) drove the
 train loss 0.43 → 0.06 while the holdout sat flat at 0.190 top-1 for all
-four epochs. A per-row probe explained why: **the base model (no
+four epochs. A per-row probe explained why: **base model (no
 adapter) scores 76% top-1 on the very same holdout** — the fine-tune
 collapsed to answering `give_tool` with p≈1.0 on most rows (the largest
 oracle class). Diagnosis: 16.8M free parameters against 102 short rows
@@ -825,31 +825,31 @@ give_tool-while-carrying, 1 mine_target).
 The result is a *negative* one, and it is the useful one:
 
 - **No gate separates on this corpus.** Every Youden point has negative
- margins on both sides: Laya p (correct 0.260–0.780 vs faulty
- 0.183–0.764, J=0.167), Decider p among Laya-passing (0.013–0.954 vs
- 0.027–0.905, J=0.364), Laya p among doubly-confident (0.351–0.780 vs
- 0.358–0.764, J=0.218). The 09-22/09-25 tau derivations looked clean
- because they ran on *narrow* live distributions (policy proposals on
- active missions), where the two populations barely mix.
+  margins on both sides: Laya p (correct 0.260–0.780 vs faulty
+  0.183–0.764, J=0.167), Decider p among Laya-passing (0.013–0.954 vs
+  0.027–0.905, J=0.364), Laya p among doubly-confident (0.351–0.780 vs
+  0.358–0.764, J=0.218). The 09-22/09-25 tau derivations looked clean
+  because they ran on *narrow* live distributions (policy proposals on
+  active missions), where the two populations barely mix.
 - **At the current defaults (0.35/0.50/0.40) the stress corpus
- short-circuits 47/151 rows, of which 20 are faulty** (Wilson 95% UB
- 19.6%) — 13 goto_base skip-goals (Laya p up to 0.764 — no Laya
- threshold catches them, correct rows reach 0.780) and 7
- give_tool-while-carrying. Both leak families are exactly the two known
- weak points: the Decider's travel-phase bias and the spontaneous-
- substitution gap.
+  short-circuits 47/151 rows, of which 20 are faulty** (Wilson 95% UB
+  19.6%) — 13 goto_base skip-goals (Laya p up to 0.764 — no Laya
+  threshold catches them, correct rows reach 0.780) and 7
+  give_tool-while-carrying. Both leak families are exactly the two known
+  weak points: the Decider's travel-phase bias and the spontaneous-
+  substitution gap.
 - **Consequence for the defaults:** the tau values were left *where
- they are*. Chasing the Youden points (e.g. tau_dec 0.907, tau_strong
- 0.747) would be an artifact of the overlap — they "separate" by
- killing the short-circuit benefit (correct SC 10/39, 20/55) rather
- than by finding a boundary. On this corpus the gates' function is
- **load control** (47% of rows skip the 27B; the live narrow
- distribution short-circuits more), and *safety is carried by the 27B
- catching what leaks plus the last-resort deterministic repair* — which
- is the architecture's design, not a compromise. The lever for the two
- leak families is the tiers themselves: world-variety corpus growth +
+  they are*. Chasing the Youden points (e.g. tau_dec 0.907, tau_strong
+  0.747) would be an artifact of the overlap — they "separate" by
+  killing the short-circuit benefit (correct SC 10/39, 20/55) rather
+  than by finding a boundary. On this corpus the gates' function is
+  **load control** (47% of rows skip the 27B; the live narrow
+  distribution short-circuits more), and *safety is carried by the 27B
+  catching what leaks plus the last-resort deterministic repair* — which
+  is the architecture's design, not a compromise. The lever for the two
+  leak families is the tiers themselves: world-variety corpus growth +
  the gentle fine-tune (boundary smoothing; see the llmlab addendum's
- in-context-boundary literature), not threshold tuning.
+  in-context-boundary literature), not threshold tuning.
 
 ### Pickup phase exercised live + two loop fixes + world-variety corpus (2026-09-25, late afternoon)
 
@@ -976,33 +976,32 @@ the restored resident (courtesy end state).
 
 Deployment lessons learned the hard way, this box, this night:
 1. **Why the file "vanished": it never got there — and a timezone trap
- almost made it a mystery.** The CT's `/mnt/models` *is* the host's
- `/vmpool/models` (one 60G thin LV, bind-mounted via `mp0`; marker
- writes pass both ways). The "divergent" timestamps that suggested two
- filesystems were the CT's UTC clock vs the host's CEST — the same
- instant, two displays. The real cause of the load failure was a
- silently failed file transfer of the fresh GGUF. The write-permission
- wall is the **unprivileged CT**: CT-internal root (host uid 100000)
- can't write host-root-owned dirs (they look `nobody:nogroup` in-CT),
- so the new model got a fresh dir created from inside the CT —
- `/mnt/models/decider-2b-ft/`. Lesson: verify copies by reading them
- back, and remember the 2 h clock offset when comparing `ls` output
- across this box's two sides.
+   almost made it a mystery.** The CT's `/mnt/models` *is* the host's
+   writes pass both ways). The "divergent" timestamps that suggested two
+   filesystems were the CT's UTC clock vs the host's CEST — the same
+   instant, two displays. The real cause of the load failure was a
+   silently failed file transfer of the fresh GGUF. The write-permission
+   wall is the **unprivileged CT**: CT-internal root (host uid 100000)
+   can't write host-root-owned dirs (they look `nobody:nogroup` in-CT),
+   so the new model got a fresh dir created from inside the CT —
+   `/mnt/models/decider-2b-ft/`. Lesson: verify copies by reading them
+   back, and remember the 2 h clock offset when comparing `ls` output
+   across this box's two sides.
 2. **`pkill -x llama-server` kills the router systemd service** (it *is*
- a llama-server process). Use `systemctl stop/start llama-server`.
+   a llama-server process). Use `systemctl stop/start llama-server`.
 3. **The mux's `_switching` dict can wedge**: a failed switch leaves the
- model flagged "switching" with a silently polling background thread;
- subsequent loads return 202 forever with zero log output. Remedy:
- `systemctl restart llama-mux` (empty dict), then re-issue.
+   model flagged "switching" with a silently polling background thread;
+   subsequent loads return 202 forever with zero log output. Remedy:
+   `systemctl restart llama-mux` (empty dict), then re-issue.
 4. **The 35B child can hang holding 11.7 GB after an unload** (router says
- unloaded, VRAM never drains, mux `wait_gpu_free` times out at 180 s).
- Kill the child by its ephemeral port (`--port 56675` in its argv);
+   unloaded, VRAM never drains, mux `wait_gpu_free` times out at 180 s).
+   Kill the child by its ephemeral port (`--port 56675` in its argv);
  the mux then switches in ~6 s.
 5. **Converting this model family requires `--no-mtp`**: without it the
- MTP block produces a `blk.24.attn_norm` mismatch / file-bounds
- corruption in the GGUF. And the merged HF dir must not contain
- `adapter_config.json` (a stray copy made transformers re-apply the
- LoRA on top of the merged weights).
+   MTP block produces a `blk.24.attn_norm` mismatch / file-bounds
+   corruption in the GGUF. And the merged HF dir must not contain
+   `adapter_config.json` (a stray copy made transformers re-apply the
+   LoRA on top of the merged weights).
 
 Residual risk, stated plainly: the FT model's p≈1.0 means it is
 confident on everything it has seen structurally. An *out-of-vocabulary*
@@ -1016,16 +1015,16 @@ data point for that tail.
 ### Next (in order)
 
 1. **R1 real-world blocks**: same pinned missions against *real* block
- types (granite ore, real trees/crops) in a generated world — the first
- out-of-vocabulary test for the FT decider; watch what p_oracle does on
- states it has never seen structurally.
+   types (granite ore, real trees/crops) in a generated world — the first
+   out-of-vocabulary test for the FT decider; watch what p_oracle does on
+   states it has never seen structurally.
 2. **Build mission** (`place_block` end-to-end) — closes the 7-option
- vocabulary; the FT model already scores place_block rows in the corpus.
+   vocabulary; the FT model already scores place_block rows in the corpus.
 3. **Monitoring**: decider readout latency + SC rate as a Grafana panel
- (the mux exposes per-model metrics; the v5 JSON carries the SC counts).
+   (the mux exposes per-model metrics; the v5 JSON carries the SC counts).
 4. **Corpus growth for the tail**: out-of-vocabulary state families
- (new block types, multi-item carries) to give the *next* fine-tune a
- calibration signal for abstention instead of confident guessing.
+   (new block types, multi-item carries) to give the *next* fine-tune a
+   calibration signal for abstention instead of confident guessing.
 
 ## 17. R1: out-of-vocabulary content and live natural missions (2026-09-25/26, 10th pass)
 
@@ -1042,12 +1041,12 @@ the game testbed against *natural* world structures with natural task wording.
 trained state template:
 
 - **oov-id**: trained task phrasing; carrying/items lines carry block ids
- absent from the 09-25 corpora (coal/copper/tin/silver/iron/gold ores,
- pine/birch/spruce/linden/willow logs, potato/oat/barley/rye crops and
- seeds, wool/dove-feather/flint)
+  absent from the 09-25 corpora (coal/copper/tin/silver/iron/gold ores,
+  pine/birch/spruce/linden/willow logs, potato/oat/barley/rye crops and
+  seeds, wool/dove-feather/flint)
 - **oov-task**: natural mission phrasings ("mine the coal ore, then return
- to base" …) plus the same OOV ids, so the task line and the item lines
- are novel at once
+  to base" …) plus the same OOV ids, so the task line and the item lines
+  are novel at once
 
 Canonical measurement: dedicated 2B server on the 12 GB 3060 (no prompt
 cache), pre-fetched prompts, paced — 192 rows in ~2 min:
@@ -1069,47 +1068,47 @@ abstention labels; see Next).
 ### R1b — live natural missions (the game testbed, FT reflex via the 3060 host mux)
 
 - **mine**: granite marker embedded in a 3×3 rock-limestone pocket
- (natural ore-pocket structure), natural task wording, `--drop-after-mine`
- → **complete**: 3 steps, injected fault corrected 1/1, 3 judge calls,
- 0 SC (the decider's p on these natural-phrasing rows ran below tau-dec —
+  (natural ore-pocket structure), natural task wording, `--drop-after-mine`
+  → **complete**: 3 steps, injected fault corrected 1/1, 3 judge calls,
+  0 SC (the decider's p on these natural-phrasing rows ran below tau-dec —
  the loop escalated to the 27B, which is the designed behavior).
 - **harvest**: a real non-carrot crop — `crop-rye-9` (first run with
- `crop-rye-7` failed: rye matures at stage 9/9, not 7/7 — the game's own
- stage gating reported "crop not mature: stage 7/9"), natural wording,
- `--drop-after-harvest` → **complete**: harvest → pickup → return → done;
- mission_complete True, fault 1/1, **4/8 reflex short-circuits**.
+  `crop-rye-7` failed: rye matures at stage 9/9, not 7/7 — the game's own
+  stage gating reported "crop not mature: stage 7/9"), natural wording,
+  `--drop-after-harvest` → **complete**: harvest → pickup → return → done;
+  mission_complete True, fault 1/1, **4/8 reflex short-circuits**.
 
 Findings:
 
 1. **Pickup approach step (new, loop level).** Harvest drops land at the
- source block; after a ranged harvest the item can sit 3.26 blocks from
+   source block; after a ranged harvest the item can sit 3.26 blocks from
  the bot — beyond the 3.0 pickup range (this is a *general* game
- condition, not a rye quirk: items roll on slopes, the bot drifts during
- action animations). The v5 pickup executor now gootos the item's cell
- first when the nearest ground item is > 2.5 blocks away (same pattern
- as the 9th-pass mine approach step). Durable follow-up: the mod's
- `PolisPickupItemAction` currently hard-fails on `dist > range` — it
- should self-approach (queue a goto to the item, pick up on arrival)
- like the mine action's approach.
+   condition, not a rye quirk: items roll on slopes, the bot drifts during
+   action animations). The v5 pickup executor now gootos the item's cell
+   first when the nearest ground item is > 2.5 blocks away (same pattern
+   as the 9th-pass mine approach step). Durable follow-up: the mod's
+   `PolisPickupItemAction` currently hard-fails on `dist > range` — it
+   should self-approach (queue a goto to the item, pick up on arrival)
+   like the mine action's approach.
 2. **Harvest completion detector was hardcoded to "carrot"**
- (`any("carrot" in carrying)`); the rye mission (carrying
- `game:seeds-rye`) never declared complete. Fixed to a baseline-carry
- diff: complete = at base + a new non-tool item was acquired.
+   (`any("carrot" in carrying)`); the rye mission (carrying
+   `game:seeds-rye`) never declared complete. Fixed to a baseline-carry
+   diff: complete = at base + a new non-tool item was acquired.
 3. **The decider mis-picks on structurally novel state text**: on the
- post-pickup return rows (compound `since_last_step` lines) it proposed
- `pickup_item` with nontrivial mass; the judge corrected. Laya p on the
- natural-phrasing rows ran 0.30–0.49 (below the fixture baseline), so
- SC rate is lower on natural wording than on corpus wording. This is
+   post-pickup return rows (compound `since_last_step` lines) it proposed
+   `pickup_item` with nontrivial mass; the judge corrected. Laya p on the
+   natural-phrasing rows ran 0.30–0.49 (below the fixture baseline), so
+   SC rate is lower on natural wording than on corpus wording. This is
  the calibration tail R1 was built to measure: the loop's answer
- (escalate to the 27B) is exactly right, and the tail's shape is now
- characterized for the next corpus.
+   (escalate to the 27B) is exactly right, and the tail's shape is now
+   characterized for the next corpus.
 4. **VS 1.22.7 code space (reference).** Item codes and block codes are
- different spaces: the corpus's "stone-granite"/"oak"/"wheat" strings
- are *channel vocabulary* — they are not settable block codes in 1.22
- (`Unknown block: stone-coal`, `…: oak`, `…: wheat`). Real codes:
- granite = `rock-granite`, rye = `crop-rye-<stage 0..9>`, cabbage =
- `crop-cabbage-<stage>`. The facts channel was never exposed to game
- block codes, which is why the model never needed them.
+   different spaces: the corpus's "stone-granite"/"oak"/"wheat" strings
+   are *channel vocabulary* — they are not settable block codes in 1.22
+   (`Unknown block: stone-coal`, `…: oak`, `…: wheat`). Real codes:
+   granite = `rock-granite`, rye = `crop-rye-<stage 0..9>`, cabbage =
+   `crop-cabbage-<stage>`. The facts channel was never exposed to game
+   block codes, which is why the model never needed them.
 
 ### Measurement-artifact finding (batched readouts on this build)
 
@@ -1131,17 +1130,17 @@ interpretation. (File a note for the llama.cpp build maintainer;
 ### Next (in order)
 
 1. **Build mission** (`place_block` end-to-end) — closes the 7-option
- vocabulary; the FT model already scores the corpus place_block rows.
+   vocabulary; the FT model already scores the corpus place_block rows.
 2. **Monitoring**: decider readout latency + SC rate as a Grafana panel;
  the FT model registered in the llm-hub config/sidecar.
 3. **Nightly val-world canary** (96 rows, ~2 min on the card): the drift
- guard for the deployed reflex.
+   guard for the deployed reflex.
 4. **Next fine-tune corpus**: OOV *state* families with abstention labels
- (new phase patterns — the §16/§17 residual risk), multi-crop harvest
- rows (rye/oat/cabbage), natural-phrasing rows. `gen-r1-probe-rows.py`
- is the seed.
+   (new phase patterns — the §16/§17 residual risk), multi-crop harvest
+   rows (rye/oat/cabbage), natural-phrasing rows. `gen-r1-probe-rows.py`
+   is the seed.
 5. **Mod rebuild session**: pickup self-approach (durable form of
- finding 1), plus the other carried items.
+   finding 1), plus the other carried items.
 
 ## 18. The build mission goes live; the 7-option vocabulary is closed (2026-09-26, 11th pass)
 
@@ -1254,25 +1253,25 @@ the 3060 card (base, FT-1, FT-2; raw rows in `data/ft2-ab/`):
 Reading:
 
 1. **No regression anywhere.** Val-world stays 96/96 and the *floor*
- rises (min p_oracle 0.679 → 0.883): FT-1's weakest rows were the
- ones the round-2 corpus reinforced; OOV is statistically
- unchanged (0.9998 vs 0.9996).
+   rises (min p_oracle 0.679 → 0.883): FT-1's weakest rows were the
+   ones the round-2 corpus reinforced; OOV is statistically
+   unchanged (0.9998 vs 0.9996).
 2. **The abstention capability is real and is the right shape.** On
  the held-out "none of the 7 is right" states FT-2 answers `wait`
- on all 45 with p ≈ 1.0 — and the distribution is *peaked on
- `wait`* (max-p mean equals p(`wait`) mean), not flat. The
- calibrated-abstainer behavior the jev-designer rule calls for: the
- escape option is a confident signal to escalate to the judge, not
- a shrug.
+   on all 45 with p ≈ 1.0 — and the distribution is *peaked on
+   `wait`* (max-p mean equals p(`wait`) mean), not flat. The
+   calibrated-abstainer behavior the jev-designer rule calls for: the
+   escape option is a confident signal to escalate to the judge, not
+   a shrug.
 3. **What FT-1 actually did on those states is the design
- justification, in one row.** FT-1: 71% of abstention states got a
- *confident wrong action* (max-p mean 0.967, max 1.000) — exactly
+   justification, in one row.** FT-1: 71% of abstention states got a
+   *confident wrong action* (max-p mean 0.967, max 1.000) — exactly
  the "confident guessing outside the learned distribution" risk the
- §16 adoption note flagged, now *measured* (29% of the time it
- picked the escape; base: 84% wrong but at least uncertain).
- Under the cascade, a confident wrong reflex still passes the
- Laya-yes gate; only the judge catches it. Round 2 removes most of
- that exposure at zero cost to the in-distribution slices.
+   §16 adoption note flagged, now *measured* (29% of the time it
+   picked the escape; base: 84% wrong but at least uncertain).
+   Under the cascade, a confident wrong reflex still passes the
+   Laya-yes gate; only the judge catches it. Round 2 removes most of
+   that exposure at zero cost to the in-distribution slices.
 
 ### Live build on the new reflex (the game testbed, d12, travel fault)
 

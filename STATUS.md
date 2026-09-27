@@ -22,162 +22,162 @@ Game target: **Vintage Story 1.22.7** (released 2026-08-16). 1.23 expected befor
 ## Open issues carried into 1.22.7 (from archive/KNOWN_ISSUES.md, unresolved)
 
 - **Movement physics (top priority):** client prediction writes `Pos.Motion`
- directly, fighting the server's `interpolateposition`. 1.22.7 note: `goto`
- 10 blocks completed with `arrived=true` (2026-09-21); smoothness unassessed.
+  directly, fighting the server's `interpolateposition`. 1.22.7 note: `goto`
+  10 blocks completed with `arrived=true` (2026-09-21); smoothness unassessed.
 - Tall-grass targeting: `gotolook` can target the grass block instead of the
- ground below → "no path".
+  ground below → "no path".
 - A* reports `no path` across unloaded chunks (spawn nearby for visual tests).
 - Goto arrival snap: functionally exact, visually a ~0.5-block jump.
 - Looping animations don't play on client; several action classes have no
- animation at all.
+  animation at all.
 - Pickup timing: `CanCollect` false for ~1s after a drop; dropped items can
- leave the search radius quickly.
+  leave the search radius quickly.
 - Creative-mode caveats: no drops on mine/harvest (vanilla behavior) — run
- drop-dependent tests in survival.
+  drop-dependent tests in survival.
 - HUD coordinates can be offset from server coordinates (~+256 X/Z observed
- on the old build) — use `/polis list` / F3 for absolute coords.
+  on the old build) — use `/polis list` / F3 for absolute coords.
 
 ## 1.22.7 environment gotchas found 2026-09-21 (affects any test/agent work)
 - **World migration drops player moddata (field 15).** The 1.21.6→1.22.7
- upgrade rewrote the playerdata record and silently dropped the moddata
- container — `createCharacter=true` was lost, so the first-run dialog
- re-appeared on every boot and suspended the embedded server's tick
- (all harness commands hang). Fixed by splicing the field-15 blob back into
+  upgrade rewrote the playerdata record and silently dropped the moddata
+  container — `createCharacter=true` was lost, so the first-run dialog
+  re-appeared on every boot and suspended the embedded server's tick
+  (all harness commands hang). Fixed by splicing the field-15 blob back into
  the live save (backup: `Saves/*.pre-charsel.bak`); also added harness
- routes `/polis/debug/charsel` (inspect) and `/polis/admin/moddata`
- (set via the game's own SetModData — the dialog is unconfirmable headless).
- Any 1.21-era world will hit this on first 1.22 boot.
+  routes `/polis/debug/charsel` (inspect) and `/polis/admin/moddata`
+  (set via the game's own SetModData — the dialog is unconfirmable headless).
+  Any 1.21-era world will hit this on first 1.22 boot.
 - **Collectible namespaces moved.** `survival:stone`-style codes no longer
- resolve via the world accessors; content resolves under plain / `game:`
- and hyphen-variant codes (`rock-granite`, `pickaxe-iron`, `packeddirt`).
- The harness now uses a lenient resolver (as-is → stripped → `game:` →
- `survival:`) in setblock/place/give. Plant/harvest blocks still not
- found under any tried namespace — open.
+  resolve via the world accessors; content resolves under plain / `game:`
+  and hyphen-variant codes (`rock-granite`, `pickaxe-iron`, `packeddirt`).
+  The harness now uses a lenient resolver (as-is → stripped → `game:` →
+  `survival:`) in setblock/place/give. Plant/harvest blocks still not
+  found under any tried namespace — open.
 - **Possession NaN crash (fixed):** seat exposed a shared mutable EntityPos;
- on first possession frame the client entity got a NaN pos and the physics
- tick threw, killing the client. Seat now returns copies, guards NaN, and
+  on first possession frame the client entity got a NaN pos and the physics
+  tick threw, killing the client. Seat now returns copies, guards NaN, and
  the client reconciler self-heals.
 - `observer-screenshot --save` returns `filePath: null` (silent write
- failure; base64 path works). Use VNC/noVNC screenshots for visual evidence.
+  failure; base64 path works). Use VNC/noVNC screenshots for visual evidence.
 - In-game the cursor is pointer-locked (re-centered at 512,384): noVNC
- absolute clicks don't land on UI buttons in-world. Keyboard works (ESC
- closes dialogs; the first-run `Customize Skin` dialog could only be
- *closed*, never *confirmed*, headless — hence the admin/moddata route).
+  absolute clicks don't land on UI buttons in-world. Keyboard works (ESC
+  closes dialogs; the first-run `Customize Skin` dialog could only be
+  *closed*, never *confirmed*, headless — hence the admin/moddata route).
 
 ## Known 1.22.7 harness quirks (found 2026-09-21)
 - `observer-screenshot --save` returns `filePath: null` (silent write failure;
- base64 path works). Use VNC/noVNC screenshots for visual evidence meanwhile.
+  base64 path works). Use VNC/noVNC screenshots for visual evidence meanwhile.
 - In-game the cursor is pointer-locked (re-centered at 512,384): noVNC
- absolute clicks don't land on UI buttons in-world. Keyboard works (ESC closes
- dialogs; the first-run `Customize Skin` dialog completes via close/ESC).
+  absolute clicks don't land on UI buttons in-world. Keyboard works (ESC closes
+  dialogs; the first-run `Customize Skin` dialog completes via close/ESC).
 
 ## Next (in order)
 1. Green build on 1.22.7 — **done 2026-09-21**.
 2. In-game smoke test on the game container — **done 2026-09-21** (core loop, possession,
- block ops live-verified; smoke-v1 PASS).
+   block ops live-verified; smoke-v1 PASS).
 3. **Jev-loop v2/v3/v4** — done 2026-09-22: v2 (phase oracle, 0/8 match,
- 8/8 gated), v3 (noul veto: conservative net, not precision),
- v4 (27B per-step judge + Laya pre-filter: decision side works, see
- `docs/reports/2026-09-22-jev-loop-v4-27b-judge.md`).
+   8/8 gated), v3 (noul veto: conservative net, not precision),
+   v4 (27B per-step judge + Laya pre-filter: decision side works, see
+   `docs/reports/2026-09-22-jev-loop-v4-27b-judge.md`).
 4. **Bot inventory + 1.22 loot routing** — done 2026-09-22: 16-slot cargo
- on `EntityPolisBot`; mine breaks as the bot and routes `GetDrops` into
+   on `EntityPolisBot`; mine breaks as the bot and routes `GetDrops` into
  the cargo; set-placed rocks yield no item drops, so the mission's
- success criterion is marker removal (scan-verified); `POLIS_SKIP_CLAIMS`
- test-world bypass — `docs/reports/2026-09-22-bot-cargo-and-decision-harness.md`.
+   success criterion is marker removal (scan-verified); `POLIS_SKIP_CLAIMS`
+   test-world bypass — `docs/reports/2026-09-22-bot-cargo-and-decision-harness.md`.
 5. **Decision loop as optimization harness** — done 2026-09-22:
- `scripts/jev-loop-v4.py` (labeled set, mission outcome, phase-relative
- faults, threshold re-derivation). Five passes measured: mission complete
- 2/2 at the re-derived tau; the doubt-arbiter stall (failure evidence
- sticks) is a robust, prompt-resistant finding for the method record.
+   `scripts/jev-loop-v4.py` (labeled set, mission outcome, phase-relative
+   faults, threshold re-derivation). Five passes measured: mission complete
+   2/2 at the re-derived tau; the doubt-arbiter stall (failure evidence
+   sticks) is a robust, prompt-resistant finding for the method record.
 6. **Doubt-arbiter stall fix** — done 2026-09-22 (pass 6): diff-based
- `since_last_step` state line + max-stall valve (2 waits -> policy
- resumes). Mission 2/2 in 25 s, 4/4 faults handled by the judge, 0
- stalls; threshold converged (suggested 0.358 ~ applied 0.35).
+   `since_last_step` state line + max-stall valve (2 waits -> policy
+   resumes). Mission 2/2 in 25 s, 4/4 faults handled by the judge, 0
+   stalls; threshold converged (suggested 0.358 ~ applied 0.35).
 7. **Harvest pipeline + second mission** — done 2026-09-22: 1.22 crop
- system (farmland + `crop` variants, stage 7 = mature), harvest action
- breaks as the bot and routes drops to the cargo; harness is
- mission-parameterized (`--mission mine|harvest`); harvest mission
- complete 2/2 in 2 steps / 13 s, bot carries 11x carrot + seed home;
- openjev use cases `polis-action-noul` + `polis-harvest-noul`; labeled
- corpus in `data/`.
+   system (farmland + `crop` variants, stage 7 = mature), harvest action
+   breaks as the bot and routes drops to the cargo; harness is
+   mission-parameterized (`--mission mine|harvest`); harvest mission
+   complete 2/2 in 2 steps / 13 s, bot carries 11x carrot + seed home;
+   openjev use cases `polis-action-noul` + `polis-harvest-noul`; labeled
+   corpus in `data/`.
 8. Grow the labeled corpus (a few more harvest/mine runs at varied
- taus) and hand the question JSONs + labeled sets to the llmlab side
- for the decision-classifiers page.
+   taus) and hand the question JSONs + labeled sets to the llmlab side
+   for the decision-classifiers page.
 9. **Movement pass** — done 2026-09-22 (report section 9): the goto freeze
- root-caused to persisted idle-bot accumulation (19 bots; a restart
- mid-goto wedges the traverser one-shot async search); harness now sweeps
- bots before every run; goto has a bounded 3-phase fallback ladder (async
- A* -> sync A* -> straight line, 15 s timeouts) instead of a silent hang.
+   root-caused to persisted idle-bot accumulation (19 bots; a restart
+   mid-goto wedges the traverser one-shot async search); harness now sweeps
+   bots before every run; goto has a bounded 3-phase fallback ladder (async
+   A* -> sync A* -> straight line, 15 s timeouts) instead of a silent hang.
 10. ~~WORLD WEDGED~~ - resolved 09-22 morning (see item 11 and report section 11). The
- `polis-testbed-pristine` world is persistently navigation-wedged (all
- entities fail to move; every recovery attempt failed; full incident
- record: report section 10). Next session, first task: delete the world
- (noVNC with a viewer connected, or stop the game and rm the Worlds/ and
- Saves/ entries), create `polis-testbed-2` WITH THE VIEWER CONNECTED
- (headless new-world creation hangs), set `VSGAME_WORLD`, restart,
- re-verify spawn+goto. Rules: never restart mid-goto; sweep bots before
- stopping the game.
+    `polis-testbed-pristine` world is persistently navigation-wedged (all
+    entities fail to move; every recovery attempt failed; full incident
+    record: report section 10). Next session, first task: delete the world
+    (noVNC with a viewer connected, or stop the game and rm the Worlds/ and
+    Saves/ entries), create `polis-testbed-2` WITH THE VIEWER CONNECTED
+    (headless new-world creation hangs), set `VSGAME_WORLD`, restart,
+    re-verify spawn+goto. Rules: never restart mid-goto; sweep bots before
+    stopping the game.
 11. **Wedge RESOLVED 09-22 morning** (supersedes item 10): world
- healthy again, full mine mission green. Root-cause trace + external
- corroboration (open vanilla VS issues #5334/#5422/#5875: entities
- alive-but-frozen; repro "saving and reloading a save within a
- vertical distance") in report section 11. Defenses: never restart
- mid-goto, `POLIS_PATH_PROBE=1` diagnostic, dawn-screenshot pause
- check. Done since: harvest pipeline + corpus growth + visual proof +
- repo sanitization + llmlab handoff (reports/2026-09-22-polis-jev-loop-model-handoff.md).
+    healthy again, full mine mission green. Root-cause trace + external
+    corroboration (open vanilla VS issues #5334/#5422/#5875: entities
+    alive-but-frozen; repro "saving and reloading a save within a
+    vertical distance") in report section 11. Defenses: never restart
+    mid-goto, `POLIS_PATH_PROBE=1` diagnostic, dawn-screenshot pause
+    check. Done since: harvest pipeline + corpus growth + visual proof +
+    repo sanitization + llmlab handoff (reports/2026-09-22-polis-jev-loop-model-handoff.md).
 12. **v5 live loop — done 2026-09-25 (overnight, report §15)**: three-tier
- cascade measured on the game testbed (harvest 2/16 s, mine 4–5/76–81 s,
- faults handled, `give_tool` action live, botview live).
+    cascade measured on the game testbed (harvest 2/16 s, mine 4–5/76–81 s,
+    faults handled, `give_tool` action live, botview live).
 13. **Tailnet fast path — done 2026-09-25 (report: fast decider path)**:
- user approved the game testbed's tailnet node; the Decider now serves the loop
- from the 3060 card via the `/prompt` + `decider-fast-client` split
- (286 ms/row warm vs 3–4 s CPU); first live short-circuit recorded
- (harvest return, Laya 0.41 + Decider 0.96, no 27B call).
+    user approved the game testbed's tailnet node; the Decider now serves the loop
+    from the 3060 card via the `/prompt` + `decider-fast-client` split
+    (286 ms/row warm vs 3–4 s CPU); first live short-circuit recorded
+    (harvest return, Laya 0.41 + Decider 0.96, no 27B call).
 14. **7-option reflex vocabulary — done 2026-09-25 (report §16)**:
- `pickup_item` + `place_block` joined the option set (7 per mission),
- pickup phase live-wired in the loop; corpus grown to 123 labeled
- rows (generated pickup/place grids + all prior rows remapped).
- **Fine-tune experiment (the 12 GB 3060 window): negative result** —
- aggressive LoRA (r16, lr 1e-4, 4 epochs on 102 rows) collapsed the
- model (holdout 76% base → 29% adapter, degenerate give_tool
- one-answer); the base model already selects the new options by
- reading the option list in the prompt (76/123, Q8 ≡ bf16,
- quantization-neutral), including give_tool 10/12 where the 5-option
- era measured 0/12. **Fine-tune deferred** until the corpus is
- several times larger; next attempt must be gentle (r 4-8, lr
- 1-3e-5, early-stop, holdout covering the new families). Live
- 7-option missions: mine 2 steps/42 s + harvest 2 steps/26 s,
- injected faults corrected, short-circuit on mine return.
- **Remaining on the v5 line:** (a) **done** — tau
- re-derivation on the new calibration unit, run as an *offline stress
- test* on 151 dual-p rows (dualp-runner.py: 84 correct-side vs 67
- faulty-side — 26 goto_base skip-goal + 46 give_tool-while-carrying
- variants): **no gate separates on the broad corpus** (all Youden
- points negative-margin; the clean 09-22/09-25 derivations ran on
- narrow live distributions); at current defaults 47/151 short-circuit,
- 20 faulty (Wilson UB 19.6%) — both known leak families. **Decision:
- defaults stay 0.35/0.50/0.40** — the gates are load control, the
- 27B + last-resort repair carry safety; chasing Youden points would
- kill the SC benefit (10/39 correct) without a real boundary. The
- leak families are tier-quality problems (report §15 stress-test
- section); (b) **done** — world-variety corpus growth: `gen-world-variety-
- rows.py` generated 240 rows (distance 3-30, carrying, items
- distractors, phase-consistent since/last) → 363-row merged corpus;
- base Decider Q8 re-measured on the full grid: **top-1 61.8% → 71.9%
- (261/363), travel family 84%** (was the 24/30 bias), return 100%,
- B-substitution still 0/12 (the known in-context gap the gentle
- fine-tune / judge tier targets); (c) **done** — pickup phase verified
- live: mine drops insert into the inventory first, so the working
- mechanism is the `--drop-after-mine` world event (give+drop a
- stone-granite at the mine site); first pickup-phase short-circuit
- (Laya 0.58 + Decider 0.73, GOAL 3 steps/27 s). **Two loop bugs found
- + fixed along the way:** the 3-tier gate silently degraded to Laya-only
- when only `--decider-fast` was passed (Decider tier gated on
- `--decider`; now self-sufficient), and `mine_target` had no approach
- step so a goal-first mine from 12+ blocks away failed out-of-range
- and repeated 8× until step-budget (now gootos the target first).
- `--drop-after-harvest` exists but is inert (harvestcrop puts the crop
- in the backpack directly). (d) `place_block` build mission
- end-to-end (execute() exists); (e) **unblocked** — gentle fine-tune
- (r 4-8, lr 1-3e-5, p-oracle-plateau early-stop) on the 363-row
- corpus (B-family 0/12 is the target).
+    `pickup_item` + `place_block` joined the option set (7 per mission),
+    pickup phase live-wired in the loop; corpus grown to 123 labeled
+    rows (generated pickup/place grids + all prior rows remapped).
+    **Fine-tune experiment (the 12 GB 3060 window): negative result** —
+    aggressive LoRA (r16, lr 1e-4, 4 epochs on 102 rows) collapsed the
+    model (holdout 76% base → 29% adapter, degenerate give_tool
+    one-answer); the base model already selects the new options by
+    reading the option list in the prompt (76/123, Q8 ≡ bf16,
+    quantization-neutral), including give_tool 10/12 where the 5-option
+    era measured 0/12. **Fine-tune deferred** until the corpus is
+    several times larger; next attempt must be gentle (r 4-8, lr
+    1-3e-5, early-stop, holdout covering the new families). Live
+    7-option missions: mine 2 steps/42 s + harvest 2 steps/26 s,
+    injected faults corrected, short-circuit on mine return.
+    **Remaining on the v5 line:** (a) **done** — tau
+    re-derivation on the new calibration unit, run as an *offline stress
+    test* on 151 dual-p rows (dualp-runner.py: 84 correct-side vs 67
+    faulty-side — 26 goto_base skip-goal + 46 give_tool-while-carrying
+    variants): **no gate separates on the broad corpus** (all Youden
+    points negative-margin; the clean 09-22/09-25 derivations ran on
+    narrow live distributions); at current defaults 47/151 short-circuit,
+    20 faulty (Wilson UB 19.6%) — both known leak families. **Decision:
+    defaults stay 0.35/0.50/0.40** — the gates are load control, the
+    27B + last-resort repair carry safety; chasing Youden points would
+    kill the SC benefit (10/39 correct) without a real boundary. The
+    leak families are tier-quality problems (report §15 stress-test
+    section); (b) **done** — world-variety corpus growth: `gen-world-variety-
+    rows.py` generated 240 rows (distance 3-30, carrying, items
+    distractors, phase-consistent since/last) → 363-row merged corpus;
+    base Decider Q8 re-measured on the full grid: **top-1 61.8% → 71.9%
+    (261/363), travel family 84%** (was the 24/30 bias), return 100%,
+    B-substitution still 0/12 (the known in-context gap the gentle
+    fine-tune / judge tier targets); (c) **done** — pickup phase verified
+    live: mine drops insert into the inventory first, so the working
+    mechanism is the `--drop-after-mine` world event (give+drop a
+    stone-granite at the mine site); first pickup-phase short-circuit
+    (Laya 0.58 + Decider 0.73, GOAL 3 steps/27 s). **Two loop bugs found
+    + fixed along the way:** the 3-tier gate silently degraded to Laya-only
+    when only `--decider-fast` was passed (Decider tier gated on
+    `--decider`; now self-sufficient), and `mine_target` had no approach
+    step so a goal-first mine from 12+ blocks away failed out-of-range
+    and repeated 8× until step-budget (now gootos the target first).
+    `--drop-after-harvest` exists but is inert (harvestcrop puts the crop
+    in the backpack directly). (d) `place_block` build mission
+    end-to-end (execute() exists); (e) **unblocked** — gentle fine-tune
+    (r 4-8, lr 1-3e-5, p-oracle-plateau early-stop) on the 363-row
+    corpus (B-family 0/12 is the target).

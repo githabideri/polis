@@ -12,13 +12,12 @@ Verdict lands in `docs/reports/2026-09-22-bot-cargo-and-decision-harness.md`
 
 ## Where it runs
 
-Dedicated unprivileged LXC **the CPU batch box** on (4 cores, 16 G since
-2026-09-24, IP the CPU batch box). No GPU — this is an offline batch verdict, not
-a live service; deployment latency for a winning model is a GPU question
-decided after the accuracy verdict. Not the vLLM CT (324): prod inference
-boxes do not host bench work.
+Dedicated unprivileged CPU container (4 cores, 16 G, no GPU) — this is an
+offline batch verdict, not a live service; deployment latency for a winning
+model is a GPU question decided after the accuracy verdict. The prod vLLM box
+is not used: prod inference boxes do not host bench work.
 
-## Layout on the CT
+## Layout on the batch box
 
 ```
 /var/jevab/
@@ -35,7 +34,7 @@ boxes do not host bench work.
 ## Model provenance (weights: shared store, NOT CT rootfs)
 
 Weights live on the host's shared model store **`/models/jevab/`** (mounted
-into the CT; `mp0` in the LXC config) — the lab pattern for model files.
+into the CT; `mp0` in the container config) — the lab pattern for model files.
 Host-side `hf download` writes them; completion markers
 `/models/jevab/<dir>.done` gate the supervisor.
 
@@ -102,11 +101,6 @@ pyproject-metadata, packaging) as files on a machine with good network,
 `pip install --no-index --no-deps --no-build-isolation llama_cpp_python-*.tar.gz`
 (the sdist vendors the llama.cpp source; no fetch at build time; the 0.3.35
 vendor has `qwen35.cpp`).
-
-**Gotcha: stale rootfs bind.** On the night of 2026-09-24 the running CT
-started seeing a divergent, reduced view of `/var/jevab` while the host-side
-just the container's mount out of sync (the PVE config/subvol themselves were
-this CT, check the host-side subvol first; the data is safe.
 
 ## Live service + v5 client (2026-09-25, 3rd/4th sessions)
 
