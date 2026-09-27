@@ -553,3 +553,26 @@ the old code used "current state" becomes a one-line developer error with
 no visible per-step regression. Phase 2's gate includes a dedicated check
 for both invariants (no fixture, completion, or action-precondition path
 reads a WorldModel record without a same-step fresh observation).
+
+- **2026-09-28: Phase 1-A COMPLETE - the extraction is done and proven.**
+  The pure reflex core now lives in `r2/{types,projection,executor}.py`,
+  VERBATIM-extracted from v5 (one implementation for both entry points; v5
+  is the live orchestration importing from it). The T4 goldens were captured
+  the way 11.1 specifies: daylight passes with additive instrumentation (each
+  step records the full observation triple - f1 state, f2 carry, post-
+  injection f3 - plus the fixture scan and the prev record, and the exact
+  reflex-state DTO the loop built at the moment of the decision);
+  `tests/reflex/fixtures/reflex-state-t4.json` freezes 8 steps (3 runs,
+  mine/harvest/build, clean and complete) with run-level transition data for
+  T2b. The gate now runs **T1 237/237, T2 45/45, T3 237/237, T4 8/8, T2b 3/3
+  on BOTH `--impl v5` and `--impl r2`** - the behavior-identity proof the
+  plan required, plus the state-construction seam T1 could not cover.
+  Verification paid: the first T4 replay caught a real recording bug (the
+  row's `raw.scan` was re-read from `pol.last_scan` at append time - after
+  the post-execute goal check had re-issued the scan - so the recorded
+  "pre-decision" scan was actually post-execution; the DTO itself was
+  fine because it was built from the earlier ctx capture). Post-extraction
+  live spot runs (faults on, mine + harvest) completed in 2 steps each with
+  the 27B judge correcting both injected skip-goal faults as designed.
+  Phase 1-B (next daylight): nothing left except the Phase 2 work -
+  WorldModel + ObservationService under the now-fully-frozen reflex.
