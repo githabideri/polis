@@ -298,8 +298,8 @@ details.rail-section[open] > summary::before { content: '\2013'; }
     height: 100%;
     border: none;
     background: #060708;
-    object-fit: contain;
 }
+.stage-vnc { object-fit: contain; } /* the frames canvas letterboxes in JS */
 .stage-vnc[hidden], .stage-frames[hidden] { display: none; }
 
 /* ── Control rail (right) ────────────────────────────────────────────── */

@@ -184,12 +184,17 @@ internal static class PolisBuilderNpcAStarTraversablePatch{
     }
 }
 
-// Crash guard (2026-09-26): rapid view/teleport commands can make the CLIENT'S
-// prediction/interpolation produce a NaN position; vanilla then throws
-// ArgumentException ("Given pos contained NaN") in the physics step and kills
-// the whole process (the 09/21 polisbot crash and the 09/26 player crash both
-// died here). Sanitize the incoming pos instead: restore the entity's last
-// known-good position (or zero) so the throw never happens.
+// Crash guard (2026-09-26, extended 2026-09-27): rapid view/teleport commands
+// can make the CLIENT'S prediction/interpolation produce a NaN position or
+// MOTION (velocity); vanilla then throws ArgumentException ("Given pos
+// contained NaN") in the physics step and kills the whole process (the 09/21
+// polisbot crash, the 09/26 player crash and the 09/27 crash all died here).
+// The vanilla check inspects pos.X/Y/Z AND pos.Motion — but pos.ToString()
+// only prints XYZ/YPR/Dim, which is why the 09/27 crash message looked clean
+// while its Motion was NaN (the original guard only checked XYZ/YPR). We
+// sanitize the incoming pos: restore last known-good position when the
+// position itself is NaN, and always zero a NaN motion (worst case: the
+// entity stalls for one tick instead of the process dying).
 [HarmonyPatch(typeof(EntityBehaviorControlledPhysics), "ApplyTests")]
 internal static class PolisNanPosGuardPatch
 {
@@ -198,30 +203,42 @@ internal static class PolisNanPosGuardPatch
 
     static bool Prefix(EntityBehaviorControlledPhysics __instance, ref EntityPos pos, EntityControls controls, float dt, bool remote)
     {
-        if (!HasNan(pos))
+        bool nanPos = HasNanPos(pos);
+        bool nanMotion = HasNanMotion(pos);
+        if (!nanPos && !nanMotion)
         {
             return true;
         }
         sanitizeCount++;
-        var entity = __instance?.Entity;
-        var last = entity != null ? entity.Pos : default;
-        if (!HasNan(last))
+        if (nanPos)
         {
-            pos = last;
+            var entity = __instance?.Entity;
+            var last = entity != null ? entity.Pos : default;
+            if (!HasNanPos(last) && !HasNanMotion(last))
+            {
+                pos = last;
+            }
+            else
+            {
+                pos = new EntityPos(0, 0, 0, 0, 0f);
+            }
         }
-        else
+        if (nanMotion)
         {
-            pos = new EntityPos(0, 0, 0, 0, 0f);
+            pos.Motion = Vec3d.Zero;
         }
         if (sanitizeCount <= 5 || sanitizeCount % 100 == 0)
         {
             logger?.Notification(
-                $"[polis] NaN physics pos sanitized (occurrence {sanitizeCount}); restored last known pos");
+                $"[polis] NaN physics pos sanitized (occurrence {sanitizeCount}); motion-zeroed={nanMotion} pos-restored={nanPos}");
         }
         return true;
     }
 
-    static bool HasNan(EntityPos p)
+    static bool HasNanPos(EntityPos p)
         => double.IsNaN(p.X) || double.IsNaN(p.Y) || double.IsNaN(p.Z)
         || float.IsNaN(p.Yaw) || float.IsNaN(p.Pitch) || float.IsNaN(p.Roll);
+
+    static bool HasNanMotion(EntityPos p)
+        => double.IsNaN(p.Motion.X) || double.IsNaN(p.Motion.Y) || double.IsNaN(p.Motion.Z);
 }

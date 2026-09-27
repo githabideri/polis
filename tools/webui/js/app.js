@@ -405,6 +405,58 @@ function disconnectStream() {
     el.streamStatus.className = 'stream-status dim';
 }
 
+// ── Frame rendering (canvas-based, 2026-09-27) ─────────────────────────
+// Captured frames are decoded into a pair of canvases (an offscreen
+// full-resolution buffer + the visible letterboxed surface) and
+// overwritten in place. The old code set a FRESH data: URL on the <img>
+// for every frame; Blink keeps every unique data: bitmap in the renderer
+// cache until the page dies, so any long-lived monitoring page grew
+// without bound (measured: 7.5 GB of bitmaps in one headless page left
+// open, 2026-09-27 — it OOM-risked the box running the session daemon).
+let frameBuffer = null;        // offscreen canvas at capture resolution
+let frameBufferCtx = null;
+
+async function renderFrameImage(base64) {
+    const cv = el.framesImg;
+    const ctx = cv.getContext('2d');
+    const mime = base64.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    let bitmap;
+    if (window.createImageBitmap) {
+        bitmap = await createImageBitmap(new Blob([bytes], { type: mime }));
+    } else {
+        // fallback: decode via a one-shot blob URL (revoked after use)
+        const u = URL.createObjectURL(new Blob([bytes], { type: mime }));
+        bitmap = await new Promise((res, rej) => {
+            const im = new Image();
+            im.onload = () => { URL.revokeObjectURL(u); res(im); };
+            im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('decode failed')); };
+            im.src = u;
+        });
+    }
+    if (!frameBuffer || frameBuffer.width !== bitmap.width || frameBuffer.height !== bitmap.height) {
+        frameBuffer = document.createElement('canvas');
+        frameBuffer.width = bitmap.width;
+        frameBuffer.height = bitmap.height;
+        frameBufferCtx = frameBuffer.getContext('2d');
+    }
+    frameBufferCtx.drawImage(bitmap, 0, 0);
+    if (bitmap.close) bitmap.close();
+
+    // letterbox-composite into the visible surface (constant size)
+    const vw = cv.clientWidth, vh = cv.clientHeight;
+    if (vw && vh && (cv.width !== vw || cv.height !== vh)) {
+        cv.width = vw; cv.height = vh;
+    }
+    if (cv.width && cv.height) {
+        const s = Math.min(cv.width / frameBuffer.width, cv.height / frameBuffer.height);
+        const dw = frameBuffer.width * s, dh = frameBuffer.height * s;
+        ctx.fillStyle = '#060708';
+        ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.drawImage(frameBuffer, (cv.width - dw) / 2, (cv.height - dh) / 2, dw, dh);
+    }
+}
+
 async function captureFrame() {
     // Observer screenshot = point-of-view snapshot: the harness sets the
     // player's view to the (current) pose, captures, restores — so passing
@@ -423,7 +475,7 @@ async function captureFrame() {
         const [x, y, z] = me.pos;
         const shot = await (await fetch(`${base}/polis/observer-screenshot?x=${x}&y=${y}&z=${z}&yaw=${me.yaw}&pitch=${me.pitch}&playerUid=${encodeURIComponent(p.uid)}`)).json();
         if (!shot.ok) throw new Error(shot.error || 'screenshot failed');
-        el.framesImg.src = `data:image/png;base64,${shot.base64Png}`;
+        await renderFrameImage(shot.base64Png);
         el.shotStatus.textContent = `frame ${new Date().toLocaleTimeString('en-GB', { hour12: false })}`;
         el.shotStatus.className = 'stream-status ok';
         if (stageView !== 'frames') setStageView('frames');

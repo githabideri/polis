@@ -71,6 +71,12 @@ public class PolisTestHarness : IDisposable
     private readonly System.Func<string, long?, TestStateResult> getTestStateFunc;
     private readonly System.Func<string, string[], CommandContext, CommandResult> executeCommandFunc;
     private readonly System.Func<string, bool, System.Action<PolisScreenshotResponsePacket>, string> requestScreenshotFunc;
+    // In-flight guard for /polis/observer-screenshot: overlapping teleport-
+    // capture-restore round trips produce bursts of server->client position
+    // updates that the client's prediction can turn into NaN motion (crash
+    // family of 2026-09-21 / 09-26 / 09-27). One capture at a time; concurrent
+    // callers get an error instead of a nested teleport.
+    private bool observerShotInFlight;
 
     private HttpListener listener;
     private CancellationTokenSource cts;
@@ -826,6 +832,15 @@ public class PolisTestHarness : IDisposable
                 }
                 else
                 {
+                    // In-flight guard: reject concurrent captures — nested
+                    // teleport-capture-restore sequences are the NaN-motion
+                    // trigger (crash family 2026-09-21/09-26/09-27).
+                    if (observerShotInFlight)
+                    {
+                        tcs.SetResult(new { ok = false, error = "observer screenshot already in flight; try again shortly" });
+                        return;
+                    }
+                    observerShotInFlight = true;
                     sapi.Event.EnqueueMainThreadTask(() =>
                     {
                         try
@@ -833,6 +848,7 @@ public class PolisTestHarness : IDisposable
                             var player = sapi.World.PlayerByUid(playerUid) as IServerPlayer;
                             if (player?.Entity == null)
                             {
+                                observerShotInFlight = false;
                                 tcs.SetResult(new { error = "Player not found or entity not loaded" });
                                 return;
                             }
@@ -859,12 +875,35 @@ public class PolisTestHarness : IDisposable
                             {
                                 requestScreenshotFunc(playerUid, saveToFile, result =>
                                 {
-                                    // Restore position (on main thread)
+                                    // Restore position (on main thread) — but only while the
+                                    // player still holds this exact entity. If the viewer
+                                    // disconnected meanwhile, the entity is mid-disposal (VS
+                                    // marks dying entities with NaN positions); teleporting a
+                                    // dying entity is exactly what produced the 2026-09-27
+                                    // NaN-motion crash. A new session gets its own entity.
                                     sapi.Event.EnqueueMainThreadTask(() =>
                                     {
-                                        var restorePos = new EntityPos(originalX, originalY, originalZ, originalYaw, originalPitch);
-                                        entity.TeleportTo(restorePos);
-                                        modSystem?.serverChannel?.SendPacket(new PolisSetViewDirectionPacket { Yaw = originalYaw, Pitch = originalPitch }, player);
+                                        try
+                                        {
+                                            if (sapi.World.PlayerByUid(playerUid)?.Entity == entity)
+                                            {
+                                                var restorePos = new EntityPos(originalX, originalY, originalZ, originalYaw, originalPitch);
+                                                entity.TeleportTo(restorePos);
+                                                modSystem?.serverChannel?.SendPacket(new PolisSetViewDirectionPacket { Yaw = originalYaw, Pitch = originalPitch }, player);
+                                            }
+                                            else
+                                            {
+                                                sapi.Logger.Debug($"{LogPrefix} observer-screenshot restore skipped: player no longer on this entity");
+                                            }
+                                        }
+                                        catch (Exception restoreEx)
+                                        {
+                                            sapi.Logger.Debug($"{LogPrefix} observer-screenshot restore failed: {restoreEx.Message}");
+                                        }
+                                        finally
+                                        {
+                                            observerShotInFlight = false;
+                                        }
 
                                         if (result == null)
                                         {
@@ -893,6 +932,7 @@ public class PolisTestHarness : IDisposable
                         }
                         catch (Exception ex)
                         {
+                            observerShotInFlight = false;
                             tcs.SetResult(new { error = ex.Message });
                         }
                     }, "polis-observer-screenshot");
