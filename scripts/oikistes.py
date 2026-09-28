@@ -206,8 +206,23 @@ class Oikistes:
                                       e.get("event") or e.get("cmd")))
         except Exception:
             pass
+        around = "-"
+        try:
+            s = int(pos[0]); t2 = int(pos[2])
+            sr = self.polis.cmd(
+                "scan", [str(s - 8), "2", str(t2 - 8),
+                         str(s + 8), "6", str(t2 + 8)], bot)
+            cnt = {}
+            for bl in (sr.get("Data") or {}).get("blocks", []):
+                c = bl.get("code") or "?"
+                cnt[c] = cnt.get(c, 0) + 1
+            top = sorted(cnt.items(), key=lambda kv: -kv[1])[:6]
+            around = ", ".join("%s x%d" % (k.split(":")[-1], v)
+                               for k, v in top) or "empty ground"
+        except Exception:
+            pass
         return ("bot=%d pos=(%s,%s,%s) holding=[%s] last_action=%s%s "
-                "recent=[%s]"
+                "around=[%s] recent=[%s]"
                 % (bot,
                    pos[0] if len(pos) > 0 else "?",
                    pos[1] if len(pos) > 1 else "?",
@@ -215,6 +230,7 @@ class Oikistes:
                    ", ".join(inv) or "nothing",
                    la.get("Name") or "-",
                    (" (%s)" % la.get("Msg")) if la.get("Msg") else "",
+                   around,
                    "; ".join(evs) or "-"))
 
     # -- the tool surface ----------------------------------------------
