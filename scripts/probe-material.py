@@ -89,10 +89,10 @@ def main():
     print("GRANITE:", {k: len(v) for k, v in granite.items()})
     print("NATURAL:", {k: v[:5] for k, v in natural.items()})
 
-    target = None
+    target = None  # (block_code, cell, note)
     for k, v in sorted(natural.items()):
         if v:
-            target = (k, v[0])
+            target = (k, v[0], "natural")
             break
     if not target:
         # fall back: any rock-granite that is NOT on a known fixture row
@@ -100,26 +100,53 @@ def main():
         # below tells us whether the mined item behavior matches)
         for p in granite.get("game:rock-granite", []):
             if not (p[0] in range(512000, 512012) and p[2] in range(512015, 512025)):
-                target = ("game:rock-granite (non-fixture cell)", p)
+                target = ("game:rock-granite", p, "non-fixture cell")
                 break
-    out["mined_cell"] = target
+    out["mined_cell"] = list(target) if target else None
     if not target:
         out["verdict"] = "no granite found in the probe region"
         print(json.dumps(out, indent=1))
         return
 
-    code, cell = target
-    # 2) mine it and diff the inventory
+    code, cell, note = target
+    # prefer ground-level (y==3) cells - the stable targets (v5's fixture
+    # markers sit at ground level and mine cleanly)
+    pool = natural.get(code) or ([cell] if note != "natural" else [])
+    alts = [v for v in pool if v[1] == 3]
+    if not alts and note != "natural":
+        alts = [v for v in granite.get("game:rock-granite", [])
+                if v[1] == 3
+                and not (v[0] in range(512000, 512012)
+                         and v[2] in range(512015, 512025))]
+        if alts:
+            code = "game:rock-granite"
+    if alts and alts[0] != cell:
+        cell = alts[0]
+        note += ", re-targeted to ground level"
+        out["mined_cell"] = [code, list(cell), note]
+        print("re-targeted to ground-level cell", cell)
+    # 2) mine it and diff the inventory - v5's approach pattern: walk a
+    # neighbour cell first, then mine (the mine range is 4.5 blocks)
     r = cmd("spawn")
     bot = (r.get("Data") or {}).get("id")
     out["bot"] = bot
     cmd("give", ["pickaxe-iron", "1"], bot)
     pre = state(bot).get("Items") or []
-    g = cmd("goto", [str(cell[0]), str(cell[1]), str(cell[2])], bot, timeout=90)
-    out["goto"] = g.get("Message") or g.get("error")
-    m = cmd("mine", [str(cell[0]), str(cell[1]), str(cell[2]), "true"], bot,
-            timeout=120)
-    out["mine_msg"] = m.get("Message") or m.get("error")
+    neighbours = [(cell[0] + 1, cell[1], cell[2]),
+                  (cell[0] - 1, cell[1], cell[2]),
+                  (cell[0], cell[1], cell[2] + 1),
+                  (cell[0], cell[1], cell[2] - 1)]
+    mine_msg = None
+    for nb in neighbours:
+        g = cmd("goto", [str(nb[0]), str(nb[1]), str(nb[2])], bot, timeout=90)
+        out["goto"] = g.get("Message") or g.get("error")
+        m = cmd("mine", [str(cell[0]), str(cell[1]), str(cell[2]),
+                         "true"], bot, timeout=120)
+        mine_msg = m.get("Message") or m.get("error")
+        out["mine_msg"] = mine_msg
+        if not mine_msg or "line of sight" not in mine_msg:
+            break
+    out["mine_msg"] = mine_msg
     t0 = time.time()
     while time.time() - t0 < 30:
         if not any(b.get("code") == code and b.get("pos") == list(cell)
@@ -128,7 +155,6 @@ def main():
             break
         time.sleep(2)
     post = state(bot).get("Items") or []
-
     def norm(items):
         d = {}
         for i in items:
