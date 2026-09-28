@@ -126,14 +126,24 @@ def normalize_inv(inv):
 
 def register_site(wm, pol, bot, goal, fixtures):
     """Make sure the goal's site exists as a fixture (we created it -
-    authoritative identity, doc 5.3). For a first run on the testbed the
-    site is the empty cell 2 east of the spawn, requirement = the goal
-    object. Returns the fixture dict list for the prompt."""
+    authoritative identity, doc 5.3). The site is the nearest EMPTY cell
+    2-5 east of the bot (the world persists: earlier runs leave filled
+    sites, so the first empty cell is searched, not assumed)."""
     out = []
     if getattr(goal, "at", None) and goal.at not in wm.fixtures:
         st = pol.state(bot)
         pos = st["Bot"]["Pos"]
-        cell = [int(pos[0]) + 2, 2, int(pos[2])]
+        bx, bz = int(pos[0]), int(pos[2])
+        cell = None
+        for dx in range(2, 6):
+            cand = (bx + dx, 3, bz)
+            blocks = pol.cell_blocks(bot, cand, pad=0)
+            if not any(b.get("pos") == [cand[0], cand[1], cand[2]]
+                       for b in blocks):
+                cell = list(cand)
+                break
+        if cell is None:  # everything filled - use the first anyway
+            cell = [bx + 2, 3, bz]
         wm.register_fixture(goal.at, "build-site", cell, goal.object)
         present = pol.site_filled(bot, tuple(cell))
         wm.observe_fixture(goal.at, present, reason="fixture_setup")
