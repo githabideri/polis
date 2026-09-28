@@ -442,7 +442,8 @@ def main():
             return finish(args.out, run, t0)
         d, r = best
         raw = json.dumps({"id": "j1", "type": goal.verb,
-                          "quantity": goal.n or 1, "source": r.id})
+                          "quantity": goal.n or 1, "source": r.id,
+                          "origin": "deterministic"})
         prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
                                              center=(bp[0], 0, bp[2]))
         run["planner"] = {"mode": "deterministic",
