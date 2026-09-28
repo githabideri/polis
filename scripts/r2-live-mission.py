@@ -308,11 +308,14 @@ def execute_job(pol, bot, base, job, wm, run):
                 break
         la = pol.state(bot).get("LastAction") or {}
         # oracle: a crop block now sits in the walkable cell above the
-        # farmland
+        # farmland. Scan codes carry the namespace prefix - match both
+        # forms (run 30: the crop was placed and stable, the oracle's
+        # prefix-less startswith read it as absent)
         crop_cell = (cell[0], stand_y, cell[2])
         blocks = pol.cell_blocks(bot, crop_cell)
         crop_present = any(
-            (b.get("code") or "").startswith("crop-" + mat)
+            str(b.get("code") or "").replace("game:", "").startswith(
+                "crop-" + mat)
             and b.get("pos") == list(crop_cell) for b in blocks)
         inv_post = inventory_of(pol.state(bot))
         seed_post = (inv_post.get("game:" + seed_code, 0)
