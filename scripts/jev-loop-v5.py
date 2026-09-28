@@ -1453,6 +1453,9 @@ def main():
         "steps_runs": [o["steps_run"] for o in all_outcomes],
         "steps_budgets": [o["steps_budget"] for o in all_outcomes],
         "mission_complete_rate": "%d/%d" % (sum(1 for o in all_outcomes if o["mission_complete"]), len(all_outcomes)),
+        # R2 §7 (Phase 2): the run JSON carries each run's full outcome,
+        # including the WorldModel snapshot the decisions ran on.
+        "outcomes": all_outcomes,
         "avg_steps_to_complete": (sum(o["steps_to_complete"] or a.steps for o in all_outcomes
                                        if o["mission_complete"]) / max(sum(1 for o in all_outcomes if o["mission_complete"]), 1)),
         "injected_faults": len(faults),
