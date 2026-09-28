@@ -731,3 +731,53 @@ measurement, conditions A/B) → P6 (JobQueue + live two-job milestone).
   golden 3). Both are the known travel-phase bias / boundary behavior
   of the small models, not the loop. Next: the material capability
   probe (12.8), then Phase 3 (job contracts + effect catalog).
+
+## 12.9 Material capability probe — findings (2026-09-28, ~04:30 CEST)
+
+Executed per §12.8 before the P4/P5 schema freeze
+(`scripts/probe-material.py`; JSON: `data/material-probe-<date>.json`).
+Findings, live-verified against the 1.22 testbed:
+
+1. **Drop code.** Mining a `game:rock-granite` block (the code shared by
+   set-placed and any granite block in this world) yields the item
+   **`game:stone-granite`** — not `rock-granite`.
+2. **Quantity.** 2–3 items per single-cell mine (autocollect); treat
+   expected yield as ≥1, measured, never assumed.
+3. **Normalization.** `stone-granite` and `rock-granite` are DISTINCT
+   materials in the ledger: the mined raw stone vs the placeable stone
+   (what `give`/`give_tool` provide and what `place` consumes).
+4. **Place acceptance.** The harness `place <blockcode> x y z` resolves
+   a BLOCK code and matches inventory items by exact code; it accepts
+   `rock-granite` items and rejects `stone-granite` ("Unknown block").
+   Vanilla right-click can place raw stone, but the public 1.22 API
+   exposes no item→block mapping (checked the API surface: no
+   IPlaceable, no Item.GetBlock) — so the harness cannot mirror that
+   path without internal-API surgery, which is not acceptable for a
+   repo staged for public release. No C# change made.
+
+**Consequence for the Phase 6 two-job milestone (honest rescope):**
+a mine→place material chain is NOT currently executable end-to-end in
+the harness (the mined material needs a stone→rock conversion the game
+exposes only as internal placement). The live two-job milestone is
+therefore re-scoped to a goal whose jobs the executor can actually run:
+**`give_tool` (external source, ledger: +material) → `place` (ledger:
+−material)** plus a second independent job type to make it a real
+two-action sequence (`harvest`), i.e. goal "harvest the crop and place
+granite at the site" → jobs [give_tool granite, harvest crop, place
+granite@site]. The mine→place case is NOT dropped — it moves into the
+P5 planner fixtures as the validator's strongest semantic test: a
+naive [mine granite, place granite] plan must be REJECTED by the
+inventory-ledger simulation (mine yields stone-granite, place needs
+rock-granite) — the validator doing real work, not rubber-stamping.
+A future `craft/convert` job type (stone→rock) is the follow-up that
+makes mine→place live; it needs a game-exposed conversion (grind/press
+candidates) and is out of scope tonight.
+
+## Status log (append-only)
+- **2026-09-28 (material probe complete, ~04:35 CEST).** Probe results
+  above recorded; the Phase 6 milestone is re-scoped per §12.9
+  (give_tool→place + harvest as the second job type; mine→place lives
+  on as the P5 validator rejection case). Next: Phase 3 (r2/jobs.py —
+  job catalog with effect semantics, goal grammar, failure taxonomy),
+  then P4 (planner prompt + ledger validator), P5 (27B measurement),
+  P6 (JobQueue + live milestone + honest rejection).
