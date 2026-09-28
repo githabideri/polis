@@ -94,7 +94,7 @@ def build_planner_prompt(wm, goal, inventory, fixtures, max_candidates=16,
         if r.properties.get("stage") is not None:
             extra = " stage=%s" % r.properties["stage"]
         dm = r.drop_material() or "?"
-        lines.append("  %s  block=%s  code=%s  drops=%s  qty=%d  %dm"
+        lines.append("  %s  block=%s  code=%s  drops=%s%s  qty=%d  %dm"
                      % (rid, r.material or "?", r.code or "?",
                         dm + (" (measured)" if r.drops
                               else " (assumed, unmeasured)"),
