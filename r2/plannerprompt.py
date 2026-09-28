@@ -38,24 +38,17 @@ RULES
    resource whose code or material name matches X. The material it
    actually yields (drops=) may differ - that is a consequence, not a
    blocker, for mine/harvest goals.
-6. External supply: for a place goal whose material is absent from the
-   INVENTORY and is not the measured output of any world producer, you
-   MUST plan a give_tool job for the required quantity. External supply
-   is a SANCTIONED plan form in this system: the planner proposes, it
-   does not second-guess the operator's goal.
+6. External supply: if a place goal needs a material that no world
+   producer yields and the inventory lacks it, a give_tool job is a
+   LEGAL plan (harness supply); use it, or reject if you judge the goal
+   should not use external supply.
 7. Keep the plan minimal. Order producers before consumers.
 8. If the goal cannot be met from the candidates, answer exactly
    {{"reject":"<one-line reason>"}}.
-9. Do NO arithmetic. You may reject ONLY when a required resource or
-   site is absent from the candidate lists. Quantity sufficiency is
-   decided by the deterministic validator that runs after you. In
-   particular:
-   - if the INVENTORY already holds the material a place job needs,
-     the answer is a single place job (inventory material is usable
-     as-is, no mining involved);
-   - if the inventory lacks it, add a give_tool job for the shortfall
-     - that is a LEGAL plan (rule 6); do not check the quantity
-     yourself, do not mine to cover it.
+9. REJECT ONLY when a required resource or site is absent from the
+   candidate lists. NEVER reject on quantity grounds: quantity
+   sufficiency is decided by the deterministic validator that runs
+   after you - do no arithmetic, just propose the plan.
 
 GOAL
 {goal}
@@ -100,12 +93,9 @@ def build_planner_prompt(wm, goal, inventory, fixtures, max_candidates=16,
         extra = ""
         if r.properties.get("stage") is not None:
             extra = " stage=%s" % r.properties["stage"]
-        dm = r.drop_material() or "?"
         lines.append("  %s  block=%s  code=%s  drops=%s%s  qty=%d  %dm"
                      % (rid, r.material or "?", r.code or "?",
-                        dm + (" (measured)" if r.drops
-                              else " (assumed, unmeasured)"),
-                        extra,
+                        r.drop_material() or "?", extra,
                         int(r.observed_quantity or 1), _dist(r)))
     resources = "\n".join(lines) or "  (none - the world scan is empty)"
 
@@ -116,18 +106,9 @@ def build_planner_prompt(wm, goal, inventory, fixtures, max_candidates=16,
         index[fid] = f
         cond = f.get("condition")
         cond_s = cond.get("satisfied") if isinstance(cond, dict) else cond
-        kind = f.get("kind") or ""
-        if kind == "build-site":
-            if cond_s is False:
-                state = "PLACE TARGET (empty - ready for a place job)"
-            elif cond_s is True:
-                state = "FILLED (already satisfied here)"
-            else:
-                state = "condition unknown"
-        else:
-            state = "present" if cond_s else "absent"
-        flines.append("  %s  %s  requirement=%s  %s"
-                      % (fid, kind, f.get("requirement"), state))
+        flines.append("  %s  %s  requirement=%s  now=%s"
+                      % (fid, f.get("kind"), f.get("requirement"),
+                         cond_s))
     fixtures_s = "\n".join(flines) or "  (none)"
 
     inv = ", ".join("%s:%d" % (k, v) for k, v in sorted(inventory.items())) \
@@ -139,14 +120,4 @@ def build_planner_prompt(wm, goal, inventory, fixtures, max_candidates=16,
         resources=resources,
         fixtures=fixtures_s,
         inventory=inv)
-    # appended AFTER .format(): the worked example contains JSON braces
-    prompt += """
-
-EXAMPLE (worked):
-GOAL: place granite at site-A x1
-INVENTORY: (empty)
-no world producer yields granite
--> [{"id":"j1","type":"give_tool","material":"granite","quantity":1},
-    {"id":"j2","type":"place","target":"site-A","material":"granite",
-     "quantity":1,"depends_on":["j1"]}]"""
     return prompt, index
