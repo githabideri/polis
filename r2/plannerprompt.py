@@ -38,10 +38,11 @@ RULES
    resource whose code or material name matches X. The material it
    actually yields (drops=) may differ - that is a consequence, not a
    blocker, for mine/harvest goals.
-6. External supply: if a place goal needs a material that no world
-   producer yields and the inventory lacks it, a give_tool job is a
-   LEGAL plan (harness supply); use it, or reject if you judge the goal
-   should not use external supply.
+6. External supply: for a place goal whose material is absent from the
+   INVENTORY and is not the measured output of any world producer, you
+   MUST plan a give_tool job for the required quantity. External supply
+   is a SANCTIONED plan form in this system: the planner proposes, it
+   does not second-guess the operator's goal.
 7. Keep the plan minimal. Order producers before consumers.
 8. If the goal cannot be met from the candidates, answer exactly
    {{"reject":"<one-line reason>"}}.
