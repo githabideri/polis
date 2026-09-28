@@ -32,6 +32,8 @@ RULES
    the output of an earlier producing job (mine/harvest/give_tool).
    A mine/harvest job produces the resource's MEASURED DROPS material
    (the drops= column) - a place job must consume exactly that code.
+   drops=? means UNMEASURED: the ledger does not enforce that code
+   (the measured drop after execution is authoritative).
    Do NOT check quantities yourself: do no arithmetic - the
    deterministic validator after you checks all material balances.
    Propose the plan you believe is best; if you believe the goal cannot
@@ -103,7 +105,7 @@ def build_planner_prompt(wm, goal, inventory, fixtures, max_candidates=16,
             extra = " stage=%s" % r.properties["stage"]
         lines.append("  %s  block=%s  code=%s  drops=%s%s  qty=%d  %dm"
                      % (rid, r.material or "?", r.code or "?",
-                        r.drop_material() or "?", extra,
+                        r.drops or "?", extra,
                         int(r.observed_quantity or 1), _dist(r)))
     resources = "\n".join(lines) or "  (none - the world scan is empty)"
 
