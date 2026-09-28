@@ -597,18 +597,20 @@ function wireConsole() {
     });
 }
 
-/* ── Oikistes (2026-09-27 re-scope) ────────────────────────────────────────
-   The settlement agent. Today: the autonomy control is LIVE (it writes the
-   mod's world-config value the decision runtime injects + enforces) and the
-   chat is a stub that becomes the conversational loop once the R2 job system
-   exists. The panel shape is the final one — what grows is what it does. */
+/* ── Oikistes (2026-09-27 re-scope, inaugurated 2026-09-28) ────────────
+   The settlement agent: a 35B-class model with a tool surface over the
+   harness. The autonomy control is LIVE (mod-owned world config; the
+   agent only reads it, the execution path enforces it). The chat is a
+   live loop - the agent observes (state/scan/screenshot/events),
+   orders work through the R2 job system (mission tool), and answers in
+   plain text. Every actuation it performs carries actor=oikistes and
+   lands in the event stream with a badge. */
 
 const oik = {
     log: () => $('oikistesLog'),
     input: () => $('oikistesInput'),
     send: () => $('oikistesSend'),
     select: () => $('autonomySelect'),
-    state: () => $('oikistesState'),
 };
 
 function oikLog(text, cls = '') {
@@ -618,6 +620,7 @@ function oikLog(text, cls = '') {
     line.innerHTML = `<span class="t">${new Date().toLocaleTimeString('en-GB', { hour12: false })}</span>${escapeHtml(text)}`;
     box.appendChild(line);
     box.scrollTop = box.scrollHeight;
+    return line;
 }
 
 async function loadAutonomy() {
@@ -626,31 +629,79 @@ async function loadAutonomy() {
         const sel = oik.select();
         if (r?.Ok && r?.Data?.preset) {
             sel.value = r.Data.preset;
-            oikLog(`autonomy: ${r.Data.preset} (mod-owned, world config)`, 'success');
         }
-    } catch (e) { oikLog(`autonomy: ${e.message}`, 'error'); }
+    } catch (e) { /* autonomy is mod-owned; quiet if the world is away */ }
 }
 
 async function setAutonomy(preset) {
     try {
         const r = await api.command('autonomy', ['set', preset], { actor: 'user' });
-        oikLog(r?.Ok ? `autonomy → ${preset}` : `autonomy set failed: ${r?.Message}`, r?.Ok ? 'success' : 'error');
+        oikLog(r?.Ok ? `autonomy → ${preset} (mod-owned config — the agent reads it every turn)` : `autonomy set failed: ${r?.Message}`, r?.Ok ? 'success' : 'error');
     } catch (e) { oikLog(`autonomy set failed: ${e.message}`, 'error'); }
+}
+
+async function oikStatus() {
+    try {
+        const r = await (await fetch('/polis/oikistes/status')).json();
+        oikLog(`Oikistes ready — model ${r.model}, autonomy ${r.autonomy}, body ${r.bot != null ? 'bot ' + r.bot : 'spawning…'}`);
+        return r;
+    } catch (e) {
+        oikLog(`Oikistes service unreachable (${e.message}) — messages will fail until it is back.`, 'error');
+        return null;
+    }
+}
+
+async function oikTranscript(n = 24) {
+    try {
+        const r = await (await fetch(`/polis/oikistes/transcript?n=${n}`)).json();
+        for (const rec of r) {
+            if (rec.role === 'user') oikLog(`${rec.actor ?? 'user'}: ${rec.text}`);
+            else oikLog(rec.text, 'oik');
+        }
+    } catch (e) { /* fresh install: nothing yet */ }
+}
+
+let oikBusy = false;
+
+async function oikSend() {
+    const input = oik.input();
+    const t = input.value.trim();
+    if (!t || oikBusy) return;
+    oikBusy = true;
+    oik.send().disabled = true;
+    oikLog(`you: ${t}`);
+    input.value = '';
+    const pending = oikLog('…', 'dim');
+    try {
+        const res = await fetch('/polis/oikistes/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: t, actor: 'user' }),
+        });
+        pending.remove();
+        const d = await res.json();
+        for (const a of (d.actions || [])) {
+            const denied = String(a.observation || '').startsWith('DENIED');
+            oikLog(`⚙ ${a.tool} ${JSON.stringify(a.args || {})} → ${String(a.observation || '').slice(0, 160)}`, denied ? 'error' : 'act');
+        }
+        if (d.error) oikLog(`agent error: ${d.error}`, 'error');
+        oikLog(d.reply || '(no reply)', 'oik');
+    } catch (e) {
+        pending.remove();
+        oikLog(`Oikistes unreachable: ${e.message} (the service may be mid-restart)`, 'error');
+    } finally {
+        oikBusy = false;
+        oik.send().disabled = false;
+        input.focus();
+    }
 }
 
 function wireOikistes() {
     oik.select().addEventListener('change', (e) => setAutonomy(e.target.value));
-    const send = () => {
-        const t = oik.input().value.trim();
-        if (!t) return;
-        oikLog(`you: ${t}`);
-        // The runtime is not inaugurated yet — be honest about that.
-        oikLog('The Oikistes is not yet inaugurated (R2 job system first). Your message was not sent.');
-        oik.input().value = '';
-    };
-    oik.send().addEventListener('click', send);
-    oik.input().addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+    oik.send().addEventListener('click', oikSend);
+    oik.input().addEventListener('keydown', (e) => { if (e.key === 'Enter') oikSend(); });
     loadAutonomy();
+    oikTranscript().then(() => oikStatus());
 }
 
 /* ── theme (auto / dark / light; auto follows the OS) ─────────────────── */
