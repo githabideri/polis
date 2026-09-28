@@ -74,6 +74,23 @@ class ResourceRecord:
         self.seq = 0                        # last observed at (run sequence)
         self.monotonic_ms = 0.0
         self.wall_ms = 0
+        # MEASURED drop material (what mining this resource yields, from
+        # the post-mine inventory diff). Distinct from the BLOCK material:
+        # the 2026-09-28 probe found granite blocks drop the stone-granite
+        # item. None = unmeasured; the planner/ledger fall back to
+        # `material` only for unmeasured resources.
+        self.drops = None
+
+    def record_drop(self, material, seq, monotonic_ms, wall_ms):
+        """Record the measured drop (called with the post-mine inventory
+        observation). Stamped like any other observation."""
+        self.drops = material
+        self.seq, self.monotonic_ms, self.wall_ms = seq, monotonic_ms, wall_ms
+
+    def drop_material(self):
+        """The material the ledger must simulate: the measured drop when
+        known, the block material as proxy when not."""
+        return self.drops or self.material
 
     @property
     def quantity(self):
@@ -89,7 +106,8 @@ class ResourceRecord:
                 "is_complete_extent": self.is_complete_extent,
                 "source": self.source, "seq": self.seq,
                 "monotonic_ms": self.monotonic_ms,
-                "wall_ms": self.wall_ms}
+                "wall_ms": self.wall_ms,
+                "drops": self.drops}
 
 
 class FixtureRecord:
@@ -194,7 +212,7 @@ class WorldModel:
             rid = self._resource_keys.get(key)
             if rid is None:
                 self._res_seq += 1
-                rid = "res-%d" % self._res_seq
+                rid = "res-%02d" % self._res_seq
                 self._resource_keys[key] = rid
                 self.resources[rid] = ResourceRecord(
                     rid, cl["kind"], cl["material"], cl["code"],

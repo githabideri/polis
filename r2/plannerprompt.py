@@ -9,8 +9,6 @@ pure: given (world_model, fixture records, inventory, goal) it returns
 (prompt_text, candidate_index).
 """
 
-from r2.queries import normalize_material
-
 from .jobs import Goal, Job, JOB_CATALOG, PLANNER_JOB_TYPES
 
 PROMPT_HEADER = """\
@@ -30,10 +28,13 @@ RULES
    - optional "depends_on":["j<id>"] (must point EARLIER in the list)
 4. Material flow: a place job needs its material in the INVENTORY or as
    the output of an earlier producing job (mine/harvest/give_tool).
-   A mine job of material X produces X - check the material codes match
-   what the place job consumes. give_tool sources material from outside
-   the world (a harness supply) - use it only if the goal permits
-   external supply; prefer world-producing jobs.
+   A mine/harvest job produces the resource's MEASURED DROPS material
+   (the drops= column) - a place job must consume exactly that code.
+   If the drops material differs from what the place needs, the plan
+   cannot be covered by that producer (use give_tool or reject).
+   give_tool sources material from outside the world (a harness supply)
+   - use it only if the goal permits external supply; prefer
+   world-producing jobs.
 5. Order producers before consumers. Keep the plan minimal.
 6. If the goal cannot be met from the candidates, answer exactly
    {{"reject":"<one-line reason>"}}.
@@ -41,7 +42,7 @@ RULES
 GOAL
 {goal}
 
-CANDIDATE RESOURCES (id, material, quantity, distance)
+CANDIDATE RESOURCES (id, block material, measured drops, qty, dist)
 {resources}
 
 FIXTURES (id, kind, requirement, current condition)
@@ -54,25 +55,33 @@ ANSWER (one JSON value only, no prose):
 """
 
 
-def build_planner_prompt(wm, goal, inventory, fixtures, max_candidates=16):
+def build_planner_prompt(wm, goal, inventory, fixtures, max_candidates=16,
+                         center=None):
     """Project the world into the planner prompt.
 
+    center: the bot's (x, _, z) for distance ordering (optional).
     Returns (prompt_text, candidate_index) where candidate_index maps
     every res-*/site-* id in the prompt to its record - the validator
     (r2/plancheck.py) resolves references against exactly this index.
     """
     index = {}
 
-    # resources: unclaimed first, sorted by distance (nearest work first)
-    res = wm.find_unclaimed(max_count=max_candidates)
+    # resources: unclaimed first, nearest to the bot first (planning mode:
+    # stale allowed to NOMINATE - 12.6; the index is the trust boundary)
+    cands = wm.find_unclaimed(wm.find_resources(fresh=False))
+    def _dist(r):
+        if center is None or r.centroid is None:
+            return 0
+        return abs(r.centroid[0] - center[0]) + \
+            abs(r.centroid[2] - center[2])
+    cands = sorted(cands, key=_dist)[:max_candidates]
     lines = []
-    for r in res:
+    for r in cands:
         rid = r.id
         index[rid] = r
-        lines.append("  %s  %s  qty=%d  %dm"
-                     % (rid, r.material or "?",
-                        r.observed_quantity or 1,
-                        r.distance_m or 0))
+        lines.append("  %s  block=%s  drops=%s  qty=%d  %dm"
+                     % (rid, r.material or "?", r.drop_material() or "?",
+                        r.observed_quantity or 1, _dist(r)))
     resources = "\n".join(lines) or "  (none - the world scan is empty)"
 
     # fixtures: the site registry with their stamped condition

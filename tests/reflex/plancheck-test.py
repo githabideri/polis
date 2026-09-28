@@ -25,14 +25,14 @@ def check(name, cond, detail=""):
 
 
 class Rec:
-    def __init__(self, id, material):
-        self.id, self.material = id, material
+    def __init__(self, id, material, drops=None):
+        self.id, self.material, self.drops = id, material, drops
 
-def R(i, m):  # resource stub
-    return Rec(i, m)
+def R(i, m, drops=None):  # resource stub
+    return Rec(i, m, drops)
 
 INDEX = {
-    "res-01": R("res-01", "stone-granite"),   # what the testbed actually drops
+    "res-01": R("res-01", "stone-granite", drops="stone-granite"),
     "res-02": R("res-02", "granite"),         # a world that drops placeable
     "res-03": R("res-03", "crop-rye-2"),
     "site-A": {"id": "site-A", "kind": "build-site",
@@ -123,13 +123,20 @@ jobs, f = validate_plan(
 check("duplicate claim rejected",
       jobs is None and f.code == "claim_conflict", str(f and f.to_dict()))
 
-# 10. producer declares a material its source does not drop
+# 10. producer claims a material its MEASURED drop contradicts
 jobs, f = validate_plan(
     '[{"id":"j1","type":"mine","source":"res-01","material":"granite"}]',
     INDEX, INV_GRANITE)
-check("producer/source material mismatch rejected",
+check("producer/measured-drop mismatch rejected",
       jobs is None and f.code == "planner_invalid_reference",
       str(f and f.to_dict()))
+
+# 10b. same claim WITHOUT a measured drop: no claim possible - allowed
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"mine","source":"res-02","material":"granite"}]',
+    INDEX, INV_GRANITE)
+check("unmeasured drop: claim passes (unknown is never yes)",
+      jobs is not None and f is None, str(f and f.to_dict()))
 
 # 11. quantity cap
 jobs, f = validate_plan(

@@ -124,17 +124,26 @@ def validate_plan(plan_raw, index, inventory):
         if cat["produces"] and j.material:
             src = JOB_CATALOG[j.type]["source"]
             if src == "world":
-                # a world producer must reference a resource of this
-                # material (the index carries the observed material)
+                # a world producer must reference a resource; the
+                # material claim is checked HARD only against a MEASURED
+                # drop (unknown drops = no claim - the "unknown is never
+                # yes" rule applied to the ledger)
                 rec = index.get(j.source) if j.source else None
-                if rec is None or getattr(rec, "material", None) != j.material:
+                if rec is None:
                     return None, Failure(
                         "planner_invalid_reference",
-                        "producer job %s claims material %r but source %s "
-                        "is %r" % (j.id, j.material, j.source,
-                                   getattr(rec, "material", None)),
+                        "producer job %s has unknown source %s"
+                        % (j.id, j.source), job_id=j.id)
+                measured = getattr(rec, "drops", None)
+                if measured is not None and measured != j.material:
+                    return None, Failure(
+                        "planner_invalid_reference",
+                        "producer job %s claims material %r but the "
+                        "measured drop of source %s is %r"
+                        % (j.id, j.material, j.source, measured),
                         job_id=j.id)
-            avail[j.material] = avail.get(j.material, 0) + (j.quantity or 1)
+                avail[j.material] = avail.get(j.material, 0) + \
+                    (j.quantity or 1)
 
     # 6. claim compatibility (single bot: no two jobs on one resource)
     seen = {}
