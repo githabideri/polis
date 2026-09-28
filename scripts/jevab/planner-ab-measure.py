@@ -229,6 +229,39 @@ def verdict(case, res):
     return "CORRECT", "external supply used (acceptable for this case)"
 
 
+def attribute(case, res, v, why):
+    """13.6 step 5: which layer OWNS this non-CORRECT case (whose fix
+    makes it right). The five failure classes:
+      model       - the planner's own error (over-rejection, bad plan,
+                    hesitation); CAUGHT cases land here too, because the
+                    validator did its job and the plan is the defect
+      validation  - the validator is the gap: a plan that passes but does
+                    not achieve the goal (semantic layer), or a
+                    fabrication against a should-reject goal that got through
+      observation - the model was fed a misleading presentation (the
+                    goal-grammar ambiguity: action-scoped vs outcome-
+                    scoped is a design question about what the prompt
+                    tells the model, not a model defect)
+      executor    - the job's execution failed (live missions only -
+                    the offline suite never actuates)
+      environment - game/world conditions (pathfinder wedges, block
+                    respawns, ...; live missions only)
+    """
+    if v == "CORRECT":
+        return None
+    if v == "AMBIGUOUS":
+        return "observation"
+    if v == "CAUGHT":
+        return "model"
+    if v == "WRONG":
+        if res.get("outcome") == "valid-unachieved":
+            return "validation"
+        if res.get("expect") == "reject":
+            return "validation"
+        return "model"
+    return "model"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cases", required=True)
@@ -252,6 +285,7 @@ def main():
                  "outcome": "error", "error": repr(e)}
         v, why = verdict(c, r)
         r["verdict"], r["why"] = v, why
+        r["attribution"] = attribute(c, r, v, why)
         r["wall_s"] = round(time.time() - t0, 1)
         results.append(r)
         print("%s [%s] %s: %s (%s)  %ds  %s"
@@ -302,6 +336,11 @@ def summarize(results):
             "resource_not_found", "planner_invalid_reference"))
     s["valid_unachieved"] = sum(
         1 for r in results if r.get("outcome") == "valid-unachieved")
+    # 13.6 step 5: the five-way failure attribution - which layer owns
+    # each non-CORRECT case (the fix target, not just the symptom)
+    s["attribution"] = {k: sum(1 for r in results if r.get("attribution") == k)
+                        for k in ("model", "validation", "observation",
+                                  "executor", "environment")}
     s["latency_ms_p50"] = sorted(
         r.get("latency_ms", 0) for r in results)[len(results) // 2] \
         if results else 0
