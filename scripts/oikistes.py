@@ -260,17 +260,17 @@ class Oikistes:
                            la.get("Name") or "-", la.get("Msg") or ""))
             if tool == "scan":
                 x = int(a.get("x", 0)); y = int(a.get("y", 2))
-                z = int(a.get("z", 0)); r = int(a.get("r", 8) or 8)
-                r = self.polis.cmd(
-                    "scan", [str(x - r), str(y), str(z - r),
-                             str(x + r), str(y + 4), str(z + r)], bot)
-                blocks = (r.get("Data") or {}).get("blocks", [])
+                z = int(a.get("z", 0)); rad = int(a.get("r", 8) or 8)
+                res = self.polis.cmd(
+                    "scan", [str(x - rad), str(y), str(z - rad),
+                             str(x + rad), str(y + 4), str(z + rad)], bot)
+                blocks = (res.get("Data") or {}).get("blocks", [])
                 cnt = {}
                 for bl in blocks:
                     cnt[bl.get("code")] = cnt.get(bl.get("code"), 0) + 1
                 top = sorted(cnt.items(), key=lambda kv: -kv[1])[:10]
                 return ("scan (%d..%d, %d..%d, %d..%d): %d blocks: %s"
-                        % (x - r, x + r, y, y + 4, z - r, z + r,
+                        % (x - rad, x + rad, y, y + 4, z - rad, z + rad,
                            len(blocks),
                            ", ".join("%s x%d" % (k, v)
                                       for k, v in top) or "none"))
