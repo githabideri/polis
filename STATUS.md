@@ -327,3 +327,44 @@ new recorder (see the design-doc status log); live spot runs after the
 extraction (faults on, mine + harvest) completed in 2 steps each with the
 27B judge correcting both injected skip-goal faults. Phase 1 of the plan is
 therefore complete — Phase 2 (WorldModel + ObservationService) is next.
+
+### Phases 2-6 (2026-09-28 overnight): world model -> planner -> queue -> live
+
+- **Phase 2** — `r2/{queries,worldmodel,observation}.py`: the mission-
+  agnostic WorldModel (resources with measured drops, fixtures with
+  stamped conditions, the claim index, logical-tick freshness) and the
+  single-threaded ObservationService. T5 staleness invariants in the
+  contract gate; gate green on both impls.
+- **Material probe** (`scripts/probe-material.py`) — the authoritative
+  1.22 fact: mining `rock-granite` yields `stone-granite`; place only
+  accepts `rock-granite`; there is NO public API for the item->block
+  mapping. §12.9 re-scoped the live two-job milestone to external-
+  supply place (+harvest); mine->place lives on as the validator's
+  strongest rejection case.
+- **Phase 3** — `r2/jobs.py`: goal grammar (v1), the 8-type job catalog
+  with effect semantics, the 9-code failure taxonomy with layer
+  attribution. 31/31 unit tests.
+- **Phase 4** — `r2/{plannerprompt,plancheck}.py`: the deterministic
+  projection (candidate index = the trust boundary) and the goal-aware
+  validator (schema, references, dependencies, the material ledger with
+  the measured-drop hard check, the goal-target check, intake). 21/21
+  unit tests (a mid-file sys.exit had been silencing the last 5 —
+  found and fixed during this night).
+- **Phase 5** — the 27B planner A/B on the 25-case suite, 4 rounds
+  (r1-r4: 9 -> 17 -> 19 -> 20 CORRECT, 1 CAUGHT, 4 WRONG). Findings:
+  the 27B over-rejects on quantity (never over-accepts — the safe
+  failure mode), reads "mine X" as outcome, hallucinates "no site" on
+  mine goals; bare-object plans are normalized at the parse boundary.
+- **Phase 6** — `r2/jobqueue.py` (13/13: lifecycle, abandonment,
+  rejection, ledger, run-JSON) + `scripts/r2-live-mission.py` (the live
+  orchestrator reusing the v5 action primitives). **Live: one-job GOAL
+  COMPLETE in 8 s (run 05) + 8 honest rejections (runs 01-03, 06-10).**
+  **The two-job live completion was NOT achieved: the 27B consistently
+  refuses the sanctioned external-supply plan form** (mandatory rule 6
+  and a worked example did not move it — finding §12.10). The
+  experimental prompt edits it motivated regressed the P5 suite
+  (r5: 18/25) and were reverted (r6: 20/25); **planner-prompt changes
+  are now gated by the 25-case A/B**. Next (user decision): remediation
+  (a) — operator-declared external supply at intake, deterministically
+  inserted before the planner — makes the two-job milestone executable
+  without any model change.

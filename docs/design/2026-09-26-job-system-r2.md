@@ -781,3 +781,66 @@ candidates) and is out of scope tonight.
   job catalog with effect semantics, goal grammar, failure taxonomy),
   then P4 (planner prompt + ledger validator), P5 (27B measurement),
   P6 (JobQueue + live milestone + honest rejection).
+
+### 12.10 Phase 6 live outcomes (2026-09-28, 04:00-05:10 CEST)
+
+Ten live runs on the testbed via `scripts/r2-live-mission.py`
+(`data/r2-live-2026-09-28-01..10.json`):
+
+1. **One-job GOAL COMPLETE - verified live** (run 05): goal
+   "place granite at site-A x1" with the bot pre-supplied one
+   rock-granite (operator setup, recorded in the run JSON) -> the 27B
+   proposed a single place job -> validator passed -> the queue
+   executed it (goto + place) -> the FRESH oracle (site filled)
+   confirmed -> `goal_complete` in 8 s. The full chain
+   (intake -> world observation -> planner -> goal-aware validator ->
+   JobQueue -> executor -> oracle) works end to end.
+2. **Honest rejection - verified live 8 times** (runs 01, 02, 03, 06,
+   07, 08, 09, 10): the model rejected with reasons; the pipeline
+   recorded `unsupported_goal` and terminated safely without
+   executing. Notable: "site-A already has granite" (a stale site
+   from an earlier pass - the model was right) and "no granite in
+   inventory and no producer yields granite" (world fact: granite
+   drops stone).
+3. **Two-job live completion - NOT achieved; recorded as a finding,
+   not a defect.** For every supply goal (empty inventory, no world
+   producer of the placeable material) the 27B rejected, consistently
+   and fluently ("only 3 sources of qty 1 each", "no external supply
+   justified"). Prompt interventions were MEASURED, not asserted:
+   making give_tool MANDATORY in rule 6 (run 09) and a worked
+   few-shot example (run 10) did not change the outcome. The model's
+   prior (matter must come from the world) is not prompt-overridable
+   at this size.
+4. **Prompt A/B regression discipline.** The experimental prompt edits
+   made while chasing (3) - a measured/assumed drops label, "FILLED"
+   fixture wording, a split rule 9 - regressed the 25-case P5 suite
+   20/25 -> 18/25 (r5), with C3/E1/G2 each attributable to a specific
+   edit. Reverting to the r4 prompt (keeping only an int() quantity
+   guard) restored 20/25 (r6). **The planner prompt now changes only
+   through an A/B against the 25-case suite.**
+
+**Remediation options for the supply-plan refusal** (user decision):
+(a) operator declaration at intake: a goal may carry a
+`supply: external` flag (the operator decides when the goal is set);
+the orchestrator then inserts the give_tool job for the shortfall
+DETERMINISTICALLY, before the planner sees the goal - the planner
+only plans world actions. Fits the ownership table (operator owns the
+goal, planner proposes, validator decides) and needs no model
+training.
+(b) a fine-tuned planner (the decider's proven FT pattern) on the P5
+fixtures plus labeled supply goals.
+(c) accept the refusal as R2 planner policy: supply goals are an
+operator-level operation, not a planner-level one.
+**Recommendation: (a).** With (a) the two-job live milestone
+([give_tool, place]) becomes executable without any model change; the
+sequential execution itself is already covered by the queue unit
+tests (13/13) and the P5 validator fixtures.
+
+## Status log (append-only)
+- **2026-09-28 (Phase 6 complete, ~05:15 CEST).** JobQueue (r2/
+  jobqueue.py, 13/13 unit tests) + r2-live-mission.py. Live: one-job
+  GOAL COMPLETE (8 s) + 8 honest rejections verified; the two-job
+  live completion is blocked by the 27B's supply-refusal prior
+  (finding 12.10.3) - remediation (a) is the recommended follow-up.
+  The planner prompt is back at the r4 wording (r5/r6 A/B); prompt
+  changes are now suite-gated.
