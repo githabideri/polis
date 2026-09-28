@@ -48,7 +48,9 @@ RULES
 9. REJECT ONLY when a required resource or site is absent from the
    candidate lists. NEVER reject on quantity grounds: quantity
    sufficiency is decided by the deterministic validator that runs
-   after you - do no arithmetic, just propose the plan.
+   after you - do no arithmetic, just propose the plan. If the
+   INVENTORY already holds the material a place job needs, the answer
+   is a single place job (no mining, no top-up).
 
 GOAL
 {goal}
