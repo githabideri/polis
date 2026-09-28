@@ -48,7 +48,7 @@ from r2.worldmodel import WorldModel
 from r2.plannerprompt import build_planner_prompt
 from r2.plancheck import validate_plan, check_goal
 from r2.jobqueue import GoalState
-from r2.jobs import Goal, Failure
+from r2.jobs import Goal, Job, Failure
 from r2.queries import classify
 
 # material name -> the ITEM code a give_tool job supplies (the placeable
@@ -63,7 +63,13 @@ GIVE_ITEM = {
 
 
 def parse_goal_line(line):
-    """'place granite at site-A x1' -> {verb, object, at, n}."""
+    """'place granite at site-A x1 supply external' ->
+    {verb, object, at, n, supply}. The supply flag is an OPERATOR
+    declaration (design doc 12.10 remediation (a)): the operator says
+    at intake that external (harness) supply is sanctioned for this
+    goal; the orchestrator then supplies the material DETERMINISTICALLY
+    (logged as job j0), so the planner sees a world it can plan.
+    """
     toks = line.split()
     if not toks:
         raise ValueError("empty goal")
@@ -77,6 +83,11 @@ def parse_goal_line(line):
         elif rest[i].startswith("x") and rest[i][1:].isdigit():
             goal["n"] = int(rest[i][1:])
             i += 1
+        elif rest[i] == "supply" and i + 1 < len(rest):
+            if rest[i + 1] != "external":
+                raise ValueError("only 'supply external' is declared")
+            goal["supply"] = "external"
+            i += 2
         else:
             raise ValueError("unparseable goal token %r" % rest[i])
     return goal
@@ -296,7 +307,17 @@ def main():
 
     # 4. the queue drives execution (R2: strictly sequential)
     base = tuple(st["Bot"]["Pos"])
-    gs = GoalState(goal, jobs, "planner:%s" % args.llm_model)
+    if getattr(goal, "supply", None) == "external" and goal.verb == "place":
+        # 12.10 remediation (a): the operator declared external supply at
+        # intake - the give_tool job is inserted DETERMINISTICALLY (no LLM)
+        # so the planner sees a world it can plan; the queue executes both.
+        op = Job("j0", "give_tool", source="operator",
+                 material=goal.object, quantity=goal.n or 1)
+        jobs = [op] + jobs
+        run["supply"] = {"declared": True, "job": op.to_dict()}
+    gs = GoalState(goal, jobs,
+                  ("planner:%s + operator-supply" if "supply" in run
+                   else "planner:%s") % args.llm_model)
     job = gs.start()
     while job is not None and gs.status == "running":
         run_jobs(pol, bot, base, gs, job, run, wm)

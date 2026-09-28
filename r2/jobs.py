@@ -40,10 +40,13 @@ class Goal:
     object: str                  # material / block / destination name
     at: str | None = None        # "site-*" id or "x y z" coordinates
     n: int | None = None         # required quantity (int >= 1)
+    supply: str | None = None    # operator declaration: "external" (the
+                                 # orchestrator supplies the material
+                                 # deterministically - 12.10 remediation (a))
 
     def to_dict(self):
         return {"verb": self.verb, "object": self.object,
-                "at": self.at, "n": self.n}
+                "at": self.at, "n": self.n, "supply": self.supply}
 
     @classmethod
     def from_dict(cls, d):
@@ -62,7 +65,11 @@ class Goal:
         n = d.get("n")
         if n is not None and (not isinstance(n, int) or n < 1):
             raise GoalGrammarError("goal.n must be a positive integer")
-        return cls(verb=verb, object=obj, at=at, n=n)
+        supply = d.get("supply")
+        if supply is not None and supply != "external":
+            raise GoalGrammarError(
+                "goal.supply must be 'external' or null, got %r" % supply)
+        return cls(verb=verb, object=obj, at=at, n=n, supply=supply)
 
     def describe(self):
         s = "%s %s" % (self.verb, self.object)
