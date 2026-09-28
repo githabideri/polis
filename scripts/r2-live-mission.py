@@ -227,6 +227,10 @@ def main():
     ap.add_argument("--llm-model", required=True)
     ap.add_argument("--goal", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--pregive", action="append", default=[],
+                    help="external setup before the goal: '<item> <qty>' "
+                         "(logged in the run JSON - a harness privilege, "
+                         "not a world fact)")
     args = ap.parse_args()
 
     run = {"started": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
@@ -248,6 +252,13 @@ def main():
     # 2. world observation
     bot, wm, st = boot(pol)
     run["bot"] = bot
+    for spec in args.pregive:
+        item, qty = spec.split()
+        r = pol.cmd("give", [item, qty], bot)
+        run.setdefault("setup", []).append(
+            {"give": item, "qty": qty, "ok": bool(r.get("Ok"))})
+        time.sleep(1)
+    st = pol.state(bot)
     inv = normalize_inv(inventory_of(st))
     fixtures = register_site(wm, pol, bot, goal, None)
     gfail = check_goal(goal, [f["id"] for f in fixtures])
