@@ -277,6 +277,21 @@ class Oikistes:
         return True  # free
 
     def do_tool(self, tool, a, autonomy):
+        # the model sometimes passes a bare string where the protocol
+        # says an object - normalize per tool instead of failing
+        if isinstance(a, str):
+            if tool == "mission":
+                a = {"goal": a}
+            elif tool == "give":
+                parts = a.split()
+                a = {"item": parts[0],
+                     "qty": int(parts[1]) if len(parts) > 1 and
+                     parts[1].isdigit() else 1} if parts else {}
+            elif tool == "command":
+                a = {"cmd": a.split()[0],
+                     "args": a.split()[1:]} if a.strip() else {}
+            else:
+                a = {}
         if not self.check_tool(tool, autonomy):
             return "DENIED: autonomy=%s does not permit tool %r" % (
                 autonomy, tool)
@@ -414,9 +429,10 @@ class Oikistes:
             "(goals like 'mine granite x1', 'harvest rye x1', 'sow rye "
             "x1 at site-A', 'place granite at site-A x1 supply "
             "external'); command=<cmd,args> a direct harness command "
-            "(free only). Otherwise answer with plain text. You are "
-            "the Oikistes: answer as it, in short plainspoken sentences "
-            "- never echo the input back.\n"
+            "(free only). After each action you see its result; once "
+            "you are done acting you MUST answer in plain text with a "
+            "short report. You are the Oikistes: answer as it, in short "
+            "plainspoken sentences - never echo the input back.\n"
             "Current world (fresh): %s\n"
             "Recent exchanges:\n%s"
             % (autonomy.upper(),
@@ -478,6 +494,7 @@ class Oikistes:
             digest = self.world_digest()
             reply = ""
             for step in range(self.MAX_ACTIONS + 1):
+                last = step == self.MAX_ACTIONS
                 base = self.system_prompt(autonomy, digest,
                                           self.memory_text())
                 if step == 0:
@@ -487,10 +504,12 @@ class Oikistes:
                     msg = (base +
                            "\n\nYour actions this turn and their "
                            "results:\n" + json.dumps(actions,
-                                                      indent=1) +
-                           "\nContinue (one more action) or answer.")
+                                                      indent=1))
+                if last:
+                    msg += ("\nAnswer NOW in plain text - no JSON "
+                            "action, a short report of what happened.")
                 out = self.llm.chat([{"role": "user", "content": msg}])
-                if out.startswith("{"):
+                if not last and out.startswith("{"):
                     try:
                         act = json.loads(out)
                     except ValueError:
