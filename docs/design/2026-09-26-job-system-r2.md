@@ -1123,3 +1123,57 @@ fixture, not an execution capability.
   metrics (precision 1.000 / coverage 0.476); the M2 place half is
   blocked on the 1.22 item->block mapping wall (soil round-trip
   probe is the next investigation).
+
+### 13.8 M2 closed: the endogenous harvest→sow chain (2026-09-28, 14:19)
+
+The closing sequence reached its milestone. **M2 (endogenous
+production→consumption) is GOAL COMPLETE**: run 31, 9.6 s, the
+deterministic two-job chain `harvest crop-rye-9 → sow crop-rye-2 at
+site-A`: the harvest's MEASURED drops (2× seeds-rye + 6× grain-rye)
+satisfied the sow's seed precondition; the sow stood on the walkable
+layer beside the farmland column and placed a new crop on the
+farmland; the oracle verified the crop block. The world produced the
+input the next job consumed - no external supply anywhere.
+
+**The material landscape, measured (what DOES round-trip in 1.22):**
+- granite: mine → `stone-granite` drops; `place` says "Unknown
+  block: game:stone-granite" - the mapping wall is real (the item has
+  no public block reference).
+- soil: hand-mining does nothing (ground block, needs a shovel, and
+  drops nothing anyway); `axe-wood` does not exist in 1.22; `tree` is
+  not a settable block (trees are growables, not placeable blocks) -
+  the wood round-trip is not stageable in the testbed.
+- cabbage: harvest requires farmland *at or below* the crop (the
+  testbed's cabbage sat on soil and was honestly rejected).
+- **rye on farmland: the round-trip that works.** Mature (stage 9/9)
+  rye on farmland harvests into seeds + grain; the new crop is
+  stageable on the same farmland. Farming is M2's material.
+
+**Known fidelity gaps (recorded, not hidden):** the composite sow
+(a) places the crop via `setblock` (1.22's right-click planting is
+not exposed - `Item` has no public block reference) and (b) does not
+consume the seed. The run JSON's oracle carries both facts
+(`api_gap`). The loop's ECONOMY is honest (the harvest's measured
+drops pay the sow's precondition); the placement fidelity is a
+documented engine-API limit, not a loop property.
+
+**The 27B and the new vocabulary:** on the sow goal the 27B
+(1) rejected three times against a world where the required crop
+was visible in the candidate list (each rejection faithful to the
+prompt as then written), and (2) with thinking enabled, **degenerate
+into a silent token loop** (finish=length, 3000 tokens, zero content
+or reasoning). The harvest of the same resource plans fine. This is
+the second model-capability finding in two days (12.10's supply
+refusal): the 27B is a capable judge, not a reliable planner for
+novel action vocabularies. The deterministic compiler takes the
+structured cases; the planner-FT question (13.6 step 6) now has
+concrete evidence on both sides.
+
+**Engineering lesson (three prefix bugs in one day):** inventory and
+scan codes carry the `game:` namespace; lookups against bare names
+read zero against full hands (runs 25-27, 30) while the world sat
+correct the whole time. The debug dump at failure time (the world's
+own view, taken at the moment of the false negative) is what
+exposed it - the 13.2 execution/oracle split paid for itself: when
+the oracle says "absent" and the engine says "placed", one of them
+is lying, and only the raw view tells which.

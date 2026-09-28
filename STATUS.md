@@ -405,3 +405,17 @@ half is blocked on the 1.22 item->block mapping wall (granite drops
 next investigation: the soil round-trip probe; then step 4 (close
 M2), step 5 (P5 5-way classification), step 6 (the planner-FT
 decision - precision 1.000 means an FT can only work on coverage).
+
+### 13.6 step 4 executed (2026-09-28, 14:19): M2 CLOSED
+Endogenous harvest→sow chain GOAL COMPLETE (run 31, 9.6 s): harvest
+mature rye on farmland (measured 2× seeds + 6× grain) → sow the seeds
+as a new crop on the farmland (oracle: crop present). No external
+supply. Documented gaps: composite sow uses setblock (1.22 exposes
+no right-click planting) and does not consume the seed (recorded in
+the oracle's `api_gap`). The material landscape is measured:
+granite/soil/wood all dead-end (mapping wall, no drops, no stageable
+trees); rye-on-farmland is the round-trip. The 27B degenerate
+(silent 3000-token loop) on the new sow vocabulary - second
+model-capability finding; the deterministic compiler owns the
+structured cases. Three `game:`-prefix lookup bugs in my own code
+cost runs 25-30; the 13.2 raw-view-at-failure discipline caught each.
