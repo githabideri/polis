@@ -93,9 +93,12 @@ def build_planner_prompt(wm, goal, inventory, fixtures, max_candidates=16,
         extra = ""
         if r.properties.get("stage") is not None:
             extra = " stage=%s" % r.properties["stage"]
-        lines.append("  %s  block=%s  code=%s  drops=%s%s  qty=%d  %dm"
+        dm = r.drop_material() or "?"
+        lines.append("  %s  block=%s  code=%s  drops=%s  qty=%d  %dm"
                      % (rid, r.material or "?", r.code or "?",
-                        r.drop_material() or "?", extra,
+                        dm + (" (measured)" if r.drops
+                              else " (assumed, unmeasured)"),
+                        extra,
                         r.observed_quantity or 1, _dist(r)))
     resources = "\n".join(lines) or "  (none - the world scan is empty)"
 
@@ -106,9 +109,18 @@ def build_planner_prompt(wm, goal, inventory, fixtures, max_candidates=16,
         index[fid] = f
         cond = f.get("condition")
         cond_s = cond.get("satisfied") if isinstance(cond, dict) else cond
-        flines.append("  %s  %s  requirement=%s  now=%s"
-                      % (fid, f.get("kind"), f.get("requirement"),
-                         cond_s))
+        kind = f.get("kind") or ""
+        if kind == "build-site":
+            if cond_s is False:
+                state = "PLACE TARGET (empty - ready for a place job)"
+            elif cond_s is True:
+                state = "FILLED (already satisfied here)"
+            else:
+                state = "condition unknown"
+        else:
+            state = "present" if cond_s else "absent"
+        flines.append("  %s  %s  requirement=%s  %s"
+                      % (fid, kind, f.get("requirement"), state))
     fixtures_s = "\n".join(flines) or "  (none)"
 
     inv = ", ".join("%s:%d" % (k, v) for k, v in sorted(inventory.items())) \

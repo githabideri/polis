@@ -162,10 +162,6 @@ check("under-supplied place rejected",
       jobs is None and f.code == "resource_not_found",
       str(f and f.to_dict()))
 
-print()
-print("plancheck-test: %d passed, %d failed" % (PASS, FAIL))
-sys.exit(1 if FAIL else 0)
-
 # 14. goal-aware target check (P5 round-2 F3 gap)
 from r2.plancheck import check_goal
 from r2.jobs import Goal as _G
@@ -187,3 +183,7 @@ jobs, f = validate_plan(
     INDEX, INV_GRANITE, goal=_G(verb="place", object="granite", at="site-A"))
 check("plan matching the goal's site passes",
       jobs is not None and f is None, str(f and f.to_dict()))
+
+print()
+print("plancheck-test: %d passed, %d failed" % (PASS, FAIL))
+sys.exit(1 if FAIL else 0)
