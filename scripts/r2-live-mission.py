@@ -259,29 +259,38 @@ def execute_job(pol, bot, base, job, wm, run):
                      "reason": "no seeds"},
                     {"seed_precondition": seed_have, "required": need,
                      "inventory": inv0})
-        solid = [b["pos"] for b in pol.cell_blocks(bot, tuple(cell), pad=2)
-                 if (b.get("code") or "") != "game:air"
-                 and b["pos"] != cell]
+        # stand-cell candidates: the WALKABLE layer (y+1) beside the
+        # farmland column. The farmland is a ground-level block, so its
+        # same-level neighbours are solid soil (run 29: the block-
+        # neighbour logic found zero candidates), and the cell directly
+        # above it is where the crop will be placed (the bot cannot
+        # stand there - run 28)
+        solid = set()
+        for b in (pol.cell_blocks(bot, tuple(cell), pad=2) or []):
+            if b.get("code") and b["code"] != "game:air":
+                solid.add(tuple(b["pos"]))
         from_pos = tuple(pol.state(bot)["Bot"]["Pos"])
+        stand_y = cell[1] + 1
+        cands = []
+        for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            c = (cell[0] + dx, stand_y, cell[2] + dz)
+            if c not in solid:
+                cands.append(c)
+        cands.sort(key=lambda c: (abs(c[0] - from_pos[0]) +
+                                  abs(c[2] - from_pos[2]), c))
 
         def _goto(c):
             return v5.goto_wait(pol, bot, c, timeout=25)
 
         def _act():
             r = pol.cmd("setblock", [crop_code, str(cell[0]),
-                                     str(cell[1] + 1), str(cell[2])], bot)
+                                     str(stand_y), str(cell[2])], bot)
             return {"ok": bool(r.get("Ok")),
                     "msg": r.get("Message") or r.get("error") or ""}
 
-        # the sow must stand on a NEIGHBOUR of the farmland cell: the
-        # engine refuses to place a block in a cell the bot occupies
-        # (run 28: target-first approach, silent setblock refusal), so
-        # the candidate list skips the target cell itself
-        cands = [c for c in r2approach.candidates(
-            tuple(cell), solid, from_pos) if c != tuple(cell)]
         attempts = []
         aok = False
-        adetail = "no approach candidate"
+        adetail = "no approach candidate (all stand cells blocked)"
         for cand in cands:
             g = _goto(cand)
             if not g.get("ok"):
@@ -292,14 +301,15 @@ def execute_job(pol, bot, base, job, wm, run):
             attempts.append({"cell": list(cand), "stage": "action",
                              "ok": a["ok"], "msg": a["msg"]})
             aok = a["ok"]
-            adetail = ("setblock %s via %s -> %s" % (crop_code, cand,
-                                                    a["msg"] or
-                                                    ("ok" if a["ok"] else "refused")))
+            adetail = ("setblock %s from %s -> %s" % (crop_code, cand,
+                                                     a["msg"] or
+                                                     ("ok" if a["ok"] else "refused")))
             if aok:
                 break
         la = pol.state(bot).get("LastAction") or {}
-        # oracle: a crop block now sits above the farmland cell
-        crop_cell = (cell[0], cell[1] + 1, cell[2])
+        # oracle: a crop block now sits in the walkable cell above the
+        # farmland
+        crop_cell = (cell[0], stand_y, cell[2])
         blocks = pol.cell_blocks(bot, crop_cell)
         crop_present = any(
             (b.get("code") or "").startswith("crop-" + mat)
