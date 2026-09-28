@@ -543,7 +543,8 @@ def main():
             n = goal.n or 1
             raw = json.dumps([
                 {"id": "j1", "type": "harvest", "quantity": n,
-                 "source": r.id, "origin": "deterministic"},
+                 "source": r.id, "material": goal.object,
+                 "origin": "deterministic"},
                 {"id": "j2", "type": "sow", "quantity": n,
                  "target": goal.at, "material": goal.object,
                  "depends_on": ["j1"], "origin": "deterministic"}])
