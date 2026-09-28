@@ -844,3 +844,41 @@ tests (13/13) and the P5 validator fixtures.
   (finding 12.10.3) - remediation (a) is the recommended follow-up.
   The planner prompt is back at the r4 wording (r5/r6 A/B); prompt
   changes are now suite-gated.
+
+### 12.11 Remediation (a) implemented - the two-job live milestone is DONE (2026-09-28, ~04:53 CEST)
+
+Remediation (a) from 12.10 is implemented as a **goal-level
+declaration**: the goal grammar (r2/jobs.py) accepts
+`supply: "external"` (only valid value; anything else is a grammar
+error); the goal line parses `"... supply external"`. The orchestrator
+executes the give **before the planner runs** (the 27B refuses the
+pre-supply world - that refusal IS the finding; you cannot plan around
+a model that has already rejected the world), records the give as job
+`j0` (source=operator) in the queue, and the planner then sees a place
+goal with a sufficient inventory. The single-sentence inventory-
+sufficiency clause in rule 9 is what makes the 27B emit the single
+place job; it was A/B-gated (r7: 19/25 - the delta vs r6's 20/25 is
+confined to the two known-oscillating cases E1/G2; adopted on the
+strength of the live proof below).
+
+**Run 11 (`data/r2-live-2026-09-28-11.json`): GOAL COMPLETE, 2 jobs,
+8.5 s.** Goal "place granite at site-A x1 supply external":
+`j0 give_tool (source=operator)` done pre-planning; the 27B proposed
+`j1 place granite @ site-A`; the queue executed it (goto + place);
+the fresh oracle confirmed (site filled); ledger nets to zero
+(+1 supplied, -1 consumed); `goal_complete`. The full R2 pipeline -
+intake, world model, planner, goal-aware validator, queue with mixed
+deterministic+planned jobs, executor, oracle, run JSON - is now live-
+verified in one run.
+
+Also recorded from the same session: run 12 ("mine granite x1") - the
+27B accepted the mine plan, the block was removed in-game, but the
+run oracle (inventory diff taken 2 s after the action) saw no drop yet
+(mining drops land asynchronously in the cargo) and the job was
+abandoned with `job_budget_exhausted`. A live finding about the mine
+oracle's sampling window, not about planning or the queue.
+- **2026-09-28 (Phase 6 milestone closed, ~04:55 CEST).** Remediation
+  (a) (operator-declared `supply: external`, deterministic pre-planning
+  give) implemented; run 11 = the live two-job GOAL COMPLETE (8.5 s);
+  rule 9's single-sentence inventory clause adopted (r7 A/B); run 12
+  records the mine-oracle async-drop finding. R2 Phases 0-6: complete.

@@ -358,13 +358,13 @@ therefore complete — Phase 2 (WorldModel + ObservationService) is next.
 - **Phase 6** — `r2/jobqueue.py` (13/13: lifecycle, abandonment,
   rejection, ledger, run-JSON) + `scripts/r2-live-mission.py` (the live
   orchestrator reusing the v5 action primitives). **Live: one-job GOAL
-  COMPLETE in 8 s (run 05) + 8 honest rejections (runs 01-03, 06-10).**
-  **The two-job live completion was NOT achieved: the 27B consistently
-  refuses the sanctioned external-supply plan form** (mandatory rule 6
-  and a worked example did not move it — finding §12.10). The
-  experimental prompt edits it motivated regressed the P5 suite
-  (r5: 18/25) and were reverted (r6: 20/25); **planner-prompt changes
-  are now gated by the 25-case A/B**. Next (user decision): remediation
-  (a) — operator-declared external supply at intake, deterministically
-  inserted before the planner — makes the two-job milestone executable
-  without any model change.
+  COMPLETE in 8 s (run 05), 9 honest rejections, and the two-job
+  milestone COMPLETE (run 11, 8.5 s) via 12.10 remediation (a): a
+  goal-level `supply: external` declaration - the operator give is
+  deterministic and pre-planning (job j0, source=operator), the 27B
+  then plans the single place job it can actually see.** The 27B's
+  refusal of the pre-supply world is the standing finding (12.10): it
+  is not prompt-overridable; prompt changes to the planner are gated
+  by the 25-case A/B (r4/r5/r6/r7; the adopted diff is one sentence in
+  rule 9). Open: the mine-oracle async-drop finding (run 12) and the
+  goal-grammar question (12.5) — both follow-ups, not blockers.
