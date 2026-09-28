@@ -149,19 +149,40 @@ def register_site(wm, pol, bot, goal, fixtures):
         st = pol.state(bot)
         pos = st["Bot"]["Pos"]
         bx, bz = int(pos[0]), int(pos[2])
-        cell, empty = None, False
-        for dx in range(2, 6):
-            cand = (bx + dx, 3, bz)
-            blocks = pol.cell_blocks(bot, cand, pad=0)
-            filled = any(b.get("pos") == [cand[0], cand[1], cand[2]]
-                         for b in blocks)
-            if not filled:
-                cell, empty = list(cand), True
-                break
-        if cell is None:  # everything filled - the site cannot be a
-            cell = [bx + 2, 3, bz]   # place target (empty cell absent)
-        wm.register_fixture(goal.at, "build-site", cell, "empty")
-        wm.observe_fixture(goal.at, empty, reason="fixture_setup")
+        if getattr(goal, "verb", None) == "sow":
+            # a sow site is a FARMLAND cell (the crop lands on top of
+            # it): find one nearby, or stage one deterministically
+            # (operator action, recorded in the fixture's source)
+            cell, src = None, "staged"
+            near = []
+            for b in (pol.cell_blocks(bot, (bx, 3, bz), pad=12) or []):
+                if (b.get("code") or "").startswith("game:farmland"):
+                    near.append(b["pos"])
+            if near:
+                near.sort(key=lambda p: abs(p[0] - bx) + abs(p[2] - bz))
+                cell, src = near[0], "scanned"
+            else:
+                cell = [bx + 2, 2, bz]
+                r = pol.cmd("setblock", ["game:farmland-dry-verylow",
+                                         str(cell[0]), str(cell[1]),
+                                         str(cell[2])], bot)
+                src = "staged(ok=%s)" % r.get("Ok")
+            wm.register_fixture(goal.at, "farmland", cell, "farmland")
+            wm.observe_fixture(goal.at, True, reason="fixture_setup:%s" % src)
+        else:
+            cell, empty = None, False
+            for dx in range(2, 6):
+                cand = (bx + dx, 3, bz)
+                blocks = pol.cell_blocks(bot, cand, pad=0)
+                filled = any(b.get("pos") == [cand[0], cand[1], cand[2]]
+                             for b in blocks)
+                if not filled:
+                    cell, empty = list(cand), True
+                    break
+            if cell is None:  # everything filled - the site cannot be a
+                cell = [bx + 2, 3, bz]   # place target (empty cell absent)
+            wm.register_fixture(goal.at, "build-site", cell, "empty")
+            wm.observe_fixture(goal.at, empty, reason="fixture_setup")
     for fid, f in sorted(wm.fixtures.items()):
         cond = wm.fixture_observations.get(fid)
         out.append({"id": fid, "kind": f.kind,
@@ -194,6 +215,74 @@ def execute_job(pol, bot, base, job, wm, run):
             measured, \
             {"cmd": "give", "item": item, "ok": r.get("Ok")}, \
             {"carried": got, "required": qty}
+
+    # sow (13.7 M2): 1.22's API does not expose right-click sowing (Item
+    # has no public block reference), so sow is a COMPOSITE: approach
+    # the farmland, then setblock a new crop above it. The seed
+    # PRECONDITION is checked against the measured inventory; the seed
+    # is NOT consumed by the composite - that non-consumption is an
+    # engine-API gap recorded in the oracle (the crop is real; in the
+    # real engine the seed is consumed on planting).
+    if job.type == "sow":
+        site = wm.fixtures.get(job.target)
+        if site is None:
+            return (False, "sow: unknown site %s" % job.target,
+                    measured, {"cmd": "sow", "ok": False,
+                               "reason": "unknown site"}, {})
+        mat = job.material or "rye"
+        crop_code = "crop-%s-2" % mat
+        seed_code = "seeds-%s" % mat
+        cell = list(site.cell)
+        inv0 = inventory_of(pol.state(bot))
+        seed_have = inv0.get(seed_code, 0)
+        need = job.quantity or 1
+        if seed_have < need:
+            return (False,
+                    "sow: need %d %s, have %d (harvest it first? - the "
+                    "1.22 composite cannot conjure seeds)"
+                    % (need, seed_code, seed_have), measured,
+                    {"cmd": "sow", "ok": False,
+                     "reason": "no seeds"},
+                    {"seed_precondition": seed_have, "required": need})
+        solid = [b["pos"] for b in pol.cell_blocks(bot, tuple(cell), pad=2)
+                 if (b.get("code") or "") != "game:air"
+                 and b["pos"] != cell]
+        from_pos = tuple(pol.state(bot)["Bot"]["Pos"])
+
+        def _goto(c):
+            return v5.goto_wait(pol, bot, c, timeout=25)
+
+        def _act():
+            r = pol.cmd("setblock", [crop_code, str(cell[0]),
+                                     str(cell[1] + 1), str(cell[2])], bot)
+            return {"ok": bool(r.get("Ok")),
+                    "msg": r.get("Message") or r.get("error") or ""}
+
+        aok, adetail, attempts, la = r2approach.approach(
+            _goto, _act, from_pos, tuple(cell), solid)
+        # oracle: a crop block now sits above the farmland cell
+        crop_cell = (cell[0], cell[1] + 1, cell[2])
+        blocks = pol.cell_blocks(bot, crop_cell)
+        crop_present = any(
+            (b.get("code") or "").startswith("crop-" + mat)
+            and b.get("pos") == list(crop_cell) for b in blocks)
+        inv_post = inventory_of(pol.state(bot))
+        seed_post = inv_post.get(seed_code, 0)
+        ok = aok and crop_present
+        detail = ("sow %s on %s -> %s | last_action_ok=%s crop_present=%s"
+                  % (crop_code, job.target, adetail, la.get("Ok"),
+                     crop_present))
+        return ok, detail, measured, \
+            {"last_action": {k: la.get(k) for k in ("Name", "Ok", "Msg")},
+             "approach_attempts": attempts}, \
+            {"crop_present": crop_present,
+             "crop_cell": list(crop_cell),
+             "seed_precondition": seed_have,
+             "seed_after": seed_post,
+             "seed_consumed": seed_post < seed_have,
+             "api_gap": ("1.22 composite sow does not consume the seed "
+                         "(engine placement is not exposed)" if not
+                         seed_post < seed_have else None)}
 
     # resource-targeted jobs: the target cell is the resource's
     # representative cell (measured world fact, not model output)

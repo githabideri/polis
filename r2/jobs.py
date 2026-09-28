@@ -102,6 +102,8 @@ JOB_CATALOG = {
                   "source": "world",    "needs": ("target", "material")},
     "goto":      {"produces": False, "consumes": False,
                   "source": "world",    "needs": ("target",)},
+    "sow":       {"produces": False, "consumes": True,
+                  "source": "world",    "needs": ("target", "material")},
     "give_tool": {"produces": True,  "consumes": False,
                   "source": "external", "needs": ("material",)},
     "pickup":    {"produces": False, "consumes": False,

@@ -46,15 +46,19 @@ f = Failure("unsupported_goal", "verb fly", goal="fly x")
 check("unsupported_goal layer=goal", f.layer == "goal")
 
 # --- job catalog ----------------------------------------------------------
-check("catalog covers the v5 families + 12.1 additions",
+check("catalog covers the v5 families + 12.1 + 13.7 sow",
       set(JOB_CATALOG) == {"mine", "harvest", "place", "goto",
-                           "give_tool", "pickup", "travel", "wait"})
+                           "give_tool", "pickup", "travel", "wait",
+                           "sow"})
 check("give_tool is external", JOB_CATALOG["give_tool"]["source"] == "external")
 check("mine/harvest produce from world",
       all(JOB_CATALOG[t]["produces"] and JOB_CATALOG[t]["source"] == "world"
           for t in ("mine", "harvest")))
 check("place consumes", JOB_CATALOG["place"]["consumes"]
       and JOB_CATALOG["place"]["needs"] == ("target", "material"))
+check("sow consumes on a site target (13.7 M2)",
+      JOB_CATALOG["sow"]["consumes"]
+      and JOB_CATALOG["sow"]["needs"] == ("target", "material"))
 
 j = Job.from_dict({"id": "j1", "type": "place", "target": "site-A",
                    "material": "granite", "quantity": 5,

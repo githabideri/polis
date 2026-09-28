@@ -25,6 +25,8 @@ RULES
    - mine/harvest/pickup: "source":"res-<id>"
    - place/goto/travel:   "target":"site-<id>" (or a res-* for goto)
    - place/give_tool:     "material":"<material code>"
+   - sow:                 "target":"site-<id>" (a farmland site),
+                          "material":"<crop code>"
    - optional "depends_on":["j<id>"] (must point EARLIER in the list)
 4. Material flow: a place job needs its material in the INVENTORY or as
    the output of an earlier producing job (mine/harvest/give_tool).
@@ -38,6 +40,10 @@ RULES
    resource whose code or material name matches X. The material it
    actually yields (drops=) may differ - that is a consequence, not a
    blocker, for mine/harvest goals.
+   "sow X" plants seeds of crop X on a farmland site. Seeds come from
+   HARVESTING that crop (its drops= contains seeds-*). If the
+   inventory holds no seeds, the plan is [harvest <same crop>, sow
+   <crop>] - the harvest produces the seeds the sow consumes.
 6. External supply: if a place goal needs a material that no world
    producer yields and the inventory lacks it, a give_tool job is a
    LEGAL plan (harness supply); use it, or reject if you judge the goal
