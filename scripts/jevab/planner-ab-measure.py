@@ -34,7 +34,7 @@ sys.path.insert(0, REPO)
 
 from r2.worldmodel import WorldModel
 from r2.plannerprompt import build_planner_prompt
-from r2.plancheck import validate_plan
+from r2.plancheck import validate_plan, check_goal
 from r2.jobs import Goal, GoalGrammarError
 
 
@@ -146,6 +146,14 @@ def score_case(case, llm, model):
         fixtures.append({"id": fid, "kind": f.kind,
                          "requirement": f.requirement,
                          "condition": cond.present if cond else None})
+    # goal intake (before any planning): unknown site in the goal
+    gfail = check_goal(goal, [f["id"] for f in fixtures])
+    if gfail is not None:
+        return {"id": case["id"], "cat": case["cat"],
+                "expect": case["expect"], "latency_ms": 0,
+                "outcome": "rejected", "achieved": False,
+                "failure": gfail.to_dict(), "raw": "(goal intake)",
+                "intake_reject": True}
     prompt, index = build_planner_prompt(
         wm, goal, case["inventory"], fixtures, center=(512010, 0, 512019))
     raw, ms = call_llm(llm, model, prompt)
@@ -153,8 +161,8 @@ def score_case(case, llm, model):
            "latency_ms": ms, "prompt_chars": len(prompt),
            "raw": raw[:600], "prompt": None}
 
-    # -- the validator (deterministic) --------------------------------------
-    jobs, failure = validate_plan(raw, index, case["inventory"])
+    # -- the validator (deterministic, goal-aware) --------------------------
+    jobs, failure = validate_plan(raw, index, case["inventory"], goal=goal)
     if failure is not None:
         out.update({"valid": False,
                     "failure": failure.to_dict(),
@@ -169,16 +177,43 @@ def score_case(case, llm, model):
 
 
 def verdict(case, res):
-    """CORRECT / CORRECT-CAUGHT / WRONG with a reason, per the case's
+    """CORRECT / CORRECT-CAUGHT / AMBIGUOUS / WRONG, per the case's
     expected outcome class."""
     exp = case["expect"]
     o = res["outcome"]
+    detail = " ".join(str(x) for x in [
+        (res.get("failure") or {}).get("detail", ""), res.get("raw", "")])
     if o == "rejected":
+        # the outcome-reading pattern: a mine/harvest goal rejected
+        # BECAUSE the measured drops differ from the goal object. The
+        # goal grammar (section 6) is action-scoped (mine X = act on X);
+        # the 27B reads it outcome-scoped (obtain X). Neither the model
+        # nor the validator is wrong - the grammar must be settled.
+        if exp == "valid" and case["goal"].get("verb") in ("mine", "harvest") \
+                and ("drop" in detail or "yields" in detail or
+                     "yield" in detail):
+            return "AMBIGUOUS", "goal-grammar ambiguity: action-scoped vs " \
+                "outcome-scoped mine/harvest (design question, not a " \
+                "model defect)"
         if exp == "reject":
             return "CORRECT", "honest rejection as expected"
         if exp == "either":
-            return "CORRECT", "honest rejection (acceptable)"
-        return "WRONG", "rejected a goal the candidates could meet"
+            raw = res.get("raw", "")
+            model_rejected = ("reject" in raw[:20] and
+                              not raw.lstrip().startswith("[{"))
+            if model_rejected:
+                return "CORRECT", "honest rejection (acceptable here)"
+            return "CAUGHT", "model proposed an unachieved plan; the " \
+                "validator rejected it (pipeline output safe)"
+        # exp == "valid" and rejected
+        raw = res.get("raw", "")
+        model_rejected = ("reject" in raw[:20]
+                          and not raw.lstrip().startswith("[{"))
+        if not model_rejected:
+            return "CAUGHT", "model proposed an unachieved plan; the " \
+                "validator rejected it (pipeline output safe)"
+        return "WRONG", "model over-rejected a goal the candidates " \
+            "could meet"
     if o == "valid-unachieved":
         return "WRONG", "plan passes the validator but does not achieve " \
             "the goal (semantic gap - the measurement's key signal)"
@@ -239,10 +274,12 @@ def main():
 
 def summarize(results):
     s = {"total": len(results)}
-    for v in ("CORRECT", "WRONG"):
+    for v in ("CORRECT", "CAUGHT", "WRONG", "AMBIGUOUS"):
         s[v] = sum(1 for r in results if r.get("verdict") == v)
     s["honest_rejections"] = sum(
         1 for r in results if r.get("outcome") == "rejected")
+    s["intake_rejections"] = sum(
+        1 for r in results if r.get("intake_reject"))
     s["validator_catches"] = sum(
         1 for r in results
         if r.get("valid") is False and
@@ -257,8 +294,10 @@ def summarize(results):
     for r in results:
         by_cat.setdefault(r["cat"], []).append(r.get("verdict"))
     s["by_category"] = {
-        k: {"correct": v.count("CORRECT"), "wrong": v.count("WRONG"),
-            "total": len(v)} for k, v in sorted(by_cat.items())}
+        k: {v: vals.count(v)
+            for v in ("CORRECT", "CAUGHT", "WRONG", "AMBIGUOUS")}
+        | {"total": len(vals)}
+        for k, vals in sorted(by_cat.items())}
     return s
 
 

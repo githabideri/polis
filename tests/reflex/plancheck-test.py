@@ -165,3 +165,25 @@ check("under-supplied place rejected",
 print()
 print("plancheck-test: %d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)
+
+# 14. goal-aware target check (P5 round-2 F3 gap)
+from r2.plancheck import check_goal
+from r2.jobs import Goal as _G
+g = _G(verb="place", object="granite", at="site-Z")
+check("goal intake: unknown site rejected",
+      check_goal(g, ["site-A"]) is not None)
+check("goal intake: known site passes",
+      check_goal(g, ["site-A", "site-Z"]) is None)
+check("goal intake: no at -> passes",
+      check_goal(_G(verb="mine", object="granite"), []) is None)
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"place","target":"site-A","material":"granite"}]',
+    INDEX, INV_GRANITE, goal=_G(verb="place", object="granite", at="site-B"))
+check("plan targeting a different site than the goal rejected",
+      jobs is None and f.code == "planner_invalid_reference",
+      str(f and f.to_dict()))
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"place","target":"site-A","material":"granite"}]',
+    INDEX, INV_GRANITE, goal=_G(verb="place", object="granite", at="site-A"))
+check("plan matching the goal's site passes",
+      jobs is not None and f is None, str(f and f.to_dict()))

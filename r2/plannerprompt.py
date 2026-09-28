@@ -30,19 +30,30 @@ RULES
    the output of an earlier producing job (mine/harvest/give_tool).
    A mine/harvest job produces the resource's MEASURED DROPS material
    (the drops= column) - a place job must consume exactly that code.
-   If the drops material differs from what the place needs, the plan
-   cannot be covered by that producer (use give_tool or reject).
-   give_tool sources material from outside the world (a harness supply)
-   - use it only if the goal permits external supply; prefer
-   world-producing jobs.
-5. Order producers before consumers. Keep the plan minimal.
-6. If the goal cannot be met from the candidates, answer exactly
+   Do NOT check quantities yourself: do no arithmetic - the
+   deterministic validator after you checks all material balances.
+   Propose the plan you believe is best; if you believe the goal cannot
+   be met at all, use rule 6.
+5. Goal semantics: "mine X" / "harvest X" means perform the action on a
+   resource whose code or material name matches X. The material it
+   actually yields (drops=) may differ - that is a consequence, not a
+   blocker, for mine/harvest goals.
+6. External supply: if a place goal needs a material that no world
+   producer yields and the inventory lacks it, a give_tool job is a
+   LEGAL plan (harness supply); use it, or reject if you judge the goal
+   should not use external supply.
+7. Keep the plan minimal. Order producers before consumers.
+8. If the goal cannot be met from the candidates, answer exactly
    {{"reject":"<one-line reason>"}}.
+9. REJECT ONLY when a required resource or site is absent from the
+   candidate lists. NEVER reject on quantity grounds: quantity
+   sufficiency is decided by the deterministic validator that runs
+   after you - do no arithmetic, just propose the plan.
 
 GOAL
 {goal}
 
-CANDIDATE RESOURCES (id, block material, measured drops, qty, dist)
+CANDIDATE RESOURCES (id, block material, raw code, measured drops, qty, dist)
 {resources}
 
 FIXTURES (id, kind, requirement, current condition)
@@ -79,8 +90,12 @@ def build_planner_prompt(wm, goal, inventory, fixtures, max_candidates=16,
     for r in cands:
         rid = r.id
         index[rid] = r
-        lines.append("  %s  block=%s  drops=%s  qty=%d  %dm"
-                     % (rid, r.material or "?", r.drop_material() or "?",
+        extra = ""
+        if r.properties.get("stage") is not None:
+            extra = " stage=%s" % r.properties["stage"]
+        lines.append("  %s  block=%s  code=%s  drops=%s%s  qty=%d  %dm"
+                     % (rid, r.material or "?", r.code or "?",
+                        r.drop_material() or "?", extra,
                         r.observed_quantity or 1, _dist(r)))
     resources = "\n".join(lines) or "  (none - the world scan is empty)"
 

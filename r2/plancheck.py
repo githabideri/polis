@@ -25,7 +25,22 @@ from .jobs import (Job, Failure, JOB_CATALOG, Goal, GoalGrammarError,
 MAX_QUANTITY = 100  # a single job asking for more is a plan smell
 
 
-def validate_plan(plan_raw, index, inventory):
+def check_goal(goal, fixture_ids):
+    """Goal-intake check (runs BEFORE any planning): a goal whose `at`
+    names a site not in the fixture registry is outside what the world
+    can serve - rejected at intake, never handed to the planner.
+    Returns None (ok) or a Failure."""
+    at = getattr(goal, "at", None)
+    if at and at.startswith("site-") and at not in set(fixture_ids):
+        return Failure(
+            "resource_not_found",
+            "goal references unknown site %r (registry: %s)"
+            % (at, sorted(fixture_ids)),
+            goal=goal.describe())
+    return None
+
+
+def validate_plan(plan_raw, index, inventory, goal=None):
     """Validate a raw planner response.
 
     plan_raw: str or object (the model output)
@@ -34,7 +49,9 @@ def validate_plan(plan_raw, index, inventory):
 
     Returns (jobs, None) on success, (None, Failure) on rejection.
     """
-    # 1. parse
+    # 1. parse (boundary normalization, round-2 finding: the 27B returns
+    #    a BARE object for single-job plans; a job-shaped dict is
+    #    normalized to a one-element list - documented, not invented)
     if isinstance(plan_raw, (str, bytes)):
         try:
             plan_raw = json.loads(plan_raw)
@@ -45,6 +62,8 @@ def validate_plan(plan_raw, index, inventory):
         return None, Failure(
             "unsupported_goal",
             "planner rejected: %s" % plan_raw.get("reject"))
+    if isinstance(plan_raw, dict) and "type" in plan_raw:
+        plan_raw = [plan_raw]
     if not isinstance(plan_raw, list) or not plan_raw:
         return None, Failure(
             "planner_invalid_json",
@@ -155,5 +174,20 @@ def validate_plan(plan_raw, index, inventory):
                     "resource %s claimed by both %s and %s"
                     % (j.source, seen[j.source], j.id), job_id=j.id)
             seen[j.source] = j.id
+
+    # 7. goal-target check (goal-aware validation): when a PLACE goal
+    #    names a site, a place job must target exactly that site - a plan
+    #    that achieves a DIFFERENT known site (or omits the place job
+    #    altogether) is not the goal (the valid-unachieved gap found in
+    #    P5 round 2, case F3). Goto goals are checked by the goal
+    #    intake, not here.
+    if goal is not None and getattr(goal, "verb", None) == "place" and \
+            getattr(goal, "at", None) and goal.at.startswith("site-"):
+        if not any(j.type == "place" and j.target == goal.at
+                   for j in jobs):
+            return None, Failure(
+                "planner_invalid_reference",
+                "plan does not place at the goal's site %r" % goal.at,
+                goal=goal.describe())
 
     return jobs, None

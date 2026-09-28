@@ -1,0 +1,704 @@
+{
+ "cases_file": "tests/reflex/fixtures/planner-cases.json",
+ "model": "qwen3.8-27b-dual",
+ "date": "2026-09-28 03:50 CEST",
+ "results": [
+  {
+   "id": "A1",
+   "cat": "harvest",
+   "expect": "valid",
+   "latency_ms": 1312,
+   "prompt_chars": 2456,
+   "raw": "{\"id\":\"j1\",\"type\":\"harvest\",\"quantity\":1,\"source\":\"res-01\"}",
+   "prompt": null,
+   "valid": true,
+   "achieved": true,
+   "jobs": [
+    {
+     "id": "j1",
+     "type": "harvest",
+     "source": "res-01",
+     "target": null,
+     "material": null,
+     "quantity": 1,
+     "depends_on": [],
+     "claims": [],
+     "budget": 12,
+     "status": "ready"
+    }
+   ],
+   "outcome": "valid",
+   "verdict": "CORRECT",
+   "why": "achieved",
+   "wall_s": 1.3
+  },
+  {
+   "id": "A2",
+   "cat": "harvest",
+   "expect": "valid",
+   "latency_ms": 1337,
+   "prompt_chars": 2520,
+   "raw": "{\"id\":\"j1\",\"type\":\"harvest\",\"quantity\":1,\"source\":\"res-01\"}",
+   "prompt": null,
+   "valid": true,
+   "achieved": true,
+   "jobs": [
+    {
+     "id": "j1",
+     "type": "harvest",
+     "source": "res-01",
+     "target": null,
+     "material": null,
+     "quantity": 1,
+     "depends_on": [],
+     "claims": [],
+     "budget": 12,
+     "status": "ready"
+    }
+   ],
+   "outcome": "valid",
+   "verdict": "CORRECT",
+   "why": "achieved",
+   "wall_s": 1.3
+  },
+  {
+   "id": "A3",
+   "cat": "harvest",
+   "expect": "valid",
+   "latency_ms": 1289,
+   "prompt_chars": 2415,
+   "raw": "{\"id\":\"j1\",\"type\":\"harvest\",\"quantity\":3,\"source\":\"res-01\"}",
+   "prompt": null,
+   "valid": true,
+   "achieved": true,
+   "jobs": [
+    {
+     "id": "j1",
+     "type": "harvest",
+     "source": "res-01",
+     "target": null,
+     "material": null,
+     "quantity": 3,
+     "depends_on": [],
+     "claims": [],
+     "budget": 12,
+     "status": "ready"
+    }
+   ],
+   "outcome": "valid",
+   "verdict": "CORRECT",
+   "why": "achieved",
+   "wall_s": 1.3
+  },
+  {
+   "id": "B1",
+   "cat": "mine",
+   "expect": "valid",
+   "latency_ms": 1309,
+   "prompt_chars": 2412,
+   "raw": "{\"reject\":\"no site candidate available for goto\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "unsupported_goal",
+    "layer": "goal",
+    "detail": "planner rejected: no site candidate available for goto",
+    "job_id": null,
+    "goal": null
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "WRONG",
+   "why": "rejected a goal the candidates could meet",
+   "wall_s": 1.3
+  },
+  {
+   "id": "B2",
+   "cat": "mine",
+   "expect": "valid",
+   "latency_ms": 1355,
+   "prompt_chars": 2530,
+   "raw": "{\"id\":\"j1\",\"type\":\"mine\",\"quantity\":1,\"source\":\"res-01\"}",
+   "prompt": null,
+   "valid": true,
+   "achieved": true,
+   "jobs": [
+    {
+     "id": "j1",
+     "type": "mine",
+     "source": "res-01",
+     "target": null,
+     "material": null,
+     "quantity": 1,
+     "depends_on": [],
+     "claims": [],
+     "budget": 12,
+     "status": "ready"
+    }
+   ],
+   "outcome": "valid",
+   "verdict": "CORRECT",
+   "why": "achieved",
+   "wall_s": 1.4
+  },
+  {
+   "id": "B3",
+   "cat": "mine",
+   "expect": "reject",
+   "latency_ms": 1218,
+   "prompt_chars": 2409,
+   "raw": "{\"reject\":\"No granite resource available in candidates\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "unsupported_goal",
+    "layer": "goal",
+    "detail": "planner rejected: No granite resource available in candidates",
+    "job_id": null,
+    "goal": null
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "CORRECT",
+   "why": "honest rejection as expected",
+   "wall_s": 1.2
+  },
+  {
+   "id": "C1",
+   "cat": "place-inv",
+   "expect": "valid",
+   "latency_ms": 1274,
+   "prompt_chars": 2442,
+   "raw": "{\"id\":\"j1\",\"type\":\"place\",\"quantity\":3,\"target\":\"site-A\",\"material\":\"granite\"}",
+   "prompt": null,
+   "valid": true,
+   "achieved": true,
+   "jobs": [
+    {
+     "id": "j1",
+     "type": "place",
+     "source": null,
+     "target": "site-A",
+     "material": "granite",
+     "quantity": 3,
+     "depends_on": [],
+     "claims": [],
+     "budget": 12,
+     "status": "ready"
+    }
+   ],
+   "outcome": "valid",
+   "verdict": "CORRECT",
+   "why": "achieved",
+   "wall_s": 1.3
+  },
+  {
+   "id": "C2",
+   "cat": "place-inv",
+   "expect": "either",
+   "latency_ms": 1309,
+   "prompt_chars": 2442,
+   "raw": "{\"reject\":\"no granite-producing resource available and inventory lacks required quantity\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "unsupported_goal",
+    "layer": "goal",
+    "detail": "planner rejected: no granite-producing resource available and inventory lacks required quantity",
+    "job_id": null,
+    "goal": null
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "CORRECT",
+   "why": "honest rejection (acceptable)",
+   "wall_s": 1.3
+  },
+  {
+   "id": "C3",
+   "cat": "place-inv",
+   "expect": "valid",
+   "latency_ms": 1271,
+   "prompt_chars": 2439,
+   "raw": "{\"id\":\"j1\",\"type\":\"place\",\"quantity\":1,\"target\":\"site-B\",\"material\":\"granite\"}",
+   "prompt": null,
+   "valid": true,
+   "achieved": true,
+   "jobs": [
+    {
+     "id": "j1",
+     "type": "place",
+     "source": null,
+     "target": "site-B",
+     "material": "granite",
+     "quantity": 1,
+     "depends_on": [],
+     "claims": [],
+     "budget": 12,
+     "status": "ready"
+    }
+   ],
+   "outcome": "valid",
+   "verdict": "CORRECT",
+   "why": "achieved",
+   "wall_s": 1.3
+  },
+  {
+   "id": "D1",
+   "cat": "give-place",
+   "expect": "either",
+   "latency_ms": 1321,
+   "prompt_chars": 2464,
+   "raw": "{\"reject\":\"No granite-producing resource or site available in candidates\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "unsupported_goal",
+    "layer": "goal",
+    "detail": "planner rejected: No granite-producing resource or site available in candidates",
+    "job_id": null,
+    "goal": null
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "CORRECT",
+   "why": "honest rejection (acceptable)",
+   "wall_s": 1.3
+  },
+  {
+   "id": "D2",
+   "cat": "give-place",
+   "expect": "valid",
+   "latency_ms": 1260,
+   "prompt_chars": 2469,
+   "raw": "{\"reject\":\"insufficient granite quantity\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "unsupported_goal",
+    "layer": "goal",
+    "detail": "planner rejected: insufficient granite quantity",
+    "job_id": null,
+    "goal": null
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "WRONG",
+   "why": "rejected a goal the candidates could meet",
+   "wall_s": 1.3
+  },
+  {
+   "id": "D3",
+   "cat": "give-place",
+   "expect": "either",
+   "latency_ms": 1259,
+   "prompt_chars": 2467,
+   "raw": "{\"reject\":\"insufficient granite source quantity\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "unsupported_goal",
+    "layer": "goal",
+    "detail": "planner rejected: insufficient granite source quantity",
+    "job_id": null,
+    "goal": null
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "CORRECT",
+   "why": "honest rejection (acceptable)",
+   "wall_s": 1.3
+  },
+  {
+   "id": "E1",
+   "cat": "mine-place",
+   "expect": "valid",
+   "latency_ms": 1328,
+   "prompt_chars": 2469,
+   "raw": "{\"id\":\"j1\",\"type\":\"mine\",\"quantity\":3,\"source\":\"res-01\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "planner_invalid_reference",
+    "layer": "validation",
+    "detail": "plan does not place at the goal's site 'site-A'",
+    "job_id": null,
+    "goal": "place granite at site-A x3"
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "WRONG",
+   "why": "rejected a goal the candidates could meet",
+   "wall_s": 1.3
+  },
+  {
+   "id": "E2",
+   "cat": "mine-place",
+   "expect": "either",
+   "latency_ms": 1261,
+   "prompt_chars": 2467,
+   "raw": "{\"reject\":\"insufficient granite source quantity\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "unsupported_goal",
+    "layer": "goal",
+    "detail": "planner rejected: insufficient granite source quantity",
+    "job_id": null,
+    "goal": null
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "CORRECT",
+   "why": "honest rejection (acceptable)",
+   "wall_s": 1.3
+  },
+  {
+   "id": "E3",
+   "cat": "mine-place",
+   "expect": "valid",
+   "latency_ms": 1683,
+   "prompt_chars": 2471,
+   "raw": "{\"reject\":\"insufficient granite: need 4, have 2 in inventory + 3 from res-01 = 5, but res-01 qty=3 < 4 needed from mining\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "unsupported_goal",
+    "layer": "goal",
+    "detail": "planner rejected: insufficient granite: need 4, have 2 in inventory + 3 from res-01 = 5, but res-01 qty=3 < 4 needed from mining",
+    "job_id": null,
+    "goal": null
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "WRONG",
+   "why": "rejected a goal the candidates could meet",
+   "wall_s": 1.7
+  },
+  {
+   "id": "E4",
+   "cat": "mine-place",
+   "expect": "either",
+   "latency_ms": 1313,
+   "prompt_chars": 2442,
+   "raw": "{\"reject\":\"no granite-producing resource available and inventory lacks required quantity\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "unsupported_goal",
+    "layer": "goal",
+    "detail": "planner rejected: no granite-producing resource available and inventory lacks required quantity",
+    "job_id": null,
+    "goal": null
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "CORRECT",
+   "why": "honest rejection (acceptable)",
+   "wall_s": 1.3
+  },
+  {
+   "id": "F1",
+   "cat": "out-of-scope",
+   "expect": "reject",
+   "latency_ms": 1261,
+   "prompt_chars": 2409,
+   "raw": "{\"reject\":\"no diamond resource in candidates\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "unsupported_goal",
+    "layer": "goal",
+    "detail": "planner rejected: no diamond resource in candidates",
+    "job_id": null,
+    "goal": null
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "CORRECT",
+   "why": "honest rejection as expected",
+   "wall_s": 1.3
+  },
+  {
+   "id": "F2",
+   "cat": "out-of-scope",
+   "expect": "valid",
+   "latency_ms": 1204,
+   "prompt_chars": 2430,
+   "raw": "{\"id\":\"j1\",\"type\":\"goto\",\"target\":\"site-B\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "planner_invalid_reference",
+    "layer": "validation",
+    "detail": "plan does not place at the goal's site 'site-B'",
+    "job_id": null,
+    "goal": "goto camp at site-B"
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "WRONG",
+   "why": "rejected a goal the candidates could meet",
+   "wall_s": 1.2
+  },
+  {
+   "id": "F3",
+   "cat": "out-of-scope",
+   "expect": "reject",
+   "latency_ms": 0,
+   "outcome": "rejected",
+   "achieved": false,
+   "failure": {
+    "code": "resource_not_found",
+    "layer": "query",
+    "detail": "goal references unknown site 'site-Z' (registry: ['site-A'])",
+    "job_id": null,
+    "goal": "place granite at site-Z x1"
+   },
+   "raw": "(goal intake)",
+   "intake_reject": true,
+   "verdict": "CORRECT",
+   "why": "honest rejection as expected",
+   "wall_s": 0.0
+  },
+  {
+   "id": "G1",
+   "cat": "noise",
+   "expect": "valid",
+   "latency_ms": 1433,
+   "prompt_chars": 2645,
+   "raw": "{\"id\":\"j1\",\"type\":\"harvest\",\"quantity\":1,\"source\":\"res-02\"}",
+   "prompt": null,
+   "valid": true,
+   "achieved": true,
+   "jobs": [
+    {
+     "id": "j1",
+     "type": "harvest",
+     "source": "res-02",
+     "target": null,
+     "material": null,
+     "quantity": 1,
+     "depends_on": [],
+     "claims": [],
+     "budget": 12,
+     "status": "ready"
+    }
+   ],
+   "outcome": "valid",
+   "verdict": "CORRECT",
+   "why": "achieved",
+   "wall_s": 1.4
+  },
+  {
+   "id": "G2",
+   "cat": "noise",
+   "expect": "valid",
+   "latency_ms": 1558,
+   "prompt_chars": 2474,
+   "raw": "[{\"id\":\"j1\",\"type\":\"harvest\",\"quantity\":1,\"source\":\"res-01\"},{\"id\":\"j2\",\"type\":\"harvest\",\"quantity\":1,\"source\":\"res-02\"}]",
+   "prompt": null,
+   "valid": true,
+   "achieved": true,
+   "jobs": [
+    {
+     "id": "j1",
+     "type": "harvest",
+     "source": "res-01",
+     "target": null,
+     "material": null,
+     "quantity": 1,
+     "depends_on": [],
+     "claims": [],
+     "budget": 12,
+     "status": "ready"
+    },
+    {
+     "id": "j2",
+     "type": "harvest",
+     "source": "res-02",
+     "target": null,
+     "material": null,
+     "quantity": 1,
+     "depends_on": [],
+     "claims": [],
+     "budget": 12,
+     "status": "ready"
+    }
+   ],
+   "outcome": "valid",
+   "verdict": "CORRECT",
+   "why": "achieved",
+   "wall_s": 1.6
+  },
+  {
+   "id": "H1",
+   "cat": "qty",
+   "expect": "valid",
+   "latency_ms": 1319,
+   "prompt_chars": 2442,
+   "raw": "{\"id\":\"j1\",\"type\":\"place\",\"quantity\":1,\"target\":\"site-A\",\"material\":\"granite\"}",
+   "prompt": null,
+   "valid": true,
+   "achieved": true,
+   "jobs": [
+    {
+     "id": "j1",
+     "type": "place",
+     "source": null,
+     "target": "site-A",
+     "material": "granite",
+     "quantity": 1,
+     "depends_on": [],
+     "claims": [],
+     "budget": 12,
+     "status": "ready"
+    }
+   ],
+   "outcome": "valid",
+   "verdict": "CORRECT",
+   "why": "achieved",
+   "wall_s": 1.3
+  },
+  {
+   "id": "H2",
+   "cat": "qty",
+   "expect": "valid",
+   "latency_ms": 1314,
+   "prompt_chars": 2412,
+   "raw": "{\"reject\":\"no site candidate available for goto\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "unsupported_goal",
+    "layer": "goal",
+    "detail": "planner rejected: no site candidate available for goto",
+    "job_id": null,
+    "goal": null
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "WRONG",
+   "why": "rejected a goal the candidates could meet",
+   "wall_s": 1.3
+  },
+  {
+   "id": "I1",
+   "cat": "robust",
+   "expect": "valid",
+   "latency_ms": 1286,
+   "prompt_chars": 2442,
+   "raw": "{\"id\":\"j1\",\"type\":\"place\",\"quantity\":1,\"target\":\"site-A\",\"material\":\"granite\"}",
+   "prompt": null,
+   "valid": true,
+   "achieved": true,
+   "jobs": [
+    {
+     "id": "j1",
+     "type": "place",
+     "source": null,
+     "target": "site-A",
+     "material": "granite",
+     "quantity": 1,
+     "depends_on": [],
+     "claims": [],
+     "budget": 12,
+     "status": "ready"
+    }
+   ],
+   "outcome": "valid",
+   "verdict": "CORRECT",
+   "why": "achieved",
+   "wall_s": 1.3
+  },
+  {
+   "id": "I2",
+   "cat": "robust",
+   "expect": "reject",
+   "latency_ms": 1304,
+   "prompt_chars": 2411,
+   "raw": "{\"reject\":\"no candidate resource matches crop-rye-2\"}",
+   "prompt": null,
+   "valid": false,
+   "failure": {
+    "code": "unsupported_goal",
+    "layer": "goal",
+    "detail": "planner rejected: no candidate resource matches crop-rye-2",
+    "job_id": null,
+    "goal": null
+   },
+   "outcome": "rejected",
+   "achieved": false,
+   "verdict": "CORRECT",
+   "why": "honest rejection as expected",
+   "wall_s": 1.3
+  }
+ ],
+ "summary": {
+  "total": 25,
+  "CORRECT": 19,
+  "WRONG": 6,
+  "AMBIGUOUS": 0,
+  "honest_rejections": 15,
+  "intake_rejections": 1,
+  "validator_catches": 2,
+  "valid_unachieved": 0,
+  "latency_ms_p50": 1309,
+  "by_category": {
+   "give-place": {
+    "CORRECT": 2,
+    "WRONG": 1,
+    "AMBIGUOUS": 0,
+    "total": 3
+   },
+   "harvest": {
+    "CORRECT": 3,
+    "WRONG": 0,
+    "AMBIGUOUS": 0,
+    "total": 3
+   },
+   "mine": {
+    "CORRECT": 2,
+    "WRONG": 1,
+    "AMBIGUOUS": 0,
+    "total": 3
+   },
+   "mine-place": {
+    "CORRECT": 2,
+    "WRONG": 2,
+    "AMBIGUOUS": 0,
+    "total": 4
+   },
+   "noise": {
+    "CORRECT": 2,
+    "WRONG": 0,
+    "AMBIGUOUS": 0,
+    "total": 2
+   },
+   "out-of-scope": {
+    "CORRECT": 2,
+    "WRONG": 1,
+    "AMBIGUOUS": 0,
+    "total": 3
+   },
+   "place-inv": {
+    "CORRECT": 3,
+    "WRONG": 0,
+    "AMBIGUOUS": 0,
+    "total": 3
+   },
+   "qty": {
+    "CORRECT": 1,
+    "WRONG": 1,
+    "AMBIGUOUS": 0,
+    "total": 2
+   },
+   "robust": {
+    "CORRECT": 2,
+    "WRONG": 0,
+    "AMBIGUOUS": 0,
+    "total": 2
+   }
+  }
+ }
+}
