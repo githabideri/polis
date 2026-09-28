@@ -22,7 +22,10 @@ from dataclasses import dataclass, field, asdict
 # Goal grammar (v1)
 # --------------------------------------------------------------------------
 
-GOAL_VERBS = ("mine", "harvest", "place", "goto")
+GOAL_VERBS = ("mine", "harvest", "place", "goto", "sow", "plant")
+
+#: operator synonyms that normalize onto another grammar verb
+GOAL_VERB_ALIASES = {"plant": "sow"}
 
 
 class GoalGrammarError(Exception):
@@ -56,6 +59,7 @@ class Goal:
         if verb not in GOAL_VERBS:
             raise GoalGrammarError(
                 "verb %r outside the v1 grammar %r" % (verb, GOAL_VERBS))
+        verb = GOAL_VERB_ALIASES.get(verb, verb)
         obj = d.get("object")
         if not isinstance(obj, str) or not obj:
             raise GoalGrammarError("goal.object must be a non-empty string")
