@@ -82,6 +82,15 @@ could start this week.
    permadays, goal: "a small base — wood, a platform, a working crop
    plot", agent at `guarded`, operator only on failure.
 
+**A/B (same battery, both brains, live today):** the 27B (vLLM
+judge engine, always-on) and the 35B (llama.cpp mux) are a near-tie
+on this work - inspection in 7-9 s, the endogenous sow mission in
+13.5 s each, both with correct tool choice and honest reporting.
+The 27B is marginally more thorough (double-scan), the 35B marginally
+more frugal (single scan). Given the 35B's memory-edge instability on
+the 12 GB card, the **27B is the default brain**, with the 35B kept
+as the swappable alt (`POST /oikistes/model` / the UI selector).
+
 **Verdict:** the architecture is done; the pilot is a vocabulary and
 memory problem, not an architecture problem. The two-tier design
 (reflex 2B / judge 27B / deterministic compiler / conversational
