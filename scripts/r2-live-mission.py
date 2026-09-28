@@ -233,9 +233,19 @@ def execute_job(pol, bot, base, job, wm, run):
         crop_code = "crop-%s-2" % mat
         seed_code = "seeds-%s" % mat
         cell = list(site.cell)
-        inv0 = inventory_of(pol.state(bot))
-        seed_have = inv0.get(seed_code, 0)
+        # the drop from the preceding harvest lands ASYNCHRONOUSLY (the
+        # cargo registration flickers - run 25 read a transient zero): poll
+        # for the seed instead of one-shot, exactly like the harvest's
+        # post loop
         need = job.quantity or 1
+        seed_have = 0
+        inv0 = {}
+        for _ in range(12):  # up to ~12 s
+            inv0 = inventory_of(pol.state(bot))
+            seed_have = inv0.get(seed_code, 0)
+            if seed_have >= need:
+                break
+            time.sleep(1)
         if seed_have < need:
             return (False,
                     "sow: need %d %s, have %d (harvest it first? - the "
