@@ -205,9 +205,19 @@ def execute_job(pol, bot, base, job, wm, run):
         # the block is gone, run 12) - poll for it instead of a fixed
         # sleep; the block-gone check and the cargo diff are separate
         # oracles on the same fresh observations
-        gone = not pol.cell_blocks(bot, cell) or not any(
+        blocks = pol.cell_blocks(bot, cell)
+        # 'gone' must be vacuity-proof: an empty scan (failure, air box)
+        # is NOT proof the block is gone - the box always contains the
+        # ground layer, so a non-empty scan is expected
+        gone = bool(blocks) and not any(
             b.get("code") == rec.code and b.get("pos") == list(cell)
-            for b in pol.cell_blocks(bot, cell))
+            for b in blocks)
+        # the action's OWN completion record is the primary signal
+        # (run 13: the mine failed 'goto stuck' while a vacuous scan
+        # read the block as gone)
+        la = pol.state(bot).get("LastAction") or {}
+        la_ok = la.get("Name") == action.rstrip("_target") and \
+            la.get("Ok") is True
         post = {}
         for _ in range(9):  # up to ~18 s for the cargo registration
             time.sleep(2)
@@ -218,10 +228,11 @@ def execute_job(pol, bot, base, job, wm, run):
         for k in set(pre) | set(post):
             if post.get(k, 0) > pre.get(k, 0):
                 measured[k] = post[k] - pre[k]
-        ok = bool(res.get("ok")) and gone
-        msg = "%s %s -> exec_ok=%s gone=%s measured=%s" % (
-            job.type, rec.code, res.get("ok"), gone, measured)
-        return ok, msg, measured
+        ok = la_ok and gone
+        detail = ("%s %s -> last_action_ok=%s (%s) gone=%s measured=%s"
+                  % (job.type, rec.code, la.get("Ok"),
+                     (la.get("Msg") or "")[:60], gone, measured))
+        return ok, detail, measured
 
     if job.type == "place":
         fix = wm.fixtures.get(job.target)
