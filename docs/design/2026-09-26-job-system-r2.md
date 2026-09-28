@@ -576,3 +576,131 @@ reads a WorldModel record without a same-step fresh observation).
   the 27B judge correcting both injected skip-goal faults as designed.
   Phase 1-B (next daylight): nothing left except the Phase 2 work -
   WorldModel + ObservationService under the now-fully-frozen reflex.
+
+## 12. Amendments — review round 3 (2026-09-28, before Phase 4)
+
+Additive to the frozen §1–§11. Where this section disagrees with an
+earlier section, this section wins for the material it covers. Six
+central rules are adopted verbatim:
+
+1. **Wall time is diagnostic; `observation_seq` / monotonic ordering is
+   operational.** (Wall clocks jump; a game tick is not a prerequisite
+   for R2 — the invariant is causal: cached observation ≠ fresh proof.)
+2. **Resource quantities are observed quantities, never assumed complete
+   extents** (a 3×3×4 scan cuts veins at its boundary).
+3. **WorldModel nominates; fresh game observations authorize actions and
+   prove outcomes.**
+4. **`"inventory"` is an execution source, not material provenance.**
+   Material-before-use is validated by *simulating inventory effects over
+   the ordered job list* (ledger = current bot inventory; mine →
+   ledger += expected yield; place → requires ledger ≥ n, ledger −= n;
+   harvest → +harvest result; goto → none). `depends_on` describes job
+   dependency only.
+5. **Planner candidate IDs are scoped to the projection/snapshot that
+   introduced them** (`projection_id` in the run JSON); a later
+   WorldModel refresh must not silently rebind a job's target — the job
+   retains its binding (cells/material from the snapshot).
+6. **Every observation records why/when in the action lifecycle it was
+   obtained** (`reason`: pre_action / post_action / oracle /
+   planner_scan / fixture_setup, plus optional `caused_by_action_id`).
+
+Specific amendments:
+
+### 12.1 ObservationService (Phase 2): unit-test only, result taxonomy
+
+Agreed: no migration of the three existing consumers (dashcam / judge
+attachment / UI) tonight — that is a later controlled pass. The service
+API distinguishes outcomes, never collapsing non-images into `None`:
+`ok` | `unavailable` (endpoint rejected) | `timeout` | `disconnected`
+(transport failure / viewer gone) | `coalesced` (satisfied by a capture
+within `maxAgeMs`). The future judge path cares WHY visual evidence is
+unavailable.
+
+### 12.2 Observation stamps: sequence + monotonic + wall
+
+Records carry `seq` (monotonic within run — the operational freshness
+basis), `monotonic_ms` (process clock), `wall_ms` (diagnostics only),
+`reason` (lifecycle phase, rule 6). The WorldModel's logical `tick` is
+renamed to this `seq` discipline; no C# tick endpoint in R2 (it becomes
+worthwhile only with long-lived knowledge, concurrent observers,
+time-decay, save/reload).
+
+### 12.3 Resource records: raw identity kept, extent flagged
+
+Cluster records carry BOTH raw identity and normalized class:
+`code` (e.g. `crop-flax-7`), `kind` (`crop`/`ore`/`rock`/...), `material`
+(`flax`/`granite`/... — crops are NOT collapsed to a bare `crop`),
+`properties` (e.g. stage), `observed_quantity = len(cells)`,
+`is_complete_extent = False` always in R2. Clusters are keyed by
+(kind, material); IDs are stable within a run/snapshot (rule 5), not
+globally.
+
+### 12.4 Job-effect catalog (P3 design hole closed)
+
+Jobs carry **deterministic effect semantics** in a shared catalog
+(`r2/jobs.py`), so validator, executor and planner schema all agree on
+the same job semantics instead of each inventing rules:
+
+```
+mine    requires: target resource      effect: +material × n
+place   requires: inventory material n effect: −material × n
+harvest requires: crop fixture         effect: +harvest result (item)
+goto    inventory effect: none
+```
+
+Deliberately crude in R2; the architecture is the point.
+
+### 12.5 Goal grammar is verb-specific (no placeholder fields)
+
+`goto`: requires `at`; object/n irrelevant. `mine`: object required, n
+optional (default 1), at optional/candidate-resolved. `place`: object +
+at, n optional (default 1). The grammar check rejects fields a verb does
+not use — fake placeholders are a validation failure, not padding.
+
+### 12.6 Validator ≠ oracle
+
+`plan_valid` (deterministic checks over the snapshot: types,
+symbolic references IN THAT SNAPSHOT, quantities, grammar, dependency
+order, source/material compatibility, ledger simulation) is a different
+guarantee from `action_precondition_current` (fresh same-step
+observation). The validator may use observed availability to judge
+plausibility; it never implies the resource will still exist at
+execution.
+
+### 12.7 P5 measurement conditions
+
+Strict JSON is the correct baseline. Measured separately: **A** raw
+model (parse / schema / semantic success), **B** same model + one
+semantic repair turn (validator error strings fed back; repaired
+success). Mechanical syntax-repair middleware is a separate experimental
+condition (C), reported apart — it must not silently improve A. Planner
+context stays minimal: schema/version + `projection_id`, goal, relevant
+bot inventory, allowed job types, candidate resources
+(id/material/observedQuantity), candidate sites, execution semantics,
+output schema. **No coordinates** in the projection.
+
+### 12.8 Amended order + the material capability probe
+
+The live material capability probe moves **before the P4/P5 schema
+freeze**: mine one known-NATURAL granite → inspect the exact inventory
+delta/item code → select it → place once. The probe establishes actual
+drop code, quantity behavior, normalization, and whether place accepts
+the representation, BEFORE material-compatibility rules are encoded in
+`plancheck`. (R2 caveat: set-placed rock blocks yield no item in 1.22 —
+block removal only — so the probe must use natural stone variants.)
+
+Amended execution order:
+P2 → material probe → P3 (contracts + job-effect catalog) →
+P4 (planner projection + inventory-ledger validator) → P5 (27B
+measurement, conditions A/B) → P6 (JobQueue + live two-job milestone).
+
+## Status log (append-only)
+- **2026-09-28 (night run, review round 3) — amendments §12 adopted.**
+  Phase 2 in execution: `r2/{queries,worldmodel,observation}.py` built
+  per the amended shape (seq/monotonic/wall stamps, reason-tagged
+  observations, kind/material resource records with observed_quantity +
+  is_complete_extent, ObservationService with the five-outcome taxonomy,
+  fake-transport tests only). The next gates: T5 staleness (both
+  polarities: stale-filled + fresh-empty ⇒ NOT complete; stale-empty +
+  fresh-filled ⇒ complete), nomination-vs-authorization, then the live
+  material capability probe, then P3–P6 per §12.8.

@@ -72,6 +72,7 @@ from r2.types import (MISSIONS, dist, carrying_from, fixture_bool,
                      oracle_action, build_reflex_state)
 from r2.projection import build_state_text
 from r2.executor import needs_judge, decide_cascade
+from r2.worldmodel import WorldModel
 
 
 def http_json(url, payload=None, timeout=60):
@@ -960,12 +961,21 @@ def run_once(a, pol, fault_phases):
     pol = Polis(a.harness, a.uid)
     time.sleep(2)
     base, target, base_carry = setup_fixture(a, pol, mission, a.dist)
-    if mission == "harvest":
-        fixture_check = pol.crop_present
-    elif mission == "build":
-        fixture_check = pol.site_filled
-    else:
-        fixture_check = lambda bot, cell: pol.marker_present(bot, cell, a.marker)
+    # Phase 2 (R2, 2026-09-28): the run's WorldModel. It only SEES the game
+    # through this stamped observation stream - it never decides, never
+    # authorizes (doc §11.4/§12: fresh observations authorize, the model
+    # only remembers and nominates). The fixture CONDITION it stores is
+    # produced by the frozen predicate (one implementation).
+    wm = WorldModel()
+    wm.new_tick(reason="fixture_setup")
+    wm.register_fixture("f", {"mine": "marker", "harvest": "crop",
+                               "build": "build-site"}[mission],
+                       target,
+                       {"mine": "absent", "harvest": "absent",
+                        "build": "filled"}[mission])
+    fixture_check = (pol.crop_present if mission == "harvest" else
+                   (pol.site_filled if mission == "build" else
+                    (lambda bot, cell: pol.marker_present(bot, cell, a.marker))))
     has_tool = any("pickaxe" in (c or "") for c in pol.carrying(a.bot))
     setup_note = (("pickaxe=" + str(has_tool)) if mission == "mine"
                   else ("block=" + str(any(a.buildblock in (c or "")
@@ -1045,6 +1055,10 @@ def run_once(a, pol, fault_phases):
         pos = reflex_state["pos"]
         near_t, near_b = reflex_state["near_t"], reflex_state["near_b"]
         fixture = reflex_state["fixture"]
+        if wm is not None:            # the shared view sees this step's
+            wm.new_tick(reason="pre_action")     # pre-decision observation
+            wm.observe_scan(ctx["scan"], reason="pre_action")
+            wm.observe_fixture("f", fixture, reason="pre_action")
         fixture_gone = not fixture
         carrying = carrying_from(carry_resp)
         has_harvest = any("carrot" in (c or "") for c in carrying)
@@ -1241,6 +1255,16 @@ def run_once(a, pol, fault_phases):
             goal_step = i + 1
             print("run %d: GOAL at step %d (%.0fs)" % (a.run, i + 1, time.time() - t_start), flush=True)
             break
+        if mission in ("mine", "build") and wm is not None:
+            # the goal check just re-queried the game (marker_present /
+            # site_filled issued a fresh scan) - stamp it as this step's
+            # ORACLE observation: the fixture condition the game actually
+            # shows now, separate from the pre-decision one (doc §12 rule 6)
+            wm.observe_scan(pol.last_scan, reason="oracle")
+            wm.observe_fixture("f",
+                               fixture_bool(mission, pol.last_scan, target,
+                                            a.marker),
+                               reason="oracle")
 
     st = pol.state(a.bot)
     at_base = dist(st["Bot"]["Pos"], base) <= 2.5
@@ -1254,6 +1278,12 @@ def run_once(a, pol, fault_phases):
             (c not in base_carry)
             and not any(t in (c or "") for t in ("pickaxe", "linensack"))
             for c in pol.carrying(a.bot))
+    if mission in ("mine", "build") and wm is not None:
+        wm.observe_scan(pol.last_scan, reason="oracle")
+        wm.observe_fixture("f",
+                           fixture_bool(mission, pol.last_scan, target,
+                                        a.marker),
+                           reason="oracle")
     if getattr(a, "dashcam_dir", None):
         # end-of-run six views from where the bot ended up (the canyon
         # check: up/down included)
@@ -1271,6 +1301,9 @@ def run_once(a, pol, fault_phases):
         "steps_run": len(rows),
         "steps_budget": a.steps,
         "total_sec": int(time.time() - t_start),
+        # R2 §7: the run JSON carries the WorldModel snapshot - the
+        # semantic view the decisions ran on (stamped, reason-tagged).
+        "worldSnapshot": wm.to_dict() if wm is not None else None,
     }
 
 def main():

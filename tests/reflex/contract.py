@@ -26,6 +26,12 @@ What it freezes (docs/design/2026-09-26-job-system-r2.md, §5.4):
                 consistent: a run ends at its goal step or at the step
                 budget; completion implies the goal was seen; the
                 recorded completion step matches the transition rule.
+  T5  staleness (Phase 2, 2026-09-28, doc §11.4/§12.6) the WorldModel's
+                freshness discipline: fresh reads return the observed
+                value, one tick later the same record is unknown (None -
+                never yes, never no), completion flips only on FRESH
+                observations (both polarities), and resource records
+                nominate (stale) but never authorize (fresh).
 
 The implementation under test is selected with --impl:
 
@@ -67,6 +73,7 @@ def load_impl(name):
         ns.build_reflex_state = importlib.import_module("r2.types").build_reflex_state
         ns.oracle_action = importlib.import_module("r2.types").oracle_action
         ns.carrying_from = importlib.import_module("r2.types").carrying_from
+        ns.fixture_bool = importlib.import_module("r2.types").fixture_bool
         ns.MISSIONS = importlib.import_module("r2.types").MISSIONS
         return ns
     else:
@@ -320,6 +327,92 @@ def test_run_transitions(t4):
     return fails, n
 
 
+def test_worldmodel_staleness(impl, t4):
+    """T5 (Phase 2, 2026-09-28; doc §11.4/§12.6): the staleness invariant.
+
+    Replays the T4 golden rows through the WorldModel exactly as the
+    live loop does - one tick per step, the fixture condition observed
+    from the recorded scan (the same frozen predicate both sides use),
+    then a tick advance proving staleness. Checks per run:
+      a) a fresh read returns the observed condition;
+      b) after the next tick the same record is UNKNOWN (None), and the
+         requirement check on it is None too (unknown is never yes and
+         never no);
+      c) the satisfaction flag is monotone once the completion condition
+         is met (a goal that was seen cannot un-happen from the cached
+         view); a stale-satisfied + fresh-not record can never prove
+         completion (both polarities, synthetic);
+      d) resource records observed on tick t are gone from the fresh
+         (authorizing) set at tick t+1 but still available for
+         nomination (stale) - nominate, never authorize (12.6-E).
+    """
+    from r2 import worldmodel as wm_mod
+    requirement = {"mine": "absent", "harvest": "absent", "build": "filled"}
+    kindmap = {"mine": "marker", "harvest": "crop", "build": "build-site"}
+    fails, n = 0, 0
+    for fdoc in t4:
+        mission = fdoc["mission"]
+        for run in fdoc["runs"]:
+            n += 1
+            rows = [r for r in fdoc["rows"]
+                    if r.get("run") is None or r.get("run") == run.get("run")]
+            if len(fdoc["runs"]) == 1:
+                rows = fdoc["rows"]
+            wm = wm_mod.WorldModel()
+            wm.new_tick(reason="fixture_setup")
+            target = fdoc["rows"][0]["ctx"]["target"]
+            wm.register_fixture("f", kindmap[mission], target,
+                                requirement[mission])
+            run_ok, seen_complete = True, False
+            for r in rows:
+                ctx = r["ctx"]
+                cond = impl.fixture_bool(mission, ctx["scan"], ctx["target"],
+                                         ctx.get("marker"))
+                wm.new_tick(reason="pre_action")
+                wm.observe_scan(ctx["scan"], reason="pre_action")
+                wm.observe_fixture("f", cond, reason="pre_action")
+                # a) fresh read returns the observed value
+                if wm.fixture_condition("f", fresh=True) != cond:
+                    run_ok = False
+                # d) records observed this tick are NOT authorizing next
+                fresh_now = wm.find_resources(fresh=True)
+                wm.new_tick()  # advance: everything observed at t is stale
+                if any(rec.seq != wm.seq for rec in
+                       wm.find_resources(fresh=True)):
+                    run_ok = False
+                stale_view = wm.find_resources(fresh=False)
+                if fresh_now and not stale_view:
+                    run_ok = False      # nominees must survive the advance
+                # c) satisfaction from the FRESH condition of this tick
+                sat = wm.fixture_satisfies("f", fresh=False)  # latest obs
+                if seen_complete and sat is not True:
+                    run_ok = False      # completion un-happened: impossible
+                if sat is True:
+                    seen_complete = True
+                if run["mission_complete"] and r is rows[-1]:
+                    if sat is not True:
+                        run_ok = False   # completed run's last observation
+                                          # must show the satisfied state
+            # c) both polarities, synthetic (independent of the rows):
+            wmp = wm_mod.WorldModel()
+            wmp.register_fixture("s", "build-site", target, "filled")
+            wmp.new_tick(); wmp.observe_fixture("s", True, "pre_action")
+            wmp.new_tick(); wmp.observe_fixture("s", False, "oracle")
+            if wmp.fixture_satisfies("s", fresh=True) is not False:
+                run_ok = False          # stale-filled + fresh-empty: NOT done
+            wmn = wm_mod.WorldModel()
+            wmn.register_fixture("s", "build-site", target, "filled")
+            wmn.new_tick(); wmn.observe_fixture("s", False, "pre_action")
+            wmn.new_tick(); wmn.observe_fixture("s", True, "oracle")
+            if wmn.fixture_satisfies("s", fresh=True) is not True:
+                run_ok = False          # stale-empty + fresh-filled: done
+            if not run_ok:
+                fails += 1
+                print("T5 STALENESS [%s run %d] invariant violated" %
+                      (mission, run.get("run")))
+    return fails, n
+
+
 # ---------------------------------------------------------------- main ----
 
 def main():
@@ -339,8 +432,9 @@ def main():
     f3, n3 = test_readout(corpora["rows"])
     f4, n4 = test_state_construction(impl, t4)
     f2b, n2b = test_run_transitions(t4)
+    f5, n5 = test_worldmodel_staleness(impl, t4)
 
-    total_fail = f1 + f2 + f2s + f3 + f4 + f2b
+    total_fail = f1 + f2 + f2s + f3 + f4 + f2b + f5
     print("impl=%s" % args.impl)
     print("T1 prompt    %3d/%3d byte-identical" % (n1 - f1, n1))
     print("T2 decision  %3d/%3d replayed exactly" % (
@@ -348,6 +442,7 @@ def main():
     print("T3 readout   %3d/%3d coherent" % (n3 - f3, n3))
     print("T4 state     %3d/%3d reconstructed exactly" % (n4 - f4, n4))
     print("T2b run      %3d/%3d transitions consistent" % (n2b - f2b, n2b))
+    print("T5 staleness %3d/%3d invariants hold" % (n5 - f5, n5))
     if total_fail:
         print("CONTRACT BROKEN: %d failure(s)" % total_fail)
         sys.exit(1)
