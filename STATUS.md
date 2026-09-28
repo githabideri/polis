@@ -368,3 +368,23 @@ therefore complete — Phase 2 (WorldModel + ObservationService) is next.
   by the 25-case A/B (r4/r5/r6/r7; the adopted diff is one sentence in
   rule 9). Open: the mine-oracle async-drop finding (run 12) and the
   goal-grammar question (12.5) — both follow-ups, not blockers.
+
+### Round-3 amendments (2026-09-28, morning): §13
+ChatGPT's feedback round 3 was grounded and adopted as design-doc
+§13. Code changes: **M1/M2 milestone split** (run 11 = M1 supplied-
+material two-job execution, DONE; M2 endogenous mine→place remains
+open); **execution/oracle separation** in the run-JSON step record;
+**JobOrigin** (frozen set planner/operator/deterministic/repair —
+j0 corrected from the abused `source` field); **VisualCaptureService**
+rename (my "1 Hz/2 Hz refresher" description was wrong — that loop
+does not exist); **P5 dual metrics** — precision 1.000 / coverage
+0.524-0.476 (the 27B never fabricates, covers ~half of feasible
+goals). Confirmed already-true: CAUGHT is evaluation-only (not in
+the runtime 9-code taxonomy), depends_on is job-ids-only, freshness
+is current-sequence match with the seq/monotonic/wall triple, and the
+operator-supply intake meets all five of ChatGPT's requirements.
+Planner fine-tune explicitly deferred until the 6-step closing
+sequence (13.6): approach-retry port → deterministic endogenous
+proof → 27B on the same goal → M2 close → P5 re-run with 5-way
+failure classification → then (and only then) a planner-specific
+fine-tune as its own artifact.

@@ -1,4 +1,4 @@
-"""R2 ObservationService (Phase 2, 2026-09-28, design doc §11.2).
+"""R2 VisualCaptureService (Phase 2, 2026-09-28, design doc §11.2).
 
 The /polis/observer-screenshot endpoint is a SCARCE VISUAL SENSOR: one
 capture in flight, ~0.6-1 s, teleport/restore side effects (enforced in
@@ -64,7 +64,7 @@ class Capture:
                 "bytes": len(self.payload) if self.payload else 0}
 
 
-class ObservationService:
+class VisualCaptureService:
     """The serialized visual sensor. The transport is injected: the live
     one issues GET /polis/observer-screenshot (base64 JSON); tests inject
     a fake with controllable latency and failures.

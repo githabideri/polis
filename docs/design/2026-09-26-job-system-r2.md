@@ -926,3 +926,130 @@ port the neighbour-retry approach, re-run.
   completion is filed as the follow-up (pathfinder approach +
   27B rejection variance). All commits in the polis repo;
   homelab updated.
+
+## 13. Amendments from ChatGPT feedback round 3 (2026-09-28, morning)
+
+Grounded against the artifacts before adoption; each item says what
+changed and what was already true.
+
+### 13.1 Milestone semantics: M1 vs M2 (ADOPTED - naming)
+
+The overnight run 11 is **M1: supplied-material two-job execution**
+(operator-supply -> place). It proves the queue, ledger,
+deterministic+planned job composition, oracle, and goal completion.
+The original R2 milestone is **M2: endogenous-material two-job
+execution** (mine -> inventory -> place) and it remains OPEN: blocked
+by the pathfinder approach-wedge and the 27B's rejection variance,
+not by any queue/ledger/validator gap. M1 and M2 are never
+interchanged in this doc.
+
+### 13.2 Execution vs oracle, separated in the run JSON (ADOPTED - code)
+
+A step record now carries both, separately:
+`execution` (the engine's own LastAction verdict on the action) and
+`oracle` (the fresh-world check of the resulting condition).
+"Action failed" and "action succeeded but the world did not change"
+are different attributions; the vacuous-gone incident (12.12) is the
+worked example of why.
+
+### 13.3 Planner quality is two numbers (ADOPTED - code)
+
+`planner-ab-measure` now reports **valid-plan precision** (of the
+plans proposed, how many are valid) and **goal coverage** (of the
+feasible-goal cases, how many produced a valid plan), in addition to
+the per-case verdicts. Measured on the existing rounds:
+
+| round | CORRECT | precision | coverage |
+|-------|---------|-----------|----------|
+| r4 (baseline) | 20/25 | 1.000 | 0.524 |
+| r7 (adopted)  | 19/25 | 1.000 | 0.476 |
+
+The 27B's over-rejection is now characterized as it should be: it
+never fabricates (precision 1.000) and is safe by construction, but it
+covers only about half of the feasible goals. "19/25" understated
+both the safety and the limitation.
+
+### 13.4 JobOrigin (ADOPTED - code)
+
+`Job.origin` is a frozen field with the set
+`{planner, operator, deterministic, repair}` (default `planner`);
+every job in the run JSON says who made it. The overnight j0 had
+abused the `source` field (which is reserved for `res-*` ids) to
+carry "operator" - corrected: j0 is now `origin=operator`.
+
+### 13.5 Naming correction: VisualCaptureService (ADOPTED - code)
+
+`r2/observation.py` is renamed `r2/visualcapture.py`, class
+`VisualCaptureService`: it is the serialized screenshot sensor (one
+in flight, max-age, coalescing) - the concept the original doc meant
+by "ObservationService". My round-3 report message to ChatGPT
+misdescribed it as a 1 Hz cell / 2 Hz entity background refresher;
+that loop does not exist in the code and no such rate was ever
+measured. A general semantic observer is a FUTURE concept (the three
+live screenshot consumers are not on it yet); if one is built it must
+not serialize immediate semantic verification through its background
+queue (13.5 constraint, carried forward).
+
+Also grounded and confirmed as already true (no change):
+- **Freshness** is not tick-distance based. It is current-sequence
+  match: a record is fresh only if observed at the current sequence
+  value (unknown is never yes and never no). The three clocks are
+  already the proposed split: `seq` (causal/provenance),
+  `monotonic_ms` (freshness/TTL), `wall_ms` (diagnostics only).
+- **CAUGHT is evaluation-only.** The runtime `FAILURE_CODES`
+  (9 codes) never contained it; it is a P5 test/evaluation
+  classification (expected=rejected, result=CAUGHT) in the A/B JSON.
+- **`depends_on` references job ids only** (validated against the
+  plan's id set); the material ledger is the separate mechanism that
+  proves inventory feasibility.
+- **Operator-supply intake = "deterministic goal expansion"**, and it
+  meets all five requirements ChatGPT listed: j0.origin=operator;
+  j0 visible in the run JSON; the give goes through the normal
+  `give` action interface; j0 has an oracle (carried >= required);
+  the planner only sees state after j0 completed. No synthetic
+  ledger entry is ever invented: the inventory the planner sees was
+  measured after the real give.
+- **WorldModel inventory/actors are observed snapshots, not
+  authority** - the engine remains the source of truth; the model
+  only caches.
+
+### 13.6 No planner fine-tune yet; the R2 closing sequence (ADOPTED - plan)
+
+Three failure sources are currently mixed together (planner
+capability / environment-tool capability / executor-navigation
+capability); the latter two have already demonstrated themselves
+live (tool tier, goto wedge). Fine-tuning now would risk teaching
+around executor problems. The closing sequence, adopted:
+
+1. Port the approach/neighbour retry BELOW the job level: candidate
+   approach cells -> filter invalid -> order by path cost -> try A,
+   on stuck try B... The queue sees ONE running job, not six failed
+   gotos. `goto(position)` and `approach(target, interaction
+   predicate)` become separate executor concepts (no new public job
+   type; an executor helper around the existing pathfinder).
+2. Prove the endogenous path deterministically, no planner: known-
+   valid natural granite, approach -> mine -> measured inventory
+   delta -> place (executor + ledger + oracle).
+3. Run the same goal through the 27B planner.
+4. Close M2 (endogenous mine -> place).
+5. Re-run P5 and classify every remaining failure: model /
+   validation / observation / executor / environment.
+6. Only if the planner is still the bottleneck: a PLANNER-specific
+   fine-tune as its own artifact (separate adapter/checkpoint from
+   the reflex and judge contracts, even though the 27B base is
+   shared).
+
+Longer-term (NOT part of R2): for structured goals a deterministic
+goal compiler handles the obvious case; the LLM proposes only on
+ambiguity, decomposition, or choice. R2 stays "LLM proposer +
+deterministic validator" - that architecture is coherent and is the
+one that gets stabilized.
+
+- **2026-09-28 (round-3 amendments, §13).** M1/M2 split the milestone
+  naming; execution/oracle separated in the run JSON; JobOrigin
+  frozen; VisualCaptureService rename; the 1 Hz/2 Hz description
+  corrected (no such loop exists); precision/coverage dual metrics
+  added and measured (1.000 / 0.524-0.476); CAUGHT, depends_on,
+  freshness, and the five operator-supply requirements confirmed
+  already-true; the 6-step closing sequence adopted, planner
+  fine-tune explicitly deferred past it.

@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "..", ".."))
 
 from r2.jobs import (Goal, GoalGrammarError, Job, JOB_CATALOG,
-                     FAILURE_CODES, Failure, deps_consistent)
+                     FAILURE_CODES, Failure, deps_consistent, ORIGINS)
 
 PASS = 0
 FAIL = 0
@@ -107,6 +107,20 @@ try:
     check("unknown code rejected", False, "no exception")
 except ValueError:
     check("unknown code rejected", True)
+
+# job origin (13.1): provenance is a frozen field, default planner
+check("origins frozen set",
+      set(ORIGINS) == {"planner", "operator", "deterministic", "repair"})
+j = Job.from_dict({"id": "j1", "type": "wait"})
+check("default origin planner", j.origin == "planner")
+j2 = Job.from_dict({"id": "j0", "type": "give_tool", "origin": "operator"})
+check("operator origin accepted", j2.origin == "operator"
+      and j2.to_dict()["origin"] == "operator")
+try:
+    Job.from_dict({"id": "j9", "type": "wait", "origin": "alien"})
+    check("unknown origin rejected", False, "no exception")
+except ValueError:
+    check("unknown origin rejected", True)
 
 print()
 print("jobs-test: %d passed, %d failed" % (PASS, FAIL))

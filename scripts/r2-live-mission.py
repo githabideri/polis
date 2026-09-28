@@ -170,21 +170,29 @@ def register_site(wm, pol, bot, goal, fixtures):
 
 
 def execute_job(pol, bot, base, job, wm, run):
-    """One job's actuation + oracle. Returns (ok, detail, measured).
-    All game checks are FRESH observations (the 12.6 invariant)."""
+    """One job's actuation + oracle. Returns (ok, detail, measured,
+    execution, oracle). The split is the 13.2 invariant: the ENGINE'S
+    verdict on the action (execution) and the FRESH-WORLD check of the
+    resulting condition (oracle) are related but not interchangeable -
+    'action failed' and 'action succeeded but the world did not
+    change' must produce different attribution. All game checks are
+    FRESH observations (the 12.6 invariant)."""
     measured = {}
     if job.type == "give_tool":
         item = GIVE_ITEM.get(job.material, job.material)
-        r = pol.cmd("give", [item, str(job.quantity or 1)], bot)
+        qty = job.quantity or 1
+        r = pol.cmd("give", [item, str(qty)], bot)
         ok = bool(r.get("Ok"))
         st = pol.state(bot)
         inv = inventory_of(st)
         got = inv.get(item, 0)
         if ok:
-            ok = got >= (job.quantity or 1)
+            ok = got >= qty
         measured = {item: got}
-        return ok, ("gave %s x%d -> carried %d"
-                    % (item, job.quantity or 1, got)), measured
+        return ok, ("gave %s x%d -> carried %d" % (item, qty, got)), \
+            measured, \
+            {"cmd": "give", "item": item, "ok": r.get("Ok")}, \
+            {"carried": got, "required": qty}
 
     # resource-targeted jobs: the target cell is the resource's
     # representative cell (measured world fact, not model output)
@@ -192,8 +200,9 @@ def execute_job(pol, bot, base, job, wm, run):
         "mine", "harvest", "pickup") else None
     if job.type in ("mine", "harvest", "pickup"):
         if rec is None:
-            return False, "resource %s vanished from the model" % job.source, \
-                measured
+            return (False, "resource %s vanished from the model" % job.source,
+                    measured, {}, {"block_gone": None,
+                                   "measured": measured})
         cell = rec.cells[0]
         action = {"mine": "mine_target", "harvest": "harvest_target",
                   "pickup": "pickup_item"}[job.type]
@@ -253,12 +262,16 @@ def execute_job(pol, bot, base, job, wm, run):
         detail += (" last_action_ok=%s (%s) gone=%s measured=%s"
                    % (la.get("Ok"), (la.get("Msg") or "")[:60], gone,
                       measured))
-        return ok, detail, measured
+        return ok, detail, measured, \
+            {"last_action": {k: la.get(k) for k in
+                             ("Name", "Ok", "Msg")}}, \
+            {"block_gone": gone, "measured": measured}
 
     if job.type == "place":
         fix = wm.fixtures.get(job.target)
         if fix is None:
-            return False, "site %s unknown" % job.target, measured
+            return (False, "site %s unknown" % job.target, measured, {},
+                    {"site_filled": None})
         cell = fix.cell
         item = GIVE_ITEM.get(job.material, job.material)
         res = v5.execute(pol, bot, "place_block", cell, base, "build",
@@ -267,21 +280,29 @@ def execute_job(pol, bot, base, job, wm, run):
         filled = pol.site_filled(bot, tuple(cell))
         cond = wm.observe_fixture(job.target, filled,
                                   reason="oracle")
+        la = pol.state(bot).get("LastAction") or {}
         ok = bool(res.get("ok")) and filled
         msg = ("place %s -> exec_ok=%s site_filled=%s oracle=%s" %
                (item, res.get("ok"), filled, cond))
-        return ok, msg, measured
+        return ok, msg, measured, \
+            {"last_action": {k: la.get(k) for k in
+                             ("Name", "Ok", "Msg")},
+             "exec_ok": res.get("ok")}, \
+            {"site_filled": filled, "wm_condition": cond}
 
     if job.type in ("goto", "travel"):
         fix = wm.fixtures.get(job.target)
         cell = tuple(fix.cell) if fix else base
         g = v5.goto_wait(pol, bot, cell)
-        return bool(g.get("ok")), "goto %s -> %s" % (job.target,
-                                                    g.get("msg")), measured
+        return (bool(g.get("ok")), "goto %s -> %s" % (job.target,
+                                                      g.get("msg")),
+                measured, {"goto": g.get("msg")},
+                {"arrived": bool(g.get("ok"))})
     if job.type == "wait":
         time.sleep(2)
-        return True, "waited", measured
-    return False, "unhandled job type %s" % job.type, measured
+        return True, "waited", measured, {}, {"waited": True}
+    return (False, "unhandled job type %s" % job.type, measured, {},
+            {})
 
 
 def main():
@@ -334,7 +355,7 @@ def main():
     if getattr(goal, "supply", None) == "external" and goal.verb == "place":
         item = GIVE_ITEM.get(goal.object, goal.object)
         r = pol.cmd("give", [item, str(goal.n or 1)], bot)
-        op = Job("j0", "give_tool", source="operator",
+        op = Job("j0", "give_tool", origin="operator",
                  material=goal.object, quantity=goal.n or 1)
         run["supply"] = {"declared": True, "item": item,
                           "ok": bool(r.get("Ok"))}
@@ -402,16 +423,21 @@ def run_jobs(pol, bot, base, gs, job, run, wm):
         wm.record_claim(job.target, job.id, bot)
     t0 = time.time()
     try:
-        ok, detail, measured = execute_job(pol, bot, base, job, wm, run)
+        (ok, detail, measured,
+         execution, oracle) = execute_job(pol, bot, base, job, wm, run)
     except Exception as e:
         import traceback
         open("/tmp/r2-job-traceback.txt", "w").write(
             "".join(traceback.format_exception(type(e), e,
                                                e.__traceback__)))
         ok, detail, measured = False, "exception: %r" % e, {}
+        execution, oracle = {"exception": "%r" % e}, {}
     run["steps"].append({
         "job": job.id, "type": job.type, "ok": ok,
         "detail": detail, "measured": measured,
+        "origin": job.origin,
+        "execution": execution,   # the engine's verdict on the action
+        "oracle": oracle,         # the fresh-world check of the result
         "wall_s": round(time.time() - t0, 1)})
     if job.type in ("mine", "harvest"):
         rec = wm.resources.get(job.source)

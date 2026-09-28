@@ -115,6 +115,11 @@ JOB_CATALOG = {
 #: job types the planner may emit in a plan (section 12.1 amended catalog).
 PLANNER_JOB_TYPES = tuple(JOB_CATALOG)
 
+#: provenance of a job's origin (13.1, frozen): the queue runs a mix of
+#: jobs made by different principals; the run JSON is the transparency
+#: record, so every job says who made it.
+ORIGINS = ("planner", "operator", "deterministic", "repair")
+
 #: jobs whose effect material is a world observation (ledger "world" side)
 WORLD_PRODUCERS = ("mine", "harvest")
 
@@ -131,6 +136,9 @@ class Job:
     claims: list = field(default_factory=list)
     budget: int = 12               # max execution steps (the stall valve)
     status: str = "ready"          # ready|running|blocked|done|abandoned
+    # provenance of the job's ORIGIN (13.1): the queue runs a mix of
+    # deterministic and planned jobs; the run JSON must say who made each
+    origin: str = "planner"
 
     def to_dict(self):
         return asdict(self)
@@ -154,13 +162,18 @@ class Job:
         if not isinstance(deps, list) or not all(
                 isinstance(x, str) for x in deps):
             raise ValueError("job %s: depends_on must be a list of ids" % jid)
+        origin = d.get("origin", "planner")
+        if origin not in ORIGINS:
+            raise ValueError("job %s: unknown origin %r (frozen: %r)"
+                             % (jid, origin, sorted(ORIGINS)))
         return cls(id=jid, type=jtype,
                    source=d.get("source"), target=d.get("target"),
                    material=d.get("material"), quantity=qty,
                    depends_on=list(deps),
                    claims=list(d.get("claims") or []),
                    budget=int(d.get("budget") or 12),
-                   status=d.get("status") or "ready")
+                   status=d.get("status") or "ready",
+                   origin=origin)
 
     def missing_refs(self):
         """Catalog-mandated reference fields this job leaves empty."""

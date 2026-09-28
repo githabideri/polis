@@ -276,6 +276,21 @@ def summarize(results):
     s = {"total": len(results)}
     for v in ("CORRECT", "CAUGHT", "WRONG", "AMBIGUOUS"):
         s[v] = sum(1 for r in results if r.get("verdict") == v)
+    # dual planner-quality metrics (13.3): a single "n/25" conflates two
+    # different properties of an over-rejecting planner - how often it is
+    # right when it proposes (precision) vs how often it proposes at all
+    # for a feasible goal (coverage). High precision + low coverage is a
+    # different finding from low precision.
+    proposed = [r for r in results if r.get("outcome") == "valid"]
+    s["valid_plan_precision"] = (
+        round(sum(1 for r in proposed if r.get("valid")) / len(proposed), 3)
+        if proposed else None)
+    feasible = [r for r in results
+                if r.get("expect") in ("valid", "either")]
+    s["goal_coverage"] = (
+        round(sum(1 for r in feasible
+                 if r.get("outcome") == "valid" and r.get("valid"))
+              / len(feasible), 3) if feasible else None)
     s["honest_rejections"] = sum(
         1 for r in results if r.get("outcome") == "rejected")
     s["intake_rejections"] = sum(
