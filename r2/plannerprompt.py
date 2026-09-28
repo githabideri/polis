@@ -99,7 +99,7 @@ def build_planner_prompt(wm, goal, inventory, fixtures, max_candidates=16,
                         dm + (" (measured)" if r.drops
                               else " (assumed, unmeasured)"),
                         extra,
-                        r.observed_quantity or 1, _dist(r)))
+                        int(r.observed_quantity or 1), _dist(r)))
     resources = "\n".join(lines) or "  (none - the world scan is empty)"
 
     # fixtures: the site registry with their stamped condition
