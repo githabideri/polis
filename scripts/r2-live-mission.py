@@ -507,42 +507,89 @@ def main():
         return finish(args.out, run, t0)
 
     # 3. plan + validate (deterministic, goal-aware)
-    if getattr(args, "no_planner", False) and goal.verb in ("mine", "harvest"):
+    if getattr(args, "no_planner", False) and goal.verb in ("mine", "harvest", "sow"):
         # the deterministic goal compiler (13.6 step 2, no LLM): a
         # one-verb acquisition goal has one obvious plan - the closest
         # resource with sufficient observed quantity. The SAME
         # validator gate applies to the synthesized plan.
-        import math as _math
-        bp = st["Bot"]["Pos"]
-        best = None
-        for r in wm.resources.values():
-            if r.material != goal.object:
-                continue
-            if r.observed_quantity < (goal.n or 1):
-                continue
-            c = r.cells[0]
-            d = _math.hypot(c[0] - bp[0], c[2] - bp[2])
-            if best is None or d < best[0]:
-                best = (d, r)
-        if best is None:
-            run.update({"outcome": "rejected",
-                        "reason": "deterministic: no %s resource with "
-                                  "sufficient observed quantity" % goal.object})
-            return finish(args.out, run, t0)
-        d, r = best
-        raw = json.dumps({"id": "j1", "type": goal.verb,
-                          "quantity": goal.n or 1, "source": r.id,
-                          "origin": "deterministic"})
-        prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
-                                             center=(bp[0], 0, bp[2]))
-        run["planner"] = {"mode": "deterministic",
-                          "chosen": {"id": r.id, "distance": round(d, 1),
-                                      "observed": r.observed_quantity},
-                          "candidates": sorted(index)}
-        jobs, failure = validate_plan(raw, index, inv, goal=goal)
-        run["plan"] = {"raw": raw, "latency_ms": 0,
-                       "jobs": [j.to_dict() for j in jobs] if jobs else None,
-                       "failure": failure.to_dict() if failure else None}
+        if goal.verb == "sow":
+            # the 2-job endogenous chain (13.6): harvest the nearest crop
+            # of the goal's material, then sow at the goal's site. The
+            # 27B degenerates (silent token loop) on the new "sow"
+            # vocabulary (measured 2026-09-28), so the deterministic
+            # compiler takes the structured case - the design-level
+            # answer to the 27B's refusal (12.10 remediation (a) applied
+            # to the planner itself).
+            import math as _math
+            bp2 = st["Bot"]["Pos"]
+            best = None
+            for r in wm.resources.values():
+                if r.kind != "crop" or r.material != goal.object:
+                    continue
+                if r.observed_quantity < (goal.n or 1):
+                    continue
+                c = r.cells[0]
+                d = _math.hypot(c[0] - bp2[0], c[2] - bp2[2])
+                if best is None or d < best[0]:
+                    best = (d, r)
+            if best is None or not getattr(goal, "at", None):
+                run.update({"outcome": "rejected",
+                            "reason": "deterministic: sow needs a crop "
+                                      "resource and a site"
+                            if best is None else
+                            "deterministic: sow goal needs 'at <site>'"})
+                return finish(args.out, run, t0)
+            d, r = best
+            n = goal.n or 1
+            raw = json.dumps([
+                {"id": "j1", "type": "harvest", "quantity": n,
+                 "source": r.id, "origin": "deterministic"},
+                {"id": "j2", "type": "sow", "quantity": n,
+                 "target": goal.at, "material": goal.object,
+                 "depends_on": ["j1"], "origin": "deterministic"}])
+            prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
+                                                 center=(bp2[0], 0, bp2[2]))
+            run["planner"] = {"mode": "deterministic",
+                              "chosen": {"harvest": {"id": r.id,
+                                                     "distance": round(d, 1)},
+                                         "sow": {"site": goal.at}},
+                              "candidates": sorted(index)}
+            jobs, failure = validate_plan(raw, index, inv, goal=goal)
+            run["plan"] = {"raw": raw, "latency_ms": 0,
+                           "jobs": [j.to_dict() for j in jobs] if jobs else None,
+                           "failure": failure.to_dict() if failure else None}
+        else:
+            import math as _math
+            bp = st["Bot"]["Pos"]
+            best = None
+            for r in wm.resources.values():
+                if r.material != goal.object:
+                    continue
+                if r.observed_quantity < (goal.n or 1):
+                    continue
+                c = r.cells[0]
+                d = _math.hypot(c[0] - bp[0], c[2] - bp[2])
+                if best is None or d < best[0]:
+                    best = (d, r)
+            if best is None:
+                run.update({"outcome": "rejected",
+                            "reason": "deterministic: no %s resource with "
+                                      "sufficient observed quantity" % goal.object})
+                return finish(args.out, run, t0)
+            d, r = best
+            raw = json.dumps({"id": "j1", "type": goal.verb,
+                              "quantity": goal.n or 1, "source": r.id,
+                              "origin": "deterministic"})
+            prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
+                                                 center=(bp[0], 0, bp[2]))
+            run["planner"] = {"mode": "deterministic",
+                              "chosen": {"id": r.id, "distance": round(d, 1),
+                                          "observed": r.observed_quantity},
+                              "candidates": sorted(index)}
+            jobs, failure = validate_plan(raw, index, inv, goal=goal)
+            run["plan"] = {"raw": raw, "latency_ms": 0,
+                           "jobs": [j.to_dict() for j in jobs] if jobs else None,
+                           "failure": failure.to_dict() if failure else None}
     else:
         prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
                                              center=(st["Bot"]["Pos"][0], 0,
