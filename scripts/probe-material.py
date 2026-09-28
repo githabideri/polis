@@ -65,6 +65,21 @@ def scan(x1, y1, z1, x2, y2, z2):
     return (r.get("Data") or {}).get("blocks", [])
 
 
+def goto_wait(bot, cell, timeout=60):
+    """v5's goto semantics: full arg list + poll LastAction until the
+    walk settles (the command returns as soon as the walk STARTS)."""
+    r = cmd("goto", [str(cell[0]), str(cell[1]), str(cell[2]), "true",
+                     "0.02", "true"], bot, timeout=timeout)
+    t0 = time.time()
+    msg = r.get("Message") or r.get("error")
+    while time.time() - t0 < timeout:
+        la = state(bot).get("LastAction") or {}
+        if la.get("Name") == "goto" and la.get("Ok") is not None:
+            return la.get("Msg") or msg
+        time.sleep(0.5)
+    return msg + " (goto timeout)"
+
+
 def main():
     out = {"probe": "material capability", "ts": time.strftime("%F %T")}
     # 1) wide scan around the testbed (surface AND the layer below it:
@@ -138,8 +153,8 @@ def main():
                   (cell[0], cell[1], cell[2] - 1)]
     mine_msg = None
     for nb in neighbours:
-        g = cmd("goto", [str(nb[0]), str(nb[1]), str(nb[2])], bot, timeout=90)
-        out["goto"] = g.get("Message") or g.get("error")
+        mine_msg = goto_wait(bot, nb)
+        out["goto"] = mine_msg
         m = cmd("mine", [str(cell[0]), str(cell[1]), str(cell[2]),
                          "true"], bot, timeout=120)
         mine_msg = m.get("Message") or m.get("error")
