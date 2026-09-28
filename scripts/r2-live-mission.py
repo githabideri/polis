@@ -299,7 +299,7 @@ def execute_job(pol, bot, base, job, wm, run):
                 break
         for k in set(pre) | set(post):
             if post.get(k, 0) > pre.get(k, 0):
-                measured[k] = post[k] - pre[k]
+                measured[k] = post.get(k, 0) - pre.get(k, 0)
         ok = aok and gone
         detail += (" | %s | last_action_ok=%s (%s) gone=%s measured=%s"
                    % (adetail, la.get("Ok"), (la.get("Msg") or "")[:60],
