@@ -136,7 +136,7 @@ class Oikistes:
         self.lock = threading.Lock()
         self.born = time.time()
         self.state_path = os.path.join(args.datadir, "oikistes-state.json")
-        self.transcript = os.path.join(args.datadir, "oikistes-log.jsonl")
+        self.transcript_path = os.path.join(args.datadir, "oikistes-log.jsonl")
         self.bot = self._load_bot()
 
     # -- persistent state (survives restarts) --------------------------
@@ -387,7 +387,7 @@ class Oikistes:
 
     def memory_text(self):
         try:
-            lines = open(self.transcript).read().splitlines()[-40:]
+            lines = open(self.transcript_path).read().splitlines()[-40:]
         except Exception:
             lines = []
         out = []
@@ -409,12 +409,12 @@ class Oikistes:
                "role": role, "text": text}
         if actor:
             rec["actor"] = actor
-        with open(self.transcript, "a") as f:
+        with open(self.transcript_path, "a") as f:
             f.write(json.dumps(rec) + "\n")
 
     def transcript(self, n=50):
         try:
-            lines = open(self.transcript).read().splitlines()
+            lines = open(self.transcript_path).read().splitlines()
         except Exception:
             lines = []
         out = []
@@ -534,7 +534,7 @@ def make_handler(oik):
                                      "error": repr(e)})
             elif u.path == "/oikistes/reset":
                 try:
-                    open(oik.transcript, "w").close()
+                    open(oik.transcript_path, "w").close()
                     self._send(200, {"ok": True})
                 except Exception as e:
                     self._send(500, {"error": repr(e)})
