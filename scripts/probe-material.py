@@ -43,8 +43,24 @@ def cmd(c, args=(), bot=None, timeout=60):
         return {"Ok": False, "error": str(e)}
 
 
+def inventory(state_resp):
+    """The bot's inventory the way the game keeps it: hands + cargo grid
+    (the state's top-level Items are GROUND item entities, not the bot's
+    inventory - 2026-09-28 probe finding)."""
+    b = (state_resp or {}).get("Bot") or {}
+    out = {}
+    for k in ("RightHand", "LeftHand"):
+        it = b.get(k)
+        if it and it.get("Code"):
+            out[it["Code"]] = out.get(it["Code"], 0) + (it.get("Qty") or 1)
+    for it in (b.get("Backpack") or []):
+        if it.get("Code"):
+            out[it["Code"]] = out.get(it["Code"], 0) + (it.get("Qty") or 1)
+    return out
+
+
 def state(bot):
-    """GET /polis/state?botId=N - same shape v5 uses (top-level Items)."""
+    """GET /polis/state?botId=N - same shape v5 uses (Bot + ground Items)."""
     for _ in range(10):
         try:
             with urllib.request.urlopen(
@@ -146,7 +162,7 @@ def main():
     bot = (r.get("Data") or {}).get("id")
     out["bot"] = bot
     cmd("give", ["pickaxe-iron", "1"], bot)
-    pre = state(bot).get("Items") or []
+    pre = inventory(state(bot))
     neighbours = [(cell[0] + 1, cell[1], cell[2]),
                   (cell[0] - 1, cell[1], cell[2]),
                   (cell[0], cell[1], cell[2] + 1),
@@ -169,20 +185,13 @@ def main():
                                  cell[0] + 1, cell[2] + 1, cell[2] + 1)):
             break
         time.sleep(2)
-    post = state(bot).get("Items") or []
-    def norm(items):
-        d = {}
-        for i in items:
-            c = i.get("Code")
-            d[c] = d.get(c, 0) + (i.get("Count") or 1)
-        return d
-    pre_n, post_n = norm(pre), norm(post)
+    post = inventory(state(bot))
     delta = {}
-    for c in set(pre_n) | set(post_n):
-        if pre_n.get(c, 0) != post_n.get(c, 0):
-            delta[c] = {"before": pre_n.get(c, 0), "after": post_n.get(c, 0)}
+    for c in set(pre) | set(post):
+        if pre.get(c, 0) != post.get(c, 0):
+            delta[c] = {"before": pre.get(c, 0), "after": post.get(c, 0)}
     out["inventory_delta"] = delta
-    out["post_items"] = post_n
+    out["post_items"] = post
     new_item = next((c for c, d in delta.items() if d["after"] > d["before"]),
                     None)
     out["dropped_item"] = new_item
