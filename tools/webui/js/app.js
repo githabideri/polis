@@ -248,16 +248,25 @@ function wireHolds() {
     });
 }
 
-/* keyboard: WASD + arrows, same hold semantics */
+/* keyboard: WASD + arrows, same hold semantics. The handler yields to
+   EVERY text control (chat box, command line, anything focusable) -
+   while you are typing, keys are yours, not the bot's (2026-09-28:
+   the Oikistes chat input was not in the guard; typing "w" moved the
+   bot and the character was eaten by preventDefault). */
 const KEYMAP = {
     KeyW: 'forward', ArrowUp: 'forward',
     KeyS: 'backward', ArrowDown: 'backward',
     KeyA: 'left', ArrowLeft: 'left',
     KeyD: 'right', ArrowRight: 'right',
 };
+function typingTarget(e) {
+    const t = e.target;
+    return !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA'
+                    || t.isContentEditable));
+}
 function wireKeys() {
     window.addEventListener('keydown', (e) => {
-        if (e.target === el.cmdInput) return;
+        if (typingTarget(e)) return;
         const kind = KEYMAP[e.code];
         if (!kind || e.repeat) return;
         e.preventDefault();
