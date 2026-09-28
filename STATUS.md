@@ -419,3 +419,13 @@ trees); rye-on-farmland is the round-trip. The 27B degenerate
 model-capability finding; the deterministic compiler owns the
 structured cases. Three `game:`-prefix lookup bugs in my own code
 cost runs 25-30; the 13.2 raw-view-at-failure discipline caught each.
+
+### 13.6 steps 5+6 decided (2026-09-28)
+P5 r10 with the 5-way attribution: 19/25, precision 1.0, coverage
+0.476; **attribution = model 6 / validation 0 / observation 0 /
+executor 0 / environment 0** - the whole offline failure mass is the
+27B's own over-rejection/pick behavior. **Step 6 decision: planner
+FT deferred into the Oikistes model question** (the 27B is the
+judge - not a training target; the deterministic compiler has taken
+the structured cases; the long tail needs its own small model + a
+real corpus, which starts with the rejection data we already have).

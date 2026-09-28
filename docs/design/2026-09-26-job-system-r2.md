@@ -1177,3 +1177,50 @@ own view, taken at the moment of the false negative) is what
 exposed it - the 13.2 execution/oracle split paid for itself: when
 the oracle says "absent" and the engine says "placed", one of them
 is lying, and only the raw view tells which.
+
+### 13.9 Steps 5 and 6: the attribution result and the planner-FT decision (2026-09-28)
+
+**Step 5 (executed):** P5 now assigns every non-CORRECT case to the
+layer whose fix makes it right - the 5-way classes of 13.6. r10
+(19/25, precision 1.0, coverage 0.476 - the coverage varies 0.48-0.62
+across runs r7-r10; precision has not left 1.000 in any round):
+**attribution = model 6, validation 0, observation 0, executor 0,
+environment 0.** Every failure in the offline suite is the model's
+own (over-rejections and wrong picks). The validator has never let
+something bad through or (in this suite) blocked something good; the
+world presentation has never misled. Executor/environment are live-
+only classes - the live run JSONs already carry their evidence
+(the approach wedges, the prefix bugs, the 27B degeneration).
+
+**Step 6 (decision): the planner fine-tune is DEFERRED, not as a
+skipped task but as a re-targeted one.** The evidence now says:
+1. The failure mass is 100% model-side, and precision 1.000 across
+   ten rounds means the safety property (never fabricate) is a
+   stable prior of this model family - an FT can work on coverage
+   without a safety trade-off being visible at this size.
+2. BUT the 27B is the production JUDGE (vision, per-step). Fine-
+   tuning it into a planner is off the table; the planner needs its
+   OWN model. And the 13.8 degeneration (silent token loop on novel
+   vocabulary) is a warning that a small frozen base model does not
+   absorb a growing action set - the FT must be part of a deliberate
+   model choice, not a delta on the judge.
+3. The deterministic compiler has been eating the structured cases
+   all morning (mine, harvest, sow, place-from-inventory are now
+   compiler-owned; the 27B's remaining job is the ambiguous long
+   tail) - and that long tail is exactly where the data is
+   thinnest. An FT on 25 cases would be memorization.
+
+So: the planner's model question (dedicated 2B-4B FT vs 35B-with-
+tools) is folded into the Oikistes architecture work - Oikistes is
+the conversational planner; the R2 job planner is its structured
+mode. The data program starts now anyway: every live rejection with
+its world snapshot, and every P5 over-rejection with a synthetic
+correct plan, are FT rows. The corpus, not the training, is the
+critical path.
+
+- **2026-09-28.** 13.6 closing sequence: steps 1-5 executed (approach
+  port live; deterministic mine + harvest→sow proofs; 27B on the mine
+  goal; M2 closed at run 31; P5 5-way attribution = 100% model).
+  Step 6 decided: planner FT deferred into the Oikistes model
+  question; the corpus program starts with the rejection data we
+  already have.
