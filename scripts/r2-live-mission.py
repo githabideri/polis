@@ -236,38 +236,29 @@ def execute_job(pol, bot, base, job, wm, run):
         # the drop from the preceding harvest lands ASYNCHRONOUSLY (the
         # cargo registration flickers - run 25 read a transient zero): poll
         # for the seed instead of one-shot, exactly like the harvest's
-        # post loop
+        # post loop. Inventory keys carry the namespace prefix (game:...) -
+        # the precondition must match both forms (run 27: a prefix-less
+        # lookup read zero against a full right hand)
         need = job.quantity or 1
         seed_have = 0
         inv0 = {}
         for _ in range(12):  # up to ~12 s
             inv0 = inventory_of(pol.state(bot))
-            seed_have = inv0.get(seed_code, 0)
+            seed_have = (inv0.get("game:" + seed_code, 0)
+                         + inv0.get(seed_code, 0))
             if seed_have >= need:
                 break
             time.sleep(1)
         if seed_have < need:
-            # TEMP DEBUG (run 26 mystery): dump every view of the world
-            dbg = {"inventory_of": inv0,
-                   "raw": (pol.state(bot).get("Bot") or {}) if False else None}
-            stdbg = pol.state(bot)
-            bdbg = stdbg.get("Bot") or {}
-            dbg["raw"] = {k: bdbg.get(k) for k in
-                          ("RightHand", "LeftHand", "Backpack")}
-            try:
-                cl = pol.cmd("container-list", [], bot)
-                dbg["containers"] = cl.get("Data") or cl.get("Message")
-            except Exception as e:
-                dbg["containers"] = "err %r" % e
-            open("/tmp/sow-debug.txt", "w").write(json.dumps(dbg,
-                                                             indent=1))
             return (False,
-                    "sow: need %d %s, have %d (harvest it first? - the "
-                    "1.22 composite cannot conjure seeds)"
-                    % (need, seed_code, seed_have), measured,
+                    "sow: need %d %s, have %d (inventory: %s)"
+                    % (need, seed_code, seed_have,
+                       {k: v for k, v in inv0.items()}
+                       if inv0 else "(empty)"), measured,
                     {"cmd": "sow", "ok": False,
                      "reason": "no seeds"},
-                    {"seed_precondition": seed_have, "required": need})
+                    {"seed_precondition": seed_have, "required": need,
+                     "inventory": inv0})
         solid = [b["pos"] for b in pol.cell_blocks(bot, tuple(cell), pad=2)
                  if (b.get("code") or "") != "game:air"
                  and b["pos"] != cell]
