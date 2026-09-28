@@ -237,8 +237,8 @@ def execute_job(pol, bot, base, job, wm, run):
         # (run 13: the mine failed 'goto stuck' while a vacuous scan
         # read the block as gone)
         la = pol.state(bot).get("LastAction") or {}
-        la_ok = la.get("Name") == action.rstrip("_target") and \
-            la.get("Ok") is True
+        la_ok = la.get("Name") in (action, action.replace("_target", "")) \
+            and la.get("Ok") is True
         post = {}
         for _ in range(9):  # up to ~18 s for the cargo registration
             time.sleep(2)
@@ -404,6 +404,10 @@ def run_jobs(pol, bot, base, gs, job, run, wm):
     try:
         ok, detail, measured = execute_job(pol, bot, base, job, wm, run)
     except Exception as e:
+        import traceback
+        open("/tmp/r2-job-traceback.txt", "w").write(
+            "".join(traceback.format_exception(type(e), e,
+                                               e.__traceback__)))
         ok, detail, measured = False, "exception: %r" % e, {}
     run["steps"].append({
         "job": job.id, "type": job.type, "ok": ok,
