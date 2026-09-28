@@ -247,6 +247,20 @@ def execute_job(pol, bot, base, job, wm, run):
                 break
             time.sleep(1)
         if seed_have < need:
+            # TEMP DEBUG (run 26 mystery): dump every view of the world
+            dbg = {"inventory_of": inv0,
+                   "raw": (pol.state(bot).get("Bot") or {}) if False else None}
+            stdbg = pol.state(bot)
+            bdbg = stdbg.get("Bot") or {}
+            dbg["raw"] = {k: bdbg.get(k) for k in
+                          ("RightHand", "LeftHand", "Backpack")}
+            try:
+                cl = pol.cmd("container-list", [], bot)
+                dbg["containers"] = cl.get("Data") or cl.get("Message")
+            except Exception as e:
+                dbg["containers"] = "err %r" % e
+            open("/tmp/sow-debug.txt", "w").write(json.dumps(dbg,
+                                                             indent=1))
             return (False,
                     "sow: need %d %s, have %d (harvest it first? - the "
                     "1.22 composite cannot conjure seeds)"
