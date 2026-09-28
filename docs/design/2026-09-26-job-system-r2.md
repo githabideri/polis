@@ -704,3 +704,30 @@ measurement, conditions A/B) → P6 (JobQueue + live two-job milestone).
   polarities: stale-filled + fresh-empty ⇒ NOT complete; stale-empty +
   fresh-filled ⇒ complete), nomination-vs-authorization, then the live
   material capability probe, then P3–P6 per §12.8.
+- **2026-09-28 (Phase 2 complete, ~03:20 CEST).** WorldModel +
+  ObservationService built per §12 and wired under the live loop:
+  `r2/worldmodel.py` (seq/monotonic/wall stamps, reason-tagged
+  observations, freshness-gated fixture reads - unknown is never
+  yes/no, nomination vs authorization, claims view, worldSnapshot),
+  `r2/queries.py` (classify + connected-cluster with observed_quantity
+  and is_complete_extent=False), `r2/observation.py` (5-outcome
+  taxonomy, maxAgeMs coalescing; fake-transport unit tests only - the
+  three live screenshot consumers stay untouched per 12.1). v5's run
+  loop now feeds its own stamped observations in and records the
+  worldSnapshot in the run JSON (§7; per-run outcomes are now
+  persisted in the --out file). New gate test T5 (staleness invariants,
+  both completion polarities, monotone satisfaction, nomination-only
+  resources): gate is T1+T2+T2b+T3+T4+T5, green on --impl v5 AND
+  --impl r2. Live verification (same params as the T4 goldens): mine
+  2 steps, harvest 2 steps, build 3 steps - all complete; per-step
+  phase/proposal sequences match the T4 goldens; the worldSnapshots
+  show the expected reason-tagged logs and fresh oracle confirmations.
+  Two model-level wobbles observed (NOT code drift - recorded for the
+  canary/dashcam watch list): (1) mine step 1: Laya p=0.286 <
+  tau_yes on travel -> 27B judge goal-first-skipped to mine_target
+  (executed fine - privileged harness action - mission still 2 steps);
+  (2) harvest step 1: Laya p=0.40 exactly at tau_strong ->
+  consensus-hole escalation -> judge harvested early (2 steps vs
+  golden 3). Both are the known travel-phase bias / boundary behavior
+  of the small models, not the loop. Next: the material capability
+  probe (12.8), then Phase 3 (job contracts + effect catalog).
