@@ -22,7 +22,9 @@ import time
 import urllib.request
 
 HARNESS = os.environ.get("POLIS_HARNESS", "http://127.0.0.1:8585")
-UID = "probe-" + time.strftime("%H%M%S")
+# a REAL player uid is required - the harness resolves the command
+# context against registered players (a fabricated uid cannot spawn)
+UID = os.environ.get("POLIS_UID", "d4pJ+Ty1RgaBHrQgQEV8z27E")
 
 
 def cmd(c, args=(), bot=None, timeout=60):
@@ -65,8 +67,9 @@ def scan(x1, y1, z1, x2, y2, z2):
 
 def main():
     out = {"probe": "material capability", "ts": time.strftime("%F %T")}
-    # 1) wide scan around the testbed spawn (511997, 512019-ish)
-    blocks = scan(511970, 2, 511990, 512035, 12, 512055)
+    # 1) wide scan around the testbed (surface AND the layer below it:
+    # the flat testbed's stone, if any, sits at/below y=2)
+    blocks = scan(511900, 0, 511950, 512100, 15, 512120)
     codes = {}
     for b in blocks:
         c = b.get("code") or "?"
@@ -93,9 +96,11 @@ def main():
             break
     if not target:
         # fall back: any rock-granite that is NOT on a known fixture row
+        # (1.22: set-placed and natural granite share the code - the probe
+        # below tells us whether the mined item behavior matches)
         for p in granite.get("game:rock-granite", []):
             if not (p[0] in range(512000, 512012) and p[2] in range(512015, 512025)):
-                target = ("game:rock-granite (unfixed cell)", p)
+                target = ("game:rock-granite (non-fixture cell)", p)
                 break
     out["mined_cell"] = target
     if not target:
