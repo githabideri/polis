@@ -49,6 +49,7 @@ from r2.plannerprompt import build_planner_prompt
 from r2.plancheck import validate_plan, check_goal
 from r2.jobqueue import GoalState
 from r2.jobs import Goal, Job, Failure
+from r2 import approach as r2approach
 from r2.queries import classify
 
 # material name -> the ITEM code a give_tool job supplies (the placeable
@@ -204,10 +205,6 @@ def execute_job(pol, bot, base, job, wm, run):
                     measured, {}, {"block_gone": None,
                                    "measured": measured})
         cell = rec.cells[0]
-        action = {"mine": "mine_target", "harvest": "harvest_target",
-                  "pickup": "pickup_item"}[job.type]
-        mission = {"mine": "mine", "harvest": "harvest",
-                   "pickup": "pickup"}[job.type]
         pre = inventory_of(pol.state(bot))
         # the mine path needs a tool (granite is tier 2): v5's mission
         # setup gave one implicitly; the live orchestrator does the same
@@ -222,15 +219,62 @@ def execute_job(pol, bot, base, job, wm, run):
         for it in (b0.get("Backpack") or []):
             if it.get("Code"):
                 tool_codes.add(it["Code"])
-        if not any((t or "").startswith(("pickaxe", "shovel", "axe", "hoe"))
-                   for t in tool_codes):
+        if job.type == "mine" and not any(
+                (t or "").startswith(("pickaxe", "shovel", "axe", "hoe"))
+                for t in tool_codes):
             tr = pol.cmd("give", ["pickaxe-iron", "1"], bot)
             pre = inventory_of(pol.state(bot))
             detail = ("%s %s -> gave pickaxe-iron ok=%s; "
                       % (job.type, rec.code, bool(tr.get("Ok"))))
         else:
             detail = "%s %s -> " % (job.type, rec.code)
-        res = v5.execute(pol, bot, action, cell, base, mission)
+        # 13.6 step 1: APPROACH resolution. goto(position) and
+        # approach(target, interaction) are separate concepts: a mine/
+        # harvest job means "interact successfully with the target
+        # block" - for an occupied solid block the valid destinations
+        # are the neighbouring walkable cells. The driver walks the
+        # candidates (target first, then neighbours by distance, solids
+        # filtered), retries on stuck/range/LOS, and stops on a
+        # definitive engine verdict. From the queue's perspective this
+        # whole loop is ONE job attempt; the per-candidate log goes to
+        # the run JSON.
+        cmd_name = {"mine": "mine", "harvest": "harvestcrop"}.get(job.type)
+        solid = [b["pos"] for b in pol.cell_blocks(bot, cell, pad=2)
+                 if (b.get("code") or "") != "game:air"]
+        from_pos = tuple(pol.state(bot)["Bot"]["Pos"])
+
+        def _goto(c):
+            return v5.goto_wait(pol, bot, c, timeout=25)
+
+        def _act():
+            r = pol.cmd(cmd_name, [str(cell[0]), str(cell[1]),
+                                   str(cell[2]), "true"], bot)
+            st_p = pol.state(bot)
+            pre_ms = st_p.get("LastActionMs") or 0
+            t0 = time.time()
+            la2 = {}
+            while time.time() - t0 < 45:
+                st2 = pol.state(bot)
+                la2 = st2.get("LastAction") or {}
+                if la2.get("Name") in (cmd_name, job.type) \
+                        and la2.get("Ok") is not None \
+                        and (st2.get("LastActionMs") or 0) > pre_ms:
+                    break
+                time.sleep(1)
+            return {"ok": la2.get("Ok") is True, "last_action": la2}
+
+        if cmd_name is not None:
+            aok, adetail, attempts, la = r2approach.approach(
+                _goto, _act, from_pos, cell, solid)
+        else:
+            # pickup targets an ITEM entity, not a block cell - v5's
+            # item-entity approach stands
+            res = v5.execute(pol, bot, "pickup_item", cell, base, "pickup")
+            la = pol.state(bot).get("LastAction") or {}
+            aok = bool(res.get("ok"))
+            adetail = ("pickup -> %s" % (res.get("msg") or
+                                         la.get("Msg") or ""))
+            attempts = []
         # the drop lands in the cargo ASYNCHRONOUSLY (measured ~8 s after
         # the block is gone, run 12) - poll for it instead of a fixed
         # sleep; the block-gone check and the cargo diff are separate
@@ -242,11 +286,9 @@ def execute_job(pol, bot, base, job, wm, run):
         gone = bool(blocks) and not any(
             b.get("code") == rec.code and b.get("pos") == list(cell)
             for b in blocks)
-        # the action's OWN completion record is the primary signal
-        # (run 13: the mine failed 'goto stuck' while a vacuous scan
-        # read the block as gone)
-        la = pol.state(bot).get("LastAction") or {}
-        la_ok = la.get("Name") in (action, action.replace("_target", "")) \
+        la_ok = la.get("Name") in ("mine", "mine_target", "harvestcrop",
+                                   "harvest_target", "pickup",
+                                   "pickup_item") \
             and la.get("Ok") is True
         post = {}
         for _ in range(9):  # up to ~18 s for the cargo registration
@@ -258,13 +300,14 @@ def execute_job(pol, bot, base, job, wm, run):
         for k in set(pre) | set(post):
             if post.get(k, 0) > pre.get(k, 0):
                 measured[k] = post[k] - pre[k]
-        ok = la_ok and gone
-        detail += (" last_action_ok=%s (%s) gone=%s measured=%s"
-                   % (la.get("Ok"), (la.get("Msg") or "")[:60], gone,
-                      measured))
+        ok = aok and gone
+        detail += (" | %s | last_action_ok=%s (%s) gone=%s measured=%s"
+                   % (adetail, la.get("Ok"), (la.get("Msg") or "")[:60],
+                      gone, measured))
         return ok, detail, measured, \
             {"last_action": {k: la.get(k) for k in
-                             ("Name", "Ok", "Msg")}}, \
+                             ("Name", "Ok", "Msg")},
+             "approach_attempts": attempts}, \
             {"block_gone": gone, "measured": measured}
 
     if job.type == "place":
@@ -309,8 +352,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--harness", required=True)
     ap.add_argument("--uid", required=True)
-    ap.add_argument("--llm", required=True)
-    ap.add_argument("--llm-model", required=True)
+    ap.add_argument("--no-planner", action="store_true",
+                    help="deterministic plan for one-verb mine/harvest "
+                         "goals (13.6 step 2: prove executor+ledger+oracle "
+                         "without the LLM in the loop)")
+    ap.add_argument("--llm", default="")
+    ap.add_argument("--llm-model", default="")
     ap.add_argument("--goal", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--pregive", action="append", default=[],
@@ -370,17 +417,54 @@ def main():
                     "reason": "%s: %s" % (gfail.code, gfail.detail)})
         return finish(args.out, run, t0)
 
-    # 3. plan (27B) + validate (deterministic, goal-aware)
-    prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
-                                         center=(st["Bot"]["Pos"][0], 0,
-                                                st["Bot"]["Pos"][2]))
-    run["planner"] = {"prompt_chars": len(prompt),
-                      "candidates": sorted(index)}
-    raw, ms = call_llm(args.llm, args.llm_model, prompt)
-    jobs, failure = validate_plan(raw, index, inv, goal=goal)
-    run["plan"] = {"raw": raw[:600], "latency_ms": ms,
-                   "jobs": [j.to_dict() for j in jobs] if jobs else None,
-                   "failure": failure.to_dict() if failure else None}
+    # 3. plan + validate (deterministic, goal-aware)
+    if getattr(args, "no_planner", False) and goal.verb in ("mine", "harvest"):
+        # the deterministic goal compiler (13.6 step 2, no LLM): a
+        # one-verb acquisition goal has one obvious plan - the closest
+        # resource with sufficient observed quantity. The SAME
+        # validator gate applies to the synthesized plan.
+        import math as _math
+        bp = st["Bot"]["Pos"]
+        best = None
+        for r in wm.resources.values():
+            if r.material != goal.object:
+                continue
+            if r.observed_quantity < (goal.n or 1):
+                continue
+            c = r.cells[0]
+            d = _math.hypot(c[0] - bp[0], c[2] - bp[2])
+            if best is None or d < best[0]:
+                best = (d, r)
+        if best is None:
+            run.update({"outcome": "rejected",
+                        "reason": "deterministic: no %s resource with "
+                                  "sufficient observed quantity" % goal.object})
+            return finish(args.out, run, t0)
+        d, r = best
+        raw = json.dumps({"id": "j1", "type": goal.verb,
+                          "quantity": goal.n or 1, "source": r.id})
+        prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
+                                             center=(bp[0], 0, bp[2]))
+        run["planner"] = {"mode": "deterministic",
+                          "chosen": {"id": r.id, "distance": round(d, 1),
+                                      "observed": r.observed_quantity},
+                          "candidates": sorted(index)}
+        jobs, failure = validate_plan(raw, index, inv, goal=goal)
+        run["plan"] = {"raw": raw, "latency_ms": 0,
+                       "jobs": [j.to_dict() for j in jobs] if jobs else None,
+                       "failure": failure.to_dict() if failure else None}
+    else:
+        prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
+                                             center=(st["Bot"]["Pos"][0], 0,
+                                                    st["Bot"]["Pos"][2]))
+        run["planner"] = {"mode": "llm",
+                          "prompt_chars": len(prompt),
+                          "candidates": sorted(index)}
+        raw, ms = call_llm(args.llm, args.llm_model, prompt)
+        jobs, failure = validate_plan(raw, index, inv, goal=goal)
+        run["plan"] = {"raw": raw[:600], "latency_ms": ms,
+                       "jobs": [j.to_dict() for j in jobs] if jobs else None,
+                       "failure": failure.to_dict() if failure else None}
     if failure is not None:
         run.update({"outcome": "rejected",
                     "reason": "%s (%s): %s"
