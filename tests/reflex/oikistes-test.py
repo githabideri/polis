@@ -16,7 +16,8 @@ def check(name, cond):
 
 args = argparse.Namespace(harness="http://127.0.0.1:1", uid="x",
                           llm="http://127.0.0.1:1",
-                          llm_model="test", datadir="/tmp/oik-test")
+                          llm_model="test", alt_llm="", alt_model="",
+                          datadir="/tmp/oik-test")
 oik = oikistes.Oikistes(args)
 
 READONLY = {"state", "scan", "screenshot", "events", "autonomy"}
