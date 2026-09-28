@@ -140,13 +140,13 @@ def build_planner_prompt(wm, goal, inventory, fixtures, max_candidates=16,
         fixtures=fixtures_s,
         inventory=inv)
     # appended AFTER .format(): the worked example contains JSON braces
-    prompt += ("
+    prompt += """
 
 EXAMPLE (worked):
 GOAL: place granite at site-A x1
 INVENTORY: (empty)
 no world producer yields granite
--> [{\"id\":\"j1\",\"type\":\"give_tool\",\"material\":\"granite\",\"quantity\":1},"
-          "{\"id\":\"j2\",\"type\":\"place\",\"target\":\"site-A\","
-          "\"material\":\"granite\",\"quantity\":1,\"depends_on\":[\"j1\"]}]")
+-> [{"id":"j1","type":"give_tool","material":"granite","quantity":1},
+    {"id":"j2","type":"place","target":"site-A","material":"granite",
+     "quantity":1,"depends_on":["j1"]}]"""
     return prompt, index
