@@ -388,3 +388,20 @@ sequence (13.6): approach-retry port → deterministic endogenous
 proof → 27B on the same goal → M2 close → P5 re-run with 5-way
 failure classification → then (and only then) a planner-specific
 fine-tune as its own artifact.
+
+### 13.6 step 1 executed (2026-09-28, 09:35): approach port + the mine path is green
+`r2/approach.py` (12/12 offline tests) formalizes the neighbour retry
+as `goto(position)` vs `approach(target, interaction)`; the queue
+sees one job, the per-candidate log lands in the run JSON. Wired into
+mine/harvest live. **Mine goal now GOAL COMPLETE in both modes**:
+deterministic (run 18, 11.4 s, `--no-planner`) and 27B-planned
+(run 19, 16.3 s), each with a measured 2x stone-granite delta. Two
+latent bugs died in the process (the inventory-diff KeyError that
+crashed runs 15/17; deterministic jobs now carry `origin`). P5 r8
+re-measured with the 13.3 dual metrics: 19/25, precision 1.000,
+coverage 0.476 (stable vs r7). **Remaining sequence:** the M2 place
+half is blocked on the 1.22 item->block mapping wall (granite drops
+`stone-granite`, place wants `rock-granite`; no public mapping) -
+next investigation: the soil round-trip probe; then step 4 (close
+M2), step 5 (P5 5-way classification), step 6 (the planner-FT
+decision - precision 1.000 means an FT can only work on coverage).

@@ -1053,3 +1053,73 @@ one that gets stabilized.
   freshness, and the five operator-supply requirements confirmed
   already-true; the 6-step closing sequence adopted, planner
   fine-tune explicitly deferred past it.
+
+### 13.7 Step 1 executed: the approach port is live (2026-09-28, 09:35)
+
+The 13.6 closing sequence started. **Step 1 is done**:
+`r2/approach.py` formalizes the probe's neighbour loop as the
+`goto(position)` vs `approach(target, interaction)` split. `candidates`
+(pure, unit-tested) orders the approach cells: the target cell itself
+first (the pathfinder stops one cell short of a solid - already in
+interaction range), then the ground-level neighbours by distance from
+the bot, a solid-occupied neighbour filtered (you cannot stand in a
+block). The `approach` driver walks the candidates with injected
+`goto`/`try_action` callables (12/12 offline tests): action ok ->
+success; retriable failure (stuck / range / LOS / timeout) -> next
+candidate; definitive failure ("Tool required: tier 2") -> stop, that
+is the answer. The JobQueue sees ONE running job, never N failed
+gotos; the per-candidate log goes to the run JSON under
+`execution.approach_attempts`.
+
+Wired into the mine/harvest branches of the live orchestrator
+(pickup keeps v5's item-entity approach - it targets an entity, not a
+block cell). While there, two latent bugs died: the inventory-diff
+`post[k]-pre[k]` KeyError (a drop that is a NEW code was never in
+`pre` - runs 15/17 crashed exactly here, and the crash itself had
+been proving the drop was measured), and the deterministic job now
+carries `origin=deterministic` (13.4 provenance honesty).
+
+**Live results (the mine path is green in both modes):**
+- **run 18** (`--no-planner`, step 2's mine half): GOAL COMPLETE,
+  11.4 s - deterministic nearest-resource choice (res-05, 4.8 m),
+  approach on the first candidate, engine verdict ok, **measured
+  delta 2x stone-granite**, block gone, ledger +2.
+- **run 19** (step 3, the 27B on the same goal): GOAL COMPLETE,
+  16.3 s - the 27B proposed the mine job (res-05), the approach
+  executed it, measured 2x stone-granite.
+
+The earlier mine failures (runs 12-16) were never a planning problem:
+each was one of the now-separated causes (goto stuck, tool tier,
+vacuous oracle, my diff crash). With the causes separated, the same
+goal completes in both modes.
+
+**P5 re-run (r8, the first round measured with the 13.3 dual
+metrics):** 19/25, precision 1.000, coverage 0.476 - stable against
+r7. The mine category remains 2/3 in the OFFLINE suite (one
+over-rejection) even though the mine goal just completed LIVE twice:
+the offline failure is the 27B's quantity/grammar hesitation on a
+fixture, not an execution capability.
+
+**What remains of the sequence (the honest status):**
+- Step 2's *place* half (placing the mined drop) hits the 1.22
+  mapping wall: the granite mine drops `stone-granite`, the place
+  action accepts `rock-granite`; the public 1.22 API has no
+  item->block mapping (the material probe, 12.9). M2 therefore needs
+  either a round-trippable material (a soil block mined by hand
+  drops a placeable soil item - unproven, needs its own probe) or an
+  operator-declared bridge for the placeable. Filed as the M2
+  blocker; it is a world-facts question, not an architecture one.
+- Step 4 (close M2) waits on that; step 5 (P5 with 5-way failure
+  classification) and step 6 (the planner-FT decision) follow.
+  The current numbers make the step-6 question concrete: precision
+  1.000 means a fine-tune can only HELP coverage (0.476) - the
+  safety property it must preserve is the zero-fabrication one.
+
+- **2026-09-28 (09:35-09:40 CEST).** 13.6 step 1 complete (approach
+  module + 12 tests + live wiring); the mine path is GOAL COMPLETE in
+  both deterministic (run 18) and 27B-planned (run 19) mode, each
+  with a measured inventory delta; two latent bugs retired (the diff
+  KeyError, the deterministic origin); P5 r8 = 19/25 with the dual
+  metrics (precision 1.000 / coverage 0.476); the M2 place half is
+  blocked on the 1.22 item->block mapping wall (soil round-trip
+  probe is the next investigation).
