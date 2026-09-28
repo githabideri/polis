@@ -273,8 +273,31 @@ def execute_job(pol, bot, base, job, wm, run):
             return {"ok": bool(r.get("Ok")),
                     "msg": r.get("Message") or r.get("error") or ""}
 
-        aok, adetail, attempts, la = r2approach.approach(
-            _goto, _act, from_pos, tuple(cell), solid)
+        # the sow must stand on a NEIGHBOUR of the farmland cell: the
+        # engine refuses to place a block in a cell the bot occupies
+        # (run 28: target-first approach, silent setblock refusal), so
+        # the candidate list skips the target cell itself
+        cands = [c for c in r2approach.candidates(
+            tuple(cell), solid, from_pos) if c != tuple(cell)]
+        attempts = []
+        aok = False
+        adetail = "no approach candidate"
+        for cand in cands:
+            g = _goto(cand)
+            if not g.get("ok"):
+                attempts.append({"cell": list(cand), "stage": "goto",
+                                 "ok": False, "msg": g.get("msg") or ""})
+                continue
+            a = _act()
+            attempts.append({"cell": list(cand), "stage": "action",
+                             "ok": a["ok"], "msg": a["msg"]})
+            aok = a["ok"]
+            adetail = ("setblock %s via %s -> %s" % (crop_code, cand,
+                                                    a["msg"] or
+                                                    ("ok" if a["ok"] else "refused")))
+            if aok:
+                break
+        la = pol.state(bot).get("LastAction") or {}
         # oracle: a crop block now sits above the farmland cell
         crop_cell = (cell[0], cell[1] + 1, cell[2])
         blocks = pol.cell_blocks(bot, crop_cell)
@@ -282,7 +305,8 @@ def execute_job(pol, bot, base, job, wm, run):
             (b.get("code") or "").startswith("crop-" + mat)
             and b.get("pos") == list(crop_cell) for b in blocks)
         inv_post = inventory_of(pol.state(bot))
-        seed_post = inv_post.get(seed_code, 0)
+        seed_post = (inv_post.get("game:" + seed_code, 0)
+                     + inv_post.get(seed_code, 0))
         ok = aok and crop_present
         detail = ("sow %s on %s -> %s | last_action_ok=%s crop_present=%s"
                   % (crop_code, job.target, adetail, la.get("Ok"),
