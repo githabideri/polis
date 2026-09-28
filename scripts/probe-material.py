@@ -178,13 +178,17 @@ def main():
         if not mine_msg or "line of sight" not in mine_msg:
             break
     out["mine_msg"] = mine_msg
+    # mining is async (~8 s with a tool) - wait for the action to finish
+    # (LastAction is the reliable signal; the block's disappearance alone
+    # can race the scan) before reading the inventory
     t0 = time.time()
-    while time.time() - t0 < 30:
-        if not any(b.get("code") == code and b.get("pos") == list(cell)
-                   for b in scan(cell[0] - 1, 2, cell[2] - 1,
-                                 cell[0] + 1, cell[2] + 1, cell[2] + 1)):
+    while time.time() - t0 < 60:
+        la = state(bot).get("LastAction") or {}
+        if la.get("Name") == "mine" and la.get("Ok") is not None:
+            out["mine_last_action"] = la
             break
         time.sleep(2)
+    time.sleep(2)  # autocollect settle
     post = inventory(state(bot))
     delta = {}
     for c in set(pre) | set(post):
