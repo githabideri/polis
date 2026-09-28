@@ -882,3 +882,47 @@ oracle's sampling window, not about planning or the queue.
   give) implemented; run 11 = the live two-job GOAL COMPLETE (8.5 s);
   rule 9's single-sentence inventory clause adopted (r7 A/B); run 12
   records the mine-oracle async-drop finding. R2 Phases 0-6: complete.
+
+### 12.12 The mine oracle, hardened on live (2026-09-28, runs 13-16)
+
+The mine-goal runs after the milestone exposed and fixed three live
+bugs in the r2 orchestrator's mine path, each recorded in the run
+JSONs (`r2-live-2026-09-28-13..16.json`):
+
+1. **Vacuous-gone** (run 13): the block-gone oracle was
+   `not blocks(...) or not any(...)` - a *failed/empty* scan read as
+   "the block is gone". Fix: gone requires a NON-EMPTY scan (the box
+   always contains the ground layer, so empty is a scan fault, not
+   world state) plus the code/pos match.
+2. **The action's own record is the primary signal** (run 14):
+   LastAction carries the engine's verdict on the action
+   (`mine Ok:false "goto failed: stuck"`, `"Tool required: block
+   needs tier 2"`) - the orchestrator now reads it and the job detail
+   carries the engine's message verbatim. Exception tracebacks go to
+   `/tmp/r2-job-traceback.txt` instead of being swallowed.
+3. **Tool provisioning** (runs 14-15): granite is tier 2; v5's mission
+   setup gave the bot a tool implicitly, the live orchestrator did not
+   - it now gives `pickaxe-iron` deterministically when the bot holds
+   no tool, recorded in the step detail (harness privilege, same
+   register as `supply external`).
+   (Also caught while there: `str.rstrip("_target")` is a character-
+   *set* strip, not a suffix strip - `"mine_target".rstrip(...)` ==
+   `"min"`.)
+
+Outcome of the sequence: the mine goal is now plan-correct (runs
+12-15 all planned the mine job) and the failures are HONEST and
+engine-sourced. The remaining mine-path blockers are live-world, not
+code: the pathfinder's approach can wedge (`goto ... stuck` - the
+probe's neighbour-retry loop is the known remedy, unported), and the
+27B over-rejects the mine plan on some boots (run 16, 3.3 s, with
+three granite blocks in the box - the P5 over-rejection variance,
+not a defect). Mine goal completion end-to-end is the follow-up task:
+port the neighbour-retry approach, re-run.
+
+- **2026-09-28 (~05:15 CEST).** Runs 13-16 closed out the night:
+  the mine oracle is hardened (12.12), the tool-give and
+  `supply external` mechanisms are in and live-proven, the
+  two-job milestone stands (run 11), and the mine end-to-end
+  completion is filed as the follow-up (pathfinder approach +
+  27B rejection variance). All commits in the polis repo;
+  homelab updated.
