@@ -100,11 +100,30 @@ class Polis:
 class LLM:
     def __init__(self, base, model, max_tokens=400):
         self.url = base.rstrip("/") + "/v1/chat/completions"
+        self.base = base.rstrip("/")
         self.model = model
         self.max_tokens = max_tokens
 
+    def _wait_loaded(self, budget=120):
+        """The 35B lives on an exclusive-GPU mux: when its server dies
+        (it runs at the edge of the 12 GB card) the mux reloads it and
+        refuses connections while the load runs (~1 min). Poll the model
+        status instead of failing the whole turn."""
+        t0 = time.time()
+        while time.time() - t0 < budget:
+            try:
+                r = http_json(self.base + "/v1/models", timeout=5)
+                for m in r.get("data", []):
+                    if m.get("id") == self.model:
+                        if (m.get("status") or {}).get("value") == "loaded":
+                            return True
+            except Exception:
+                pass
+            time.sleep(5)
+        return False
+
     def chat(self, messages, timeout=240):
-        r = http_json(self.url, {
+        body = {
             "model": self.model, "temperature": 0.2,
             "max_tokens": self.max_tokens,
             "messages": messages,
@@ -113,7 +132,13 @@ class LLM:
             # both the 27B judge and the 35B) - the action protocol is a
             # short-JSON task, it wants direct answers
             "chat_template_kwargs": {"enable_thinking": False},
-        }, timeout=timeout, retries=1)
+        }
+        try:
+            r = http_json(self.url, body, timeout=timeout, retries=1)
+        except Exception:
+            if not self._wait_loaded():
+                raise
+            r = http_json(self.url, body, timeout=timeout, retries=1)
         try:
             m = r["choices"][0]["message"]
         except (KeyError, IndexError) as e:
@@ -389,7 +414,9 @@ class Oikistes:
             "(goals like 'mine granite x1', 'harvest rye x1', 'sow rye "
             "x1 at site-A', 'place granite at site-A x1 supply "
             "external'); command=<cmd,args> a direct harness command "
-            "(free only). Otherwise answer with plain text.\n"
+            "(free only). Otherwise answer with plain text. You are "
+            "the Oikistes: answer as it, in short plainspoken sentences "
+            "- never echo the input back.\n"
             "Current world (fresh): %s\n"
             "Recent exchanges:\n%s"
             % (autonomy.upper(),
