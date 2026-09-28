@@ -137,27 +137,30 @@ def normalize_inv(inv):
 
 def register_site(wm, pol, bot, goal, fixtures):
     """Make sure the goal's site exists as a fixture (we created it -
-    authoritative identity, doc 5.3). The site is the nearest EMPTY cell
-    2-5 east of the bot (the world persists: earlier runs leave filled
-    sites, so the first empty cell is searched, not assumed)."""
+    authoritative identity, doc 5.3). Convention (the one the P5
+    fixtures use, e.g. C3): a build-site's REQUIREMENT is an empty
+    cell and its condition is whether that empty cell is present - so
+    the prompt line 'requirement=empty now=True/False' reads the same
+    in the live world as in the measured suite.
+    """
     out = []
     if getattr(goal, "at", None) and goal.at not in wm.fixtures:
         st = pol.state(bot)
         pos = st["Bot"]["Pos"]
         bx, bz = int(pos[0]), int(pos[2])
-        cell = None
+        cell, empty = None, False
         for dx in range(2, 6):
             cand = (bx + dx, 3, bz)
             blocks = pol.cell_blocks(bot, cand, pad=0)
-            if not any(b.get("pos") == [cand[0], cand[1], cand[2]]
-                       for b in blocks):
-                cell = list(cand)
+            filled = any(b.get("pos") == [cand[0], cand[1], cand[2]]
+                         for b in blocks)
+            if not filled:
+                cell, empty = list(cand), True
                 break
-        if cell is None:  # everything filled - use the first anyway
-            cell = [bx + 2, 3, bz]
-        wm.register_fixture(goal.at, "build-site", cell, goal.object)
-        present = pol.site_filled(bot, tuple(cell))
-        wm.observe_fixture(goal.at, present, reason="fixture_setup")
+        if cell is None:  # everything filled - the site cannot be a
+            cell = [bx + 2, 3, bz]   # place target (empty cell absent)
+        wm.register_fixture(goal.at, "build-site", cell, "empty")
+        wm.observe_fixture(goal.at, empty, reason="fixture_setup")
     for fid, f in sorted(wm.fixtures.items()):
         cond = wm.fixture_observations.get(fid)
         out.append({"id": fid, "kind": f.kind,
