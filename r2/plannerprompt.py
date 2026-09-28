@@ -57,6 +57,14 @@ RULES
      - that is a LEGAL plan (rule 6); do not check the quantity
      yourself, do not mine to cover it.
 
+EXAMPLE (worked):
+GOAL: place granite at site-A x1
+INVENTORY: (empty)
+no world producer yields granite
+-> [{"id":"j1","type":"give_tool","material":"granite","quantity":1},
+    {"id":"j2","type":"place","target":"site-A","material":"granite",
+     "quantity":1,"depends_on":["j1"]}]
+
 GOAL
 {goal}
 
