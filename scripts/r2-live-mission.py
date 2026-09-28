@@ -280,6 +280,23 @@ def main():
             {"give": item, "qty": qty, "ok": bool(r.get("Ok"))})
         time.sleep(1)
     st = pol.state(bot)
+
+    # 2b. declared external supply (12.10 remediation (a)): the operator
+    # said at intake that harness supply is sanctioned, so the material is
+    # given DETERMINISTICALLY BEFORE the planner runs - the 27B then sees a
+    # place goal it can actually plan (its refusal prior fires on the
+    # pre-supply world). Recorded as job j0 for the queue/run JSON.
+    op = None
+    if getattr(goal, "supply", None) == "external" and goal.verb == "place":
+        item = GIVE_ITEM.get(goal.object, goal.object)
+        r = pol.cmd("give", [item, str(goal.n or 1)], bot)
+        op = Job("j0", "give_tool", source="operator",
+                 material=goal.object, quantity=goal.n or 1)
+        run["supply"] = {"declared": True, "item": item,
+                          "ok": bool(r.get("Ok"))}
+        time.sleep(1)
+        st = pol.state(bot)
+
     inv = normalize_inv(inventory_of(st))
     fixtures = register_site(wm, pol, bot, goal, None)
     gfail = check_goal(goal, [f["id"] for f in fixtures])
@@ -307,17 +324,16 @@ def main():
 
     # 4. the queue drives execution (R2: strictly sequential)
     base = tuple(st["Bot"]["Pos"])
-    if getattr(goal, "supply", None) == "external" and goal.verb == "place":
-        # 12.10 remediation (a): the operator declared external supply at
-        # intake - the give_tool job is inserted DETERMINISTICALLY (no LLM)
-        # so the planner sees a world it can plan; the queue executes both.
-        op = Job("j0", "give_tool", source="operator",
-                 material=goal.object, quantity=goal.n or 1)
-        jobs = [op] + jobs
-        run["supply"] = {"declared": True, "job": op.to_dict()}
+    if op is not None:
+        jobs = [op] + jobs   # j0 already executed pre-planning (2b)
     gs = GoalState(goal, jobs,
-                  ("planner:%s + operator-supply" if "supply" in run
+                  ("planner:%s + operator-supply" if op is not None
                    else "planner:%s") % args.llm_model)
+    if op is not None:
+        gs.job_status[op.id] = "done"
+        gs.log(op.id, "job_done",
+               "operator supply - deterministic, pre-planning (12.10a)")
+        gs.record_measured(goal.object, goal.n or 1)
     job = gs.start()
     while job is not None and gs.status == "running":
         run_jobs(pol, bot, base, gs, job, run, wm)
