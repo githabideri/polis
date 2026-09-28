@@ -108,14 +108,16 @@ class LLM:
         """The 35B lives on an exclusive-GPU mux: when its server dies
         (it runs at the edge of the 12 GB card) the mux reloads it and
         refuses connections while the load runs (~1 min). Poll the model
-        status instead of failing the whole turn."""
+        status instead of failing the whole turn. A server without a
+        status field (vLLM) is loaded if it answers at all."""
         t0 = time.time()
         while time.time() - t0 < budget:
             try:
                 r = http_json(self.base + "/v1/models", timeout=5)
                 for m in r.get("data", []):
                     if m.get("id") == self.model:
-                        if (m.get("status") or {}).get("value") == "loaded":
+                        st = (m.get("status") or {})
+                        if not st or st.get("value") == "loaded":
                             return True
             except Exception:
                 pass
@@ -157,7 +159,13 @@ class Oikistes:
     def __init__(self, args):
         self.args = args
         self.polis = Polis(args.harness, args.uid)
-        self.llm = LLM(args.llm, args.llm_model)
+        # swappable brains: primary (default) + optional alt - the
+        # operator switches at runtime (POST /oikistes/model) to A/B
+        # the models on the same task battery
+        self.models = {"primary": LLM(args.llm, args.llm_model)}
+        if args.alt_llm and args.alt_model:
+            self.models["alt"] = LLM(args.alt_llm, args.alt_model)
+        self.active = "primary"
         self.lock = threading.Lock()
         self.born = time.time()
         self.state_path = os.path.join(args.datadir, "oikistes-state.json")
@@ -511,7 +519,8 @@ class Oikistes:
                 if last:
                     msg += ("\nAnswer NOW in plain text - no JSON "
                             "action, a short report of what happened.")
-                out = self.llm.chat([{"role": "user", "content": msg}])
+                out = self.models[self.active].chat(
+                    [{"role": "user", "content": msg}])
                 if not last and out.startswith("{"):
                     try:
                         act = json.loads(out)
@@ -537,12 +546,21 @@ class Oikistes:
             self.lock.release()
 
     def status(self):
-        return {"name": "Oikistes", "model": self.args.llm_model,
+        return {"name": "Oikistes",
+                "model": self.models[self.active].model,
+                "brain": self.active,
+                "models": {k: v.model for k, v in self.models.items()},
                 "autonomy": self.autonomy(),
                 "bot": self.bot,
                 "uptime_s": int(time.time() - self.born),
                 "memory_turns": self.MEMORY_TURNS,
                 "transcript_lines": len(self.transcript(10 ** 6))}
+
+    def set_brain(self, brain):
+        if brain not in self.models:
+            return None
+        self.active = brain
+        return self.status()
 
 
 # ----------------------------------------------------------------------
@@ -603,6 +621,16 @@ def make_handler(oik):
                     self._send(200, {"ok": True})
                 except Exception as e:
                     self._send(500, {"error": repr(e)})
+            elif u.path == "/oikistes/model":
+                brain = str(body.get("brain") or body.get("id") or "")
+                st = oik.set_brain(brain)
+                if st is None:
+                    self._send(400, {"error": "unknown brain %r; "
+                                             "available: %s"
+                                             % (brain,
+                                                ", ".join(oik.models))})
+                else:
+                    self._send(200, st)
             else:
                 self._send(404, {"error": "unknown path"})
 
@@ -616,9 +644,13 @@ def main():
     ap.add_argument("--uid", required=True,
                     help="owner player uid for harness contexts")
     ap.add_argument("--llm", required=True,
-                    help="llama.cpp/vLLM base url serving the planner model")
+                    help="llama.cpp/vLLM base url of the primary brain")
     ap.add_argument("--llm-model", required=True,
-                    help="the conversational model id (35B-class)")
+                    help="the primary brain's model id")
+    ap.add_argument("--alt-llm", default="",
+                    help="optional second brain (A/B comparison)")
+    ap.add_argument("--alt-model", default="",
+                    help="the second brain's model id")
     ap.add_argument("--datadir", default=os.path.join(REPO, "data"))
     ap.add_argument("--port", type=int, default=8587)
     ap.add_argument("--host", default="127.0.0.1")

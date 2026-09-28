@@ -611,6 +611,7 @@ const oik = {
     input: () => $('oikistesInput'),
     send: () => $('oikistesSend'),
     select: () => $('autonomySelect'),
+    brain: () => $('oikBrain'),
 };
 
 function oikLog(text, cls = '') {
@@ -643,12 +644,34 @@ async function setAutonomy(preset) {
 async function oikStatus() {
     try {
         const r = await (await fetch('/polis/oikistes/status')).json();
-        oikLog(`Oikistes ready — model ${r.model}, autonomy ${r.autonomy}, body ${r.bot != null ? 'bot ' + r.bot : 'spawning…'}`);
+        const sel = oik.brain();
+        if (r.models) {
+            for (const [k, id] of Object.entries(r.models)) {
+                let opt = [...sel.options].find(o => o.value === k);
+                if (!opt) { opt = new Option('', k, false, false); sel.add(opt); }
+                opt.textContent = `${k} · ${id}`;
+            }
+            sel.value = r.brain || 'primary';
+        }
+        oikLog(`Oikistes ready — brain ${r.brain} (${r.model}), autonomy ${r.autonomy}, body ${r.bot != null ? 'bot ' + r.bot : 'spawning…'}`);
         return r;
     } catch (e) {
         oikLog(`Oikistes service unreachable (${e.message}) — messages will fail until it is back.`, 'error');
         return null;
     }
+}
+
+async function oikSetBrain(brain) {
+    try {
+        const res = await fetch('/polis/oikistes/model', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ brain }),
+        });
+        const r = await res.json();
+        if (r.error) { oikLog(r.error, 'error'); return; }
+        oikLog(`brain → ${r.brain} (${r.model})`);
+    } catch (e) { oikLog(`brain switch failed: ${e.message}`, 'error'); }
 }
 
 async function oikTranscript(n = 24) {
@@ -698,6 +721,7 @@ async function oikSend() {
 
 function wireOikistes() {
     oik.select().addEventListener('change', (e) => setAutonomy(e.target.value));
+    oik.brain().addEventListener('change', (e) => oikSetBrain(e.target.value));
     oik.send().addEventListener('click', oikSend);
     oik.input().addEventListener('keydown', (e) => { if (e.key === 'Enter') oikSend(); });
     loadAutonomy();
