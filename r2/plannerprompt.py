@@ -43,9 +43,12 @@ RULES
    actually yields (drops=) may differ - that is a consequence, not a
    blocker, for mine/harvest goals.
    "sow X" plants seeds of crop X on a farmland site. Seeds come from
-   HARVESTING that crop (its drops= contains seeds-*). If the
-   inventory holds no seeds, the plan is [harvest <same crop>, sow
-   <crop>] - the harvest produces the seeds the sow consumes.
+   HARVESTING a crop resource of X: crops yield seeds and grain when
+   harvested - established world knowledge, so a "?" or empty drops=
+   column on a crop is NO obstacle (the validator does not enforce
+   drop codes for unmeasured resources). If the INVENTORY already
+   holds a seeds-* item of X, a single sow job suffices; otherwise
+   the plan is [harvest <crop X>, sow <crop X>].
 6. External supply: if a place goal needs a material that no world
    producer yields and the inventory lacks it, a give_tool job is a
    LEGAL plan (harness supply); use it, or reject if you judge the goal
