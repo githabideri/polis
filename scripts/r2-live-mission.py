@@ -201,11 +201,20 @@ def execute_job(pol, bot, base, job, wm, run):
                    "pickup": "pickup"}[job.type]
         pre = inventory_of(pol.state(bot))
         res = v5.execute(pol, bot, action, cell, base, mission)
-        time.sleep(2)
+        # the drop lands in the cargo ASYNCHRONOUSLY (measured ~8 s after
+        # the block is gone, run 12) - poll for it instead of a fixed
+        # sleep; the block-gone check and the cargo diff are separate
+        # oracles on the same fresh observations
         gone = not pol.cell_blocks(bot, cell) or not any(
             b.get("code") == rec.code and b.get("pos") == list(cell)
             for b in pol.cell_blocks(bot, cell))
-        post = inventory_of(pol.state(bot))
+        post = {}
+        for _ in range(9):  # up to ~18 s for the cargo registration
+            time.sleep(2)
+            post = inventory_of(pol.state(bot))
+            if any(post.get(k, 0) > pre.get(k, 0)
+                   for k in set(pre) | set(post)):
+                break
         for k in set(pre) | set(post):
             if post.get(k, 0) > pre.get(k, 0):
                 measured[k] = post[k] - pre[k]
