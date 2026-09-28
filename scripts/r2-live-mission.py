@@ -200,6 +200,27 @@ def execute_job(pol, bot, base, job, wm, run):
         mission = {"mine": "mine", "harvest": "harvest",
                    "pickup": "pickup"}[job.type]
         pre = inventory_of(pol.state(bot))
+        # the mine path needs a tool (granite is tier 2): v5's mission
+        # setup gave one implicitly; the live orchestrator does the same
+        # deterministically and records it (harness privilege)
+        st0 = pol.state(bot)
+        b0 = st0.get("Bot") or {}
+        tool_codes = set()
+        for k in ("RightHand", "LeftHand"):
+            it = b0.get(k)
+            if it and it.get("Code"):
+                tool_codes.add(it["Code"])
+        for it in (b0.get("Backpack") or []):
+            if it.get("Code"):
+                tool_codes.add(it["Code"])
+        if not any((t or "").startswith(("pickaxe", "shovel", "axe", "hoe"))
+                   for t in tool_codes):
+            tr = pol.cmd("give", ["pickaxe-iron", "1"], bot)
+            pre = inventory_of(pol.state(bot))
+            detail = ("%s %s -> gave pickaxe-iron ok=%s; "
+                      % (job.type, rec.code, bool(tr.get("Ok"))))
+        else:
+            detail = "%s %s -> " % (job.type, rec.code)
         res = v5.execute(pol, bot, action, cell, base, mission)
         # the drop lands in the cargo ASYNCHRONOUSLY (measured ~8 s after
         # the block is gone, run 12) - poll for it instead of a fixed
@@ -229,9 +250,9 @@ def execute_job(pol, bot, base, job, wm, run):
             if post.get(k, 0) > pre.get(k, 0):
                 measured[k] = post[k] - pre[k]
         ok = la_ok and gone
-        detail = ("%s %s -> last_action_ok=%s (%s) gone=%s measured=%s"
-                  % (job.type, rec.code, la.get("Ok"),
-                     (la.get("Msg") or "")[:60], gone, measured))
+        detail += (" last_action_ok=%s (%s) gone=%s measured=%s"
+                   % (la.get("Ok"), (la.get("Msg") or "")[:60], gone,
+                      measured))
         return ok, detail, measured
 
     if job.type == "place":
