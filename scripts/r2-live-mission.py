@@ -198,6 +198,30 @@ def register_site(wm, pol, bot, goal, fixtures):
     return out
 
 
+def goto_arrive(pol, bot, cell, timeout=45):
+    """Position-verified goto (09-29). v5.goto_wait polls the bot's
+    LastAction - which is the LAST RECORDED action: when a new goto
+    starts, the PREVIOUS goto's Ok=True result can still be there, an
+    instant false 'arrived'. The build executor then places from
+    wherever the bot actually is - and that drift is what embedded
+    the bot in its own work. Here, ok means the bot IS at the cell
+    (within half a cell of the centre); a recorded goto-failure or
+    timeout is a real failure."""
+    pol.cmd("goto", [str(cell[0]), str(cell[1]), str(cell[2]),
+                     "true", "0.02", "true"], bot)
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        st = pol.state(bot)
+        la = st.get("LastAction") or {}
+        pos = (st.get("Bot") or {}).get("Pos") or [0, 0, 0]
+        if all(abs(pos[i] - (cell[i] + 0.5)) <= 0.5 for i in range(3)):
+            return True
+        if la.get("Name") == "goto" and la.get("Ok") is False:
+            return False
+        time.sleep(0.5)
+    return False
+
+
 def execute_job(pol, bot, base, job, wm, run):
     """One job's actuation + oracle. Returns (ok, detail, measured,
     execution, oracle). The split is the 13.2 invariant: the ENGINE'S
@@ -626,9 +650,7 @@ def execute_job(pol, bot, base, job, wm, run):
         if (origin[0] <= bp0[0] < origin[0] + w and
                 origin[2] <= bp0[2] < origin[2] + d):
             ev = [origin[0] - 2, origin[1], origin[2] - 2]
-            try:
-                v5.goto_wait(pol, bot, ev)
-            except Exception:
+            if not goto_arrive(pol, bot, ev):
                 st, det = _emb()
                 if st != "OK":
                     return (False, "structural pre-flight: bot inside "
@@ -685,13 +707,10 @@ def execute_job(pol, bot, base, job, wm, run):
                             measured, {}, {"cells": None})
                 placed_here = False
                 for cand in cands:
-                    try:
-                        v5.goto_wait(pol, bot, cand)
-                    except Exception:
-                        # a failed goto is not automatically "try the
-                        # next candidate": if the body itself is the
-                        # problem (embedded/trapped), no candidate
-                        # helps - abort with the structural reason
+                    # position-verified: the bot must ACTUALLY be on
+                    # the candidate before a place is issued (a
+                    # stale LastAction made the old goto_wait lie)
+                    if not goto_arrive(pol, bot, cand):
                         st, det = _emb()
                         if st != "OK":
                             return (False, "structural: standing goto "
