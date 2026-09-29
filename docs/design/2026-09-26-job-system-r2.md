@@ -1303,3 +1303,76 @@ itself is the standing argument for the dedicated planner model
   bot-on-platform findings recorded; the `place` command's ok
   signal is established as UNRELIABLE (the oracle is the only
   ground truth for placement).
+
+### 13.11 (09-29 evening) - The building is DATA: the plan system
+
+The "ring of floating blocks" was not a building - that criticism is
+accepted and is the point of this section. The fix is a layer, not a
+patch: **a building is a plan file, not code**.
+
+- **`builds/<name>.json`** - a building is data: relative block list
+  (dx,dy,dz + material), `materials` (the shopping list - must
+  exactly equal the block sum, closed-loop check), `entry` (the
+  door), `provides` (the survival tags - shelter/... - that queries
+  ask of it). The first plan: **the hut** (3x3: 9 floor, 7 walls
+  with one door, 9 roof; 25 granite; provides shelter).
+- **`r2/buildplans.py`** - load/validate/compile: footprint bounds,
+  the layer cap, the material ledger, floor solidity, door
+  openness, and `phases()` -> ordered absolute-cell groups
+  floor -> walls -> roof. **The door's semantics were the subtle
+  part**: the entry column may carry the threshold floor (dy=0) and
+  the overhang roof (the plan's top layer); only the layers in
+  between (the wall layer(s)) must stay open. The first draft of
+  the rule rejected both the threshold and the overhang - the test
+  caught it.
+- **Goal verb `build-plan <id> at <site>`** - deterministic compiler
+  (like sow/build): load the plan, supply per material (external
+  pre-give or the endogenous chain), one `build_plan` job.
+  **Goal-scoped like sow**: NOT in the 27B's planner vocabulary (10
+  types, P5 baseline untouched) until an A/B gate proves it earns
+  its place.
+- **The executor climbs its own work.** Each phase is placed from
+  the layer BELOW, so the bot walks onto what it just built: the
+  floor is placed from outside the footprint (same-layer, the
+  proven 17:37 geometry), the walls at foot level while standing on
+  the floor, the roof at foot level while standing on the walls.
+  Standing candidates are the target's neighbours (never the target
+  cell itself - the engine refuses places into the bot's own cell),
+  support-sorted. Per-cell verification (the phantom rule),
+  bounded attempts, and the oracle = every cell present AND the
+  door column open at the wall layer.
+- **Live (run 29-4): the hut built in 131 s, GOAL COMPLETE, 25/25
+  present, door open.** The verification that matters: the
+  operator's own eyes - a 3x3 granite shell with a single doorway
+  on the meadow, shot from a vantage point. It is rough (raw
+  granite, flat roof on wall tops) and correct (closed shell, one
+  opening, solid floor). The floating-cluster era is over.
+- **Why this is the right shape for the project's goal** (a bot that
+  survives in a normal world): the creative-mode supply path is the
+  ONLY thing that is fake - the plan, the validation, the phased
+  build, the oracle, the "provides" tags are all real and carry
+  over to hardcore unchanged, where `materials` becomes a
+  procurement chain (mine -> craft -> place) and `provides` becomes
+  what the survival queries ask for. New buildings arrive as new
+  files: repo directory now, a git submodule or an online library
+  later - and an Oikistes that composes primitives into something
+  that stands well can file its composition back into the library.
+
+### 13.12 (09-29 evening) - The verification standard, made explicit
+
+Two of today's near-misses (declaring a build complete on a
+command's `ok` flag; shipping a view-control inversion that was
+"reported" fixed before being re-checked) come from one root:
+**completion was being read from the system's self-report instead
+of the world**. The standard, henceforth, for build-type work:
+1. the oracle (block-level census) is the success signal - never
+   the action's ok flag (phantom-verified in 13.10);
+2. a BUILD ends with looking at a picture of the result (observer
+   or UI frame) - not with a log line;
+3. a UI change ends with a before/after through the user's path
+   (the button clicks, the frame, the numbers), before it is
+   called fixed;
+4. measuring beats reasoning: the turn-direction question took one
+   before/after measurement to settle. The yaw convention is now
+   pinned: **the game's yaw increases when the view turns LEFT**
+   (turnleft = +yaw, turnright = -yaw; pitch: 0 level, + up).
