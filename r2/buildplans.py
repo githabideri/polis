@@ -17,8 +17,9 @@ Pure: reads the file handed to it; no harness, no world.
 import json
 import os
 
-#: layers above the site base a plan may occupy (floor, walls, roof, +1)
-MAX_LAYERS = 4
+#: layers above the site base a plan may occupy (floor, up to three
+#: wall layers, up to three stepped roof layers)
+MAX_LAYERS = 7
 
 
 class PlanError(Exception):
@@ -35,8 +36,15 @@ class BuildingPlan:
         self.materials = dict(materials)           # material -> total qty
         self.blocks = [((b["d"][0], b["d"][1], b["d"][2]), b["m"])
                        for b in blocks]            # [(dx,dy,dz), material]
-        self.entry = tuple(entry)                  # (dx, dz) - the door
+        self.entry = tuple(entry)                  # (dx, dz[, door_height])
         self.provides = list(provides)             # survival function tags
+
+    @property
+    def door_height(self):
+        # the opening runs from layer 1 to door_height (2-tuple entry
+        # = a 1-high opening); a lintel above it and anything beyond
+        # are normal architecture
+        return self.entry[2] if len(self.entry) > 2 else 1
 
     # -- validation (runs at load) --------------------------------------
     def validate(self):
@@ -64,17 +72,18 @@ class BuildingPlan:
         if actual != declared:
             raise PlanError("materials %r do not match the block list %r"
                             % (self.materials, actual))
-        ex, ez = self.entry
+        if len(self.entry) not in (2, 3):
+            raise PlanError("entry must be (dx, dz) or (dx, dz, "
+                            "door_height)")
+        ex, ez = self.entry[0], self.entry[1]
         if not (0 <= ex < w and 0 <= ez < d):
             raise PlanError("entry %r outside footprint" % (self.entry,))
-        # the DOOR: the entry column must be open in every layer
-        # EXCEPT the floor (a threshold) and the plan's top layer (an
-        # overhang roof). For the hut (3 layers) that leaves the wall
-        # layer as the actual opening. A wall-only plan (2 layers)
-        # has its top layer = the wall, so its entry stays open too.
-        max_dy = max(dy for (_, dy, _), _ in self.blocks)
+        # the DOOR: the entry column must be open in every layer of
+        # the opening (1 .. door_height). The floor below is a
+        # threshold, the layer above the opening a lintel (optional),
+        # and the top layers an overhang - all normal architecture.
         for (dx, dy, dz), _ in self.blocks:
-            if (dx, dz) == (ex, ez) and 0 < dy < max_dy:
+            if (dx, dz) == (ex, ez) and 1 <= dy <= self.door_height:
                 raise PlanError("entry cell (%d,%d) is blocked at layer %d "
                                 "- the door must stay open" % (ex, ez, dy))
         # the floor layer must be solid - nothing is built on air

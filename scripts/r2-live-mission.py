@@ -642,13 +642,16 @@ def execute_job(pol, bot, base, job, wm, run):
             cell = [origin[0] + dx, origin[1] + dy, origin[2] + dz]
             if _has(mat, cell):
                 present += 1
-        ex, ez = plan.entry
-        # the door oracle checks the WALL layer (origin+1): the floor
-        # under the door is a threshold, the roof over it is fine
-        door = [origin[0] + ex, origin[1] + 1, origin[2] + ez]
-        door_bs = pol.cell_blocks(bot, tuple(door), pad=0) or []
-        door_open = not any(b.get("pos") == list(door)
-                            for b in door_bs)
+        ex, ez = plan.entry[0], plan.entry[1]
+        # the door oracle checks the whole OPENING (layers 1..
+        # door_height): the floor under the door is a threshold, the
+        # lintel above it and the roof over it are architecture
+        door_open = True
+        for h in range(1, plan.door_height + 1):
+            door = [origin[0] + ex, origin[1] + h, origin[2] + ez]
+            door_bs = pol.cell_blocks(bot, tuple(door), pad=0) or []
+            if any(b.get("pos") == list(door) for b in door_bs):
+                door_open = False
         la = (pol.state(bot).get("LastAction") or {})
         ok = (present == plan.total_blocks()) and door_open
         msg = ("build-plan %s at %s -> present=%d/%d door_open=%s %s"

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Building plan system tests (13.11): load, validate, compile.
+"""Building plan system tests (13.11, 09-29 evening rev 2): the hut is a
+5x5 with 3-high walls and a stepped roof - load, validate, compile.
 Pure - no harness, no world."""
 import json
 import os
@@ -27,53 +28,57 @@ def check(name, cond, detail=""):
 
 
 BUILDS = os.path.join(REPO, "builds")
+W = D = 5
 
 # 1. the hut loads and validates
 p = load_plan(os.path.join(BUILDS, "hut.json"))
-check("hut loads", p.name == "hut" and p.footprint == (3, 3))
-check("hut has 25 blocks", p.total_blocks() == 25,
+check("hut loads", p.name == "hut" and p.footprint == (5, 5))
+check("hut has 106 blocks", p.total_blocks() == 106,
       str(p.total_blocks()))
-check("hut materials closed (25 granite)",
-      p.materials == {"granite": 25}, str(p.materials))
+check("hut materials closed (106 granite)",
+      p.materials == {"granite": 106}, str(p.materials))
 check("hut provides shelter", "shelter" in p.provides)
+check("hut door is 1 wide x 2 high at (2,0)",
+      p.entry == (2, 0, 2) and p.door_height == 2)
 
-# 2. the hut is well-formed (validate() passed at load - assert the
-#    invariants directly too): the door column is open at the WALL
-#    layer (a threshold floor below and an overhang roof above are
-#    both normal architecture)
-check("hut wall layer is open at the door",
-      (1, 1, 0) not in {(dx, dy, dz) for (dx, dy, dz), _ in p.blocks})
-check("hut door column has threshold floor + overhang roof",
-      (1, 0, 0) in {(dx, dy, dz) for (dx, dy, dz), _ in p.blocks} and
-      (1, 2, 0) in {(dx, dy, dz) for (dx, dy, dz), _ in p.blocks})
+# 2. the geometry invariants (validate() passed at load - assert the
+#    shape directly too)
+cells = {(dx, dy, dz) for (dx, dy, dz), _ in p.blocks}
+check("hut opening is empty (the two door cells)",
+      (2, 1, 0) not in cells and (2, 2, 0) not in cells)
+check("hut has the lintel above the opening",
+      (2, 3, 0) in cells)
+check("hut has the threshold floor under the door",
+      (2, 0, 0) in cells)
 floor = {(dx, dz) for (dx, dy, dz), _ in p.blocks if dy == 0}
-check("hut floor is the full 3x3",
-      floor == {(x, z) for x in range(3) for z in range(3)})
-walls = {(dx, dz) for (dx, dy, dz), _ in p.blocks if dy == 1}
-check("hut walls = perimeter ring minus the door",
-      walls == {(x, z) for x in range(3) for z in range(3)
-                if (x, z) != (1, 1)} - {(1, 0)})
-roof = {(dx, dz) for (dx, dy, dz), _ in p.blocks if dy == 2}
-check("hut roof is the full 3x3",
-      roof == {(x, z) for x in range(3) for z in range(3)})
+check("hut floor is the full 5x5",
+      floor == {(x, z) for x in range(5) for z in range(5)})
+perim = {(x, z) for x in range(5) for z in range(5)
+         if x in (0, 4) or z in (0, 4)}
+walls = {(dx, dz) for (dx, dy, dz), _ in p.blocks if 1 <= dy <= 3}
+check("hut walls = perimeter x3 minus the 2 opening cells",
+      len([c for c in p.blocks if 1 <= c[0][1] <= 3]) == 46 and
+      walls == perim, str(len([c for c in p.blocks
+                               if 1 <= c[0][1] <= 3])))
+roof = {(dx, dy, dz) for (dx, dy, dz), _ in p.blocks if dy >= 4}
+tier = lambda dy: {(dx, dz) for (dx, d2, dz) in roof if d2 == dy}
+check("hut roof is a stepped 5x5 -> 3x3 -> 1x1",
+      len(tier(4)) == 25 and len(tier(5)) == 9 and len(tier(6)) == 1
+      and tier(6) == {(2, 2)})
 
-# 3. compilation: phases ordered floor -> walls -> roof, absolute cells
+# 3. compilation: phases ordered bottom-up, absolute cells
 phases = p.phases([10, 3, 20])
-names = [n for n, _ in phases]
-check("phases ordered floor,walls,roof", names == ["floor", "walls",
-                                                   "roof"], str(names))
-by_name = dict((n, cs) for n, cs in phases)
-check("floor phase: 9 blocks at origin layer",
-      len(by_name["floor"]) == 9 and
-      all(c[1] == 3 for c, _ in by_name["floor"]))
-check("walls phase: 7 blocks one layer up",
-      len(by_name["walls"]) == 7 and
-      all(c[1] == 4 for c, _ in by_name["walls"]))
-check("roof phase: 9 blocks two layers up",
-      len(by_name["roof"]) == 9 and
-      all(c[1] == 5 for c, _ in by_name["roof"]))
+by_dy = {}
+for n, cs in phases:
+    dy = cs[0][0][1] - 3
+    by_dy[dy] = by_dy.get(dy, 0) + len(cs)
+check("phases ordered bottom-up (dy 0..6)",
+      list(by_dy) == [0, 1, 2, 3, 4, 5, 6], str(list(by_dy)))
+check("phase sizes 25/15/15/16/25/9/1 (door cells leave the wall tiers)",
+      [by_dy[d] for d in range(7)] == [25, 15, 15, 16, 25, 9, 1],
+      str([by_dy[d] for d in range(7)]))
 check("no two phases share a cell",
-      len({c for n, cs in phases for c, _ in cs}) == 25)
+      len({c for n, cs in phases for c, _ in cs}) == 106)
 
 # 4. validation failures
 def plan_file(d):
@@ -94,26 +99,31 @@ def expect_error(name, d, needle):
         os.unlink(path)
 
 
-base = json.load(open(os.path.join(BUILDS, "hut.json")))
-d = dict(base)
-d["materials"] = {"granite": 24}          # wrong total
+def fresh():
+    return json.load(open(os.path.join(BUILDS, "hut.json")))
+
+
+d = fresh()
+d["materials"] = {"granite": 105}            # wrong total
 expect_error("materials mismatch rejected", d, "do not match")
-d = json.load(open(os.path.join(BUILDS, "hut.json")))
-d["entry"] = [0, 0]                        # a walled cell
-expect_error("blocked entry rejected", d, "door must stay open")
-d = json.load(open(os.path.join(BUILDS, "hut.json")))
+d = fresh()
+d["blocks"].append({"d": [2, 1, 0], "m": "granite"})
+d["materials"] = {"granite": 107}            # block inside the opening
+expect_error("blocked opening rejected", d, "door must stay open")
+d = fresh()
 d["blocks"] = [b for b in d["blocks"]
-               if not (b["d"][0] == 1 and b["d"][1] == 0
-                       and b["d"][2] == 1)]  # floor hole
-d["materials"] = {"granite": 24}
+               if not (b["d"][0] == 2 and b["d"][1] == 0
+                       and b["d"][2] == 2)]  # floor hole
+d["materials"] = {"granite": 105}
 expect_error("floor hole rejected", d, "floor is not solid")
-d = json.load(open(os.path.join(BUILDS, "hut.json")))
-d["blocks"] = [b for b in d["blocks"] if b["d"][1] < 3]
-d["blocks"].append({"d": [0, 4, 0], "m": "granite"})
-d["materials"] = {"granite": 25}
+d = fresh()
+d["blocks"] = [b for b in d["blocks"] if b["d"][1] < 7]
+d["blocks"].append({"d": [0, 7, 0], "m": "granite"})
+d["materials"] = {"granite": 107}
 expect_error("layer above the cap rejected", d, "layer")
-d = json.load(open(os.path.join(BUILDS, "hut.json")))
+d = fresh()
 d["blocks"] = []
+d["materials"] = {}
 expect_error("empty plan rejected", d, "no blocks")
 try:
     load_plan(os.path.join(BUILDS, "no-such-building.json"))
