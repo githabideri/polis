@@ -442,3 +442,23 @@ real corpus, which starts with the rejection data we already have).
   band; r9 remains reference). The place command's ok signal is
   unreliable (phantom ok=True on bot-occupied cells) - the oracle is
   the ground truth for placement.
+
+## 13.11 the building plan system - the hut is BUILT (2026-09-29 evening)
+
+- A building is **data**: `builds/<name>.json` (relative blocks,
+  `materials` = the shopping list, `entry` = the door, `provides` =
+  survival tags). `r2/buildplans.py` validates (footprint, layer cap,
+  material ledger, floor solidity, door openness - the door column
+  may carry threshold floor and overhang roof; only the wall layer
+  must stay open) and compiles to phases.
+- Goal verb `build-plan <id> at <site>`: deterministic compiler (like
+  sow), goal-scoped - NOT yet in the 27B's planner vocabulary.
+- The executor climbs its own work: floor from outside the
+  footprint, walls at foot level on the floor, roof at foot level on
+  the walls; per-cell verification; door oracle.
+- **Run 29-4: the hut built in 131 s - 25/25 present, door open -
+  and LOOKED AT** (a 3x3 granite shell with a doorway on the meadow).
+  Rough, correct: a building, not a floating cluster.
+- The verification standard (13.12): oracle over ok-flag, picture
+  over log line, measure over reason. Yaw convention pinned: the
+  game's yaw increases when the view turns LEFT.
