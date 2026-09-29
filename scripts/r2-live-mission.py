@@ -672,6 +672,8 @@ def execute_job(pol, bot, base, job, wm, run):
                 if _has(mat, cell):
                     landed += 1
                     parts.append("%s%s:pre" % (phase, cell))
+                    print("[build] %s %s: pre (already present, skip)"
+                          % (phase, cell), flush=True)
                     continue
                 L = cell[1]  # the block's layer; the bot's feet go to L
                 if phase == "floor":
@@ -720,10 +722,24 @@ def execute_job(pol, bot, base, job, wm, run):
                                     "(- %s)" % (phase, cell, st, det),
                                     measured, {}, {"cells": None})
                         continue
-                    res = v5.execute(pol, bot, "place_block", cell,
-                                     base, "build",
-                                     buildblock=_item(mat))
-                    time.sleep(1)
+                    # DIRECT place (09-29): the harness command is
+                    # async (returns "placing..."); the result is read
+                    # from the WORLD (re-scan), the action record is
+                    # diagnostic only. v5.execute's LastAction poll
+                    # can read stale and burns its 90 s budget per
+                    # cell (that is what made the mission crawl).
+                    pol.cmd("place", [_item(mat)] + [str(c) for c in cell],
+                            bot, timeout=120)
+                    t_cell = time.time()
+                    while time.time() - t_cell < 12:
+                        time.sleep(1)
+                        if _has(mat, cell):
+                            break
+                    la = (pol.state(bot).get("LastAction") or {})
+                    print("[build] %s %s: %s" % (phase, cell,
+                                                 "landed" if _has(mat, cell)
+                                                 else "attempt(%s)" % la.get("Msg", "?")),
+                          flush=True)
                     if _has(mat, cell):
                         # BIDIRECTIONAL oracle: the target gained its
                         # block AND the body is still clear. The
@@ -744,8 +760,8 @@ def execute_job(pol, bot, base, job, wm, run):
                         placed_here = True
                         parts.append("%s%s:landed" % (phase, cell))
                         break
-                    parts.append("%s%s:attempt(ok=%s)"
-                                 % (phase, cell, res.get("ok")))
+                    parts.append("%s%s:attempt(%s)"
+                                 % (phase, cell, la.get("Msg", "?")))
         # oracle: every cell present, and the door (entry) still open
         present = 0
         for (dx, dy, dz), mat in plan.blocks:
