@@ -442,16 +442,23 @@ class Oikistes:
             "mission itself harvests the seed and sows it; never "
             "pre-harvest for it. A 'build <material> xN at <site>' "
             "mission places N blocks as a ring platform at the site "
-            "(add 'supply external' if the bot holds none). Suggest "
-            "only work you can actually order from this vocabulary; if "
-            "the user wants something outside it (buildings, crafting, "
-            "cooking, smelting), say plainly that the job system has "
-            "no verb for that yet, and offer the closest thing you "
-            "can order. After each action you see its result; once "
-            "you are done acting you MUST answer in plain text with a "
-            "short report. You are the Oikistes: answer as it, in "
-            "short plainspoken sentences - never echo the input "
-            "back.\n"
+            "(add 'supply external' if the bot holds none). "
+            "BUILDINGS: 'build-plan <id> at <site>' erects a whole "
+            "building from the library; plans available now: %s. A "
+            "building is DATA (a plan file), not a fixed shape - new "
+            "buildings arrive as new files, and a composition of "
+            "build primitives that stands well is worth saving as "
+            "one. A hut means: a floor, walls with ONE opening (the "
+            "door), a roof over - a place to shelter from weather and "
+            "the night. Suggest only work you can actually order from "
+            "this vocabulary; if the user wants something outside it "
+            "(crafting, cooking, smelting), say plainly that the job "
+            "system has no verb for that yet, and offer the closest "
+            "thing you can order. After each action you see its "
+            "result; once you are done acting you MUST answer in "
+            "plain text with a short report. You are the Oikistes: "
+            "answer as it, in short plainspoken sentences - never "
+            "echo the input back.\n"
             "Current world (fresh): %s\n"
             "Recent exchanges:\n%s"
             % (autonomy.upper(),
@@ -460,7 +467,7 @@ class Oikistes:
                 "guarded": "you may order missions and give items; "
                            "direct commands are denied",
                 "free": "all tools are open"}[autonomy],
-               tools, digest,
+               tools, ", ".join(self.plans) or "none yet", digest,
                memory or "(none yet)"))
 
     def memory_text(self):

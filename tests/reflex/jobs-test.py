@@ -49,10 +49,18 @@ f = Failure("unsupported_goal", "verb fly", goal="fly x")
 check("unsupported_goal layer=goal", f.layer == "goal")
 
 # --- job catalog ----------------------------------------------------------
-check("catalog covers the v5 families + 12.1 + 13.7 sow + 09-28 build",
+check("catalog covers the v5 families + 12.1 + 13.7 sow + 09-28 build + 13.11 plan",
       set(JOB_CATALOG) == {"mine", "harvest", "place", "goto",
                            "give_tool", "pickup", "travel", "wait",
-                           "sow", "build"})
+                           "sow", "build", "build_plan"})
+from r2.jobs import PLANNER_JOB_TYPES
+check("build_plan is GOAL-SCOPED (not in the planner vocabulary yet)",
+      "build_plan" not in PLANNER_JOB_TYPES and
+      "build" in PLANNER_JOB_TYPES and len(PLANNER_JOB_TYPES) == 10)
+g4 = Goal.from_dict({"verb": "build-plan", "object": "hut",
+                    "at": "site-A"})
+check("build-plan goal (plan id as object)",
+      g4.verb == "build-plan" and g4.object == "hut")
 check("give_tool is external", JOB_CATALOG["give_tool"]["source"] == "external")
 check("mine/harvest produce from world",
       all(JOB_CATALOG[t]["produces"] and JOB_CATALOG[t]["source"] == "world"

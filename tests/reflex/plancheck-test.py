@@ -214,6 +214,28 @@ jobs, f = validate_plan(
 check("build matching the goal's site passes",
       jobs is not None and f is None, str(f and f.to_dict()))
 
+# 16. build_plan (13.11): goal-scoped - only a build-plan goal may
+#     carry one; it must target the goal's site
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"build_plan","plan":"hut","target":"site-A"}]',
+    INDEX, INV_GRANITE, goal=_G(verb="build-plan", object="hut",
+                                at="site-A"))
+check("build-plan goal: build_plan job at the goal's site passes",
+      jobs is not None and f is None, str(f and f.to_dict()))
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"build_plan","plan":"hut","target":"site-A"}]',
+    INDEX, INV_GRANITE, goal=_G(verb="mine", object="granite"))
+check("build_plan outside a build-plan goal rejected (vocabulary gate)",
+      jobs is None and f.code == "planner_invalid_json",
+      str(f and f.to_dict()))
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"build_plan","plan":"hut","target":"site-A"}]',
+    INDEX, INV_GRANITE, goal=_G(verb="build-plan", object="hut",
+                                at="site-B"))
+check("build_plan at a different site than the goal rejected",
+      jobs is None and f.code == "planner_invalid_reference",
+      str(f and f.to_dict()))
+
 print()
 print("plancheck-test: %d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)

@@ -85,6 +85,17 @@ def validate_plan(plan_raw, index, inventory, goal=None):
                 "planner_invalid_json",
                 "quantity %d exceeds the %d cap" % (j.quantity, MAX_QUANTITY),
                 job_id=jid)
+        # build_plan is GOAL-SCOPED (13.11): it exists in the catalog
+        # but only the deterministic compiler may emit it - a planner
+        # plan carrying one is outside the vocabulary it was given
+        # (the 27B learns it via an A/B round, like sow did).
+        if j.type == "build_plan" and \
+                getattr(goal, "verb", None) != "build-plan":
+            return None, Failure(
+                "planner_invalid_json",
+                "build_plan is outside the planner vocabulary "
+                "(deterministic-compiler scoped)",
+                job_id=jid)
         jobs.append(j)
 
     # 3. references (the trust boundary - 5.2)
@@ -190,6 +201,15 @@ def validate_plan(plan_raw, index, inventory, goal=None):
                 "planner_invalid_reference",
                 "plan does not place/build at the goal's site %r"
                 % goal.at,
+                goal=goal.describe())
+    if goal is not None and getattr(goal, "verb", None) == "build-plan" and \
+            getattr(goal, "at", None) and goal.at.startswith("site-"):
+        if not any(j.type == "build_plan" and j.target == goal.at
+                   for j in jobs):
+            return None, Failure(
+                "planner_invalid_reference",
+                "plan does not build %r at the goal's site %r"
+                % (goal.object, goal.at),
                 goal=goal.describe())
 
     return jobs, None

@@ -23,7 +23,7 @@ from dataclasses import dataclass, field, asdict
 # --------------------------------------------------------------------------
 
 GOAL_VERBS = ("mine", "harvest", "place", "goto", "sow", "plant",
-              "build", "construct")
+              "build", "construct", "build-plan")
 
 #: operator synonyms that normalize onto another grammar verb
 GOAL_VERB_ALIASES = {"plant": "sow", "construct": "build"}
@@ -111,6 +111,14 @@ JOB_CATALOG = {
                   "source": "world",    "needs": ("target", "material")},
     "build":     {"produces": False, "consumes": True,
                   "source": "world",    "needs": ("target", "material")},
+    # a building plan (13.11): one composite job erects a whole plan
+    # file. `plan` names the file; its materials are resolved by the
+    # orchestrator (multi-material, so outside the single-material
+    # ledger) and it is GOAL-SCOPED: only the deterministic compiler
+    # may emit it (the 27B planner gains it via an A/B gate, like sow
+    # did - it is deliberately NOT in PLANNER_JOB_TYPES yet).
+    "build_plan": {"produces": False, "consumes": False,
+                  "source": "world",    "needs": ("target", "plan")},
     "give_tool": {"produces": True,  "consumes": False,
                   "source": "external", "needs": ("material",)},
     "pickup":    {"produces": False, "consumes": False,
@@ -121,8 +129,10 @@ JOB_CATALOG = {
                   "source": "world",    "needs": ()},
 }
 
-#: job types the planner may emit in a plan (section 12.1 amended catalog).
-PLANNER_JOB_TYPES = tuple(JOB_CATALOG)
+#: job types the planner may emit in a plan (section 12.1 amended
+#: catalog). build_plan is EXCLUDED: goal-scoped to the deterministic
+#: compiler until an A/B round teaches the 27B the vocabulary.
+PLANNER_JOB_TYPES = tuple(k for k in JOB_CATALOG if k != "build_plan")
 
 #: provenance of a job's origin (13.1, frozen): the queue runs a mix of
 #: jobs made by different principals; the run JSON is the transparency
@@ -141,6 +151,7 @@ class Job:
     target: str | None = None      # "site-*" id / destination
     material: str | None = None    # normalized material code
     quantity: int | None = None    # positive int
+    plan: str | None = None        # build_plan: the plan file name
     depends_on: list = field(default_factory=list)
     claims: list = field(default_factory=list)
     budget: int = 12               # max execution steps (the stall valve)
@@ -178,6 +189,7 @@ class Job:
         return cls(id=jid, type=jtype,
                    source=d.get("source"), target=d.get("target"),
                    material=d.get("material"), quantity=qty,
+                   plan=d.get("plan"),
                    depends_on=list(deps),
                    claims=list(d.get("claims") or []),
                    budget=int(d.get("budget") or 12),

@@ -548,6 +548,119 @@ def execute_job(pol, bot, base, job, wm, run):
             {"pre": pre, "post": post, "delta": delta,
              "blocks": placed}
 
+    if job.type == "build_plan":
+        # a whole plan file, erected in phases (13.11). Each phase is
+        # placed from the layer BELOW - the bot climbs its own work:
+        # floor from the outside (same-layer, the proven 17:37
+        # geometry), walls standing on the floor (at foot level), roof
+        # standing on the walls. Per-cell verification (the phantom
+        # rule: a reported ok is not a placed block), bounded
+        # attempts, honest per-cell report.
+        import r2.buildplans as _bp
+        plan = _bp.load_plan(os.path.join(REPO, "builds",
+                                          job.plan + ".json"))
+        fix = wm.fixtures.get(job.target)
+        if fix is None:
+            return (False, "site %s unknown" % job.target, measured, {},
+                    {"cells": None})
+        origin = list(fix.cell)
+        w, d = plan.footprint
+
+        def _item(m):
+            return GIVE_ITEM.get(m, m)
+
+        def _prefix(m):
+            return MATERIAL_BLOCK.get(m, m)
+
+        def _has(mat, cell):
+            bs = pol.cell_blocks(bot, tuple(cell), pad=0) or []
+            return any(b.get("pos") == list(cell) and
+                       (b.get("code") or "").replace("game:", "")
+                       .startswith(_prefix(mat)) for b in bs)
+
+        def _bot_pos():
+            return ((pol.state(bot).get("Bot") or {}).get("Pos")
+                    or [0, 0, 0])
+
+        def _inside(x, z):
+            return (origin[0] <= x < origin[0] + w and
+                    origin[2] <= z < origin[2] + d)
+
+        landed = 0
+        total = 0
+        parts = []
+        for phase, cells in plan.phases(origin):
+            for cell, mat in cells:
+                total += 1
+                if _has(mat, cell):
+                    landed += 1
+                    parts.append("%s%s:pre" % (phase, cell))
+                    continue
+                L = cell[1]  # the block's layer; the bot's feet go to L
+                if phase == "floor":
+                    # stand OUTSIDE the footprint, adjacent to the cell
+                    cands = [[cell[0] - 1, L, cell[2]],
+                             [cell[0] + 1, L, cell[2]],
+                             [cell[0], L, cell[2] - 1],
+                             [cell[0], L, cell[2] + 1]]
+                    cands = [c for c in cands
+                             if not _inside(c[0], c[2])] or cands
+                else:
+                    # stand at foot level on a NEIGHBOUR (never the
+                    # target cell - the engine refuses places into the
+                    # bot's own cell); neighbours with support a layer
+                    # down come first (the plan's own earlier phases)
+                    cands = [[cell[0] + dx, L, cell[2] + dz]
+                             for dx, dz in ((0, 1), (1, 0), (0, -1),
+                                            (-1, 0))]
+                    def _supported(c):
+                        below = [c[0], L - 1, c[2]]
+                        bs = pol.cell_blocks(bot, tuple(below),
+                                             pad=0) or []
+                        return any(b.get("pos") == list(below) for b in bs)
+                    cands.sort(key=lambda c: 0 if _supported(c) else 1)
+                placed_here = False
+                for cand in cands:
+                    try:
+                        v5.goto_wait(pol, bot, cand)
+                    except Exception:
+                        continue
+                    res = v5.execute(pol, bot, "place_block", cell,
+                                     base, "build",
+                                     buildblock=_item(mat))
+                    time.sleep(1)
+                    if _has(mat, cell):
+                        landed += 1
+                        placed_here = True
+                        parts.append("%s%s:landed" % (phase, cell))
+                        break
+                    parts.append("%s%s:attempt(ok=%s)"
+                                 % (phase, cell, res.get("ok")))
+        # oracle: every cell present, and the door (entry) still open
+        present = 0
+        for (dx, dy, dz), mat in plan.blocks:
+            cell = [origin[0] + dx, origin[1] + dy, origin[2] + dz]
+            if _has(mat, cell):
+                present += 1
+        ex, ez = plan.entry
+        # the door oracle checks the WALL layer (origin+1): the floor
+        # under the door is a threshold, the roof over it is fine
+        door = [origin[0] + ex, origin[1] + 1, origin[2] + ez]
+        door_bs = pol.cell_blocks(bot, tuple(door), pad=0) or []
+        door_open = not any(b.get("pos") == list(door)
+                            for b in door_bs)
+        la = (pol.state(bot).get("LastAction") or {})
+        ok = (present == plan.total_blocks()) and door_open
+        msg = ("build-plan %s at %s -> present=%d/%d door_open=%s %s"
+               % (job.plan, job.target, present, plan.total_blocks(),
+                  door_open, parts[:12]))
+        return ok, msg, {}, \
+            {"last_action": {k: la.get(k) for k in
+                             ("Name", "Ok", "Msg")},
+             "landed": landed, "attempts_reported": len(parts)}, \
+            {"present": present, "total": plan.total_blocks(),
+             "door_open": door_open}
+
     if job.type == "place":
         fix = wm.fixtures.get(job.target)
         if fix is None:
@@ -635,19 +748,30 @@ def main():
     # said at intake that harness supply is sanctioned, so the material is
     # given DETERMINISTICALLY BEFORE the planner runs - the 27B then sees a
     # place goal it can actually plan (its refusal prior fires on the
-    # pre-supply world). Recorded as job j0 for the queue/run JSON.
-    op = None
+    # pre-supply world). Recorded as job j0+ for the queue/run JSON.
+    # build-plan (13.11) generalizes this to the plan's whole material
+    # list: one give job per material.
+    ops = []
     if getattr(goal, "supply", None) == "external" and \
-            goal.verb in ("place", "build"):
-        item = GIVE_ITEM.get(goal.object, goal.object)
-        n_eff = goal.n or (4 if goal.verb == "build" else 1)
-        r = pol.cmd("give", [item, str(n_eff)], bot)
-        op = Job("j0", "give_tool", origin="operator",
-                 material=goal.object, quantity=n_eff)
-        run["supply"] = {"declared": True, "item": item,
-                          "ok": bool(r.get("Ok"))}
-        time.sleep(1)
-        st = pol.state(bot)
+            goal.verb in ("place", "build", "build-plan"):
+        if goal.verb == "build-plan":
+            import r2.buildplans as _bp
+            _plan = _bp.load_plan(os.path.join(REPO, "builds",
+                                              goal.object + ".json"))
+        else:
+            _plan = None
+        mats = _plan.materials if _plan else \
+            {goal.object: goal.n or (4 if goal.verb == "build" else 1)}
+        for i, (m, q) in enumerate(sorted(mats.items())):
+            item = GIVE_ITEM.get(m, m)
+            r = pol.cmd("give", [item, str(q)], bot)
+            ops.append(Job("j%d" % i, "give_tool", origin="operator",
+                           material=m, quantity=q))
+            run["supply"] = {"declared": True, "item": item,
+                             "qty": q, "ok": bool(r.get("Ok"))}
+            time.sleep(1)
+        if _plan is not None:
+            st = pol.state(bot)
 
     inv = normalize_inv(inventory_of(st))
     fixtures = register_site(wm, pol, bot, goal, None)
@@ -659,12 +783,65 @@ def main():
 
     # 3. plan + validate (deterministic, goal-aware)
     if getattr(args, "no_planner", False) and goal.verb in (
-            "mine", "harvest", "sow", "build"):
+            "mine", "harvest", "sow", "build", "build-plan"):
         # the deterministic goal compiler (13.6 step 2, no LLM): a
         # one-verb acquisition goal has one obvious plan - the closest
         # resource with sufficient observed quantity. The SAME
         # validator gate applies to the synthesized plan.
-        if goal.verb == "build":
+        if goal.verb == "build-plan":
+            # a building plan (13.11): the plan file is the design,
+            # the compiler just names it. Supply: the inventory, or
+            # the operator's external pre-give (2b, per material).
+            import r2.buildplans as _bp
+            if not getattr(goal, "at", None):
+                run.update({"outcome": "rejected",
+                            "reason": "deterministic: build-plan goal "
+                                      "needs 'at <site>'"})
+                return finish(args.out, run, t0)
+            plan_path = os.path.join(REPO, "builds",
+                                     goal.object + ".json")
+            if not os.path.exists(plan_path):
+                avail = ", ".join(_bp.list_plans(
+                    os.path.join(REPO, "builds"))) or "none"
+                run.update({"outcome": "rejected",
+                            "reason": "unknown plan %r (library: %s)"
+                            % (goal.object, avail)})
+                return finish(args.out, run, t0)
+            bp = _bp.load_plan(plan_path)
+            if getattr(goal, "supply", None) != "external":
+                missing = {m: (q, inv.get(m, 0))
+                           for m, q in bp.materials.items()
+                           if inv.get(m, 0) < q}
+                if missing:
+                    run.update({"outcome": "rejected",
+                                "reason": "resource_not_found: %s "
+                                          "(declare 'supply external' "
+                                          "for harness supply)"
+                                % ", ".join("%s need %d have %d" % (m, q, h)
+                                            for m, (q, h) in
+                                            sorted(missing.items()))})
+                    return finish(args.out, run, t0)
+            bp5 = st["Bot"]["Pos"]
+            raw = json.dumps({"id": "j1", "type": "build_plan",
+                              "plan": goal.object, "target": goal.at,
+                              "origin": "deterministic"})
+            prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
+                                                 center=(bp5[0], 0,
+                                                         bp5[2]))
+            run["planner"] = {"mode": "deterministic",
+                              "chosen": {"plan": goal.object,
+                                         "site": goal.at,
+                                         "blocks": bp.total_blocks(),
+                                         "supply": "external"
+                                         if getattr(goal, "supply",
+                                                    None) == "external"
+                                         else "inventory"},
+                              "candidates": sorted(index)}
+            jobs, failure = validate_plan(raw, index, inv, goal=goal)
+            run["plan"] = {"raw": raw, "latency_ms": 0,
+                           "jobs": [j.to_dict() for j in jobs] if jobs else None,
+                           "failure": failure.to_dict() if failure else None}
+        elif goal.verb == "build":
             # the ring platform (09-28): ONE composite job that places
             # N blocks around the goal site, one layer above the site's
             # base cell. Supply: the inventory, or a declared external
@@ -805,16 +982,16 @@ def main():
 
     # 4. the queue drives execution (R2: strictly sequential)
     base = tuple(st["Bot"]["Pos"])
-    if op is not None:
-        jobs = [op] + jobs   # j0 already executed pre-planning (2b)
+    if ops:
+        jobs = ops + jobs   # already executed pre-planning (2b)
     gs = GoalState(goal, jobs,
-                  ("planner:%s + operator-supply" if op is not None
+                  ("planner:%s + operator-supply" if ops
                    else "planner:%s") % args.llm_model)
-    if op is not None:
+    for op in ops:
         gs.job_status[op.id] = "done"
         gs.log(op.id, "job_done",
                "operator supply - deterministic, pre-planning (12.10a)")
-        gs.record_measured(goal.object, goal.n or 1)
+        gs.record_measured(op.material, op.quantity or 1)
     job = gs.start()
     while job is not None and gs.status == "running":
         run_jobs(pol, bot, base, gs, job, run, wm)
@@ -835,7 +1012,7 @@ def run_jobs(pol, bot, base, gs, job, run, wm):
     wm.new_tick(reason="pre_action", caused_by=job.id)
     if job.type in ("mine", "harvest"):
         wm.record_claim(job.source, job.id, bot)
-    elif job.type in ("place", "build"):
+    elif job.type in ("place", "build", "build_plan"):
         wm.record_claim(job.target, job.id, bot)
     t0 = time.time()
     try:
@@ -869,10 +1046,13 @@ def run_jobs(pol, bot, base, gs, job, run, wm):
     if job.type in ("place", "build"):
         wm.release_claim(job.target)
         gs.consume(job.material, job.quantity or 1)
+    if job.type == "build_plan":
+        wm.release_claim(job.target)
     if ok:
         gs.job_done(job, detail)
     else:
-        code = "fixture_failed" if job.type in ("place", "build") \
+        code = "fixture_failed" if job.type in ("place", "build",
+                                               "build_plan") \
             else "job_budget_exhausted"
         gs.job_failed(job, Failure(code, detail))
 
