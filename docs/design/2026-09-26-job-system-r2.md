@@ -1376,3 +1376,52 @@ of the world**. The standard, henceforth, for build-type work:
    before/after measurement to settle. The yaw convention is now
    pinned: **the game's yaw increases when the view turns LEFT**
    (turnleft = +yaw, turnright = -yaw; pitch: 0 level, + up).
+
+## 13.13 The 5x5 middle-of-edge dead-end (09-29 night)
+
+Runs 14-17 of the 106-block 5x5 hut each died at a different wall
+cell - and each "failure" was the executor working correctly on a
+genuine geometry problem. The final diagnosis (run 17, re-running
+`_standable` on the four neighbours of the failed cell against the
+live world):
+
+- The hut's wall tiers are perimeter rings. A tier-2 edge cell's
+  standing candidates are: its two same-edge neighbours (occupied by
+  the time the middle of a 5-cell edge is placed - corners-first
+  order places the corners first, which is what unblocks the corners
+  but leaves the middles), its interior neighbour (no support a
+  layer down - interior cells are never walls), and its outside
+  neighbour (floating - no floor beyond the footprint).
+- The face-placement model closes the remaining escapes: a block is
+  placed against the face of an EXISTING adjacent block. The target
+  can only be placed against its two same-edge neighbours' faces -
+  and standing inside the face block is self-occupancy, which the
+  engine refuses (the refusal that protected us all day). Placing
+  UP from the tier-1 wall directly below puts the new block in the
+  bot's head cell - refused.
+- **Therefore: a single bot cannot complete a 5x5 (or larger) ring
+  with wall tiers 2+, at the middle cells of an edge of 5 or more.
+  The 3x3 ring works: its edge middles stand on the interior floor
+  cell (which exists and is supported).**
+
+Options, in order of preference for a future session:
+1. **Harness standing-range relaxation**: allow the bot's standing
+   cell to be a ring at distance 2 (not just the 4 adjacent cells),
+   and test whether the engine's face-placement accepts a bot two
+   cells from the target face. If yes, the middle cells become
+   placeable from a distance-2 ledge. This is a C# change to
+   `ExecutePlaceCommand` (candidate generation only - the face
+   logic is the engine's).
+2. **Scaffold blocks in the plan**: temporary support blocks (marked
+   `scaffold: true`), placed before the wall tiers, removed after.
+   The plan format gains a lifecycle tag.
+3. **Accept the 3x3 as the demonstrated building** (built
+   end-to-end and visually verified, run 29-4) and cap single-bot
+   ring buildings at 3x3; bigger buildings need a second bot or
+   multi-face placement.
+
+World state at handoff: the partial 5x5 (46 granite: 25 floor, 15
+wall tier 1, 6 wall tier 2) stands at site-A (origin
+(512010, 3, 512029)). It is a legitimate artifact of the build
+system's honest failure - left in place as evidence.
+
