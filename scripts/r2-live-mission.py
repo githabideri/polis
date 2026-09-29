@@ -216,7 +216,13 @@ def goto_arrive(pol, bot, cell, timeout=45):
         st = pol.state(bot)
         la = st.get("LastAction") or {}
         pos = (st.get("Bot") or {}).get("Pos") or [0, 0, 0]
-        if all(abs(pos[i] - (cell[i] + 0.5)) <= 0.25 for i in range(3)):
+        # x/z are centred; y is the FEET - the bot walks at the layer
+        # level (y = cell[1]), it does not float at the cell centre
+        # (09-29: the old check demanded y within 0.25 of cell+0.5 -
+        # unsatisfiable - and every goto timed out silently)
+        if (abs(pos[0] - (cell[0] + 0.5)) <= 0.25 and
+                abs(pos[2] - (cell[2] + 0.5)) <= 0.25 and
+                abs(pos[1] - cell[1]) <= 0.25):
             return True
         if la.get("Name") == "goto" and la.get("Ok") is False:
             return False
@@ -716,6 +722,8 @@ def execute_job(pol, bot, base, job, wm, run):
                     # stale LastAction made the old goto_wait lie)
                     if not goto_arrive(pol, bot, cand):
                         st, det = _emb()
+                        print("[build] %s %s: goto to %s failed (body %s)"
+                              % (phase, cell, cand, st), flush=True)
                         if st != "OK":
                             return (False, "structural: standing goto "
                                     "for %s%s failed and the body is %s "
