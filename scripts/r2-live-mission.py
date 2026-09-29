@@ -46,7 +46,7 @@ _v5_spec.loader.exec_module(v5)
 
 from r2.worldmodel import WorldModel
 from r2.plannerprompt import build_planner_prompt
-from r2.embodiment import embodiment as _embodiment_fn  # 09-29: the body-vs-solid-world check
+from r2.embodiment import embodiment as _embodiment_fn, is_solid  # 09-29: the body-vs-solid-world check
 from r2.plancheck import validate_plan, check_goal
 from r2.jobqueue import GoalState
 from r2.jobs import Goal, Job, Failure
@@ -627,23 +627,28 @@ def execute_job(pol, bot, base, job, wm, run):
             return _embodiment_fn(bp, cm)
 
         def _standable(c):
-            # a standing candidate must have AIR at the feet (a goto
-            # TO a solid cell walks the bot into it - the pathfinder
+            # a standing candidate must be OPEN at the feet (a goto TO
+            # a solid cell walks the bot into it - the pathfinder
             # accepts goals inside blocks, which is how the bot got
-            # embedded 09-29). Support is only required ABOVE the
-            # walking layer (the bot stands on our placed blocks);
-            # at ground level the TERRAIN is the support - a scan's
-            # "soil-medium-none" is an empty terrain slot, not a hole
-            # (run 14: one outside neighbour with no block beneath
-            # read as "no ledge" and killed the build).
+            # embedded 09-29) and supported a layer below when above
+            # the walking layer (the bot stands on our placed blocks).
+            # "Open" = no SOLID block: vegetation (tallgrass & co.) is
+            # walk-through - the bot crosses the grassy pocket all day
+            # (run 16: a lone tallgrass in the only outside neighbour
+            # read as "occupied" and killed the floor). Support at
+            # ground level is the terrain itself, not a block (run 14);
+            # above that, only a SOLID block below counts (grass is
+            # not a ledge).
             bs = pol.cell_blocks(bot, tuple(c), pad=0) or []
-            if any(b.get("pos") == list(c) for b in bs):
+            if any(b.get("pos") == list(c) and is_solid(b.get("code"))
+                   for b in bs):
                 return False
             if c[1] <= origin[1]:
                 return True
             below = [c[0], c[1] - 1, c[2]]
             bs2 = pol.cell_blocks(bot, tuple(below), pad=0) or []
-            return any(b.get("pos") == list(below) for b in bs2)
+            return any(b.get("pos") == list(below)
+                       and is_solid(b.get("code")) for b in bs2)
 
         def _inside(x, z):
             return (origin[0] <= x < origin[0] + w and
@@ -689,27 +694,28 @@ def execute_job(pol, bot, base, job, wm, run):
                           % (phase, cell), flush=True)
                     continue
                 L = cell[1]  # the block's layer; the bot's feet go to L
-                if phase == "floor":
-                    # stand OUTSIDE the footprint, adjacent to the cell
-                    cands = [[cell[0] - 1, L, cell[2]],
-                             [cell[0] + 1, L, cell[2]],
-                             [cell[0], L, cell[2] - 1],
-                             [cell[0], L, cell[2] + 1]]
-                    cands = [c for c in cands
-                             if not _inside(c[0], c[2])] or cands
-                else:
-                    # stand at foot level on a NEIGHBOUR (never the
-                    # target cell - the engine refuses places into the
-                    # bot's own cell); neighbours with support a layer
-                    # down come first (the plan's own earlier phases)
-                    cands = [[cell[0] + dx, L, cell[2] + dz]
-                             for dx, dz in ((0, 1), (1, 0), (0, -1),
-                                            (-1, 0))]
+                # all 4 horizontal neighbours are candidates -
+                # _standable is the whole rule. (09-29: there used to
+                # be a floor-only filter keeping just the OUTSIDE
+                # neighbours. Wrong for cells with an interior side:
+                # the interior neighbour at ground level is open
+                # ground - the floor is built at the bot's feet, not
+                # under it. The filter left a lone tallgrass cell as
+                # the only candidate and killed run 16.)
+                cands = [[cell[0] - 1, L, cell[2]],
+                         [cell[0] + 1, L, cell[2]],
+                         [cell[0], L, cell[2] - 1],
+                         [cell[0], L, cell[2] + 1]]
+                if phase != "floor":
+                    # elevated: neighbours with support a layer down
+                    # come first (the plan's own earlier phases)
                     def _supported(c):
                         below = [c[0], L - 1, c[2]]
                         bs = pol.cell_blocks(bot, tuple(below),
                                              pad=0) or []
-                        return any(b.get("pos") == list(below) for b in bs)
+                        return any(b.get("pos") == list(below)
+                                   and is_solid(b.get("code"))
+                                   for b in bs)
                     cands.sort(key=lambda c: 0 if _supported(c) else 1)
                 # a candidate with a block AT foot level is not a
                 # ledge (09-29: the previous phase's own blocks are
