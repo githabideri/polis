@@ -80,6 +80,26 @@ check("phase sizes 25/15/15/16/25/9/1 (door cells leave the wall tiers)",
 check("no two phases share a cell",
       len({c for n, cs in phases for c, _ in cs}) == 106)
 
+# 3b. corners-first order (09-29, the last-corner dead-end): the four
+#     corners of a layer come first (placed last they have no open
+#     ledge and no outside support - runs 13-15 died at walls(4,1,4));
+#     edges follow (they stand on their interior neighbour).
+by_layer = {}
+for n, cs in p.phases((0, 0, 0)):
+    by_layer[cs[0][0][1]] = [c for c, _ in cs]
+check("wall corners first (dy1)",
+      by_layer[1][:4] == [(0, 1, 0), (0, 1, 4), (4, 1, 0), (4, 1, 4)],
+      str(by_layer[1][:4]))
+check("roof-5 corners first (dy4)",
+      by_layer[4][:4] == [(0, 4, 0), (0, 4, 4), (4, 4, 0), (4, 4, 4)],
+      str(by_layer[4][:4]))
+check("roof-3 corners first (dy5)",
+      by_layer[5][:4] == [(1, 5, 1), (1, 5, 3), (3, 5, 1), (3, 5, 3)],
+      str(by_layer[5][:4]))
+check("floor corners first (dy0) - harmless there",
+      by_layer[0][:4] == [(0, 0, 0), (0, 0, 4), (4, 0, 0), (4, 0, 4)],
+      str(by_layer[0][:4]))
+
 # 4. validation failures
 def plan_file(d):
     f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)

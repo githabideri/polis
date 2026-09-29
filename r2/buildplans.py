@@ -103,15 +103,44 @@ class BuildingPlan:
         (the bot stands ON the floor, places one layer up - the proven
         geometry), then roof (the bot stands ON the walls, places at
         its own level). The "bot on its own platform" footgun becomes
-        the build strategy: each phase places from the layer below."""
+        the build strategy: each phase places from the layer below.
+
+        Within a layer the CORNERS come first, then the rest (09-29,
+        the last-corner dead-end that killed runs 13-15 at
+        walls(4,1,4)): a corner's in-footprint neighbours are all
+        layer-mates, so placed LAST (plain x,z sort) it has no open
+        ledge left and no outside support; placed FIRST (everything
+        open) it stands on its two open neighbours. Edge cells stand
+        on their interior neighbour (floor for walls, layer below for
+        solid roof layers)."""
         ox, oy, oz = origin
         out = {}
         for (dx, dy, dz), m in self.blocks:
             out.setdefault(dy, []).append(((ox + dx, oy + dy, oz + dz), m))
+
+        def _order(items):
+            cells = {c for c, _ in items}
+            xs = {c[0] for c in cells}
+            zs = {c[2] for c in cells}
+
+            def corner(c):
+                # a corner is at the extreme of the layer's bounding
+                # box on BOTH axes (ring layers: the 4 corners; solid
+                # layers: the 4 corners too - harmless to lead with
+                # them). OR-of-neighbours was wrong: it marked every
+                # edge cell of a solid layer as a corner.
+                return (c[0] in (min(xs), max(xs)) and
+                        c[2] in (min(zs), max(zs)))
+
+            s = sorted(items)
+            return [i for i in s if corner(i[0])] + \
+                   [i for i in s if not corner(i[0])]
+
         order = []
         for dy in sorted(out):
-            name = {0: "floor", 1: "walls", 2: "roof"}.get(dy, "layer%d" % dy)
-            order.append((name, sorted(out[dy])))
+            name = {0: "floor", 1: "walls", 2: "roof"}.get(dy,
+                                                         "layer%d" % dy)
+            order.append((name, _order(out[dy])))
         return order
 
     def block_at(self, dx, dy, dz):
