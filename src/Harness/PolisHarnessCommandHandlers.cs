@@ -1758,7 +1758,11 @@ public partial class PolisBuilderNpcSystem
             {
                 var cell = new BlockPos((int)o.pos.X, (int)o.pos.Y, (int)o.pos.Z);
                 var cellBlock = sapi.World.BlockAccessor.GetBlock(cell);
-                if (cellBlock == null || !cellBlock.IsSolid())
+                // an open standing cell is an EMPTY cell (BlockID 0 = air /
+                // "none"). Anything else - a placed block, a wall, a crop -
+                // is not a ledge: sending the bot there is how it got
+                // embedded in the 09-29 hut runs.
+                if (cellBlock == null || cellBlock.ID == 0)
                 {
                     movePos = o.pos;
                     break;
