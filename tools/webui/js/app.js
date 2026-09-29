@@ -132,8 +132,13 @@ const holdKinds = {
     'right':    (p) => ({ ...p, x: p.x - Math.cos(p.yaw) * STEP.move.blocks, z: p.z + Math.sin(p.yaw) * STEP.move.blocks }),
     'up':       (p) => ({ ...p, y: p.y + STEP.move.blocks }),
     'down':     (p) => ({ ...p, y: p.y - STEP.move.blocks }),
-    'turnleft':  (p) => ({ ...p, yaw: p.yaw - STEP.turn.deg * RAD }),
-    'turnright': (p) => ({ ...p, yaw: p.yaw + STEP.turn.deg * RAD }),
+    // turn: the GAME's yaw increases when the view turns LEFT (measured
+    // 2026-09-29 by before/after screenshots: yaw 177->129 on the
+    // turnleft button rotated the view RIGHT - the signs below were
+    // assumed at introduction and were inverted all along; the move
+    // swap on the line above was the sibling of this one)
+    'turnleft':  (p) => ({ ...p, yaw: p.yaw + STEP.turn.deg * RAD }),
+    'turnright': (p) => ({ ...p, yaw: p.yaw - STEP.turn.deg * RAD }),
     'lookup':   (p) => ({ ...p, pitch: clamp(p.pitch + STEP.pitch.deg * RAD, -PITCH_LIMIT, PITCH_LIMIT) }),
     'lookdown': (p) => ({ ...p, pitch: clamp(p.pitch - STEP.pitch.deg * RAD, -PITCH_LIMIT, PITCH_LIMIT) }),
 };
