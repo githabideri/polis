@@ -484,18 +484,40 @@ def execute_job(pol, bot, base, job, wm, run):
                        .startswith(prefix))
 
         pre = _count()
-        placed, parts = 0, []
-        for i in range(n):
-            dx, dz = RING[i % len(RING)]
+        # per-attempt verification (run 29-1 finding): the engine
+        # SILENTLY refuses a place into a cell the bot occupies, while
+        # the place command still reports ok=True - so a reported-ok
+        # placement is not trusted: the cell is re-scanned after each
+        # attempt and only a LANDED block counts. Occupied/pre-filled
+        # cells are skipped to the next ring cell.
+        used, placed, parts = set(), 0, []
+        idx, attempts = 0, 0
+        while placed < n and attempts < 3 * n:
+            attempts += 1
+            dx, dz = RING[idx % len(RING)]
+            idx += 1
             c = [cell[0] + dx, ring_y, cell[2] + dz]
+            if tuple(c) in used:
+                continue
+            occ = [b for b in (pol.cell_blocks(bot, tuple(c), pad=0)
+                               or [])
+                   if b.get("pos") == c]
+            if occ:  # filled (or the bot is in the way) - next cell
+                continue
             res = v5.execute(pol, bot, "place_block", c, base, "build",
                              buildblock=item)
             time.sleep(1)
-            oki = bool(res.get("ok"))
-            parts.append("%s:%s" % (c, oki))
-            if not oki:
-                break
-            placed += 1
+            chk = [b for b in (pol.cell_blocks(bot, tuple(c), pad=0)
+                               or [])
+                   if b.get("pos") == c and
+                   (b.get("code") or "").replace("game:", "")
+                   .startswith(prefix)]
+            if chk:
+                placed += 1
+                used.add(tuple(c))
+                parts.append("%s:landed" % (c,))
+            else:
+                parts.append("%s:phantom(ok=%s)" % (c, res.get("ok")))
         post = _count()
         delta = post - pre
         la = (pol.state(bot).get("LastAction") or {})
