@@ -96,3 +96,31 @@ memory problem, not an architecture problem. The two-tier design
 (reflex 2B / judge 27B / deterministic compiler / conversational
 35B) survives contact with the real world; the binding constraint is
 the action space, not the planning.
+
+## 09-29 follow-up: the build verb
+
+The first real conversation ended at the vocabulary wall (the agent
+suggested buildings it could not order). The response, overnight:
+
+- **`build <material> xN at <site>` is a live goal verb**: one
+  composite job places N blocks as a ring platform at the site,
+  verified per attempt (the engine silently refuses a place into the
+  bot's own cell while the place command reports ok=True - the
+  oracle is the only ground truth for placement; this is the
+  execution-vs-oracle split doing its job on day one).
+- First platform: site-A, GOAL COMPLETE in 11 s (run 29-2, delta=4,
+  a phantom caught and retried). The 27B also produced a valid build
+  plan unaided, first try - noted for the record; the deterministic
+  compiler is the default path.
+- **P5 r11** (gate for the prompt's build contract line): 20/25,
+  precision 1.000, coverage 0.524 - inside the measured variance
+  band of the same prompt family (r8 0.476 / r9 0.619); all
+  failures the known over-rejection species. r9 remains the
+  reference baseline.
+- Residual, recorded not chased: placement geometry at head-height
+  ring cells is vantage-dependent (a C#-harness question - how
+  `place` approaches a target one layer up), most visible when a
+  second build overlaps the first ring. The failure message now
+  says exactly that, so the agent can choose a fresh site.
+- Next verb: **craft** (knap/press/clayform harness commands into
+  job types) - the workbench, then the furnace. Phase 7.

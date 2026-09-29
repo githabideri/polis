@@ -429,3 +429,16 @@ FT deferred into the Oikistes model question** (the 27B is the
 judge - not a training target; the deterministic compiler has taken
 the structured cases; the long tail needs its own small model + a
 real corpus, which starts with the rejection data we already have).
+
+
+## 13.10 the build verb (2026-09-29)
+
+- The build goal ("build <material> xN at <site>") is a live verb: one
+  composite job places N blocks as a ring platform at the site (verified
+  per attempt; oracle = block-count delta). First platform at site-A
+  (run 29-2: GOAL COMPLETE, 11 s). Oikistes orders it through the
+  deterministic compiler. Crafting (workbench/furnace) is the next
+  verb (Phase 7). P5 r11: precision 1.000 / coverage 0.524 (variance
+  band; r9 remains reference). The place command's ok signal is
+  unreliable (phantom ok=True on bot-occupied cells) - the oracle is
+  the ground truth for placement.

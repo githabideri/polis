@@ -1224,3 +1224,82 @@ critical path.
   Step 6 decided: planner FT deferred into the Oikistes model
   question; the corpus program starts with the rejection data we
   already have.
+
+### 13.10 The build verb: the ring platform (2026-09-29, ~03:00)
+
+**Trigger.** The Oikistes was inaugurated the evening before and, in its
+first real conversation, proposed a settlement plan (shelter,
+workbench, farmland) and then hit the vocabulary wall: `build` was not
+a goal verb, so "yes do that" degraded to one-block place missions.
+The gap ranked #1 in the 09-28 assessment was hit live within the
+hour. The fix has two halves: the prompt now constrains suggestions to
+the orderable vocabulary (named structures are crafting - outside it),
+and the job system gained the verb.
+
+**The contract.** `build <material> xN at <site>` is ONE composite job
+(analogous to `sow`): it places N blocks of the material as a **ring
+platform** around the site - the N ring cells clockwise around the
+site's base cell, at the layer **above** the base (the ground layer is
+solid; the layer above is where a platform goes; this is safe for both
+fixture kinds, farmland-based and build-site-based). Supply follows
+the place rule: inventory or an operator-declared external pre-give
+(2b), which runs before the inventory is read so the ledger sees the
+supplied material. N is capped at 16 (one ring). The planner prompt
+contracts the verb and says plainly that a *named* structure
+(workbench, shelter frame) is crafting and outside the vocabulary -
+such goals are rejected as unsupported, not faked.
+
+**The oracle, and what it caught.** The oracle is a block-count delta
+in a box around the site (material-prefixed codes, `game:` stripped -
+the namespace rule again). It caught two real engine behaviors:
+
+1. **The phantom placement (run 29-1).** The engine SILENTLY refuses a
+   place into a cell the bot occupies, while the `place` command
+   still reports `ok=True`. The execution layer trusted the ok and
+   reported 4/4; the oracle counted 3. This is the 13.2 principle
+   (execution vs oracle are separate attribution layers) paying for
+   itself on day one. The executor now verifies per attempt: occupied
+   cells are skipped, and only a **re-scanned, landed** block counts.
+2. **The bot on its own platform (run 29-3/29-4).** After placing a
+   few blocks the pathfinder walks the bot ONTO the ring (1-block
+   step-up), after which places into nearby platform-layer cells fail
+   - sometimes silently (the phantom case), sometimes with a plain
+   `ok=False` (a geometry-dependent reach/vantage issue: north-side
+   ring cells placed, south/east cells rejected, at the same distance).
+   The executor now drops a platform-level bot back to the ground on
+   the far side of the ring before each attempt. The residual
+   geometry failures are a C#-harness question (how `place`
+   approaches a head-height target) and are recorded, not chased,
+   tonight. The failure message tells the agent the actual situation
+   ("12 attempts, 6 occupied/phantom skips - the site may already
+   carry a platform; build at a fresh site or clear the ring first").
+
+**Verdict.** `build` is ADOPTED as the settlement vocabulary's first
+construction verb: it is live end-to-end (run 29-2: GOAL COMPLETE,
+11 s, placed=4/4, delta=4, phantom detected and retried), it is
+deterministic (the structured case; the 27B can also plan it - it
+actually produced a valid build plan unaided, first try, which is
+noted for the record), and its failures are honest and
+self-explanatory. A 2x2 granite platform at site-A is the settlement's
+foundation. Crafting (workbench, furnace) remains the next verb -
+it needs the knap/press/clayform harness commands wrapped into job
+types, which is the natural Phase 7.
+
+**P5 r11 (the prompt-change gate for the build contract line).**
+20/25 CORRECT, precision **1.000**, coverage **0.524** (r9's 0.619
+remains the reference baseline; the 0476/0619/0524 swing across
+rounds of the SAME prompt is the measured variance band - 0.143
+between r8 and r9 alone). All five non-correct cases are the known
+over-rejection species (quantity arithmetic the prompt forbids;
+"actually sufficient, but let me reconsider" in the raw output),
+none touch the new contract line. Attribution: model 4, observation
+1, the rest 0. The build line is adopted as neutral; the variance
+itself is the standing argument for the dedicated planner model
+(13.9).
+
+- **2026-09-29.** 13.10: the build verb (ring platform) adopted;
+  P5 r11 gates the build contract line (precision 1.000, coverage
+  0.524, variance band documented); the phantom-placement and
+  bot-on-platform findings recorded; the `place` command's ok
+  signal is established as UNRELIABLE (the oracle is the only
+  ground truth for placement).
