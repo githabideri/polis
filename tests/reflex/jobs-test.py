@@ -29,6 +29,9 @@ g = Goal.from_dict({"verb": "mine", "object": "granite", "n": 5})
 check("goal basic", g.verb == "mine" and g.n == 5)
 g2 = Goal.from_dict({"verb": "place", "object": "granite", "at": "site-A"})
 check("goal with site", g2.at == "site-A")
+g3 = Goal.from_dict({"verb": "construct", "object": "granite",
+                    "at": "site-A"})
+check("construct aliases to build (09-28)", g3.verb == "build")
 for bad in ({"verb": "fly", "object": "x"},             # verb outside grammar
             {"verb": "mine", "object": ""},             # empty object
             {"verb": "mine", "object": "x", "n": 0},    # n must be >= 1
@@ -46,10 +49,10 @@ f = Failure("unsupported_goal", "verb fly", goal="fly x")
 check("unsupported_goal layer=goal", f.layer == "goal")
 
 # --- job catalog ----------------------------------------------------------
-check("catalog covers the v5 families + 12.1 + 13.7 sow",
+check("catalog covers the v5 families + 12.1 + 13.7 sow + 09-28 build",
       set(JOB_CATALOG) == {"mine", "harvest", "place", "goto",
                            "give_tool", "pickup", "travel", "wait",
-                           "sow"})
+                           "sow", "build"})
 check("give_tool is external", JOB_CATALOG["give_tool"]["source"] == "external")
 check("mine/harvest produce from world",
       all(JOB_CATALOG[t]["produces"] and JOB_CATALOG[t]["source"] == "world"
@@ -59,6 +62,9 @@ check("place consumes", JOB_CATALOG["place"]["consumes"]
 check("sow consumes on a site target (13.7 M2)",
       JOB_CATALOG["sow"]["consumes"]
       and JOB_CATALOG["sow"]["needs"] == ("target", "material"))
+check("build consumes on a site target (09-28 ring platform)",
+      JOB_CATALOG["build"]["consumes"]
+      and JOB_CATALOG["build"]["needs"] == ("target", "material"))
 
 j = Job.from_dict({"id": "j1", "type": "place", "target": "site-A",
                    "material": "granite", "quantity": 5,

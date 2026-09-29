@@ -184,6 +184,36 @@ jobs, f = validate_plan(
 check("plan matching the goal's site passes",
       jobs is not None and f is None, str(f and f.to_dict()))
 
+# 15. build (09-28 ring platform): external supply then one composite
+#     job placing N blocks around the site
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"give_tool","material":"granite","quantity":4},'
+    '{"id":"j2","type":"build","target":"site-A","material":"granite",'
+    '"quantity":4,"depends_on":["j1"]}]', INDEX, INV_EMPTY)
+check("give->build valid", jobs is not None and f is None,
+      str(f and f.to_dict()))
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"build","target":"site-A","material":"granite",'
+    '"quantity":4}]', INDEX, INV_EMPTY)
+check("under-supplied build rejected",
+      jobs is None and f.code == "resource_not_found",
+      str(f and f.to_dict()))
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"build","target":"site-A","material":"granite",'
+    '"quantity":4}]',
+    INDEX, INV_GRANITE, goal=_G(verb="build", object="granite",
+                                at="site-B"))
+check("build at a different site than the goal rejected",
+      jobs is None and f.code == "planner_invalid_reference",
+      str(f and f.to_dict()))
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"build","target":"site-A","material":"granite",'
+    '"quantity":4}]',
+    INDEX, INV_GRANITE, goal=_G(verb="build", object="granite",
+                                at="site-A"))
+check("build matching the goal's site passes",
+      jobs is not None and f is None, str(f and f.to_dict()))
+
 print()
 print("plancheck-test: %d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)

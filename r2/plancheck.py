@@ -90,7 +90,7 @@ def validate_plan(plan_raw, index, inventory, goal=None):
     # 3. references (the trust boundary - 5.2)
     for j in jobs:
         for ref in (j.source, j.target, j.material if j.type in
-                    ("place",) else None):
+                    ("place", "build") else None):
             if ref and isinstance(ref, str) and \
                     (ref.startswith("res-") or ref.startswith("site-")):
                 if ref not in index:
@@ -181,13 +181,15 @@ def validate_plan(plan_raw, index, inventory, goal=None):
     #    altogether) is not the goal (the valid-unachieved gap found in
     #    P5 round 2, case F3). Goto goals are checked by the goal
     #    intake, not here.
-    if goal is not None and getattr(goal, "verb", None) == "place" and \
+    if goal is not None and getattr(goal, "verb", None) in ("place",
+                                                            "build") and \
             getattr(goal, "at", None) and goal.at.startswith("site-"):
-        if not any(j.type == "place" and j.target == goal.at
+        if not any(j.type in ("place", "build") and j.target == goal.at
                    for j in jobs):
             return None, Failure(
                 "planner_invalid_reference",
-                "plan does not place at the goal's site %r" % goal.at,
+                "plan does not place/build at the goal's site %r"
+                % goal.at,
                 goal=goal.describe())
 
     return jobs, None

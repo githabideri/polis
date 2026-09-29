@@ -62,6 +62,12 @@ GIVE_ITEM = {
     "carrot": "crop-carrot-7",
 }
 
+#: material name -> the BLOCK code a place/build of it leaves in the
+#: world (the oracle's count predicate). granite's placeable block is
+#: rock-granite (the 2026-09-28 probe: the item is stone-granite, the
+#: placed block is rock-granite).
+MATERIAL_BLOCK = {"granite": "rock-granite", "stone": "rock-granite"}
+
 
 def parse_goal_line(line):
     """'place granite at site-A x1 supply external' ->
@@ -451,6 +457,58 @@ def execute_job(pol, bot, base, job, wm, run):
              "approach_attempts": attempts}, \
             {"block_gone": gone, "measured": measured}
 
+    if job.type == "build":
+        fix = wm.fixtures.get(job.target)
+        if fix is None:
+            return (False, "site %s unknown" % job.target, measured, {},
+                    {"blocks": None})
+        n = job.quantity or 1
+        item = GIVE_ITEM.get(job.material, job.material)
+        # the ring: N cells around the site, one layer ABOVE the site's
+        # base cell (the ground layer is solid; the layer above is
+        # where a platform goes - safe for both fixture kinds: the
+        # farmland base sits at ground level, the build-site base at
+        # the walkable layer)
+        cell = fix.cell
+        ring_y = cell[1] + 1
+        RING = [(0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1),
+                (-1, 0), (-1, 1), (2, 1), (2, 0), (2, -1), (1, -2),
+                (0, -2), (-1, -2), (-2, -1), (-2, 0), (-2, 1), (-2, 2)]
+        prefix = MATERIAL_BLOCK.get(job.material, job.material)
+
+        def _count():
+            boxes = pol.cell_blocks(bot, (cell[0], ring_y, cell[2]),
+                                    pad=4) or []
+            return sum(1 for b in boxes
+                       if (b.get("code") or "").replace("game:", "")
+                       .startswith(prefix))
+
+        pre = _count()
+        placed, parts = 0, []
+        for i in range(n):
+            dx, dz = RING[i % len(RING)]
+            c = [cell[0] + dx, ring_y, cell[2] + dz]
+            res = v5.execute(pol, bot, "place_block", c, base, "build",
+                             buildblock=item)
+            time.sleep(1)
+            oki = bool(res.get("ok"))
+            parts.append("%s:%s" % (c, oki))
+            if not oki:
+                break
+            placed += 1
+        post = _count()
+        delta = post - pre
+        la = (pol.state(bot).get("LastAction") or {})
+        ok = (placed == n) and (delta >= n)
+        msg = ("build %s x%d at %s -> placed=%d/%d delta=%d %s"
+               % (item, n, job.target, placed, n, delta, parts))
+        return ok, msg, {}, \
+            {"last_action": {k: la.get(k) for k in
+                             ("Name", "Ok", "Msg")},
+             "placed": placed}, \
+            {"pre": pre, "post": post, "delta": delta,
+             "blocks": placed}
+
     if job.type == "place":
         fix = wm.fixtures.get(job.target)
         if fix is None:
@@ -540,11 +598,13 @@ def main():
     # place goal it can actually plan (its refusal prior fires on the
     # pre-supply world). Recorded as job j0 for the queue/run JSON.
     op = None
-    if getattr(goal, "supply", None) == "external" and goal.verb == "place":
+    if getattr(goal, "supply", None) == "external" and \
+            goal.verb in ("place", "build"):
         item = GIVE_ITEM.get(goal.object, goal.object)
-        r = pol.cmd("give", [item, str(goal.n or 1)], bot)
+        n_eff = goal.n or (4 if goal.verb == "build" else 1)
+        r = pol.cmd("give", [item, str(n_eff)], bot)
         op = Job("j0", "give_tool", origin="operator",
-                 material=goal.object, quantity=goal.n or 1)
+                 material=goal.object, quantity=n_eff)
         run["supply"] = {"declared": True, "item": item,
                           "ok": bool(r.get("Ok"))}
         time.sleep(1)
@@ -559,12 +619,55 @@ def main():
         return finish(args.out, run, t0)
 
     # 3. plan + validate (deterministic, goal-aware)
-    if getattr(args, "no_planner", False) and goal.verb in ("mine", "harvest", "sow"):
+    if getattr(args, "no_planner", False) and goal.verb in (
+            "mine", "harvest", "sow", "build"):
         # the deterministic goal compiler (13.6 step 2, no LLM): a
         # one-verb acquisition goal has one obvious plan - the closest
         # resource with sufficient observed quantity. The SAME
         # validator gate applies to the synthesized plan.
-        if goal.verb == "sow":
+        if goal.verb == "build":
+            # the ring platform (09-28): ONE composite job that places
+            # N blocks around the goal site, one layer above the site's
+            # base cell. Supply: the inventory, or a declared external
+            # pre-give (2b above, which runs before the inventory is
+            # read - so the ledger sees the supplied material).
+            n = goal.n or 4
+            if n > 16:
+                run.update({"outcome": "rejected",
+                            "reason": "deterministic: build is capped "
+                                      "at 16 blocks (one ring)"})
+                return finish(args.out, run, t0)
+            if not getattr(goal, "at", None):
+                run.update({"outcome": "rejected",
+                            "reason": "deterministic: build goal needs "
+                                      "'at <site>'"})
+                return finish(args.out, run, t0)
+            have = inv.get(goal.object, 0)
+            if have < n and getattr(goal, "supply", None) != "external":
+                run.update({"outcome": "rejected",
+                            "reason": "resource_not_found: %s: have %d, "
+                                      "need %d (declare 'supply external' "
+                                      "for harness supply)"
+                            % (goal.object, have, n)})
+                return finish(args.out, run, t0)
+            bp4 = st["Bot"]["Pos"]
+            raw = json.dumps({"id": "j1", "type": "build",
+                              "quantity": n, "target": goal.at,
+                              "material": goal.object,
+                              "origin": "deterministic"})
+            prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
+                                                 center=(bp4[0], 0,
+                                                         bp4[2]))
+            run["planner"] = {"mode": "deterministic",
+                              "chosen": {"site": goal.at, "blocks": n,
+                                         "supply": "inventory"
+                                         if have >= n else "external"},
+                              "candidates": sorted(index)}
+            jobs, failure = validate_plan(raw, index, inv, goal=goal)
+            run["plan"] = {"raw": raw, "latency_ms": 0,
+                           "jobs": [j.to_dict() for j in jobs] if jobs else None,
+                           "failure": failure.to_dict() if failure else None}
+        elif goal.verb == "sow":
             # the 2-job endogenous chain (13.6): harvest the nearest crop
             # of the goal's material, then sow at the goal's site. The
             # 27B degenerates (silent token loop) on the new "sow"
@@ -693,7 +796,7 @@ def run_jobs(pol, bot, base, gs, job, run, wm):
     wm.new_tick(reason="pre_action", caused_by=job.id)
     if job.type in ("mine", "harvest"):
         wm.record_claim(job.source, job.id, bot)
-    elif job.type == "place":
+    elif job.type in ("place", "build"):
         wm.record_claim(job.target, job.id, bot)
     t0 = time.time()
     try:
@@ -724,13 +827,13 @@ def run_jobs(pol, bot, base, gs, job, run, wm):
         for code, qty in measured.items():
             gs.record_measured(classify(code)[1], qty)
         wm.release_claim(job.source)
-    if job.type == "place":
+    if job.type in ("place", "build"):
         wm.release_claim(job.target)
         gs.consume(job.material, job.quantity or 1)
     if ok:
         gs.job_done(job, detail)
     else:
-        code = "fixture_failed" if job.type == "place" \
+        code = "fixture_failed" if job.type in ("place", "build") \
             else "job_budget_exhausted"
         gs.job_failed(job, Failure(code, detail))
 

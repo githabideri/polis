@@ -22,10 +22,11 @@ from dataclasses import dataclass, field, asdict
 # Goal grammar (v1)
 # --------------------------------------------------------------------------
 
-GOAL_VERBS = ("mine", "harvest", "place", "goto", "sow", "plant")
+GOAL_VERBS = ("mine", "harvest", "place", "goto", "sow", "plant",
+              "build", "construct")
 
 #: operator synonyms that normalize onto another grammar verb
-GOAL_VERB_ALIASES = {"plant": "sow"}
+GOAL_VERB_ALIASES = {"plant": "sow", "construct": "build"}
 
 
 class GoalGrammarError(Exception):
@@ -107,6 +108,8 @@ JOB_CATALOG = {
     "goto":      {"produces": False, "consumes": False,
                   "source": "world",    "needs": ("target",)},
     "sow":       {"produces": False, "consumes": True,
+                  "source": "world",    "needs": ("target", "material")},
+    "build":     {"produces": False, "consumes": True,
                   "source": "world",    "needs": ("target", "material")},
     "give_tool": {"produces": True,  "consumes": False,
                   "source": "external", "needs": ("material",)},

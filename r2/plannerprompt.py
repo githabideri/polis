@@ -23,8 +23,8 @@ RULES
 3. Every job object: {{"id":"j1","type":"<type>","quantity":<int>=1}}
    plus per type:
    - mine/harvest/pickup: "source":"res-<id>"
-   - place/goto/travel:   "target":"site-<id>" (or a res-* for goto)
-   - place/give_tool:     "material":"<material code>"
+   - place/build/goto/travel:   "target":"site-<id>" (or a res-* for goto)
+   - place/build/give_tool:     "material":"<material code>"
    - sow:                 "target":"site-<id>" (a farmland site),
                           "material":"<crop code>"
    - optional "depends_on":["j<id>"] (must point EARLIER in the list)
@@ -49,6 +49,12 @@ RULES
    drop codes for unmeasured resources). If the INVENTORY already
    holds a seeds-* item of X, a single sow job suffices; otherwise
    the plan is [harvest <crop X>, sow <crop X>].
+   "build X xN at S" places N blocks of material X as a ring platform
+   around site S - a SINGLE composite build job (one job, N blocks).
+   The material comes from the INVENTORY or an earlier give_tool job
+   (external supply). Building a NAMED structure (workbench, shelter
+   frame, furnace) is NOT a build goal - crafting has no vocabulary
+   yet; reject such goals plainly.
 6. External supply: if a place goal needs a material that no world
    producer yields and the inventory lacks it, a give_tool job is a
    LEGAL plan (harness supply); use it, or reject if you judge the goal
