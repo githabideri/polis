@@ -502,6 +502,14 @@ def execute_job(pol, bot, base, job, wm, run):
             c = [cell[0] + dx, ring_y, cell[2] + dz]
             if tuple(c) in used:
                 continue
+            # keep the bot off the platform (09-29 finding): it paths
+            # ACROSS its own placed blocks and ends up standing on a
+            # ring cell, where the engine silently refuses the place
+            # (the phantom(ok=True) case). If it is on the platform
+            # layer, drop it to the ground on the far side first.
+            bp_now = (pol.state(bot).get("Bot") or {}).get("Pos") or [0, 0, 0]
+            if bp_now[1] >= ring_y:
+                v5.goto_wait(pol, bot, (cell[0] - 4, 3, cell[2]))
             occ = [b for b in (pol.cell_blocks(bot, tuple(c), pad=0)
                                or [])
                    if b.get("pos") == c]
