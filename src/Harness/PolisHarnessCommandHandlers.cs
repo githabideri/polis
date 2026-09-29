@@ -1762,7 +1762,7 @@ public partial class PolisBuilderNpcSystem
                 // "none"). Anything else - a placed block, a wall, a crop -
                 // is not a ledge: sending the bot there is how it got
                 // embedded in the 09-29 hut runs.
-                if (cellBlock == null || cellBlock.ID == 0)
+                if (cellBlock == null || cellBlock.Id == 0)
                 {
                     movePos = o.pos;
                     break;
