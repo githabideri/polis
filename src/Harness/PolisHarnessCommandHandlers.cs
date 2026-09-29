@@ -1729,33 +1729,48 @@ public partial class PolisBuilderNpcSystem
             return new PolisTestHarness.CommandResult { Ok = false, Message = "Access denied." };
         }
 
-        // Calculate approach position: bot should stand near the target but NOT overlapping it
-        // For vertical faces (UP/DOWN), the bot needs horizontal offset to avoid body intersection
-        // For horizontal faces, standing at the clicked surface position works
+        // Calculate approach position: bot should stand near the target but NOT overlapping it.
+        // 2026-09-29 (the block-in-bot-cell incident): the old formula picked ONE offset
+        // direction from the bot's side (with a |dx|>=|dz| tie-break) and sent the bot there
+        // BLIND - a corner-arriving bot made the tie fire and the offset landed in an
+        // already-placed block, where the pathfinder walked in and "finished". Now all four
+        // horizontal neighbours at target level are candidates, nearest-first, and only an
+        // OPEN (non-solid) cell is used. If none is open the place fails cleanly instead of
+        // embedding the bot.
         Vec3d movePos;
         if (face == BlockFacing.UP || face == BlockFacing.DOWN)
         {
-            // For vertical placement, offset horizontally from target based on bot's current position
             var botPos = bot.Entity.ServerPos.XYZ;
-            double dx = botPos.X - (targetPos.X + 0.5);
-            double dz = botPos.Z - (targetPos.Z + 0.5);
-
-            // Choose horizontal offset direction based on where bot is relative to target
-            // This minimizes travel distance
-            if (Math.Abs(dx) >= Math.Abs(dz))
+            var opts = new System.Collections.Generic.List<(Vec3d pos, double dist)>
             {
-                // Offset in X direction (east/west)
-                double offsetX = dx >= 0 ? 1.0 : -1.0;
-                // 2026-09-26: stand at TARGET level, not clicked level - the clicked
-                // cell is the solid surface block; a goto target inside it has no
-                // path (measured: bot stayed at spawn, place failed 8.59 > 4.50).
-                movePos = new Vec3d(targetPos.X + 0.5 + offsetX, targetPos.Y, targetPos.Z + 0.5);
+                (new Vec3d(targetPos.X + 1.5, targetPos.Y, targetPos.Z + 0.5),
+                 Math.Abs(botPos.X - (targetPos.X + 1.5)) + Math.Abs(botPos.Z - (targetPos.Z + 0.5))),
+                (new Vec3d(targetPos.X - 0.5, targetPos.Y, targetPos.Z + 0.5),
+                 Math.Abs(botPos.X - (targetPos.X - 0.5)) + Math.Abs(botPos.Z - (targetPos.Z + 0.5))),
+                (new Vec3d(targetPos.X + 0.5, targetPos.Y, targetPos.Z + 1.5),
+                 Math.Abs(botPos.X - (targetPos.X + 0.5)) + Math.Abs(botPos.Z - (targetPos.Z + 1.5))),
+                (new Vec3d(targetPos.X + 0.5, targetPos.Y, targetPos.Z - 0.5),
+                 Math.Abs(botPos.X - (targetPos.X + 0.5)) + Math.Abs(botPos.Z - (targetPos.Z - 0.5)))
+            };
+            opts.Sort((a, b) => a.dist.CompareTo(b.dist));
+            movePos = null;
+            foreach (var o in opts)
+            {
+                var cell = new BlockPos((int)o.pos.X, (int)o.pos.Y, (int)o.pos.Z);
+                var cellBlock = sapi.World.BlockAccessor.GetBlock(cell);
+                if (cellBlock == null || !cellBlock.IsSolid())
+                {
+                    movePos = o.pos;
+                    break;
+                }
             }
-            else
+            if (movePos == null)
             {
-                // Offset in Z direction (north/south)
-                double offsetZ = dz >= 0 ? 1.0 : -1.0;
-                movePos = new Vec3d(targetPos.X + 0.5, targetPos.Y, targetPos.Z + 0.5 + offsetZ);
+                return new PolisTestHarness.CommandResult
+                {
+                    Ok = false,
+                    Message = $"no open standing cell around {targetPos} (all four neighbours are solid) - open a ledge first"
+                };
             }
         }
         else

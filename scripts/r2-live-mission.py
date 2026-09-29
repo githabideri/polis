@@ -199,22 +199,24 @@ def register_site(wm, pol, bot, goal, fixtures):
 
 
 def goto_arrive(pol, bot, cell, timeout=45):
-    """Position-verified goto (09-29). v5.goto_wait polls the bot's
-    LastAction - which is the LAST RECORDED action: when a new goto
-    starts, the PREVIOUS goto's Ok=True result can still be there, an
-    instant false 'arrived'. The build executor then places from
-    wherever the bot actually is - and that drift is what embedded
-    the bot in its own work. Here, ok means the bot IS at the cell
-    (within half a cell of the centre); a recorded goto-failure or
-    timeout is a real failure."""
-    pol.cmd("goto", [str(cell[0]), str(cell[1]), str(cell[2]),
-                     "true", "0.02", "true"], bot)
+    """Position-verified goto to a cell CENTRE (09-29). Two defects
+    made v5.goto_wait unsafe for building: it polls the bot's
+    LastAction (the LAST RECORDED action - a stale Ok=True from the
+    PREVIOUS goto reads as an instant false 'arrived'), and the
+    harness goto targets the cell CORNER - and the place command's
+    standing-cell math ties (|dx|==|dz|) exactly on a corner, picking
+    an offset into an already-placed block. A bot at the cell
+    CENTRE never ties (dx=0 or dz=0 strictly dominates), and the
+    arrival is verified by position, not by the action's word."""
+    x = "%0.1f" % (cell[0] + 0.5)
+    z = "%0.1f" % (cell[2] + 0.5)
+    pol.cmd("goto", [x, str(cell[1]), z, "true", "0.02", "true"], bot)
     t0 = time.time()
     while time.time() - t0 < timeout:
         st = pol.state(bot)
         la = st.get("LastAction") or {}
         pos = (st.get("Bot") or {}).get("Pos") or [0, 0, 0]
-        if all(abs(pos[i] - (cell[i] + 0.5)) <= 0.5 for i in range(3)):
+        if all(abs(pos[i] - (cell[i] + 0.5)) <= 0.25 for i in range(3)):
             return True
         if la.get("Name") == "goto" and la.get("Ok") is False:
             return False
