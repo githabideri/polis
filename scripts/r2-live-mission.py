@@ -630,10 +630,17 @@ def execute_job(pol, bot, base, job, wm, run):
             # a standing candidate must have AIR at the feet (a goto
             # TO a solid cell walks the bot into it - the pathfinder
             # accepts goals inside blocks, which is how the bot got
-            # embedded 09-29) and solid support a layer below
+            # embedded 09-29). Support is only required ABOVE the
+            # walking layer (the bot stands on our placed blocks);
+            # at ground level the TERRAIN is the support - a scan's
+            # "soil-medium-none" is an empty terrain slot, not a hole
+            # (run 14: one outside neighbour with no block beneath
+            # read as "no ledge" and killed the build).
             bs = pol.cell_blocks(bot, tuple(c), pad=0) or []
             if any(b.get("pos") == list(c) for b in bs):
                 return False
+            if c[1] <= origin[1]:
+                return True
             below = [c[0], c[1] - 1, c[2]]
             bs2 = pol.cell_blocks(bot, tuple(below), pad=0) or []
             return any(b.get("pos") == list(below) for b in bs2)
