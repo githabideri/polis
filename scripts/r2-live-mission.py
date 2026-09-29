@@ -46,6 +46,7 @@ _v5_spec.loader.exec_module(v5)
 
 from r2.worldmodel import WorldModel
 from r2.plannerprompt import build_planner_prompt
+from r2.embodiment import embodiment as _embodiment_fn  # 09-29: the body-vs-solid-world check
 from r2.plancheck import validate_plan, check_goal
 from r2.jobqueue import GoalState
 from r2.jobs import Goal, Job, Failure
@@ -582,9 +583,49 @@ def execute_job(pol, bot, base, job, wm, run):
             return ((pol.state(bot).get("Bot") or {}).get("Pos")
                     or [0, 0, 0])
 
+        def _emb():
+            # the body's relation to the solid world (09-29, the
+            # block-in-bot-cell incident): raw position is
+            # innocent-looking; the FAILURE is the relation between
+            # the position and the solidity of its own cells.
+            bp = _bot_pos()
+            x, y, z = (int(p) for p in bp)
+            bs = pol.cell_blocks(bot, (x, y, z), pad=2) or []
+            cm = {tuple(b["pos"]): b.get("code") for b in bs}
+            return _embodiment_fn(bp, cm)
+
         def _inside(x, z):
             return (origin[0] <= x < origin[0] + w and
                     origin[2] <= z < origin[2] + d)
+
+        # PRE-FLIGHT: the body must be clear before ANY placement,
+        # and for a footprint build it must be OUTSIDE the footprint
+        # - a floor phase started with the bot inside builds a wall
+        # around it. Structural failures abort; they are not
+        # retryable (no amount of re-trying a target fixes a body
+        # that cannot stand).
+        st, det = _emb()
+        if st != "OK":
+            return (False, "structural pre-flight: %s - %s (rescue: "
+                    "dig the bot's cell out / open a corridor, then "
+                    "re-run - the mission is idempotent)" % (st, det),
+                    measured, {}, {"cells": None})
+        bp0 = _bot_pos()
+        if (origin[0] <= bp0[0] < origin[0] + w and
+                origin[2] <= bp0[2] < origin[2] + d):
+            ev = [origin[0] - 2, origin[1], origin[2] - 2]
+            try:
+                v5.goto_wait(pol, bot, ev)
+            except Exception:
+                st, det = _emb()
+                if st != "OK":
+                    return (False, "structural pre-flight: bot inside "
+                            "the footprint and cannot walk out: %s - %s"
+                            % (st, det), measured, {}, {"cells": None})
+                return (False, "pre-flight: bot inside the footprint "
+                        "and the walk-out failed; aborting rather than "
+                        "building the floor around it", measured, {},
+                        {"cells": None})
 
         landed = 0
         total = 0
@@ -624,12 +665,37 @@ def execute_job(pol, bot, base, job, wm, run):
                     try:
                         v5.goto_wait(pol, bot, cand)
                     except Exception:
+                        # a failed goto is not automatically "try the
+                        # next candidate": if the body itself is the
+                        # problem (embedded/trapped), no candidate
+                        # helps - abort with the structural reason
+                        st, det = _emb()
+                        if st != "OK":
+                            return (False, "structural: standing goto "
+                                    "for %s%s failed and the body is %s "
+                                    "(- %s)" % (phase, cell, st, det),
+                                    measured, {}, {"cells": None})
                         continue
                     res = v5.execute(pol, bot, "place_block", cell,
                                      base, "build",
                                      buildblock=_item(mat))
                     time.sleep(1)
                     if _has(mat, cell):
+                        # BIDIRECTIONAL oracle: the target gained its
+                        # block AND the body is still clear. The
+                        # engine's place rejection is unreliable in
+                        # BOTH directions (a phantom ok, and a block
+                        # appearing in the bot's own cell) - this is
+                        # the check that catches an embedding the
+                        # instant it happens
+                        st, det = _emb()
+                        if st != "OK":
+                            return (False, "structural: place into %s "
+                                    "landed but the body ended %s "
+                                    "(- %s) - a block in the bot's own "
+                                    "cell; the target cell must be "
+                                    "replaced after rescue" % (cell, st, det),
+                                    measured, {}, {"cells": None})
                         landed += 1
                         placed_here = True
                         parts.append("%s%s:landed" % (phase, cell))

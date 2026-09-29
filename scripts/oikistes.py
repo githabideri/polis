@@ -44,6 +44,9 @@ from urllib.parse import urlparse, parse_qs
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
+sys.path.insert(0, REPO)
+from r2 import buildplans  # the building plan library (13.11)
+from r2.embodiment import embodiment as _embodiment_fn  # the body-vs-solid-world check (09-29)
 
 # ----------------------------------------------------------------------
 # harness / llm clients
@@ -159,6 +162,10 @@ class Oikistes:
     def __init__(self, args):
         self.args = args
         self.polis = Polis(args.harness, args.uid)
+        # the building library (13.11): plan files are DATA; new
+        # buildings arrive as new files - the agent sees the index
+        # every turn
+        self.plans = buildplans.list_plans(os.path.join(REPO, "builds"))
         # swappable brains: primary (default) + optional alt - the
         # operator switches at runtime (POST /oikistes/model) to A/B
         # the models on the same task battery
@@ -308,20 +315,34 @@ class Oikistes:
             if tool == "state":
                 st = self.polis.state(bot)
                 b = st.get("Bot") or {}
+                pos = b.get("Pos", [0, 0, 0])
                 inv = [ "%s x%s" % (i.get("Code"), i.get("Qty", 1))
                         for i in (b.get("Backpack") or [])
                         if i.get("Code")]
                 hands = [b.get(k) for k in ("RightHand", "LeftHand")
                          if b.get(k) and b.get(k).get("Code")]
                 la = st.get("LastAction") or {}
-                return ("bot=%d pos=(%s,%s,%s) hands=%s backpack=[%s] "
-                        "last_action=%s %s"
-                        % (bot, b.get("Pos", [0, 0, 0])[0],
-                           b.get("Pos", [0, 0, 0])[1],
-                           b.get("Pos", [0, 0, 0])[2],
-                           [h.get("Code") for h in hands],
-                           ", ".join(inv) or "-",
-                           la.get("Name") or "-", la.get("Msg") or ""))
+                out = ("bot=%d pos=(%s,%s,%s) hands=%s backpack=[%s] "
+                       "last_action=%s %s"
+                       % (bot, pos[0], pos[1], pos[2],
+                          [h.get("Code") for h in hands],
+                          ", ".join(inv) or "-",
+                          la.get("Name") or "-", la.get("Msg") or ""))
+                # the body's relation to the solid world (09-29): raw
+                # position is innocent-looking - EMBEDDED/TRAPPED is
+                # what the agent must see to know it (or anything in
+                # the world) cannot walk
+                try:
+                    x, y, z = (int(p) for p in pos)
+                    bs = self.polis.cell_blocks(bot, (x, y, z),
+                                                pad=2) or []
+                    cm = {tuple(bb["pos"]): bb.get("code")
+                          for bb in bs}
+                    est, edet = _embodiment_fn(pos, cm)
+                    out += " embodiment=%s (%s)" % (est, edet)
+                except Exception as e:
+                    out += " embodiment=? (%s)" % e
+                return out
             if tool == "scan":
                 x = int(a.get("x", 0)); y = int(a.get("y", 2))
                 z = int(a.get("z", 0)); rad = int(a.get("r", 8) or 8)
@@ -386,7 +407,7 @@ class Oikistes:
                "--harness", self.args.harness,
                "--uid", self.args.uid,
                "--goal", goal_line, "--out", out]
-        if verb in ("mine", "harvest", "sow", "build"):
+        if verb in ("mine", "harvest", "sow", "build", "build-plan"):
             cmd.append("--no-planner")
         else:
             cmd += ["--llm", self.args.llm,
