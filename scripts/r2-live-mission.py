@@ -594,6 +594,18 @@ def execute_job(pol, bot, base, job, wm, run):
             cm = {tuple(b["pos"]): b.get("code") for b in bs}
             return _embodiment_fn(bp, cm)
 
+        def _standable(c):
+            # a standing candidate must have AIR at the feet (a goto
+            # TO a solid cell walks the bot into it - the pathfinder
+            # accepts goals inside blocks, which is how the bot got
+            # embedded 09-29) and solid support a layer below
+            bs = pol.cell_blocks(bot, tuple(c), pad=0) or []
+            if any(b.get("pos") == list(c) for b in bs):
+                return False
+            below = [c[0], c[1] - 1, c[2]]
+            bs2 = pol.cell_blocks(bot, tuple(below), pad=0) or []
+            return any(b.get("pos") == list(below) for b in bs2)
+
         def _inside(x, z):
             return (origin[0] <= x < origin[0] + w and
                     origin[2] <= z < origin[2] + d)
@@ -660,6 +672,17 @@ def execute_job(pol, bot, base, job, wm, run):
                                              pad=0) or []
                         return any(b.get("pos") == list(below) for b in bs)
                     cands.sort(key=lambda c: 0 if _supported(c) else 1)
+                # a candidate with a block AT foot level is not a
+                # ledge (09-29: the previous phase's own blocks are
+                # the candidates - standing on one embeds the bot)
+                cands = [c for c in cands if _standable(c)]
+                if not cands:
+                    return (False, "structural: no standable candidate "
+                            "for %s%s (all neighbours at foot level %s "
+                            "are occupied) - the plan geometry or a "
+                            "neighbouring structure leaves no ledge"
+                            % (phase, cell, L),
+                            measured, {}, {"cells": None})
                 placed_here = False
                 for cand in cands:
                     try:
