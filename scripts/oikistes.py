@@ -386,7 +386,7 @@ class Oikistes:
                "--harness", self.args.harness,
                "--uid", self.args.uid,
                "--goal", goal_line, "--out", out]
-        if verb in ("mine", "harvest", "sow"):
+        if verb in ("mine", "harvest", "sow", "build"):
             cmd.append("--no-planner")
         else:
             cmd += ["--llm", self.args.llm,

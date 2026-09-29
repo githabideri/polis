@@ -489,9 +489,12 @@ def execute_job(pol, bot, base, job, wm, run):
         # the place command still reports ok=True - so a reported-ok
         # placement is not trusted: the cell is re-scanned after each
         # attempt and only a LANDED block counts. Occupied/pre-filled
-        # cells are skipped to the next ring cell.
+        # cells are skipped to the next ring cell (and the failure
+        # message says how many skips - a second build over an existing
+        # platform runs out of empty ring cells, and the agent should
+        # be told that, not "build failed")
         used, placed, parts = set(), 0, []
-        idx, attempts = 0, 0
+        idx, attempts, skips = 0, 0, 0
         while placed < n and attempts < 3 * n:
             attempts += 1
             dx, dz = RING[idx % len(RING)]
@@ -503,6 +506,7 @@ def execute_job(pol, bot, base, job, wm, run):
                                or [])
                    if b.get("pos") == c]
             if occ:  # filled (or the bot is in the way) - next cell
+                skips += 1
                 continue
             res = v5.execute(pol, bot, "place_block", c, base, "build",
                              buildblock=item)
@@ -524,6 +528,11 @@ def execute_job(pol, bot, base, job, wm, run):
         ok = (placed == n) and (delta >= n)
         msg = ("build %s x%d at %s -> placed=%d/%d delta=%d %s"
                % (item, n, job.target, placed, n, delta, parts))
+        if not ok and placed < n:
+            msg += (" [ring: %d attempts, %d occupied/phantom skips -"
+                    " the site may already carry a platform; build at"
+                    " a fresh site or clear the ring first]"
+                    % (attempts, skips))
         return ok, msg, {}, \
             {"last_action": {k: la.get(k) for k in
                              ("Name", "Ok", "Msg")},
