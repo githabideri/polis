@@ -1,5 +1,5 @@
 #!/bin/bash
-# build.sh - Build and optionally deploy polis-builder-npc
+# build.sh - Build and optionally deploy polis
 #
 # Usage:
 #   ./build.sh           # Build only
@@ -66,12 +66,12 @@ if [ "$DEPLOY" = true ]; then
     # rm-then-copy (2026-09-27): cp -r never removes stale files - a renamed
     # subdirectory (webui-v2 -> webui) survived the deploy and the harness 404'd.
     if [ -n "$VINTAGE_STORY" ]; then
-        rm -rf "$VINTAGE_STORY/Mods/polis-builder-npc"
-        cp -r bin/Release/Mods/polis-builder-npc "$VINTAGE_STORY/Mods/"
+        rm -rf "$VINTAGE_STORY/Mods/polis"
+        cp -r bin/Release/Mods/polis "$VINTAGE_STORY/Mods/"
     fi
     if [ -n "$VSDATA" ]; then
-        rm -rf "$VSDATA/Mods/polis-builder-npc"
-        cp -r bin/Release/Mods/polis-builder-npc "$VSDATA/Mods/"
+        rm -rf "$VSDATA/Mods/polis"
+        cp -r bin/Release/Mods/polis "$VSDATA/Mods/"
     fi
 fi
 

@@ -78,7 +78,7 @@ public partial class PolisBuilderNpcSystem : ModSystem
         // Register the possession mountable so clients can reconstruct the seat
         api.RegisterMountable(PolisPossessableSeat.MountableClassName, PolisPossessableSeat.CreateFromTree);
 
-        serverChannel = api.Network.RegisterChannel("polis-builder-npc")
+        serverChannel = api.Network.RegisterChannel("polis")
             .RegisterMessageType<PolisBotListRequestPacket>()
             .RegisterMessageType<PolisBotListResponsePacket>()
             .RegisterMessageType<PolisBotActionPacket>()
@@ -1275,7 +1275,7 @@ public partial class PolisBuilderNpcSystem : ModSystem
     public override void StartClientSide(ICoreClientAPI api)
     {
         capi = api;
-        clientChannel = api.Network.RegisterChannel("polis-builder-npc")
+        clientChannel = api.Network.RegisterChannel("polis")
             .RegisterMessageType<PolisBotListRequestPacket>()
             .RegisterMessageType<PolisBotListResponsePacket>()
             .RegisterMessageType<PolisBotActionPacket>()

@@ -125,7 +125,7 @@ def distance(pos, target):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="HTTP smoke test for polis-builder-npc test harness."
+        description="HTTP smoke test for polis test harness."
     )
     parser.add_argument("--host", default="localhost", help="HTTP host (default: localhost)")
     parser.add_argument("--port", type=int, default=8585, help="HTTP port (default: 8585)")

@@ -1,4 +1,4 @@
-# Agent Testing Guide for polis-builder-npc
+# Agent Testing Guide for polis
 
 This guide enables AI agents (Claude, Codex, etc.) to autonomously test the mod via the HTTP harness.
 

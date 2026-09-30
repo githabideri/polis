@@ -1,6 +1,6 @@
 # Polis CLI Reference
 
-Command-line interface for the polis-builder-npc HTTP test harness. Designed for ergonomic LLM/agent use.
+Command-line interface for the polis HTTP test harness. Designed for ergonomic LLM/agent use.
 
 ## Installation
 

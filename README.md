@@ -5,7 +5,7 @@ humanoid NPCs (polisbots), direct them with `/polis` chat commands or hotkeys,
 and *possess* one to control it directly — with an autonomous-behavior layer
 around it (jobs, building plans, a settlement agent).
 
-- **Mod id:** `polis-builder-npc` (keep this id; it is what worlds and servers reference)
+- **Mod id:** `polis` (renamed from the working title `polis-builder-npc`; the old id only ever existed in private test worlds)
 - **Game version:** Vintage Story **1.22.7** (port target; see `STATUS.md`)
 - **License:** MIT (`LICENSE`)
 - **Side:** universal (client + server; possession is client-side)
@@ -36,7 +36,7 @@ therefore contains the whole stack, not just the mod:
 
 ```sh
 cp .env.example .env   # point VINTAGE_STORY / VSDATA at your Vintage Story install
-./build.sh             # dotnet build -> bin/Release/Mods/polis-builder-npc
+./build.sh             # dotnet build -> bin/Release/Mods/polis
 ./build.sh --deploy    # + copy into the game's Mods dir
 ```
 

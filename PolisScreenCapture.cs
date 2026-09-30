@@ -5,7 +5,7 @@ using SkiaSharp;
 using Vintagestory.API.Client;
 
 /// <summary>
-/// Screenshot capture utility for polis-builder-npc.
+/// Screenshot capture utility for polis.
 /// Uses OpenGL glReadPixels via OpenTK to capture the current framebuffer.
 ///
 /// IMPORTANT: Must be called during an active OpenGL context (in IRenderer callback).

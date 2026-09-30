@@ -1,5 +1,5 @@
 #!/bin/bash
-# check-env.sh - Validate environment setup for polis-builder-npc
+# check-env.sh - Validate environment setup for polis
 #
 # Usage: ./scripts/check-env.sh
 #

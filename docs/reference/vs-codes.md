@@ -1,6 +1,6 @@
 # Vintage Story Block and Item Codes Reference
 
-This document lists commonly used block and item codes for the polis-builder-npc project. These codes are compatible with harness commands (`give`, `place`, `setblock`, `mine`, etc.) and `sapi.World.GetBlock()` / `sapi.World.GetItem()`.
+This document lists commonly used block and item codes for the polis project. These codes are compatible with harness commands (`give`, `place`, `setblock`, `mine`, etc.) and `sapi.World.GetBlock()` / `sapi.World.GetItem()`.
 
 **Format:** All codes use the `game:` domain prefix (e.g., `game:rock-granite`).
 

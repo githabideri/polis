@@ -4,13 +4,16 @@
  */
 import puppeteer from 'puppeteer';
 import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
+
+const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
 const UI_URL = 'http://localhost:8585/polis/ui';
 
 function runCli(args) {
   return new Promise((resolve) => {
     const proc = spawn('python3', ['scripts/poliscli.py', ...args.split(' ')], {
-      cwd: '/home/mf/Code/polis-builder/polis-builder-npc'
+      cwd: REPO_ROOT
     });
     let out = '';
     proc.stdout.on('data', d => out += d);

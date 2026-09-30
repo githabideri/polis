@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Polis CLI - Command-line interface for the polis-builder-npc HTTP test harness.
+Polis CLI - Command-line interface for the polis HTTP test harness.
 
 Provides ergonomic commands for LLM/agent use with optional TOON output format.
 """
@@ -2348,7 +2348,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         prog="polis",
-        description="CLI for polis-builder-npc HTTP test harness",
+        description="CLI for polis HTTP test harness",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Global options (use after subcommand, e.g., 'polis look --player UID'):

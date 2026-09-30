@@ -7,7 +7,7 @@ namespace PolisBuilderNpc.Core;
 public static class PolisConstants
 {
     // Bot identity
-    public const string DefaultBotCode = "polis-builder-npc:polisbot";
+    public const string DefaultBotCode = "polis:polisbot";
 
     // Highlight slot IDs (unique IDs to avoid conflicts with other mods)
     public const int HighlightSlotId = 48521;

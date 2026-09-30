@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Phase 1.5 Prediction Test Suite for polis-builder-npc.
+Phase 1.5 Prediction Test Suite for polis.
 
 Tests possession control and measures movement quality metrics
 to validate smoothing improvements.
@@ -528,7 +528,7 @@ class PredictionTestSuite:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Phase 1.5 prediction test suite for polis-builder-npc"
+        description="Phase 1.5 prediction test suite for polis"
     )
     parser.add_argument("--host", default="localhost", help="HTTP host (default: localhost)")
     parser.add_argument("--port", type=int, default=8585, help="HTTP port (default: 8585)")

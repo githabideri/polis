@@ -21,7 +21,7 @@ Open in Chrome: `http://localhost:8585/polis/ui`
 
 ## Prerequisites
 
-1. Vintage Story server running with polis-builder-npc mod
+1. Vintage Story server running with polis mod
 2. Server log shows: `[polis-harness] HTTP/WebSocket server started on port 8585`
 3. Server log shows: `[polis-harness] UI available at http://localhost:8585/polis/ui`
 

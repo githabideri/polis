@@ -1,6 +1,6 @@
 # Testing Harness Usage Guide
 
-This document describes how to use the HTTP test harness for automated testing of polis-builder-npc.
+This document describes how to use the HTTP test harness for automated testing of polis.
 
 For example outputs from a live run, see `docs/TESTING_HARNESS_OUTPUTS.md`.
 For recent activation tests (lantern/valve/quern/etc.), see `docs/journal/2026-01-13-harness-activate-misc-blocks.md`.
@@ -33,7 +33,7 @@ The raw HTTP API documented below remains available for direct integration.
 
 ## Prerequisites
 
-1. Vintage Story server running with polis-builder-npc mod loaded
+1. Vintage Story server running with polis mod loaded
 2. Check server log for: `[polis] Test harness started on port 8585`
 
 ## UI Notes (Web)
@@ -255,7 +255,7 @@ curl -X POST http://localhost:8585/polis/command \
 # Explicit entity code
 curl -X POST http://localhost:8585/polis/command \
   -H "Content-Type: application/json" \
-  -d '{"cmd":"spawn","args":["polis-builder-npc:polisbot"]}'
+  -d '{"cmd":"spawn","args":["polis:polisbot"]}'
 
 # At specific coordinates
 curl -X POST http://localhost:8585/polis/command \
@@ -265,7 +265,7 @@ curl -X POST http://localhost:8585/polis/command \
 # Entity code + coordinates
 curl -X POST http://localhost:8585/polis/command \
   -H "Content-Type: application/json" \
-  -d '{"cmd":"spawn","args":["polis-builder-npc:polisbot","100","65","-200"]}'
+  -d '{"cmd":"spawn","args":["polis:polisbot","100","65","-200"]}'
 
 # Spawn relative to a player
 curl -X POST http://localhost:8585/polis/command \

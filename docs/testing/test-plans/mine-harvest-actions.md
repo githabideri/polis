@@ -145,10 +145,10 @@ curl -s -X POST "http://localhost:8585/polis/command" \
 ```json
 {
   "Ok": true,
-  "Message": "Spawned polis-builder-npc:polisbot #393 at (223.5, 3, 267.5)",
+  "Message": "Spawned polis:polisbot #393 at (223.5, 3, 267.5)",
   "Data": {
     "id": 393,
-    "code": "polis-builder-npc:polisbot",
+    "code": "polis:polisbot",
     "pos": [223.5, 3, 267.5]
   }
 }

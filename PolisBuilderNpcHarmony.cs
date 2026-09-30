@@ -21,7 +21,7 @@ internal static class PolisBuilderNpcHarmony
             return;
         }
 
-        harmony = new Harmony("polis-builder-npc");
+        harmony = new Harmony("polis");
         PolisNanPosGuardPatch.logger = api.Logger;
         harmony.PatchAll();
         applied = true;
@@ -36,7 +36,7 @@ internal static class PolisBuilderNpcHarmony
             return;
         }
 
-        harmony?.UnpatchAll("polis-builder-npc");
+        harmony?.UnpatchAll("polis");
         harmony = null;
         applied = false;
 

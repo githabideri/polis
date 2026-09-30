@@ -10,10 +10,10 @@
 
 1. **Deploy the mod:**
    ```bash
-   cd /home/mf/Code/polis-builder/worktrees/claude-harvest-block-action
-   export VINTAGE_STORY="/home/mf/.local/share/flatpak/app/at.vintagestory.VintageStory/x86_64/stable/active/files/extra/vintagestory"
+   cd <repo-root>
+   export VINTAGE_STORY="<path to your Vintage Story install>"
    dotnet build -c Release
-   cp -r bin/Release/Mods/polis-builder-npc ../vsdata/Mods/
+   cp -r bin/Release/Mods/polis ../vsdata/Mods/
    ```
 
 2. **Start the game server** (restart if already running to reload mod)

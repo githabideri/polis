@@ -20,7 +20,7 @@ Never collapse these into "works". `STATUS.md` records the level per feature.
 - The game **auto-logs in** from the cached session key in VSDATA
   (`clientsettings.json`) — no password typing needed; the session key must
   be refreshed occasionally by a human at the login screen.
-- Mod install dir: the **game directory** `<VINTAGE_STORY>/Mods/polis-builder-npc`
+- Mod install dir: the **game directory** `<VINTAGE_STORY>/Mods/polis`
   (VS 1.22 loads user mods from the game dir; `$VSDATA/Mods` is ignored by
   1.22 — `build.sh --deploy` copies to both, game dir authoritative).
 - Test world: create a fresh world for mission work and select it in the

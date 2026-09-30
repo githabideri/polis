@@ -35,7 +35,7 @@ Top-level fields:
 
 ### Entity Entry Fields
 - `Id`: entity id.
-- `Code`: entity code (e.g., `polis-builder-npc:polisbot`, `game:item-...`).
+- `Code`: entity code (e.g., `polis:polisbot`, `game:item-...`).
 - `Class`: entity class name.
 - `Pos`: entity position `[x, y, z]`.
 - `Dist`: distance from `Center`.

@@ -15,7 +15,7 @@ This test plan validates the new verifiable building system which includes:
 
 1. **Build and deploy the mod:**
    ```bash
-   source .env && dotnet build -c Release && cp -r bin/Release/Mods/polis-builder-npc "$VSDATA/Mods/"
+   source .env && dotnet build -c Release && cp -r bin/Release/Mods/polis "$VSDATA/Mods/"
    ```
 
 2. **Start the game:**

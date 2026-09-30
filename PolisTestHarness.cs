@@ -17,7 +17,7 @@ using Vintagestory.API.Server;
 using PolisBuilderNpc.Core;
 
 /// <summary>
-/// HTTP test harness for external control of polis-builder-npc.
+/// HTTP test harness for external control of polis.
 /// Enables agents, web UIs, and CLI tools to send commands and query state.
 /// </summary>
 public class PolisTestHarness : IDisposable
@@ -291,7 +291,7 @@ public class PolisTestHarness : IDisposable
             {
                 var runPhase = sapi.Server?.CurrentRunPhase ?? EnumServerRunPhase.Standby;
                 var worldReady = (int)runPhase >= (int)EnumServerRunPhase.WorldReady;
-                var modInfo = sapi.ModLoader?.GetMod("polis-builder-npc")?.Info;
+                var modInfo = sapi.ModLoader?.GetMod("polis")?.Info;
 
                 tcs.SetResult(new
                 {

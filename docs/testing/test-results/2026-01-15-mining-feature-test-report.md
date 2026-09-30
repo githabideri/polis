@@ -31,7 +31,7 @@ The mining feature implementation is functionally solid with proper tier restric
 ## Test Environment
 
 **Game:** Vintage Story Server
-**Mod:** polis-builder-npc
+**Mod:** polis
 **Harness Port:** 8585
 **Bot Used:** #320 → #334 (respawned due to ownership issues)
 **Player:** player (uid: REDACTED-UID)

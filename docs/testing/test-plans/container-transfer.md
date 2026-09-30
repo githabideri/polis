@@ -19,7 +19,7 @@ source .local/testing.env
 
 If that fails, try the full path from the worktree root:
 ```bash
-source "$PWD/.local/testing.env" 2>/dev/null || source /home/mf/Code/polis-builder/worktrees/claude-container-transfer/.local/testing.env
+source .local/testing.env   # per-test env (created from the test plan; not committed)
 ```
 
 Verify it loaded:
