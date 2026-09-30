@@ -1389,7 +1389,7 @@ def main():
                     help="reflex model id on the card (ft2 = 2026-09-26 LoRA round 2: "
                          "build + wait-abstention; ft = round 1; base: qwen35-decider-2b)")
     ap.add_argument("--harness", default="http://127.0.0.1:8585")
-    ap.add_argument("--openjev", default=os.environ.get("OPENJEV", "the Laya noul endpoint"),
+    ap.add_argument("--openjev", default=os.environ.get("POLIS_OPENJEV_URL", os.environ.get("OPENJEV", "")),
                     help="Laya noul endpoint (openjev the Laya box on the LAN)")
     ap.add_argument("--llm", default=os.environ.get("POLIS_LLM", "http://the 27B judge"),
                     help="27B doubt-arbiter endpoint (vLLM the 27B box on the 5600X host)")

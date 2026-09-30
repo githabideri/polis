@@ -24,7 +24,7 @@ import urllib.request
 HARNESS = os.environ.get("POLIS_HARNESS", "http://127.0.0.1:8585")
 # a REAL player uid is required - the harness resolves the command
 # context against registered players (a fabricated uid cannot spawn)
-UID = os.environ.get("POLIS_UID", "d4pJ+Ty1RgaBHrQgQEV8z27E")
+UID = os.environ["POLIS_UID"]
 
 
 def cmd(c, args=(), bot=None, timeout=60):

@@ -865,8 +865,8 @@ Examples:
     parser.add_argument(
         "--port",
         type=int,
-        default=int(os.environ.get("POLIS_PORT", "5099")),
-        help="Harness port (default: $POLIS_PORT or 5099)"
+        default=int(os.environ.get("POLIS_PORT", "8585")),
+        help="Harness port (default: $POLIS_PORT or 8585)"
     )
     parser.add_argument(
         "--manifests-dir",
