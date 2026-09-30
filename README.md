@@ -3,53 +3,82 @@
 A Vintage Story mod for a **"Deity RTS with Possession"**: spawn controllable
 humanoid NPCs (polisbots), direct them with `/polis` chat commands or hotkeys,
 and *possess* one to control it directly — with an autonomous-behavior layer
-planned around it (colony management, jobs, economy).
+around it (jobs, building plans, a settlement agent).
 
 - **Mod id:** `polis-builder-npc` (keep this id; it is what worlds and servers reference)
 - **Game version:** Vintage Story **1.22.7** (port target; see `STATUS.md`)
 - **License:** MIT (`LICENSE`)
 - **Side:** universal (client + server; possession is client-side)
 
-## Repo map
+## What this repo is
+
+Polis is the substrate of a research project into one-pass, calibrated
+decision models (the "Jev" model class) driving in-game agents. The repo
+therefore contains the whole stack, not just the mod:
 
 | Path | What |
 |------|------|
-| `src/` | Mod code. `src/Compat/` = **version shim** (see below) |
-| `src/Harness/` | In-game test harness command handlers |
-| `scripts/` | `poliscli.py` (CLI), `vsctl.py`, test runners, smoke tests |
-| `tools/` | Web UI + browser test assets |
-| `tests/world/` | Pristine testbed world (`.vcdbs`) |
-| `docs/` | Living reference docs (commands, harness, radar map plan) |
-| `ops/` | CT-114 testbed operations (VNC/game stack) — private detail, sanitized |
-| `archive/` | **Frozen** history: pre-1.22.7 vision/technical/roadmap, journals, research, old issue tracker |
-| `DESIGN.md` | Architecture & design contract |
+| root `*.cs` + `src/` | The mod: bot entity, action primitives (mine, harvest, pickup, place, workstations), A* navigation, possession (the player mounts the bot), network sync, the game-event stream, screen capture, and the in-game HTTP harness — the agent-facing API |
+| `modinfo.json`, `assets/` | Mod manifest + entity definitions |
+| `r2/` | The **R2 job system**: the pure Python decision/execution core (reflex-state projection, job queue, building plans, embodiment checks, world model), pinned by the contract gate in `tests/reflex/` |
+| `scripts/` | Live tooling: `poliscli.py` (harness CLI), `jev-loop-v5.py` (the three-tier decision loop: reflex model → 2B decider readout → 27B doubt-arbiter), `oikistes.py` (the settlement agent with swappable model brains), `r2-live-mission.py`, `jevab/` (model A/B + fine-tuning measurement harness) |
+| `tools/webui/` | The web UI — the instrument panel over the harness (state, commands, live view, Oikistes chat) |
+| `builds/` | Buildings as data: JSON plans the executor compiles into per-cell verified builds |
+| `data/` | Frozen measurement data: decision-loop runs, labeled corpora, fine-tune rows, A/B results — the scientific record behind `docs/reports/` |
+| `models/decider-2b/` | Inference subset of the public Decider 2B (config, tokenizer, Python engine; weights live on Hugging Face — see its README) |
+| `tests/` | Contract gate (decision replays, prompt byte-identity) and aim verification |
+| `docs/` | Living reference: command surface, harness API, design docs, dated reports, `proofs/` visual evidence |
+| `archive/` | **Frozen** history: pre-1.22.7 vision/technical/roadmap, dev journals, research notes, superseded decision loops (v1–v4) |
 | `STATUS.md` | Current state, verification levels, open issues — **the single status source** |
-| `TESTING.md` | How to test (harness, missions, verification vocabulary) |
-| `AGENTS.md` | Rules for AI agents working in this repo |
+| `DESIGN.md` / `TESTING.md` / `AGENTS.md` | Architecture contract / how we verify / rules for AI agents working in this repo |
 
-## Quick start (dev on the CT-114 testbed)
+## Quick start (dev)
 
 ```sh
-source .env          # VINTAGE_STORY=/opt/vintagestory/extra/vintagestory, VSDATA=...
-./build.sh           # dotnet build -> bin/Release/Mods/polis-builder-npc
-./build.sh --deploy  # + copy into the game's Mods dir
-systemctl restart vsgame   # then connect via noVNC (see ops/the game container-VNC.md)
+cp .env.example .env   # point VINTAGE_STORY / VSDATA at your Vintage Story install
+./build.sh             # dotnet build -> bin/Release/Mods/polis-builder-npc
+./build.sh --deploy    # + copy into the game's Mods dir
 ```
 
-## Version shim law
+The build is hermetic: only `.env` values, no machine-specific paths in the
+csproj or scripts. Start the game and the mod loads; the in-game harness
+listens on loopback by default (set `POLIS_HARNESS_IP` to expose it on the
+LAN — that is what the web UI uses). Then:
 
-The mod targets one game version at a time. **All version-dependent API
-usage goes through `src/Compat/`** — one namespace per game version
-(currently `Compat/VS122/`). Mod code never calls a version-specific API
-directly; it calls a Compat facade. When VS ships 1.23 (expected before
-end of 2026), the port = new `Compat/VS123/` facade + csproj TFM bump,
-**not** a repo-wide rewrite.
+```sh
+scripts/poliscli.py status          # worldReady?
+scripts/poliscli.py spawn
+scripts/poliscli.py goto 100 64 -200 --wait 10
+scripts/poliscli.py state           # ALWAYS re-read after actions
+```
+
+The web UI is served by the harness from the mod folder under `/polis/ui/`
+(no build step; files are read per request, so a copy + refresh is a deploy).
+Testing methodology, the mission protocol and the verification vocabulary:
+`TESTING.md`.
+
+## Porting to a new game version
+
+The mod targets one game version at a time (currently 1.22.7; 1.23 is
+expected before end of 2026). The 1.22 port was done against the API
+directly (five small drift fixes); from the next port, version-specific API
+usage is isolated in `src/Compat/<ver>/` facades so a version bump is a new
+facade directory + a csproj TFM bump, not a repo-wide rewrite (the "version
+shim law" — `DESIGN.md`).
 
 ## Publishing
 
-Two tracks, kept separate:
-1. **Private:** Gitea `gitea/polis` (primary, all history, ops docs).
-2. **Public:** GitHub mirror + VS mod store listing — sanitized copy only
-   (no host names, IPs, ops docs, session details). The public copy's
-   `ops/` and any machine-specific content is excluded by the mirror
-   script.
+One tree, three views:
+
+1. **Gitea (primary):** `gitea/polis` — the development repository.
+2. **GitHub (community mirror):** `githabideri/polis` — the same sanitized
+   tree; the mod is MIT-licensed.
+3. **Vintage Story Mod DB** (`mods.vintagestory.at`) — the distribution
+   channel for the mod package, built from this source.
+
+**Sanitization is a standing rule of this repo:** no internal hostnames,
+network addresses, or credentials anywhere in the tree or the history.
+Measurement environments are written as *roles* ("the game testbed", "the
+CPU batch box", "the 3060 card"); endpoints come from env vars and
+arguments. Deployment-specific operational knowledge (how *our* testbed
+container is wired up) deliberately lives outside this repo.

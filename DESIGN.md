@@ -9,10 +9,10 @@ disagree, fix the doc in the same change.
 **"Deity RTS with Possession."** A player oversees a population of
 autonomous workers (colony/build/RTS layer) and can *possess* one of them
 to take direct control (action layer) when the AI isn't good enough.
-Possession is only powerful once autonomous behavior exists; today the
-autonomy layer is just command-driven primitives (Phase 0/1 shipped,
-Phase 2 job system planned — see `archive/VISION.md` for the full plan and
-research links).
+Possession is only powerful once autonomous behavior exists. The autonomy
+layer is the R2 job system (`r2/` — see
+`docs/design/2026-09-26-job-system-r2.md`); the full pre-1.22.7 plan and
+research trail are frozen in `archive/VISION.md`.
 
 ## Module map (src/)
 
@@ -29,7 +29,6 @@ research links).
 | `PolisTestHarness.cs` + `Harness/` | HTTP server on `localhost:8585` (`/polis/*`) + test command handlers |
 | `Gui/` | Bot manager GUI, debug overlays |
 | `Helpers/` | A* pathfinder, LOS, selection math, etc. |
-| `Compat/VS122/` | **Version shim** — the only place 1.22.x API specifics live |
 
 ## Command surface
 
@@ -52,6 +51,8 @@ research links).
 4. **Harness calls are fire-and-verify**: actions can report `Ok: true` at
    start and fail later — tests must re-read `/polis/state` (this is the
    "silent failure" class of bug; see `archive/KNOWN_ISSUES.md`).
-5. **Version boundary:** feature code → `Compat/<ver>/` facades → game API.
-   Bumping the game version touches one facade directory + csproj, nothing
-   else (the "version shim law").
+5. **Version boundary:** the mod targets one game version at a time.
+   Version-specific API usage is kept isolated so a port is a bounded change
+   — from the next version on through `Compat/<ver>/` facades (one facade
+   directory + csproj TFM bump, nothing else; the "version shim law"). The
+   1.22 port predates the facade discipline and calls the API directly.

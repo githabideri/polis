@@ -11,26 +11,29 @@
 
 Never collapse these into "works". `STATUS.md` records the level per feature.
 
-## The testbed (the game container "polis", the PVE host)
+## The testbed
 
-- Game: `/opt/vintagestory` (native install, 1.22.7), display via
-  noVNC `http://<ct-addr>:6080/vnc.html` (see `.env` / ops notes). Full ops notes: `ops/the game container-VNC.md`.
-- The game **auto-logs in** from the cached session key
-  (`/root/.config/VintagestoryData/clientsettings.json`) — no password
-  typing needed; the session key must be refreshed occasionally by a human
-  at the login screen.
+- Game: a Vintage Story 1.22.7 install on a headless container (paths come
+  from `.env`: `VINTAGE_STORY`, `VSDATA`), observable via noVNC. The
+  deployment specifics (services, display stack, the TLS front for the UI)
+  are operator-specific and live **outside** this repo.
+- The game **auto-logs in** from the cached session key in VSDATA
+  (`clientsettings.json`) — no password typing needed; the session key must
+  be refreshed occasionally by a human at the login screen.
 - Mod install dir: the **game directory** `<VINTAGE_STORY>/Mods/polis-builder-npc`
   (VS 1.22 loads user mods from the game dir; `$VSDATA/Mods` is ignored by
   1.22 — `build.sh --deploy` copies to both, game dir authoritative).
-- Test world: copy `tests/world/<name>/*.vcdbs` into
-  `<VSDATA>/Worlds/<name>/` and select it in the main menu.
-  `polis-testbed-pristine` is the canonical empty testbed.
+- Test world: create a fresh world for mission work and select it in the
+  main menu (the curated pristine test world was removed from this repo —
+  it carried player data). Missions always run against a fresh copy of a
+  world, never a mutated base.
 - **Never restart Xvnc while the game runs** (kills the game session).
   Restarting the game (`systemctl restart vsgame`) is fine.
 
 ## The harness
 
-The mod runs an HTTP server in-game, LAN-reachable on `http://<ct-addr>:8585` (bind set via `POLIS_HARNESS_IP` in `.env`) (no ssh tunnel; loopback also works).
+The mod runs an HTTP server in-game on loopback by default, and
+LAN-reachable when `POLIS_HARNESS_IP` is set in `.env` (no ssh tunnel).
 `/polis/servercmd` and `/polis/admin/*` stay loopback-gated:
 
 ```sh
@@ -49,7 +52,8 @@ The mod runs an HTTP server in-game, LAN-reachable on `http://<ct-addr>:8585` (b
 - `poliscli.py` supports TOON output (`--toon`) for token-efficient agent
   consumption; env vars `POLIS_PLAYER_UID` / `POLIS_BOT_ID` drive targeting.
 - Raw HTTP + WebSocket: `docs/TESTING_HARNESS.md`.
-- Web UI (primary surface): `http://<ct-addr>:8585/polis/ui2/` —
+- Web UI (primary surface): `/polis/ui/` on the harness (served from the
+  mod folder) —
   status header (Connected / World Ready), entity panels, view + step-move
   controls, noVNC live stream (VNC password once), still-image screenshot
   pane (no password — the agent-loop view).
@@ -66,8 +70,8 @@ A **mission** is a deterministic script: setup (world state) → steps
 (commands with `--wait`) → assertions (state/positions/inventory) →
 pass/fail, run by `scripts/polis-test-runner.py`. Rules:
 
-1. Missions run against a **fresh copy** of the testbed world (restore the
-   pristine `.vcdbs` before each run; never mutate the pristine file).
+1. Missions run against a **fresh copy** of the test world (create it
+   before each run; never mutate the base world).
 2. Every assertion is checked against server state, not screenshots,
    except for the explicit visual-verify missions (screen capture via the
    harness).
