@@ -14,21 +14,21 @@ layer is the R2 job system (`r2/` — see
 `docs/design/job-system-r2.md`); the full pre-1.22.7 plan and
 research trail are frozen in `archive/VISION.md`.
 
-## Module map (src/)
+## Module map (all C# under `src/`; the csproj is at the repo root because the root *is* the mod folder)
 
 | Module | Responsibility |
 |--------|----------------|
-| `PolisSystem.cs` (+ `Core/`) | Mod entry (a `ModSystem`): server-side bot registry & command execution (the "god" side), block/entity registration |
-| `PolisHarmony.cs` | Safety patches (NaN-physics guard) via Harmony |
-| `EntityPolisBot.cs` | The bot entity: inventory, health, movement target |
-| `Actions/` | `IEntityAction` implementations: Goto (A* + fallback), Mine, Harvest, Pickup, Place, Activate, Butcher, … |
-| `PolisClientPossessionHandler.cs` + `PolisPossessableSeat.cs` | Possession: IMountable/IMountableSeat at the bot's eyes, input routing to bot locomotion, player render-hide, client-side smoothing |
-| `PolisNetworkPackets.cs` | Client↔server sync (selection, possession, debug flags) |
-| `PolisEventBroadcaster.cs` | Game event feed for observers (harness/Web UI) |
-| `PolisScreenCapture*.cs` | In-game screen capture for visual verification |
-| `PolisTestHarness.cs` + `Harness/` | HTTP server on `localhost:8585` (`/polis/*`) + test command handlers |
-| `Gui/` | Bot manager GUI, debug overlays |
-| `Helpers/` | A* pathfinder, LOS, selection math, etc. |
+| `src/PolisSystem.cs` (+ `src/Core/`) | Mod entry (a `ModSystem`): server-side bot registry & command execution (the "god" side), block/entity registration |
+| `src/PolisHarmony.cs` | Safety patches (NaN-physics guard) via Harmony |
+| `src/EntityPolisBot.cs` | The bot entity: inventory, health, movement target |
+| `src/Actions/` | `IEntityAction` implementations: Goto (A* + fallback), Mine, Harvest, Pickup, Place, Activate, Butcher, workstations, … |
+| `src/PolisClientPossessionHandler.cs` + `src/PolisPossessableSeat.cs` | Possession: IMountable/IMountableSeat at the bot's eyes, input routing to bot locomotion, player render-hide, client-side smoothing |
+| `src/PolisNetworkPackets.cs` | Client↔server sync (selection, possession, debug flags) |
+| `src/PolisEventBroadcaster.cs` | Game event feed for observers (harness/Web UI) |
+| `src/PolisScreenCapture*.cs` | In-game screen capture for visual verification |
+| `src/Harness/` | `PolisTestHarness` (HTTP server on `localhost:8585`, `/polis/*`) + command handlers |
+| `src/Gui/` | Bot manager GUI, debug overlays |
+| `src/Helpers/` | Animation, inventory, profession helpers (A* lives in `src/Actions/Navigation/`) |
 
 ## Command surface
 

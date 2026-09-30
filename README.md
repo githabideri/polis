@@ -18,7 +18,7 @@ therefore contains the whole stack, not just the mod:
 
 | Path | What |
 |------|------|
-| root `*.cs` + `src/` | The mod: bot entity, action primitives (mine, harvest, pickup, place, workstations), A* navigation, possession (the player mounts the bot), network sync, the game-event stream, screen capture, and the in-game HTTP harness — the agent-facing API |
+| `src/` | **All** C# source (the csproj stays at the root — that root *is* the mod folder: `modinfo.json` + `assets/` + the built DLL, which is what Vintage Story loads and what a `.vspackage` zips). In `src/`: the mod entry, bot entity, possession, network, event-stream and screen-capture backbone files, plus `src/Actions/` (mine, harvest, pickup, place, workstations, A* navigation), `src/Core/`, `src/Commands/`, `src/Harness/` (the in-game HTTP harness — the agent-facing API), `src/Gui/`, `src/Helpers/`. The Oikistes agent is Python (`scripts/oikistes.py`) driving that API; version-porting facades (`src/Compat/<ver>/`) are the stated future discipline — see DESIGN |
 | `modinfo.json`, `assets/` | Mod manifest + entity definitions |
 | `r2/` | The **R2 job system**: the pure Python decision/execution core (reflex-state projection, job queue, building plans, embodiment checks, world model), pinned by the contract gate in `tests/reflex/` |
 | `scripts/` | Live tooling: `poliscli.py` (harness CLI), `jev-loop-v5.py` (the three-tier decision loop: reflex model → 2B decider readout → 27B doubt-arbiter), `oikistes.py` (the settlement agent with swappable model brains), `r2-live-mission.py`, `jevab/` (model A/B + fine-tuning measurement harness) |
