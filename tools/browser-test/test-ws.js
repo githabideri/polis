@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 /**
- * Browser-based WebSocket test for test-ui.html
+ * Browser-based WebSocket test for the web UI
  * Captures console logs and WebSocket activity
  */
 import puppeteer from 'puppeteer';
 
-const UI_URL = process.argv[2] || 'http://localhost:8000/test-ui.html';
+const UI_URL = process.argv[2] || 'http://localhost:8585/polis/ui/';
 
 async function testWebSocket() {
   console.log(`Testing WebSocket via browser at: ${UI_URL}\n`);

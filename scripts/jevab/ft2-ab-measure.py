@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Three-way decider A/B: base vs FT1 vs FT2, per corpus slice.
 
-Clean protocol (report 17): rendered prompts via the CT-115 /prompt
+Clean protocol (report 17): rendered prompts via the CPU batch box's /prompt
 service, one-shot completions against the mux, paced. Measures:
 
   valworld-96 top-1, mean/min p_oracle (both FTs used it as the

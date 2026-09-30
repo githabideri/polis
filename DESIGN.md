@@ -11,7 +11,7 @@ autonomous workers (colony/build/RTS layer) and can *possess* one of them
 to take direct control (action layer) when the AI isn't good enough.
 Possession is only powerful once autonomous behavior exists. The autonomy
 layer is the R2 job system (`r2/` — see
-`docs/design/2026-09-26-job-system-r2.md`); the full pre-1.22.7 plan and
+`docs/design/job-system-r2.md`); the full pre-1.22.7 plan and
 research trail are frozen in `archive/VISION.md`.
 
 ## Module map (src/)
@@ -32,10 +32,10 @@ research trail are frozen in `archive/VISION.md`.
 
 ## Command surface
 
-- Chat: `/polis <subcommand>` (full list in `docs/SERVER_COMMANDS.md`).
+- Chat: `/polis <subcommand>` (the verb surface is the same as the harness command channel — `docs/CLI.md`).
 - Hotkeys: Alt+N/L/G/A/B/H (+Shift variants) — `docs/CLI.md` + README.
 - HTTP: `GET/POST /polis/*` on `localhost:8585` (harness) — `docs/CLI.md`,
-  `docs/TESTING_HARNESS.md`. CLI wrapper: `scripts/poliscli.py` (TOON output,
+  `docs/harness.md`. CLI wrapper: `scripts/poliscli.py` (TOON output,
   env-driven player/bot ids, `--wait` for timed actions).
 
 ## Key invariants

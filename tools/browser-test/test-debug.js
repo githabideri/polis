@@ -4,7 +4,7 @@
  */
 import puppeteer from 'puppeteer';
 
-const UI_URL = 'http://localhost:8000/test-ui.html';
+const UI_URL = 'http://localhost:8585/polis/ui/';
 
 async function test() {
   console.log(`Debugging page: ${UI_URL}\n`);

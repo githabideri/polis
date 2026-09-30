@@ -2,7 +2,7 @@
 """
 Phase 0 contract gate - the behavioral contract of the reflex loop.
 
-What it freezes (docs/design/2026-09-26-job-system-r2.md, §5.4):
+What it freezes (docs/design/job-system-r2.md, §5.4):
 
   T1  prompt    build_state_text() re-renders every frozen corpus state
                 byte-identically. The 2B model was fine-tuned on exactly

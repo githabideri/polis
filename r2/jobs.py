@@ -2,7 +2,7 @@
 R2 job/goal contracts - goal grammar (v1), the Job dataclass, the job
 effect catalog and the structured failure taxonomy.
 
-Design doc: docs/design/2026-09-26-job-system-r2.md
+Design doc: docs/design/job-system-r2.md
   - section 6: goal grammar {verb, object, at, n}; ordered job list with
     optional depends_on; the Job dataclass; completion via fixture oracles.
   - section 5.5: the failure codes, each attributed to a layer

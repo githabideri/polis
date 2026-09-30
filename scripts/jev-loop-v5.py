@@ -700,7 +700,7 @@ def build_state_text(task, phase, pos, near_t, near_b, fixture_label, fixture,
                      carrying, items_line, since, last_action_msg, proposal):
     """The reflex prompt - the 8-line format the 2B decider was fine-tuned on.
 
-    PHASE 0 CONTRACT (docs/design/2026-09-26-job-system-r2.md, §5.4):
+    PHASE 0 CONTRACT (docs/design/job-system-r2.md, §5.4):
     given identical inputs this function must stay BYTE-IDENTICAL. The FT
     model was trained on exactly this representation; changing wording is a
     model regression, not a refactor (gates: tests/reflex/contract.py,

@@ -6,7 +6,7 @@
 |------|---------|
 | **implemented** | Code written, not yet run |
 | **locally verified** | Unit tests / build pass |
-| **live verified** | In-game (CT-114 testbed or equivalent) |
+| **live verified** | In-game (the game testbed, or equivalent) |
 | **remotely verified** | Works in a production/real-world context |
 
 Never collapse these into "works". `STATUS.md` records the level per feature.
@@ -51,7 +51,7 @@ LAN-reachable when `POLIS_HARNESS_IP` is set in `.env` (no ssh tunnel).
   end with a `state`/`targets` re-read (the fire-and-verify rule).
 - `poliscli.py` supports TOON output (`--toon`) for token-efficient agent
   consumption; env vars `POLIS_PLAYER_UID` / `POLIS_BOT_ID` drive targeting.
-- Raw HTTP + WebSocket: `docs/TESTING_HARNESS.md`.
+- Raw HTTP + WebSocket: `docs/harness.md`.
 - Web UI (primary surface): `/polis/ui/` on the harness (served from the
   mod folder) —
   status header (Connected / World Ready), entity panels, view + step-move

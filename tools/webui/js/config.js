@@ -11,7 +11,7 @@ export const CONFIG = {
     POLL_EVENTS_MS: 1000,     // Event polling
 
     // IndexedDB settings
-    DB_NAME: 'polis-webui-v2',
+    DB_NAME: 'polis-webui',
     DB_VERSION: 1,
 
     // UI settings
