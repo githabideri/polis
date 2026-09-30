@@ -9,7 +9,7 @@ using Vintagestory.API.Server;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
 
-internal static class PolisBuilderNpcHarmony
+internal static class PolisHarmony
 {
     private static bool applied;
     private static Harmony harmony;
@@ -45,7 +45,7 @@ internal static class PolisBuilderNpcHarmony
 }
 
 [HarmonyPatch(typeof(AStar), "traversable")]
-internal static class PolisBuilderNpcAStarTraversablePatch{
+internal static class PolisAStarTraversablePatch{
     static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
     {
         var isColliding = AccessTools.Method(
@@ -54,7 +54,7 @@ internal static class PolisBuilderNpcAStarTraversablePatch{
             new[] { typeof(IBlockAccessor), typeof(Cuboidf), typeof(Vec3d), typeof(bool) }
         );
         var isCollidingAllow = AccessTools.Method(
-            typeof(PolisBuilderNpcAStarTraversablePatch),
+            typeof(PolisAStarTraversablePatch),
             nameof(IsCollidingAllowTallGrass)
         );
         var getColliding = AccessTools.Method(
@@ -63,7 +63,7 @@ internal static class PolisBuilderNpcAStarTraversablePatch{
             new[] { typeof(IBlockAccessor), typeof(Cuboidf), typeof(Vec3d), typeof(Cuboidd).MakeByRefType(), typeof(bool), typeof(int) }
         );
         var getCollidingAllow = AccessTools.Method(
-            typeof(PolisBuilderNpcAStarTraversablePatch),
+            typeof(PolisAStarTraversablePatch),
             nameof(GetCollidingCollisionBoxAllowTallGrass)
         );
 
@@ -198,7 +198,7 @@ internal static class PolisBuilderNpcAStarTraversablePatch{
 [HarmonyPatch(typeof(EntityBehaviorControlledPhysics), "ApplyTests")]
 internal static class PolisNanPosGuardPatch
 {
-    internal static Vintagestory.API.Common.ILogger logger; // set by PolisBuilderNpcHarmony.Apply
+    internal static Vintagestory.API.Common.ILogger logger; // set by PolisHarmony.Apply
     static int sanitizeCount;
 
     static bool Prefix(EntityBehaviorControlledPhysics __instance, ref EntityPos pos, EntityControls controls, float dt, bool remote)

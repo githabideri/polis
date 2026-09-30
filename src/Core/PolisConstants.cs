@@ -1,4 +1,4 @@
-namespace PolisBuilderNpc.Core;
+namespace Polis.Core;
 
 /// <summary>
 /// Centralized constants for the Polis Builder NPC mod.

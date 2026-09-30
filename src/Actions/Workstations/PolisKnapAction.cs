@@ -7,10 +7,10 @@ using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
-using PolisBuilderNpc.Core;
-using PolisBuilderNpc.Helpers;
+using Polis.Core;
+using Polis.Helpers;
 
-namespace PolisBuilderNpc.Actions.Workstations;
+namespace Polis.Actions.Workstations;
 
 /// <summary>
 /// Action to knap flint/stone into tools. Removes voxels progressively with animation.

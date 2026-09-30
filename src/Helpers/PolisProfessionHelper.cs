@@ -1,8 +1,8 @@
 using Vintagestory.API.Common;
 using Vintagestory.GameContent;
-using PolisBuilderNpc.Core;
+using Polis.Core;
 
-namespace PolisBuilderNpc.Helpers;
+namespace Polis.Helpers;
 
 internal static class PolisProfessionHelper
 {

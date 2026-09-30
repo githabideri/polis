@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Vintagestory.API.MathTools;
 
-namespace PolisBuilderNpc.Actions.Navigation;
+namespace Polis.Actions.Navigation;
 
 /// <summary>
 /// A path node that tracks door/gate interaction requirements.

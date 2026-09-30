@@ -11,20 +11,20 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
-using PolisBuilderNpc.Core;
-using PolisBuilderNpc.Actions.Navigation;
-using PolisBuilderNpc.Actions.Blocks;
-using PolisBuilderNpc.Actions.Harvesting;
-using PolisBuilderNpc.Actions.Entities;
-using PolisBuilderNpc.Actions.Workstations;
-using PolisBuilderNpc.Actions.Inventory;
-using PolisBuilderNpc.Helpers;
+using Polis.Core;
+using Polis.Actions.Navigation;
+using Polis.Actions.Blocks;
+using Polis.Actions.Harvesting;
+using Polis.Actions.Entities;
+using Polis.Actions.Workstations;
+using Polis.Actions.Inventory;
+using Polis.Helpers;
 
 /// <summary>
 /// Partial class containing all HTTP test harness command handlers.
 /// These methods handle commands from the poliscli.py and test harness.
 /// </summary>
-public partial class PolisBuilderNpcSystem
+public partial class PolisSystem
 {
     /// <summary>
     /// Execute a command from HTTP API.
@@ -369,7 +369,7 @@ public partial class PolisBuilderNpcSystem
     // to the named modifiers (ours=6000 observed SpeedOfTime 6060), and negative modifiers
     // clamp to 0 — so the speed knob alone cannot freeze the clock (sum can never be < 60
     // ... 60+0). factor 1 yields ~2x the vanilla 48-min day; factor 0 (ours=0, sum 60)
-    // is the true vanilla. Daylock (PolisBuilderNpcSystem.DaylockTick) therefore
+    // is the true vanilla. Daylock (PolisSystem.DaylockTick) therefore
     // fast-forwards with the modifier and then freezes via the concrete
     // Vintagestory.Common.GameCalendar: CalendarSpeedMul = 0 (true stop: no
     // time, no date). NEVER call GameCalendar.SetDayTime in a tick loop —

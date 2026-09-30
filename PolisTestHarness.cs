@@ -14,7 +14,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
-using PolisBuilderNpc.Core;
+using Polis.Core;
 
 /// <summary>
 /// HTTP test harness for external control of polis.
@@ -870,7 +870,7 @@ public class PolisTestHarness : IDisposable
                             entity.TeleportTo(observerPos);
 
                             // Get server channel to send view direction packet
-                            var modSystem = sapi.ModLoader.GetModSystem<PolisBuilderNpcSystem>();
+                            var modSystem = sapi.ModLoader.GetModSystem<PolisSystem>();
                             modSystem?.serverChannel?.SendPacket(new PolisSetViewDirectionPacket { Yaw = yaw, Pitch = pitch }, player);
 
                             // Small delay for render to settle, then take screenshot

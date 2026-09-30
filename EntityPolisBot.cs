@@ -2,7 +2,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Datastructures;
 using Vintagestory.GameContent;
-using PolisBuilderNpc.Core;
+using Polis.Core;
 
 public class EntityPolisBot : EntityHumanoid
 {

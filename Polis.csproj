@@ -49,10 +49,6 @@
 
   <!-- Test UI for harness -->
   <ItemGroup>
-    <Content Include="tools/test-ui.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>tools/test-ui.html</Link>
-    </Content>
     <Content Include="tools/webui/**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

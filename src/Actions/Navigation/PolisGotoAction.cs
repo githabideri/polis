@@ -8,7 +8,7 @@ using Vintagestory.API.MathTools;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
 
-namespace PolisBuilderNpc.Actions.Navigation;
+namespace Polis.Actions.Navigation;
 
 /// <summary>
 /// Navigation action that moves an entity to a target position using A* pathfinding
@@ -108,8 +108,8 @@ class PolisGotoAction : EntityActionBase
 
         EnsureTraversers();
         InitializeCustomPathfinding();
-        PolisBuilderNpcSystem.TrySetTraverserDebug(vas?.wppathTraverser, false, debugLog);
-        debugLog?.Invoke($"[goto] start target={PolisBuilderNpcSystem.FormatPos(hereTarget)} astar={Astar} usePolisAStar={UsePolisAStar} speed={WalkSpeed.ToString(CultureInfo.InvariantCulture)}");
+        PolisSystem.TrySetTraverserDebug(vas?.wppathTraverser, false, debugLog);
+        debugLog?.Invoke($"[goto] start target={PolisSystem.FormatPos(hereTarget)} astar={Astar} usePolisAStar={UsePolisAStar} speed={WalkSpeed.ToString(CultureInfo.InvariantCulture)}");
         navTo(hereTarget);
     }
 
@@ -255,7 +255,7 @@ class PolisGotoAction : EntityActionBase
         setAnimation();
         if (debugEnabled)
         {
-            if (PolisBuilderNpcSystem.TryExtractPathFromTraverser(vas?.wppathTraverser, out var blocks, out var rawCount, out var source))
+            if (PolisSystem.TryExtractPathFromTraverser(vas?.wppathTraverser, out var blocks, out var rawCount, out var source))
             {
                 debugLog?.Invoke($"[goto] path found nodes={rawCount} source={source}");
                 debugPath?.Invoke(blocks);
@@ -266,7 +266,7 @@ class PolisGotoAction : EntityActionBase
                 if (!loggedPathIntrospection)
                 {
                     loggedPathIntrospection = true;
-                    debugLog?.Invoke("[goto] traverser members: " + PolisBuilderNpcSystem.DescribeTraverserMembers(vas?.wppathTraverser));
+                    debugLog?.Invoke("[goto] traverser members: " + PolisSystem.DescribeTraverserMembers(vas?.wppathTraverser));
                 }
             }
         }
@@ -292,7 +292,7 @@ class PolisGotoAction : EntityActionBase
         if (hbAccum >= 1f)
         {
             hbAccum = 0f;
-            debugLog?.Invoke($"[goto] action-tick heartbeat: phase={navPhase} elapsed={phaseElapsed:F1} target={PolisBuilderNpcSystem.FormatPos(hereTarget)}");
+            debugLog?.Invoke($"[goto] action-tick heartbeat: phase={navPhase} elapsed={phaseElapsed:F1} target={PolisSystem.FormatPos(hereTarget)}");
         }
         phaseElapsed += dt;
         if (phaseElapsed < PHASE_TIMEOUT) return;
@@ -345,7 +345,7 @@ class PolisGotoAction : EntityActionBase
 
     void OnStuck()
     {
-        debugLog?.Invoke("[goto] stuck pos=" + PolisBuilderNpcSystem.FormatPos(vas?.Entity?.ServerPos?.XYZ));
+        debugLog?.Invoke("[goto] stuck pos=" + PolisSystem.FormatPos(vas?.Entity?.ServerPos?.XYZ));
         ExecutionHasFailed = true;
         ReportResult(false, "stuck");
         Finish();
@@ -372,7 +372,7 @@ class PolisGotoAction : EntityActionBase
         }
 
         done = true;
-        debugLog?.Invoke("[goto] reached destination pos=" + PolisBuilderNpcSystem.FormatPos(vas?.Entity?.ServerPos?.XYZ));
+        debugLog?.Invoke("[goto] reached destination pos=" + PolisSystem.FormatPos(vas?.Entity?.ServerPos?.XYZ));
         ClearDebugPath();
         ReportResult(true, "done");
     }

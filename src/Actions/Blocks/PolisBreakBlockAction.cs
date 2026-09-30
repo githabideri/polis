@@ -5,7 +5,7 @@ using Vintagestory.API.Server;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
 
-namespace PolisBuilderNpc.Actions.Blocks;
+namespace Polis.Actions.Blocks;
 
 /// <summary>
 /// Action that instantly breaks a block at a target position (without mining animation).

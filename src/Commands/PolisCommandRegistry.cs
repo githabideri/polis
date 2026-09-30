@@ -1,15 +1,15 @@
 using Vintagestory.API.Server;
 using Vintagestory.API.Common;
 
-namespace PolisBuilderNpc.Commands;
+namespace Polis.Commands;
 
 /// <summary>
 /// Registers all /polis chat commands and their subcommands.
-/// Command handlers remain in PolisBuilderNpcSystem since they need system state.
+/// Command handlers remain in PolisSystem since they need system state.
 /// </summary>
 internal static class PolisCommandRegistry
 {
-    internal static void RegisterCommands(ICoreServerAPI api, PolisBuilderNpcSystem system)
+    internal static void RegisterCommands(ICoreServerAPI api, PolisSystem system)
     {
         var parsers = api.ChatCommands.Parsers;
         var cmd = api.ChatCommands.Create("polis")

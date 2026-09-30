@@ -2,7 +2,7 @@ using System;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 
-public class PolisBuilderNpcHotkeys : ModSystem
+public class PolisHotkeys : ModSystem
 {
     ICoreClientAPI capi;
     bool previewEnabled;

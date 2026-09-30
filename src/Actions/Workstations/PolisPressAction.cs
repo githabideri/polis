@@ -6,7 +6,7 @@ using Vintagestory.API.Server;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
 
-namespace PolisBuilderNpc.Actions.Workstations;
+namespace Polis.Actions.Workstations;
 
 /// <summary>
 /// Timed action to press fruit in a fruit press.

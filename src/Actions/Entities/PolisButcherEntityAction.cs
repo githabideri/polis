@@ -4,9 +4,9 @@ using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Server;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
-using PolisBuilderNpc.Helpers;
+using Polis.Helpers;
 
-namespace PolisBuilderNpc.Actions.Entities;
+namespace Polis.Actions.Entities;
 
 /// <summary>
 /// Timed action to butcher dead entities (animals) using a knife.

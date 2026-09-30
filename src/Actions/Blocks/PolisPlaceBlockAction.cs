@@ -5,9 +5,9 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
-using PolisBuilderNpc.Helpers;
+using Polis.Helpers;
 
-namespace PolisBuilderNpc.Actions.Blocks;
+namespace Polis.Actions.Blocks;
 
 /// <summary>
 /// Action that places a block at a target position.

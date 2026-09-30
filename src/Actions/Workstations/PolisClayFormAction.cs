@@ -7,9 +7,9 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
-using PolisBuilderNpc.Helpers;
+using Polis.Helpers;
 
-namespace PolisBuilderNpc.Actions.Workstations;
+namespace Polis.Actions.Workstations;
 
 /// <summary>
 /// Action to form clay into a recipe shape. Places voxels progressively with animation.

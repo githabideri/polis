@@ -3,7 +3,7 @@ using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 
-namespace PolisBuilderNpc.Core;
+namespace Polis.Core;
 
 /// <summary>
 /// Shared validation helpers for Polis actions.

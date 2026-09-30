@@ -6,7 +6,7 @@ using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
-namespace PolisBuilderNpc.Actions.Navigation;
+namespace Polis.Actions.Navigation;
 
 /// <summary>
 /// Handles door and gate interactions for pathfinding.

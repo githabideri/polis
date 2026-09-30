@@ -18,8 +18,8 @@ research trail are frozen in `archive/VISION.md`.
 
 | Module | Responsibility |
 |--------|----------------|
-| `PolisBuilderNpc.cs` (+ `Core/`) | Mod entry, systems, block/entity registration |
-| `PolisBuilderNpcSystem.cs` | Server-side bot registry & command execution (the "god" side) |
+| `PolisSystem.cs` (+ `Core/`) | Mod entry (a `ModSystem`): server-side bot registry & command execution (the "god" side), block/entity registration |
+| `PolisHarmony.cs` | Safety patches (NaN-physics guard) via Harmony |
 | `EntityPolisBot.cs` | The bot entity: inventory, health, movement target |
 | `Actions/` | `IEntityAction` implementations: Goto (A* + fallback), Mine, Harvest, Pickup, Place, Activate, Butcher, … |
 | `PolisClientPossessionHandler.cs` + `PolisPossessableSeat.cs` | Possession: IMountable/IMountableSeat at the bot's eyes, input routing to bot locomotion, player render-hide, client-side smoothing |

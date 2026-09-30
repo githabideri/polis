@@ -4,7 +4,7 @@ using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
-namespace PolisBuilderNpc.Actions.Entities;
+namespace Polis.Actions.Entities;
 
 public class PolisInteractEntityAction : EntityActionBase
 {

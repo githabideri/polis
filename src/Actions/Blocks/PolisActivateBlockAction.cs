@@ -7,7 +7,7 @@ using Vintagestory.API.Server;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
 
-namespace PolisBuilderNpc.Actions.Blocks;
+namespace Polis.Actions.Blocks;
 
 /// <summary>
 /// Action that activates a block (doors, containers, levers, etc.) at a target position.

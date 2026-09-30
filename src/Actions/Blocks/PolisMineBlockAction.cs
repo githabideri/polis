@@ -7,9 +7,9 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
-using PolisBuilderNpc.Helpers;
+using Polis.Helpers;
 
-namespace PolisBuilderNpc.Actions.Blocks;
+namespace Polis.Actions.Blocks;
 
 /// <summary>
 /// Action that mines a block over time with animation and tool requirements.

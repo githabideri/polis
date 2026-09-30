@@ -5,7 +5,7 @@ using Vintagestory.API.Server;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
 
-namespace PolisBuilderNpc.Actions.Workstations;
+namespace Polis.Actions.Workstations;
 
 /// <summary>
 /// Polling action that waits for a forge or firepit's input item to reach working temperature.

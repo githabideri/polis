@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 
-namespace PolisBuilderNpc.Actions.Navigation;
+namespace Polis.Actions.Navigation;
 
 /// <summary>
 /// Validates paths and line-of-sight for navigation.

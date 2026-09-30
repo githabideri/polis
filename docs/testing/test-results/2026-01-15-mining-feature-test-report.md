@@ -205,7 +205,7 @@ Response: Ok: true, "Bot #334 mining game:rock-bauxite at (218, 3, 267), est 8.0
 
 **Code Evidence:**
 ```csharp
-// PolisBuilderNpcSystem.cs line 4578
+// PolisSystem.cs line 4578
 if (autoCollectDrops)
 {
     debugLog?.Invoke("[mine] auto-collect requested (not yet implemented)");
@@ -414,7 +414,7 @@ drop 0 [qty]  # Drop from hand
 
 **Code Evidence:**
 ```csharp
-// PolisBuilderNpcSystem.cs line 4578
+// PolisSystem.cs line 4578
 if (autoCollectDrops)
 {
     debugLog?.Invoke("[mine] auto-collect requested (not yet implemented)");
@@ -712,7 +712,7 @@ curl -s "http://localhost:8585/polis/state?botId=334" | jq '.LastAction'
 - Unclear if mining finished without checking inventory/targets
 - Inconsistent with expected state tracking
 
-**Location:** `PolisBuilderNpcSystem.cs` - LastAction reporting in mining action
+**Location:** `PolisSystem.cs` - LastAction reporting in mining action
 
 ---
 
@@ -876,7 +876,7 @@ void Succeed(string msg)
 
 **Code Location:**
 ```csharp
-// PolisBuilderNpcSystem.cs line 4574-4580
+// PolisSystem.cs line 4574-4580
 if (autoCollectDrops)
 {
     // IMPLEMENT: Auto-collect drops

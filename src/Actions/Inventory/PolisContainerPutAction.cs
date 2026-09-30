@@ -4,9 +4,9 @@ using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.GameContent;
-using PolisBuilderNpc.Helpers;
+using Polis.Helpers;
 
-namespace PolisBuilderNpc.Actions.Inventory;
+namespace Polis.Actions.Inventory;
 
 /// <summary>
 /// Action: Deposit items from bot inventory into a container (IBlockEntityContainer).

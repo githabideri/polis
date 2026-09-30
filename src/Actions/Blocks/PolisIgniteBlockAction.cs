@@ -5,7 +5,7 @@ using Vintagestory.API.MathTools;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
 
-namespace PolisBuilderNpc.Actions.Blocks;
+namespace Polis.Actions.Blocks;
 
 /// <summary>
 /// Action that ignites a block (forges, firewood piles, etc.) at a target position.

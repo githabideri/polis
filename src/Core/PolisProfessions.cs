@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace PolisBuilderNpc.Core;
+namespace Polis.Core;
 
 public class ProfessionLoadout
 {

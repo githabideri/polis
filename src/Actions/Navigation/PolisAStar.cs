@@ -4,7 +4,7 @@ using System.Linq;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 
-namespace PolisBuilderNpc.Actions.Navigation;
+namespace Polis.Actions.Navigation;
 
 /// <summary>
 /// Custom A* pathfinder with fence and door awareness.

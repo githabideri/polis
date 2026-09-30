@@ -6,9 +6,9 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
-using PolisBuilderNpc.Helpers;
+using Polis.Helpers;
 
-namespace PolisBuilderNpc.Actions.Harvesting;
+namespace Polis.Actions.Harvesting;
 
 /// <summary>
 /// Harvests mature crops planted on farmland blocks.

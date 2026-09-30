@@ -2,9 +2,9 @@ using System;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.GameContent;
-using PolisBuilderNpc.Core;
+using Polis.Core;
 
-namespace PolisBuilderNpc.Helpers;
+namespace Polis.Helpers;
 
 internal static class PolisInventoryHelpers
 {

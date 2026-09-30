@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Vintagestory.API.MathTools;
 
-namespace PolisBuilderNpc.Core;
+namespace Polis.Core;
 
 /// <summary>
 /// Named AABB zone registry. Wraps a dictionary from PolisGlobalData.

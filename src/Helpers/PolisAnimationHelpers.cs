@@ -2,7 +2,7 @@ using System;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 
-namespace PolisBuilderNpc.Helpers;
+namespace Polis.Helpers;
 
 /// <summary>
 /// Helper class for managing entity animations, particularly looping animations.

@@ -16,17 +16,17 @@ using Vintagestory.API.Server;
 using Vintagestory.API.Util;
 using Vintagestory.GameContent;
 using Vintagestory.Essentials;
-using PolisBuilderNpc.Core;
-using PolisBuilderNpc.Actions.Navigation;
-using PolisBuilderNpc.Actions.Blocks;
-using PolisBuilderNpc.Actions.Harvesting;
-using PolisBuilderNpc.Actions.Entities;
-using PolisBuilderNpc.Actions.Workstations;
-using PolisBuilderNpc.Actions.Inventory;
-using PolisBuilderNpc.Helpers;
-using PolisBuilderNpc.Commands;
+using Polis.Core;
+using Polis.Actions.Navigation;
+using Polis.Actions.Blocks;
+using Polis.Actions.Harvesting;
+using Polis.Actions.Entities;
+using Polis.Actions.Workstations;
+using Polis.Actions.Inventory;
+using Polis.Helpers;
+using Polis.Commands;
 
-public partial class PolisBuilderNpcSystem : ModSystem
+public partial class PolisSystem : ModSystem
 {
     // Constants now in PolisConstants class
 
@@ -70,7 +70,7 @@ public partial class PolisBuilderNpcSystem : ModSystem
     public override void StartServerSide(ICoreServerAPI api)
     {
         sapi = api;
-        PolisBuilderNpcHarmony.Apply(api);
+        PolisHarmony.Apply(api);
         PolisCommandRegistry.RegisterCommands(api, this);
         tickListenerId = api.Event.RegisterGameTickListener(OnTick, 50);
         api.Event.RegisterGameTickListener(OnZoneTrackingTick, 1000);
@@ -613,7 +613,7 @@ public partial class PolisBuilderNpcSystem : ModSystem
         {
             sapi?.Event.UnregisterGameTickListener(tickListenerId);
         }
-        PolisBuilderNpcHarmony.Unapply(sapi);
+        PolisHarmony.Unapply(sapi);
     }
 
     float hbAccum;
