@@ -1382,7 +1382,7 @@ def main():
                     help="decider-service.py /readout base URL (CPU fallback for the "
                          "fast path; with only --decider-fast it may stay empty)")
     ap.add_argument("--decider-fast", default=os.environ.get("POLIS_DECIDER_FAST", ""),
-                    help="GPU card base URL for the fast path (llama-mux llama-server); inference there, prompt from --prompt")
+                    help="GPU card base URL for the fast path (the model-mux's llama-server); inference there, prompt from --prompt")
     ap.add_argument("--prompt", default=os.environ.get("POLIS_PROMPT", ""),
                     help="decider-service base URL for /prompt (fast path); falls back to --decider's service")
     ap.add_argument("--decider-fast-model", default="qwen35-decider-2b-ft2",

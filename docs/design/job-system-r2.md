@@ -925,7 +925,7 @@ port the neighbour-retry approach, re-run.
   two-job milestone stands (run 11), and the mine end-to-end
   completion is filed as the follow-up (pathfinder approach +
   27B rejection variance). All commits in the polis repo;
-  homelab updated.
+  the private ops docs updated.
 
 ## 13. Amendments from ChatGPT feedback round 3 (2026-09-28, morning)
 

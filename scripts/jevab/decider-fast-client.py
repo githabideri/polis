@@ -7,7 +7,7 @@ tokenizer (e.g. the polis testbed CT). Two hops:
   1. POST <prompt-service>/prompt (the CPU batch box decider-service, which has
  the tokenizer + decider package loaded) -> the exact prompt text the
      in-process readout would run, plus the option-letter token ids.
-  2. POST <card>/v1/completions (the 3060 host llama-mux llama-server, over
+  2. POST <card>/v1/completions (the 3060 host's model-mux llama-server, over
  the tailnet) with the raw `n_probs` body key (the 925e1179 build's
      OAI `top_logprobs` key does NOT feed the N-entry list on
      /v1/completions -- see decider-http-client.py) -> raw T=1

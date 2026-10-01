@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""HTTP readout of the Decider via the 3060 card (llama-mux) — live-loop client.
+"""HTTP readout of the Decider via the 3060 card (the model-mux) — live-loop client.
 
 The Decider 2B (Qwen3.5-2B decision fine-tune, Q8_0) is served by the
-llama-mux on the 3060 card (the homelab 3060 box) as `qwen35-decider-2b`.
+model-mux on the 3060 card as `qwen35-decider-2b`.
 This script is the production-side twin of `gguf-runner.py` (the C-API
 reference implementation): it builds the exact same prompt (no-shuffle,
 state_first) and recovers the T=1.3 option-letter readout from the server's

@@ -511,8 +511,8 @@ reference/measurement machine; the deployment box is still an open decision
 ## 14. Deployment: the Decider on the 12 GB 3060 (2026-09-25) — the reflex is real
 
 **Placement decision (owner):** the Decider runs on the **12 GB 3060** —
-the llama-mux card of the Freistadt GPU server. The 3090 pair is explicitly out
-(it is the production 27B vLLM TP2), llama-backup's 3060 is the box the user
+the model-mux card of the second-site GPU server. The 3090 pair is explicitly out
+(it is the production 27B vLLM TP2), the backup llama box's 3060 is a box the owner
 does not want touched, and the 5600X 12T would only buy another ~2× over the
 measured CPU number — the 3060 is the only menu entry that actually hits the
 reflex target. (The earlier "the 3060 host = Pascal cards, excluded" note was wrong:
@@ -992,7 +992,7 @@ Deployment lessons learned the hard way, this box, this night:
 3. **The mux's `_switching` dict can wedge**: a failed switch leaves the
    model flagged "switching" with a silently polling background thread;
    subsequent loads return 202 forever with zero log output. Remedy:
-   `systemctl restart llama-mux` (empty dict), then re-issue.
+   `systemctl restart model-mux` (empty dict), then re-issue.
 4. **The 35B child can hang holding 11.7 GB after an unload** (router says
    unloaded, VRAM never drains, mux `wait_gpu_free` times out at 180 s).
    Kill the child by its ephemeral port (`--port 56675` in its argv);
