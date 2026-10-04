@@ -535,7 +535,7 @@ public partial class PolisSystem
         {
             owner = sapi.Server?.Players?.FirstOrDefault(p => p?.Entity != null) as IServerPlayer;
             if (owner != null)
-                Log($"bot#{ep.BotId}: owner '{ep.OwnerUid}' not online — harvesting via online player {owner.Name}");
+                LogForage($"bot#{ep.BotId}: owner '{ep.OwnerUid}' not online — harvesting via online player {owner.PlayerUID}");
         }
         if (owner == null)
         {
@@ -600,7 +600,7 @@ public partial class PolisSystem
         {
             owner = sapi.Server?.Players?.FirstOrDefault(p => p?.Entity != null) as IServerPlayer;
             if (owner != null)
-                Log($"bot#{ep.BotId}: owner '{ep.OwnerUid}' not online — taking via online player {owner.Name}");
+                LogForage($"bot#{ep.BotId}: owner '{ep.OwnerUid}' not online — taking via online player {owner.PlayerUID}");
         }
         if (owner == null)
         {
