@@ -576,7 +576,17 @@ details.rail-section[open] > summary::before { content: '\2013'; }
     /* the chat history stays on its own page; on the field page the
        pinned command bar is the chat box */
     body.m-nav[data-mpage="stage"] #control-rail > #oikistes-section { display: none; }
-    body.m-nav[data-mpage="stage"] .rail-section { padding: 8px; }
+    /* compact the rail on the field page so BOTH pads and the pose line
+       sit fully below the video without scrolling (40 px cells: the
+       steering loop is worth the 4 px WCAG compromise on phone) */
+    body.m-nav[data-mpage="stage"] .rail-section { padding: 6px 8px 8px; }
+    body.m-nav[data-mpage="stage"] .rail-title { font-size: 10px; margin-bottom: 4px; }
+    body.m-nav[data-mpage="stage"] .meta { font-size: 10px; margin-bottom: 4px; }
+    body.m-nav[data-mpage="stage"] .pad { margin-bottom: 0; }
+    body.m-nav[data-mpage="stage"] .pad-view { grid-template-rows: 32px 32px 32px; }
+    body.m-nav[data-mpage="stage"] .pad-move { grid-template-rows: 28px 28px 28px 24px; }
+    body.m-nav[data-mpage="stage"] .pad-btn { width: 48px; min-width: 40px; min-height: 40px; font-size: 12px; }
+    body.m-nav[data-mpage="stage"] #stage { flex: 1.35; }
     /* Oikistes is a section inside the control rail; its page shows only it */
     body.m-nav[data-mpage="oik"] #control-rail > .rail-section:not(#oikistes-section),
     body.m-nav[data-mpage="oik"] #control-rail > details { display: none; }
