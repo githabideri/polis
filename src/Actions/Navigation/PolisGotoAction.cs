@@ -450,7 +450,10 @@ class PolisGotoAction : EntityActionBase
             var stuckF = t.GetBaseType()?.GetField("stuckCounter", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
                          ?? t.GetField("stuckCounter", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             object async = asyncF?.GetValue(wp);
-            s += $" async={async == null ? "null" : (async.GetType().Name + ".finished=" + (async.GetType().GetProperty("Finished")?.GetValue(async) ?? "?"))}";
+            string asyncDesc;
+            if (async == null) asyncDesc = "null";
+            else asyncDesc = async.GetType().Name + ".finished=" + (async.GetType().GetProperty("Finished")?.GetValue(async) ?? "?");
+            s += $" async={asyncDesc}";
             if (stuckF != null) s += $" stuckCnt={stuckF.GetValue(wp)}";
         }
         return s;
