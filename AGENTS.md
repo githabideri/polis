@@ -43,6 +43,11 @@
    connections can make a fresh bind fail for up to ~60s — the harness
    retries 12x5s, but the wait makes it deterministic), then start it
    again. Verify: `curl -s http://<harness-bind>:8585/polis/status`.
+10. **Research references:** `research/` (gitignored) holds source clones
+    of third-party systems we design against — currently **XSkills**
+    (CRuppert/XSkillsModSet), the Vintage Story skill mod, referenced for
+    the polis skill/food-policy design (2026-10-04). Read it as reference
+    material; never build it into the mod, never commit it.
 
 ## Workflow
 - Commits go to `main` from the workstation copy; the testbed clone is a

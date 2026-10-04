@@ -7,3 +7,6 @@ __pycache__/
 *.pyc
 tests/world/*.vcdbs-shm
 tests/world/*.vcdbs-wal
+
+# Reference source clones (read-only research material, never built)
+/research/
