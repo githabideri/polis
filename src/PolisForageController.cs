@@ -638,7 +638,8 @@ public partial class PolisSystem
 
         float after = PolisEatService.SaturationOf(bot.Entity);
         float max = PolisEatService.MaxSaturationOf(bot.Entity);
-        LogForage($"bot#{ep.BotId}: forage-eat {ok ? "ok" : "fail"} ({msg}) sat {satBefore:F0} -> {after:F0}");
+        string eatOutcome = ok ? "ok" : "fail";
+        LogForage($"bot#{ep.BotId}: forage-eat {eatOutcome} ({msg}) sat {satBefore:F0} -> {after:F0}");
         ForageQueueEvent("forage_eat", new
         {
             bot = ep.BotId,
@@ -708,7 +709,8 @@ public partial class PolisSystem
         forageNextRetryMs[ep.BotId] = ok ? 0 : NowMs() + 90_000;   // backoff on failure
         bot.JobRunning = false;
         bot.RecordActionResult(ep.Source == "container" ? "feed" : "forage", ok, detail);
-        LogForage($"bot#{ep.BotId}: episode {ok ? "SUCCESS" : "FAILED"}: {detail} (sat now {PolisEatService.SaturationOf(bot.Entity):F0})");
+        string episodeOutcome = ok ? "SUCCESS" : "FAILED";
+        LogForage($"bot#{ep.BotId}: episode {episodeOutcome}: {detail} (sat now {PolisEatService.SaturationOf(bot.Entity):F0})");
         ForageQueueEvent("forage_episode", new
         {
             bot = ep.BotId,
