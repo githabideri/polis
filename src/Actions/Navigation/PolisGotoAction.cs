@@ -292,7 +292,7 @@ class PolisGotoAction : EntityActionBase
         if (hbAccum >= 1f)
         {
             hbAccum = 0f;
-            debugLog?.Invoke($"[goto] action-tick heartbeat: phase={navPhase} elapsed={phaseElapsed:F1} target={PolisSystem.FormatPos(hereTarget)}");
+            debugLog?.Invoke($"[goto] action-tick heartbeat: phase={navPhase} elapsed={phaseElapsed:F1} target={PolisSystem.FormatPos(hereTarget)} nav={DescribeNavState()}");
         }
         phaseElapsed += dt;
         if (phaseElapsed < PHASE_TIMEOUT) return;
@@ -426,5 +426,33 @@ class PolisGotoAction : EntityActionBase
         if (resultSent) return;
         resultSent = true;
         onResult?.Invoke(ok, msg);
+    }
+
+    /// <summary>
+    /// One-line diagnosis of why the entity may not be moving: which traverser
+    /// is active, whether the waypoint traverser's async search slot is wedged,
+    /// its stuck counter, and the entity's motion/controls at the moment.
+    /// (2026-10-04: added to chase mid-walk stalls on flat terrain.)
+    /// </summary>
+    string DescribeNavState()
+    {
+        if (vas?.Entity == null) return "(no entity)";
+        var e = vas.Entity;
+        var wp = vas.wppathTraverser;
+        var ln = vas.linepathTraverser;
+        string s = $"wp.active={(wp?.Active.ToString() ?? "?")} ln.active={(ln?.Active.ToString() ?? "?")} " +
+                  $"yaw={e.Pos.Yaw * 57.2958F:F0} motion=({e.Pos.Motion.X:F2},{e.Pos.Motion.Y:F2},{e.Pos.Motion.Z:F2}) " +
+                  $"walk=({e.Controls.WalkVector.X:F2},{e.Controls.WalkVector.Z:F2}) onGround={e.OnGround}";
+        if (wp != null)
+        {
+            var t = wp.GetType();
+            var asyncF = t.GetField("asyncSearchObject", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var stuckF = t.GetBaseType()?.GetField("stuckCounter", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                         ?? t.GetField("stuckCounter", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            object async = asyncF?.GetValue(wp);
+            s += $" async={async == null ? "null" : (async.GetType().Name + ".finished=" + (async.GetType().GetProperty("Finished")?.GetValue(async) ?? "?"))}";
+            if (stuckF != null) s += $" stuckCnt={stuckF.GetValue(wp)}";
+        }
+        return s;
     }
 }

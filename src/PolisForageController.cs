@@ -95,6 +95,7 @@ public partial class PolisSystem
         public BlockPos Target;
         public Vec3d GotoCell;
         public string TargetCode;
+        public bool GotoRetried;     // one-shot retry after a transient 'stuck' goto
         public string FruitCode;
         public int ContainerSlot = -1;
         public int TakeQty = 1;
@@ -512,6 +513,22 @@ public partial class PolisSystem
         else
         {
             LogForage($"bot#{ep.BotId}: forage-goto failed: {msg}");
+
+            // The traverser's own stuck watchdog (no horizontal progress for
+            // ~4-6s) fires on transient conditions a turning-sluggish bot hits
+            // at path corners — the walk is usually fine once re-issued from
+            // the current (already advanced) position. One retry per target;
+            // 'no path' and other failures go straight to the next target.
+            if (msg.Contains("stuck") && !ep.GotoRetried && ep.Target != null)
+            {
+                ep.GotoRetried = true;
+                LogForage($"bot#{ep.BotId}: retrying same target (transient stuck)");
+                ep.Phase = "goto";
+                ep.PhaseStartMs = NowMs();
+                StartTarget(bot, ep, ep.Target, ep.TargetCode);
+                return;
+            }
+
             NextTargetOrComplete(bot, ep, $"goto failed: {msg}");
         }
     }
