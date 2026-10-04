@@ -1,8 +1,6 @@
 using System;
 using Vintagestory.API.Client;
 
-namespace Polis
-{
     /// <summary>
     /// Bounded client-side safety net against the "character-selection wedge":
     /// the survival mod opens GuiDialogCreateCharacter when a player joins
@@ -82,4 +80,3 @@ namespace Polis
             // nothing to dispose
         }
     }
-}
