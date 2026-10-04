@@ -51,7 +51,7 @@ internal static class PolisHarmony
         harmonyClient = new Harmony("polis.client");
         PolisPauseGameBlockPatch.logger = api.Logger;
         var pauseGame = AccessTools.Method(
-            typeof(Vintagestory.Client.ClientMain), "PauseGame", new[] { typeof(bool) });
+            typeof(Vintagestory.Client.NoObf.ClientMain), "PauseGame", new[] { typeof(bool) });
         if (pauseGame != null)
         {
             harmonyClient.Patch(pauseGame, prefix: new HarmonyMethod(typeof(PolisPauseGameBlockPatch), "Prefix"));
@@ -301,7 +301,7 @@ internal static class PolisPauseGameBlockPatch
     // No [HarmonyPatch] attribute on purpose: PolisHarmony.ApplyClient
     // patches this explicitly (the server-side PatchAll must not also pick
     // it up and double-apply in the singleplayer process).
-    static bool Prefix(Vintagestory.Client.ClientMain __instance, bool paused)
+    static bool Prefix(Vintagestory.Client.NoObf.ClientMain __instance, bool paused)
     {
         if (!paused)
         {
