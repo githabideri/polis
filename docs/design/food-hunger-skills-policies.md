@@ -236,6 +236,62 @@ flip denied the next `eat` within seconds, restore re-allowed it.
    `"full"` = engine behavior unmodified, so survival pilot worlds run
    the real drain. All three states live-verified (drain running / flat
    with file off / flat with bot paused; resumes on release).
+6. **PARTIAL 2026-10-04 (live, pilot world) — forage episode +
+   food-pressure interrupt.** The interrupt lives in `PolisSystem.OnTick`
+   (1 Hz, policy `pressure {trigger, rearm}` per owner profile): at
+   saturation < `trigger × max` it preempts the current job at a safe
+   checkpoint and starts a forage episode; while a bot is foraging,
+   `StartSingleAction` refuses new jobs (`refused:foraging`); the
+   episode ends by rearm (fed up) or by a 90 s cooldown after failure
+   (no storming). Live-verified both ways: two bots preempted at
+   84/1500 and 198/1500 and ran episodes; after being fed to 840/1500
+   they stayed out of episodes. Findings from the live run:
+   - **The pilot world is barren** — a 192-block ring found only
+     claystone/soil, zero vegetation; three
+     `survival:fruitingbush-wild-blueberry-free` bushes were placed
+     with `setblock` as fixtures. (Any forage testing here needs
+     planted sources; a *generated* survival world would be the honest
+     test.)
+   - **Scan geometry bug found & fixed:** the first scan queried only
+     1-block shells at ring radii 32/64/… — every cell strictly between
+     shells was never queried (a bush at 10 blocks out sat in the gap
+     forever). `StepScan` now walks a *band* per ring (cells with
+     `max(|dx|,|dz|)` in `(r-ringWidth, r]` — no gaps, no overlap) with
+     a bot-relative Y window.
+   - **Bushes are not `BlockBehaviorHarvestable`** — the forage loop
+     reached the bush (A* + traverser delivered the bot to the
+     adjacent cell) but the harvest action refuses: the fruiting bush
+     uses its own pick-interaction (`FruitingBush` behavior / block
+     entity with the fruit state), not the harvestable path. Picking
+     berries is therefore a **separate action** (sustained
+     `OnBlockInteract` with the berry stacks routed to the bot's
+     cargo, like `CompleteHarvestToBot` does for harvestable blocks).
+     Until it exists, wild forage can complete the scan + goto legs
+     but not the harvest leg.
+   - **The eat core is live-verified end to end:** `eat` (harness) →
+     `PolisEatService.Eat` → policy gate → `ReceiveSaturation`: both
+     starving bots went 0.0 → 840.0 saturation on 3x cooked redmeat
+     (280 each, category Protein, policy `cooked-meat` rule). Health
+     regen followed.
+   - **Owner gap (harness-spawned bots):** spawn recorded owner uid
+     `"harness"` when no player context was passed — `PlayerByUid`
+     never resolves that, so *every* owner-scoped action (harvest,
+     take/put) was dead for those bots. Fixed at the root (spawn
+     defaults to the single online player) plus a defensive fallback
+     in the forage controller (harvest/take through any online player
+     when the stored owner is offline).
+   - **Bots are ephemeral with respect to the hunger state:** a world
+     restart re-spawns them with a *fresh* entity — saturation resets
+     to 0, so on every restart every bot immediately trips the
+     trigger and enters a food-pressure episode. Until a working
+     forage source (or bot persistence of the hunger state) exists,
+     a restart must be followed by a manual feed (`eat`) or the bots
+     die of starvation (7 hp/h at 0 sat).
+   - **Navigation:** short straight gotos (1–5 blocks) complete live;
+     longer *diagonal* paths trip the goto stuck-watchdog (the
+     navigators time out without the bot making progress). The
+     traverser/A* cascade needs a look before forage targets beyond
+     ~5 blocks are reliable.
 
 ## 5. Build order
 
@@ -243,11 +299,12 @@ flip denied the next `eat` within seconds, restore re-allowed it.
    2026-10-04** (all live-verified in the pilot world, including the
    hot-reload flip test).
 2. Forage skill + food-pressure interrupt inside the first survival
-   pilot mission (fresh world is up: normal clock, survival): the
-   engine meter, the policy gate and the `eat` action it lands in are
-   all in place — the remaining piece is the forage sequence itself
-   (find bush → goto → harvest → eat) and the preemption seam in the
-   mission loop.
+   pilot mission (fresh world is up: normal clock, survival) —
+   **interrupt + eat core done 2026-10-04 (live, see §4.6); the wild
+   forage loop is blocked on the berry-pick action** (bushes are not
+   harvestable blocks — §4.6) and on long-path navigation robustness.
+   The container leg (`feed`) is implemented and awaits a
+   container-present test.
 3. Skill state + XP + L2 job gates — with the copper/melting-pot
    milestone (the first jobs that want a threshold).
 4. `wear`/`behavior` policy domains when the bot actually wears things.
