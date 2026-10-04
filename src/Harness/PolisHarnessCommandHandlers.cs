@@ -4616,10 +4616,10 @@ public partial class PolisSystem
         if (args.Length > 1) int.TryParse(args[1], out count);
         if (count < 1) count = 1;
 
-        var collectible = sapi.Collectibles.GetByName(code);
-        if (collectible == null)
-            return new PolisTestHarness.CommandResult { Ok = false, Message = $"Unknown item: {code}" };
-        var nut = collectible.NutritionProps;
+        if (!TryResolveStack(code, 1, out var unit, out string resErr))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = resErr };
+        var collectible = unit.Collectible;
+        var nut = collectible?.NutritionProps;
         if (nut == null)
             return new PolisTestHarness.CommandResult { Ok = false, Message = $"{code} is not edible (no NutritionProps)" };
 
@@ -4630,8 +4630,9 @@ public partial class PolisSystem
         int have = CountBotItems(e, code);
         if (have < count)
         {
-            var stack = new ItemStack(collectible, count - have);
-            if (!PolisInventoryHelpers.TryInsertIntoBotInventory(e, stack, out int moved, out string giveErr))
+            if (!TryResolveStack(code, count - have, out var toGive, out string giveErr2))
+                return new PolisTestHarness.CommandResult { Ok = false, Message = giveErr2 };
+            if (!PolisInventoryHelpers.TryInsertIntoBotInventory(e, toGive, out int moved, out string giveErr))
                 return new PolisTestHarness.CommandResult { Ok = false, Message = $"Could not give {code}: {giveErr}" };
         }
 
@@ -4652,8 +4653,11 @@ public partial class PolisSystem
                 }, -nut.Health);
             }
 
-            if (nut.EatenStack != null && !nut.EatenStack.IsNullOrEmpty())
-                PolisInventoryHelpers.TryInsertIntoBotInventory(e, nut.EatenStack.ToItemStack(1), out _, out _);
+            if (nut.EatenStack != null && nut.EatenStack.Code != null && nut.EatenStack.StackSize > 0)
+            {
+                if (TryResolveStack(nut.EatenStack.Code.ToString(), 1, out var leftover, out _))
+                    PolisInventoryHelpers.TryInsertIntoBotInventory(e, leftover, out _, out _);
+            }
 
             steps.Add(new
             {
@@ -4676,7 +4680,7 @@ public partial class PolisSystem
                 satietyPerUnit = nut.Satiety,
                 healthPerUnit = nut.Health,
                 saturationLossDelay = nut.SaturationLossDelay,
-                eatenStack = nut.EatenStack?.Code ?? null,
+                eatenStack = nut.EatenStack?.Code?.ToString() ?? null,
                 before,
                 after,
                 healthBefore,
@@ -4694,26 +4698,29 @@ public partial class PolisSystem
             for (int i = 0; i < cargo.Count; i++)
             {
                 var it = cargo[i].Itemstack;
-                if (it != null && !it.Empty && it.Code == code) total += it.StackSize;
+                if (IsItem(it, code)) total += it.StackSize;
             }
         foreach (var hand in new[] { agent.RightHandItemSlot, agent.LeftHandItemSlot })
         {
             var it = hand?.Itemstack;
-            if (it != null && !it.Empty && it.Code == code) total += it.StackSize;
+            if (IsItem(it, code)) total += it.StackSize;
         }
         return total;
     }
+
+    static bool IsItem(ItemStack it, string code)
+        => it != null && it.StackSize > 0 && it.Collectible?.Code?.ToString() == code;
 
     bool ConsumeOneBotItem(EntityAgent agent, string code, out string error)
     {
         error = null;
         var cargo = PolisInventoryHelpers.BotCargo(agent);
-        ItemSlot[] hands = { agent.RightHandItemSlot, agent.LeftHandItemSlot };
-        foreach (var slot in cargo != null ? cargo.Cast<ItemSlot>().ToArray() : new ItemSlot[0])
-        {
-            if (ConsumeOneInSlot(slot, code)) return true;
-        }
-        foreach (var slot in hands)
+        if (cargo != null)
+            for (int i = 0; i < cargo.Count; i++)
+            {
+                if (ConsumeOneInSlot(cargo[i], code)) return true;
+            }
+        foreach (var slot in new[] { agent.RightHandItemSlot, agent.LeftHandItemSlot })
         {
             if (slot != null && ConsumeOneInSlot(slot, code)) return true;
         }
@@ -4724,7 +4731,7 @@ public partial class PolisSystem
     static bool ConsumeOneInSlot(ItemSlot slot, string code)
     {
         var it = slot?.Itemstack;
-        if (it == null || it.Empty || it.Code != code) return false;
+        if (!IsItem(it, code)) return false;
         if (it.StackSize > 1)
         {
             it.StackSize--;
