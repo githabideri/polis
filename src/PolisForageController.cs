@@ -223,8 +223,22 @@ public partial class PolisSystem
         {
             if (containerPos == null) return false;
             ep.Target = containerPos;
-            ep.Phase = "pickslot";
             if (feedItemCode != null) ep.FruitCode = feedItemCode;
+
+            // If the bot is out of take reach, walk to the container
+            // first (2026-10-04: a feed issued 14 blocks away failed
+            // with "out of range" — the episode assumed proximity and
+            // never navigated). StartTarget picks a standable cell next
+            // to the container; ep.Target stays the container cell
+            // itself, which is what the take needs.
+            var sp = bot.Entity.ServerPos.XYZ;
+            double dist = sp.DistanceTo(new Vec3d(containerPos.X + 0.5, containerPos.Y, containerPos.Z + 0.5));
+            if (dist <= 4.0) ep.Phase = "pickslot";
+            else
+            {
+                var ccode = sapi.World.BlockAccessor.GetBlock(containerPos).Code?.ToString() ?? "container";
+                StartTarget(bot, ep, containerPos, ccode);
+            }
         }
         else
         {
@@ -586,6 +600,16 @@ public partial class PolisSystem
         // drop is the block entity's long-interact. Route them to the
         // dedicated pick action (same downstream: cargo diff -> eat).
         var targetBlock = sapi.World.BlockAccessor.GetBlock(ep.Target);
+        if (ep.Source == "container")
+        {
+            // Goto delivered the bot to a standable cell next to the
+            // container — go straight to the take (never harvest a
+            // storage vessel).
+            ep.Phase = "pickslot";
+            ep.PhaseStartMs = NowMs();
+            BeginContainerTake(bot, ep);
+            return;
+        }
         if (targetBlock?.GetBehavior<BlockBehaviorFruitingBush>() != null)
         {
             ep.Phase = "harvest";
