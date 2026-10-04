@@ -64,12 +64,19 @@ public partial class PolisSystem : ModSystem
 
     public override void Start(ICoreAPI api)
     {
+        // Opt-in API probe (POLIS_API_PROBE=1): dumps the reflection-based
+        // API surface to /tmp/polis-api-probe.txt for work against new
+        // game versions. Off by default.
+        if (Environment.GetEnvironmentVariable("POLIS_API_PROBE") == "1")
+            Polis.PolisApiProbe.DumpTypes();
         api.RegisterEntity("EntityPolisBot", typeof(EntityPolisBot));
     }
 
     public override void StartServerSide(ICoreServerAPI api)
     {
         sapi = api;
+        if (Environment.GetEnvironmentVariable("POLIS_API_PROBE") == "1")
+            Polis.PolisApiProbe.DumpWorld(api);
         PolisHarmony.Apply(api);
         PolisCommandRegistry.RegisterCommands(api, this);
         tickListenerId = api.Event.RegisterGameTickListener(OnTick, 50);

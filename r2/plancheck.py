@@ -40,12 +40,16 @@ def check_goal(goal, fixture_ids):
     return None
 
 
-def validate_plan(plan_raw, index, inventory, goal=None):
+def validate_plan(plan_raw, index, inventory, goal=None, recipes=None):
     """Validate a raw planner response.
 
     plan_raw: str or object (the model output)
     index:    candidate index from build_planner_prompt
     inventory: {material: qty} at plan time
+    recipes:  live grid-recipe table (list of {name, output,
+                shapeless, ingredients:[{code, qty}]}) from the harness
+                /polis/recipes - required for craft jobs; without it a
+                craft plan is rejected (unknown is never yes).
 
     Returns (jobs, None) on success, (None, Failure) on rejection.
     """
@@ -127,8 +131,52 @@ def validate_plan(plan_raw, index, inventory, goal=None):
     #    planned quantities are the budgeting input; post-execution the
     #    ledger is corrected with the MEASURED yield.
     avail = dict(inventory or {})
+    recipe_by = None
+    if recipes is not None:
+        recipe_by = {}
+        for rc in recipes:
+            name = rc.get("name") or rc.get("source")
+            if name and rc.get("output"):
+                recipe_by.setdefault(name.lower(), rc)
     for j in jobs:
         cat = JOB_CATALOG[j.type]
+        # craft (1.22.7 grid crafting): validate against the live recipe
+        # table; ingredients are consumed from the ledger, the output
+        # added. A craft without a resolvable recipe is rejected -
+        # the bot cannot invent recipes.
+        if j.type == "craft":
+            rc = None
+            if recipe_by:
+                rc = recipe_by.get((j.source or "").lower())
+            if rc is None or rc.get("output") != j.material:
+                return None, Failure(
+                    "planner_invalid_reference",
+                    "craft job %s: recipe %r does not produce %r "
+                    "(live recipe table consulted)"
+                    % (j.id, j.source, j.material), job_id=j.id)
+            if rc.get("shapeless") is False:
+                return None, Failure(
+                    "planner_invalid_reference",
+                    "craft job %s: recipe %r is shaped - the headless "
+                    "path supports shapeless recipes only"
+                    % (j.id, j.source), job_id=j.id)
+            runs = j.quantity or 1
+            for ing in rc.get("ingredients") or []:
+                code = (ing.get("code") or "").lower()
+                qty = max(1, int(ing.get("qty") or 1)) * runs
+                if not code:
+                    continue
+                if avail.get(code, 0) < qty:
+                    return None, Failure(
+                        "resource_not_found",
+                        "craft %s (recipe %s) needs %dx %s for %d run%s, have %d"
+                        % (j.id, j.source, qty, code, runs,
+                           "s" if runs != 1 else "",
+                           avail.get(code, 0)),
+                        job_id=j.id)
+                avail[code] = avail.get(code, 0) - qty
+            avail[j.material] = avail.get(j.material, 0) + (j.quantity or 1)
+            continue
         if cat["consumes"]:
             need = j.quantity or 1
             if avail.get(j.material, 0) < need:

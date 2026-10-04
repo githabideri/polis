@@ -304,6 +304,102 @@ public class PolisTestHarness : IDisposable
                 });
             }
 
+            // 1.22.7 grid-recipe table (the headless craft capability's
+            // knowledge base): enumerate world.GridRecipes with resolved
+            // output + ingredients. Optional ?output=<code> filters to
+            // recipes producing that item; ?limit caps the page (default
+            // 2000 - the full table is ~13k entries with variants).
+            else if (path == "/polis/recipes" && request.HttpMethod == "GET")
+            {
+                var wantOutput = QueryValue(request, "output")?.ToLowerInvariant();
+                int limit = 2000;
+                var lim = QueryValue(request, "limit");
+                if (!string.IsNullOrWhiteSpace(lim) && int.TryParse(lim, out var lv))
+                    limit = Math.Max(1, lv);
+
+                sapi.Event.EnqueueMainThreadTask(() =>
+                {
+                    var rows = new System.Collections.Generic.List<object>();
+                    int scanned = 0;
+                    try
+                    {
+                        var world = sapi.World;
+                        if (world == null || world.GridRecipes == null)
+                        {
+                            tcs.SetResult(new { ok = false, error = "world or GridRecipes unavailable" });
+                            return;
+                        }
+                        foreach (var r in world.GridRecipes)
+                        {
+                            if (r == null || r.RecipeOutput == null) continue;
+                            scanned++;
+                            if (rows.Count >= limit) break;
+                            string outCode = null;
+                            try
+                            {
+                                var rs = r.RecipeOutput.ResolvedItemStack;
+                                if (rs != null && rs.Collectible != null)
+                                    outCode = rs.Collectible.Code.ToString();
+                                else
+                                {
+                                    r.RecipeOutput.Resolve(world, "recipes-probe");
+                                    rs = r.RecipeOutput.ResolvedItemStack;
+                                    if (rs != null && rs.Collectible != null)
+                                        outCode = rs.Collectible.Code.ToString();
+                                }
+                            }
+                            catch { }
+                            if (string.IsNullOrEmpty(outCode)) continue;
+                            if (wantOutput != null && !outCode.ToLowerInvariant().Contains(wantOutput))
+                                continue;
+                            var ings = new System.Collections.Generic.List<object>();
+                            try
+                            {
+                                foreach (var ing in r.ResolvedIngredients)
+                                {
+                                    if (ing == null) continue;
+                                    string tagStr = null;
+                                    try
+                                    {
+                                        var tagsProp = ing.Tags.GetType().GetProperties()
+                                            .FirstOrDefault(p => p.GetValue(ing.Tags) is System.Collections.IEnumerable);
+                                        var tv = tagsProp?.GetValue(ing.Tags) as System.Collections.IEnumerable;
+                                        if (tv != null)
+                                        {
+                                            var parts = new System.Collections.Generic.List<string>();
+                                            foreach (var t in tv) parts.Add(t?.ToString());
+                                            tagStr = string.Join(",", parts);
+                                        }
+                                    }
+                                    catch { }
+                                    ings.Add(new
+                                    {
+                                        code = ing.Code?.ToString(),
+                                        qty = ing.Quantity,
+                                        tags = tagStr
+                                    });
+                                }
+                            }
+                            catch { }
+                            rows.Add(new
+                            {
+                                name = r.Name?.Path,
+                                output = outCode,
+                                outQty = r.RecipeOutput.ResolvedItemStack?.StackSize,
+                                shapeless = r.Shapeless,
+                                pattern = r.Shapeless ? null : r.IngredientPattern,
+                                ingredients = ings
+                            });
+                        }
+                        tcs.SetResult(new { ok = true, scanned, count = rows.Count, recipes = rows });
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.SetResult(new { ok = false, error = ex.Message });
+                    }
+                }, "polis-harness-recipes");
+            }
+
             else if (path == "/polis/debug/charsel" && request.HttpMethod == "GET")
             {
                 var sp = sapi.World?.AllOnlinePlayers?.FirstOrDefault() as IServerPlayer;

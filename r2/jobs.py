@@ -23,7 +23,7 @@ from dataclasses import dataclass, field, asdict
 # --------------------------------------------------------------------------
 
 GOAL_VERBS = ("mine", "harvest", "place", "goto", "sow", "plant",
-              "build", "construct", "build-plan")
+              "build", "construct", "build-plan", "craft")
 
 #: operator synonyms that normalize onto another grammar verb
 GOAL_VERB_ALIASES = {"plant": "sow", "construct": "build"}
@@ -119,6 +119,15 @@ JOB_CATALOG = {
     # did - it is deliberately NOT in PLANNER_JOB_TYPES yet).
     "build_plan": {"produces": False, "consumes": False,
                   "source": "world",    "needs": ("target", "plan")},
+    # 1.22.7 grid crafting (no workbench block in this build): the
+    # game's own GridRecipe engine (Matches + ConsumeInput) runs against
+    # the bot's cargo inventory. Semantics: `material` names the
+    # PRODUCED item code; `source` names the recipe (its asset path, e.g.
+    # "grid/plank" - NOT a "res-*" world resource, the validator
+    # resolves it against the live recipe table). The recipe's
+    # ingredients are consumed from the ledger by the validator.
+    "craft":     {"produces": True,  "consumes": True,
+                  "source": "world",    "needs": ("material", "source")},
     "give_tool": {"produces": True,  "consumes": False,
                   "source": "external", "needs": ("material",)},
     "pickup":    {"produces": False, "consumes": False,
@@ -212,6 +221,11 @@ class Job:
         if not self.material:
             return []
         qty = self.quantity or 1
+        # craft: the ledger entry is the produced output only; its
+        # ingredients are consumed against the recipe table by the
+        # validator (a single-material delta pair would cancel itself).
+        if self.type == "craft":
+            return [(self.material, +qty)] if cat["produces"] else []
         out = []
         if cat["produces"]:
             out.append((self.material, +qty))

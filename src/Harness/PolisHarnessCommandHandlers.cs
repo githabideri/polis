@@ -99,6 +99,8 @@ public partial class PolisSystem
                     return ExecuteClayFormCommand(args, context);
                 case "knap":
                     return ExecuteKnapCommand(args, context);
+                case "craft":
+                    return ExecuteCraftCommand(args, context);
                 case "seal":
                     return ExecuteSealCommand(args, context);
                 case "forge-heat":
@@ -4886,6 +4888,60 @@ public partial class PolisSystem
         {
             Ok = false,
             Message = "Use poliscli viewpoint-screenshot command or the /polis/observer-screenshot endpoint. The command handler cannot support async screenshot callbacks."
+        };
+    }
+
+    // 1.22.7 headless grid crafting (no workbench block in this build):
+    // runs the game's own GridRecipe engine (Matches + ConseeInput) against
+    // the bot's cargo inventory and returns the resolved output to it.
+    // Usage: craft <output-code>
+    PolisTestHarness.CommandResult ExecuteCraftCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 1)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: craft <output-code>" };
+        }
+
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+
+        string code = args[0];
+
+        // GridRecipe needs an IPlayer as its actor; the bot's owner is
+        // the identity (the cargo slots are the ingredient source).
+        // Fallback: the command-sending player (singleplayer: the local
+        // player - a bot spawned before the current character session
+        // has an unresolvable owner uid, which must not dead-end craft).
+        IServerPlayer ownerPlayer = null;
+        if (globalData.Bots.TryGetValue(bot.Entity.EntityId, out var botRecord))
+        {
+            ownerPlayer = sapi.World.PlayerByUid(botRecord.OwnerUid) as IServerPlayer;
+        }
+        if (ownerPlayer == null && TryGetContextPlayer(context, out var ctxPlayer, out var _))
+        {
+            ownerPlayer = ctxPlayer as IServerPlayer;
+        }
+
+        void OnResult(bool ok, string msg)
+        {
+            bot.RecordActionResult("craft", ok, msg, sapi.World.ElapsedMilliseconds);
+        }
+
+        var action = new PolisCraftAction(
+            code,
+            ownerPlayer,
+            debugEnabled ? msg => sapi.Logger.Debug($"[polis] {msg}") : null,
+            OnResult);
+
+        StartActionSequence(bot, "craft", action);
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"Bot #{bot.Entity.EntityId} crafting {code} (result lands in state action results)",
+            Data = new { output = code }
         };
     }
 

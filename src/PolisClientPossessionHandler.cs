@@ -25,8 +25,6 @@ public class PolisClientPossessionHandler : IRenderer
     private Vec3d lastServerPos;
 
     // Diagnostic counters (Phase 1.5 testing)
-    private int frameCount = 0;
-    private double frameTime = 0;
     private bool loggedFirstCall = false;
     private bool loggedPredictionDisabled = false;
 
@@ -41,21 +39,13 @@ public class PolisClientPossessionHandler : IRenderer
 
     public void OnRenderFrame(float dt, EnumRenderStage stage)
     {
-        // DIAGNOSTIC: Log once to verify handler is being called at all
+        // DIAGNOSTIC (one-shot): verify the renderer handler is called at all.
+        // (The per-second FPS log that was here spammed the log for hours -
+        // 60 fps at the Before stage is the expected, healthy rate.)
         if (!loggedFirstCall)
         {
             capi.Logger.Notification("[polis] OnRenderFrame: Handler registered and called!");
             loggedFirstCall = true;
-        }
-
-        // DIAGNOSTIC: Count frames and log FPS every second
-        frameCount++;
-        frameTime += dt;
-        if (frameTime > 1.0)
-        {
-            capi.Logger.Notification($"[polis] OnRenderFrame FPS: {frameCount} frames in last {frameTime:F2}s");
-            frameCount = 0;
-            frameTime = 0;
         }
 
         // Check if local player is mounted on a possession seat

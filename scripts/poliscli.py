@@ -850,6 +850,54 @@ def cmd_clayform(client: HarnessClient, args, fmt: OutputFormatter) -> int:
     return EXIT_SUCCESS
 
 
+def cmd_recipes(client: HarnessClient, args, fmt: OutputFormatter) -> int:
+    """Query the live grid-recipe table (1.22.7 headless craft knowledge).
+
+    Examples:
+        recipes                          # first 2000 recipes
+        recipes --output plank           # recipes producing *plank*
+        recipes --output plank --limit 50
+    """
+    params = {}
+    if getattr(args, "output", None):
+        params["output"] = args.output
+    if getattr(args, "limit", None):
+        params["limit"] = str(args.limit)
+    fmt.debug("GET /polis/recipes " + str(params))
+    result = client.get("/polis/recipes", params)
+    print(fmt.format(result))
+    return EXIT_SUCCESS
+
+
+def cmd_craft(client: HarnessClient, args, fmt: OutputFormatter) -> int:
+    """Headless grid crafting (1.22.7: no workbench block; runs the game's
+    own GridRecipe engine against the bot's cargo inventory).
+
+    The bot must already hold the recipe's ingredients in its inventory
+    (mine/harvest/give first). The resolved output lands in the bot's
+    cargo; the result is recorded in the bot state action results.
+
+    Examples:
+        craft plank-omok           # craft one recipe output worth
+        craft stick
+        craft plank-omok --wait
+    """
+    if not args.item:
+        print("Error: output item code required", file=sys.stderr)
+        return EXIT_USAGE_ERROR
+
+    cmd_args = [args.item]
+    context = build_context(args, client)
+    result = send_command(client, "craft", cmd_args, context, fmt)
+    if not result.get("Ok"):
+        print(fmt.format(result, "craft failed"))
+        return EXIT_COMMAND_FAILED
+
+    if getattr(args, "wait", False):
+        return wait_for_action(client, args, fmt, "craft", "crafted")
+    return EXIT_SUCCESS
+
+
 def cmd_knap(client: HarnessClient, args, fmt: OutputFormatter) -> int:
     """Knap flint/stone into tools.
 
@@ -2604,6 +2652,18 @@ Examples:
     p.add_argument("--speed", "-s", type=int, default=4, help="Voxels per tick (default: 4, higher = faster)")
     p.add_argument("--no-wait", dest="wait", action="store_false", help="Don't wait for completion")
     p.set_defaults(func=cmd_knap)
+
+    # craft
+    p = subparsers.add_parser("craft", help="Headless grid crafting (1.22.7: no workbench; game GridRecipe engine)", parents=[global_parent])
+    p.add_argument("item", help="Output item code (e.g., plank-omok, stick)")
+    p.add_argument("--wait", "-w", action="store_true", help="Wait for the craft to complete")
+    p.set_defaults(func=cmd_craft)
+
+    # recipes
+    p = subparsers.add_parser("recipes", help="Query the live grid-recipe table", parents=[global_parent])
+    p.add_argument("--output", "-o", help="Filter by output item code (substring)")
+    p.add_argument("--limit", "-l", type=int, help="Max rows (default 2000)")
+    p.set_defaults(func=cmd_recipes)
 
     # seal
     p = subparsers.add_parser("seal", help="Seal a barrel for fermentation/pickling", parents=[global_parent])
