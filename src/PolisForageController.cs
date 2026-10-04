@@ -524,10 +524,22 @@ public partial class PolisSystem
             return;
         }
 
+        // Harness-spawned bots have OwnerUid "harness" (no real owner) and the
+        // owner may be offline anyway — the harvest action needs a LIVE
+        // IServerPlayer for the vanilla interaction path (claims/ownership +
+        // drop delivery). Fall back to any online player; in the pilot world
+        // the single human client owns everything, so this is semantically
+        // identical to the owner.
         var owner = sapi.World.PlayerByUid(ep.OwnerUid) as IServerPlayer;
         if (owner == null)
         {
-            CompleteEpisode(bot, ep, false, "owner offline — cannot harvest (claims)");
+            owner = sapi.Server?.Players?.FirstOrDefault(p => p?.Entity != null) as IServerPlayer;
+            if (owner != null)
+                Log($"bot#{ep.BotId}: owner '{ep.OwnerUid}' not online — harvesting via online player {owner.Name}");
+        }
+        if (owner == null)
+        {
+            CompleteEpisode(bot, ep, false, "no online player to harvest through (owner offline)");
             return;
         }
 
@@ -586,7 +598,13 @@ public partial class PolisSystem
         var owner = sapi.World.PlayerByUid(ep.OwnerUid) as IServerPlayer;
         if (owner == null)
         {
-            CompleteEpisode(bot, ep, false, "owner offline — cannot take from container");
+            owner = sapi.Server?.Players?.FirstOrDefault(p => p?.Entity != null) as IServerPlayer;
+            if (owner != null)
+                Log($"bot#{ep.BotId}: owner '{ep.OwnerUid}' not online — taking via online player {owner.Name}");
+        }
+        if (owner == null)
+        {
+            CompleteEpisode(bot, ep, false, "no online player to take through (owner offline)");
             return;
         }
 
