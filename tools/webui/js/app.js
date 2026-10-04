@@ -519,6 +519,20 @@ function wireStage() {
         if (el.framesAuto.checked) framesTimer = setInterval(captureFrame, CONFIG.SCREENSHOT_INTERVAL_MS);
     });
     connectStream();
+    // The noVNC iframe streams VNC rects for as long as the page is
+    // "visible" — and the VNC client inside it accumulates image data in
+    // the renderer as it goes (long-lived tabs put real load on the VNC
+    // server and the viewing renderer). The stream is a viewing aid only;
+    // every other view (state, bots, logs) works without it. So pause it
+    // while the tab is hidden and resume when it comes back. (Headless
+    // pages report visible forever — this protects human tabs only.)
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            disconnectStream();
+        } else if (el.streamEnabled.checked && stageView === 'vnc') {
+            connectStream();
+        }
+    });
 }
 
 /* ── polling ──────────────────────────────────────────────────────────── */
