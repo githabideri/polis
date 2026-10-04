@@ -4733,7 +4733,7 @@ public partial class PolisSystem
         if (mode == null) mode = pb.HungerSuspended ? "off" : "on";
         pb.HungerSuspended = mode == "on";
 
-        float sat = pb.Entity.WatchedAttributes.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f;
+        float sat = pb.WatchedAttributes.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f;
         return new PolisTestHarness.CommandResult
         {
             Ok = true,
