@@ -413,6 +413,157 @@ def test_worldmodel_staleness(impl, t4):
     return fails, n
 
 
+def test_sequencer(impl):
+    """T6 (2026-10-04, doc 13.13): the build sequencer - the 5x5
+    dead-end, made checkable before any block is placed.
+
+    a) the 3x3 hut (16 blocks) completes: every cell orderable, no
+       scaffold, and the order is deterministic across two runs;
+    b) the 5x5 hut WITHOUT scaffold (max_scaffold=0) cannot complete:
+       the simulation stops with a stuck set whose cells ALL have zero
+       standable candidates at their turn - the exact signature of the
+       live runs 14-17 ("structural: no standable candidate") - and
+       all in layer 2+ (the recorded death layer is 2);
+    c) the 5x5 WITH the scaffold policy completes with ZERO notes:
+       the platform is the 3x3 interiors at layers 1-3 minus the door
+       column and the unused centres (24 cells, all placed), and the
+       three declared openings stay open - each is a permanent stand
+       that lets the deterministic peel close the last cell of its
+       closed 3x3 cluster (last-cell theorem, sequencer doc item 4);
+       all 103 plan cells get placed;
+    d) run-17 RESUME: the recorded 46-block partial state (25 floor,
+       15 wall tier 1, 6 wall tier 2) at site-A; the sequencer skips
+       what is already solid and completes the rest (57 now);
+    e) standable() anchors from the 13.13 analysis: the 5x5 tier-2
+       edge middle has zero stands without a platform (interior
+       neighbour unsupported, outside floats, same-edge occupied) and
+       a stand with one; the 3x3 edge middle stands on the interior
+       floor cell.
+    """
+    from r2 import sequencer as seq
+    from r2.buildplans import load_plan
+    fails = 0
+    OX, OY, OZ = 512010, 3, 512029          # site-A (13.13 handoff state)
+
+    def site_world(w, d, prebuilt=()):
+        """The leveled site (as prepared 09-30): substrate below
+        ground everywhere, ground level CLEARED across the footprint
+        plus a 2-cell margin (the bot's walking ring), terrain at
+        ground level only beyond the margin. The margin is what lets
+        the last cell of a solid layer be placed from the outside."""
+        cells = set()
+        for x in range(OX - 4, OX + w + 5):
+            for z in range(OZ - 4, OZ + d + 5):
+                in_cleared = (OX - 2 <= x < OX + w + 2 and
+                              OZ - 2 <= z < OZ + d + 2)
+                for y in range(OY - 2, OY + 10):
+                    if y < OY or (y == OY and not in_cleared):
+                        cells.add((x, y, z))
+        cells.update(prebuilt)
+        return seq.DictWorld(cells)
+
+    p3 = load_plan(os.path.join(REPO, "builds", "hut3x3.json"))
+    p5 = load_plan(os.path.join(REPO, "builds", "hut.json"))
+    floor5 = [(OX + x, OY, OZ + z) for x in range(5) for z in range(5)]
+    ring5 = [(OX + x, OY + 1, OZ + z) for (x, z) in
+             [(0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (1, 0), (1, 4),
+              (2, 4), (3, 0), (3, 4), (4, 0), (4, 1), (4, 2), (4, 3),
+              (4, 4)]]
+
+    # a) 3x3 completes, no scaffold, deterministic
+    r3a = seq.sequence(p3, (OX, OY, OZ), site_world(3, 3))
+    r3b = seq.sequence(p3, (OX, OY, OZ), site_world(3, 3))
+    plan3 = [c for c, _, k in r3a.order if k == seq.KIND_PLAN]
+    if not (r3a.ok and r3a.order == r3b.order and not r3a.scaffold
+            and len(plan3) == 16 and r3a.summary().startswith(
+                "sequencer: OK")):
+        fails += 1
+        print("T6a 3x3: %s | plan=%d scaffold=%d" %
+              (r3a.summary(), len(plan3), len(r3a.scaffold)))
+
+    # b) 5x5 without scaffold: the 13.13 dead-end, reproduced offline
+    r5n = seq.sequence(p5, (OX, OY, OZ), site_world(5, 5),
+                       max_scaffold=0)
+    wfin = seq.CompositeWorld(site_world(5, 5),
+                              [c for c, _, k in r5n.order
+                               if k != seq.KIND_TEARDOWN])
+    no_stand = all(not seq.stand_candidates(c, wfin, OY)
+                   for c in r5n.stuck)
+    layer_ok = all(c[1] >= OY + 2 for c in r5n.stuck)
+    if r5n.ok or not r5n.stuck or not no_stand or not layer_ok:
+        fails += 1
+        print("T6b 5x5 no-scaffold: %s | no_stand=%s layers=%s" %
+              (r5n.summary(), no_stand,
+               sorted({c[1] - OY for c in r5n.stuck})))
+
+    # c) 5x5 with the scaffold policy: completes with ZERO notes.
+    # The platform is the 3x3 interiors at layers 1-3 minus the door
+    # column (2,1,1) and the unused centres (2,2,1)/(2,2,2) - 24
+    # cells, ALL of them placed: the three declared openings are
+    # permanent stands, so the deterministic peel closes the last
+    # cell of every closed 3x3 cluster (last-cell theorem).
+    want_scaf = set()
+    for L in (1, 2, 3):
+        for x in range(1, 4):
+            for z in range(1, 4):
+                if (x, z, L) in ((2, 1, 1), (2, 2, 1), (2, 2, 2)):
+                    continue
+                want_scaf.add((OX + x, OY + L, OZ + z))
+    r5s = seq.sequence(p5, (OX, OY, OZ), site_world(5, 5))
+    plan5 = [c for c, _, k in r5s.order if k == seq.KIND_PLAN]
+    tear = [c for c, _, k in r5s.order if k == seq.KIND_TEARDOWN]
+    exact_scaf = (set(r5s.scaffold) == want_scaf
+                  and len(r5s.scaffold) == 24)
+    reverse_tear = (tear == list(reversed(r5s.scaffold)))
+    clean = not r5s.notes
+    if not (r5s.ok and exact_scaf and reverse_tear and clean
+            and len(plan5) == 103):
+        fails += 1
+        print("T6c 5x5 scaffold: %s | plan=%d exact_scaf=%s tear=%s "
+              "clean=%s notes=%s" % (r5s.summary(), len(plan5),
+                                     exact_scaf, reverse_tear, clean,
+                                     r5s.notes))
+
+    # d) run-17 resume: the recorded 46-block partial state
+    pre5 = floor5 + ring5 + [
+        (OX + 0, OY + 2, OZ + 0), (OX + 0, OY + 2, OZ + 4),
+        (OX + 4, OY + 2, OZ + 0), (OX + 4, OY + 2, OZ + 4),
+        (OX + 0, OY + 2, OZ + 1), (OX + 0, OY + 2, OZ + 2)]
+    r5r = seq.sequence(p5, (OX, OY, OZ), site_world(5, 5, pre5))
+    placed_now = {c for c, _, k in r5r.order if k == seq.KIND_PLAN}
+    skipped = not (placed_now & set(pre5))
+    if not (r5r.ok and not r5r.notes
+            and set(r5r.scaffold) == want_scaf
+            and len(placed_now) == 103 - 46):
+        fails += 1
+        print("T6d run-17 resume: %s | placed_now=%d "
+              "notes=%s" % (r5r.summary(), len(placed_now), r5r.notes))
+
+    # e) standable() anchors (the 13.13 analysis, cell for cell)
+    wmid = seq.DictWorld(set(floor5) | set(ring5) | {
+        (OX + 0, OY + 2, OZ + 0), (OX + 0, OY + 2, OZ + 4),
+        (OX + 4, OY + 2, OZ + 0), (OX + 4, OY + 2, OZ + 4),
+        (OX + 1, OY + 2, OZ + 4), (OX + 3, OY + 2, OZ + 4)})
+    mid = (OX + 2, OY + 2, OZ + 4)
+    anchor1 = (seq.stand_candidates(mid, wmid, OY) == [])
+    plat = {(OX + x, OY + 1, OZ + z) for x in range(1, 4)
+            for z in range(1, 4)}
+    wmidp = seq.CompositeWorld(wmid, plat)
+    anchor2 = (OX + 2, OY + 2, OZ + 3) in \
+        seq.stand_candidates(mid, wmidp, OY)
+    floor3 = [(OX + x, OY, OZ + z) for x in range(3) for z in range(3)]
+    w33 = seq.DictWorld(set(floor3) | {
+        (OX + 0, OY + 1, OZ + 0), (OX + 2, OY + 1, OZ + 0)})
+    c3 = (OX + 1, OY + 1, OZ + 0)
+    anchor3 = (OX + 1, OY + 1, OZ + 1) in \
+        seq.stand_candidates(c3, w33, OY)
+    if not (anchor1 and anchor2 and anchor3):
+        fails += 1
+        print("T6e anchors: no-stand=%s with-platform=%s 3x3-floor=%s" %
+              (anchor1, anchor2, anchor3))
+    return fails, 5
+
+
 # ---------------------------------------------------------------- main ----
 
 def main():
@@ -433,8 +584,9 @@ def main():
     f4, n4 = test_state_construction(impl, t4)
     f2b, n2b = test_run_transitions(t4)
     f5, n5 = test_worldmodel_staleness(impl, t4)
+    f6, n6 = test_sequencer(impl)
 
-    total_fail = f1 + f2 + f2s + f3 + f4 + f2b + f5
+    total_fail = f1 + f2 + f2s + f3 + f4 + f2b + f5 + f6
     print("impl=%s" % args.impl)
     print("T1 prompt    %3d/%3d byte-identical" % (n1 - f1, n1))
     print("T2 decision  %3d/%3d replayed exactly" % (
@@ -443,6 +595,7 @@ def main():
     print("T4 state     %3d/%3d reconstructed exactly" % (n4 - f4, n4))
     print("T2b run      %3d/%3d transitions consistent" % (n2b - f2b, n2b))
     print("T5 staleness %3d/%3d invariants hold" % (n5 - f5, n5))
+    print("T6 sequencer %3d/%3d hold" % (n6 - f6, n6))
     if total_fail:
         print("CONTRACT BROKEN: %d failure(s)" % total_fail)
         sys.exit(1)

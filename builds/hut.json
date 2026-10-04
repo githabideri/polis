@@ -5,7 +5,7 @@
   5
  ],
  "materials": {
-  "granite": 106
+  "granite": 103
  },
  "entry": [
   2,
@@ -410,14 +410,6 @@
   },
   {
    "d": [
-    3,
-    2,
-    4
-   ],
-   "m": "granite"
-  },
-  {
-   "d": [
     4,
     2,
     0
@@ -437,14 +429,6 @@
     4,
     2,
     2
-   ],
-   "m": "granite"
-  },
-  {
-   "d": [
-    4,
-    2,
-    3
    ],
    "m": "granite"
   },
@@ -533,14 +517,6 @@
     3,
     3,
     0
-   ],
-   "m": "granite"
-  },
-  {
-   "d": [
-    3,
-    3,
-    4
    ],
    "m": "granite"
   },
@@ -677,14 +653,6 @@
     2,
     4,
     1
-   ],
-   "m": "granite"
-  },
-  {
-   "d": [
-    2,
-    4,
-    2
    ],
    "m": "granite"
   },
@@ -863,6 +831,32 @@
     2
    ],
    "m": "granite"
+  },
+  {
+   "d": [
+    3,
+    2,
+    4
+   ],
+   "m": "granite"
   }
+ ],
+ "note": "5x5 hut, 103 blocks. Three declared architectural openings (never filled by the scaffold; each is a permanent stand for the last-cell theorem, r2/sequencer.py doc item 4): a window on the east wall at (4,2), a window on the north wall at (3,3), and a skylight at (2,4). The door is at (2,0), tiers 1-2. Openings must be supported from below - never stack two vertically (the upper would float).",
+ "openings": [
+  [
+   4,
+   2,
+   3
+  ],
+  [
+   3,
+   3,
+   4
+  ],
+  [
+   2,
+   4,
+   2
+  ]
  ]
 }

@@ -30,7 +30,7 @@ class PlanError(Exception):
 
 class BuildingPlan:
     def __init__(self, name, footprint, materials, blocks, entry,
-                 provides):
+                 provides, openings=()):
         self.name = name
         self.footprint = tuple(footprint)          # (w, d) in blocks
         self.materials = dict(materials)           # material -> total qty
@@ -38,6 +38,11 @@ class BuildingPlan:
                        for b in blocks]            # [(dx,dy,dz), material]
         self.entry = tuple(entry)                  # (dx, dz[, door_height])
         self.provides = list(provides)             # survival function tags
+        # architectural openings the sequencer must never fill: local
+        # (dx, dy, dz) cells that are part of the building's design
+        # (windows, skylights) - they stay open forever and double as
+        # permanent stands for the last-cell theorem (sequencer doc 4)
+        self.openings = [tuple(o) for o in openings]
 
     @property
     def door_height(self):
@@ -75,6 +80,14 @@ class BuildingPlan:
         if len(self.entry) not in (2, 3):
             raise PlanError("entry must be (dx, dz) or (dx, dz, "
                             "door_height)")
+        for o in self.openings:
+            if len(o) != 3 or not (0 <= o[0] < w and 0 <= o[1] < MAX_LAYERS
+                                   and 0 <= o[2] < d):
+                raise PlanError("opening %r outside footprint %r"
+                                % (o, self.footprint))
+            if any((dx, dy, dz) == tuple(o) for (dx, dy, dz), _
+                   in self.blocks):
+                raise PlanError("opening %r collides with a block" % (o,))
         ex, ez = self.entry[0], self.entry[1]
         if not (0 <= ex < w and 0 <= ez < d):
             raise PlanError("entry %r outside footprint" % (self.entry,))
@@ -163,7 +176,8 @@ def load_plan(path):
         materials=d.get("materials") or {},
         blocks=d.get("blocks") or [],
         entry=d.get("entry") or (0, 0),
-        provides=d.get("provides") or [])
+        provides=d.get("provides") or [],
+        openings=d.get("openings") or [])
     if not p.blocks:
         raise PlanError("plan has no blocks")
     p.validate()
