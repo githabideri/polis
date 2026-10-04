@@ -20,7 +20,7 @@ namespace Polis.Actions.Inventory
     /// </summary>
     public class PolisEatAction : EntityActionBase
     {
-        private readonly EntityActivitySystem vas;
+        private readonly new EntityActivitySystem vas;
         private readonly string itemCode;
         private readonly int count;
         private readonly string player;
