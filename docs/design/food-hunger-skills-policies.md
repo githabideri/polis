@@ -189,10 +189,19 @@ replaces the file schema and the evaluator internals — the call sites
    bot (resumed draining: 1500 → 1443/1500 within minutes). The `hunger`
    harness command now prints saturation, the five nutrition levels, the five
    delays and health for any bot and the player.
-2. Eating a berry end-to-end: does `OnEntityReceiveSaturation` + stack
-   consume produce the expected tree changes and the `EatenStack`?
-   (Vanilla values may be quirky — Realistic-Starvation notes saturation
-   ≈ 2× calories.)
+2. **RESOLVED 2026-10-04 (live, pilot world):** eating is one engine call on the
+   bot: `entity.ReceiveSaturation(satiety, category, delay, multiplier)` — with
+   1.22's variant-based food the per-variant table comes from
+   `collectible.GetNutritionProperties(world, stack, entity)` (foods live under
+   the `game:` domain as `base-variant` codes, e.g. `game:fruit-blueberry`,
+   `game:bushmeat-raw` — there is no `game:berry` anymore). Live: 3x blueberry
+   moved bot#2 927.64 → 1167.64 (exactly 3x80, category Fruit); the health
+   behavior also regenerates (20 → 20.16 — 1.22 quirk: regen can run slightly
+   past the declared maxhealth 20, clamping to watch). `hunger`/`eat` harness
+   commands shipped with this verification. The `EatenStack` and the
+   intoxication/psychedelic tree floats (new in 1.22: `intoxication` ≤ 1.1,
+   `psychedelic` ≤ 2.0 on WatchedAttributes — the drinking path maintains
+   them) are handled by the `eat` command.
 3. The operator's own client player is a separate entity with a separate
    meter — irrelevant to the bot; the bot's bar renders in the bot's
    player view (free observability on the possession screen).
