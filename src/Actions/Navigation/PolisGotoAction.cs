@@ -447,7 +447,7 @@ class PolisGotoAction : EntityActionBase
         {
             var t = wp.GetType();
             var asyncF = t.GetField("asyncSearchObject", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            var stuckF = t.GetBaseType()?.GetField("stuckCounter", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            var stuckF = t.BaseType?.GetField("stuckCounter", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
                          ?? t.GetField("stuckCounter", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             object async = asyncF?.GetValue(wp);
             string asyncDesc;
