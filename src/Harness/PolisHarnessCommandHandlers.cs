@@ -4527,15 +4527,15 @@ public partial class PolisSystem
     PolisTestHarness.CommandResult ExecuteHungerCommand(string[] args, PolisTestHarness.CommandContext context)
     {
         var targets = new List<(string Label, Entity E)>();
-        if (args.Length > 0 && long.TryParse(args[0], out var bid) && bots.TryGetValue(bid, out var b))
+        if (args.Length > 0 && long.TryParse(args[0], out var bid) && bots.TryGetValue(bid, out var singleBot))
         {
-            targets.Add(("bot#" + bid, b.Entity));
+            targets.Add(("bot#" + bid, singleBot.Entity));
         }
         else
         {
             foreach (var b in bots.Values) targets.Add(("bot#" + b.Entity.EntityId, b.Entity));
-            var lp = sapi.World?.Player;
-            if (lp?.Entity != null) targets.Add((lp.PlayerName + " (local player)", lp.Entity));
+            var lp = sapi.Server?.Players?.FirstOrDefault(p => p?.Entity != null);
+            if (lp != null) targets.Add((lp.PlayerName + " (server player)", lp.Entity));
         }
         if (targets.Count == 0)
             return new PolisTestHarness.CommandResult { Ok = false, Message = "No bots and no local player found" };
