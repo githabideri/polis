@@ -128,7 +128,7 @@ public partial class PolisSystem : ModSystem
     /// </summary>
     private BotState CreateBotState(EntityAgent entity)
     {
-        var bot = new BotState(entity);
+        var bot = new BotState(entity) { Owner = this };
         bot.OnActionRecorded = (botId, action, ok, msg, ms, actionId) =>
         {
             testHarness?.Broadcaster?.QueueEvent("action_complete", PolisLogLevel.Normal, new
@@ -1209,8 +1209,8 @@ public partial class PolisSystem : ModSystem
             CurrentHealth = currentHealth,
             MaxHealth = maxHealth,
             Foraging = IsForaging(entity.EntityId),
-            Saturation = PolisEatService.SaturationOf(entity) is float satv && satv > 0f ? Math.Round(satv, 1) : null,
-            MaxSaturation = PolisEatService.MaxSaturationOf(entity) is float maxsv && maxsv > 0f ? Math.Round(maxsv, 1) : null,
+            Saturation = PolisEatService.SaturationOf(entity) is float satv && satv > 0f ? (float)Math.Round(satv, 1) : null,
+            MaxSaturation = PolisEatService.MaxSaturationOf(entity) is float maxsv && maxsv > 0f ? (float)Math.Round(maxsv, 1) : null,
             RightHand = rightStack != null && rightStack.StackSize > 0
                 ? new PolisTestHarness.TestStateResult.SlotInfo
                 {
@@ -2684,7 +2684,7 @@ public partial class PolisSystem : ModSystem
         // The forage controller itself bypasses this (its own phases).
         if (!forageBypassGuard && forageEpisodes.ContainsKey(bot.Entity.EntityId))
         {
-            bot.RecordActionResult(name, false, "refused:foraging (food-pressure episode in progress; retry after it ends)");
+            bot.RecordActionResult(name, false, "refused:foraging (food-pressure episode in progress; retry after it ends)", sapi.World.ElapsedMilliseconds);
             return;
         }
         // The action name doubles as the safe-point key for the food-
@@ -3563,6 +3563,11 @@ public partial class PolisSystem : ModSystem
 
     internal class BotState
     {
+        /// <summary>
+        /// Back-reference to the owning system (nested-class access to
+        /// the outer instance methods, e.g. BeginEpisodeWhenIdle).
+        /// </summary>
+        public PolisSystem Owner;
         public EntityAgent Entity { get; }
         public EntityActivitySystem Activity { get; }
 
@@ -3616,7 +3621,7 @@ public partial class PolisSystem : ModSystem
                 JobRunning = false;
                 // A side-effect job that ran to its finish is the safe
                 // point where a deferred forage start proceeds.
-                BeginEpisodeWhenIdle(this, "finish");
+                Owner?.BeginEpisodeWhenIdle(this, "finish");
             }
 
             // Notify listeners (e.g., WebSocket broadcaster)

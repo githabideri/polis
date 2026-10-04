@@ -12,6 +12,7 @@ using Polis.Actions.Harvesting;
 using Polis.Actions.Inventory;
 using Polis.Actions.Navigation;
 using Polis.Core;
+using Polis.Helpers;
 
 // ---------------------------------------------------------------------
 // The food-pressure interrupt + the forage/feed skills (mod side).
@@ -257,6 +258,17 @@ public partial class PolisSystem
         return true;
     }
 
+    /// <summary>
+    /// Start the work of the current phase. "scanning" is driven by
+    /// StepScan (one chunk per tick); "pickslot" starts the container
+    /// take; the goto/harvest/eat phases are started by their
+    /// transition methods (StartTarget / BeginHarvestOrTake / BeginEat).
+    /// </summary>
+    void BeginPhase(BotState bot, ForageEpisode ep)
+    {
+        if (ep.Phase == "pickslot") BeginContainerTake(bot, ep);
+    }
+
     void PreemptCurrentJob(BotState bot, ForageEpisode ep)
     {
         if (!bot.JobRunning) return;
@@ -281,7 +293,7 @@ public partial class PolisSystem
         // The action's own cancel callback may have recorded a plain
         // "cancelled" — overwrite it with the real reason so the
         // mission layer (r2) can retry the job on this signature.
-        bot.RecordActionResult(jobName, false, "preempted:food_pressure");
+        bot.RecordActionResult(jobName, false, "preempted:food_pressure", sapi.World.ElapsedMilliseconds);
         bot.JobRunning = false;
         LogForage($"bot#{bot.Entity.EntityId}: preempted job '{jobName}' ({curType}) for food pressure");
     }
@@ -333,7 +345,7 @@ public partial class PolisSystem
 
         while (budget > 0)
         {
-            if (ep.Cursor >= ep.Scan.ShellCells.Count)
+            if (ep.Scan.Cursor >= ep.Scan.ShellCells.Count)
             {
                 // Ring done: keep the nearest candidate (not yet used),
                 // else move to the next ring.
@@ -365,7 +377,7 @@ public partial class PolisSystem
                 }
                 ep.Scan.Ring = nextRing;
                 ep.Scan.ShellCells.Clear();
-                ep.Cursor = 0;
+                ep.Scan.Cursor = 0;
                 if (!BuildShell(ep))
                 {
                     CompleteEpisode(bot, ep, false, "scan ring exhausted");
@@ -409,7 +421,7 @@ public partial class PolisSystem
                     cells.Add(new BlockPos(center.X + dx, 0, center.Z + dz));
         if (cells.Count == 0) return false;
         ep.Scan.ShellCells = cells;
-        ep.Cursor = 0;
+        ep.Scan.Cursor = 0;
         return true;
     }
 
@@ -435,8 +447,13 @@ public partial class PolisSystem
         };
         foreach (var nb in nbs)
         {
+            // Air (or empty) neighbour: the bush is a non-solid plant
+            // block, so its horizontal neighbours at its height are the
+            // standable cells. (No IsSolid in this API revision; the
+            // goto action's own A*/fallback handles the edge cases.)
             var b = solid.GetBlock(nb);
-            bool standable = b == null || b.Id == 0 || !b.IsSolid();
+            string bcode = b?.Code?.ToString() ?? "";
+            bool standable = b == null || b.Id == 0 || bcode.Contains(":air");
             if (standable)
             {
                 gotoCell = new Vec3d(nb.X, nb.Y, nb.Z);
