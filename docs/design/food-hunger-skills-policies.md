@@ -182,12 +182,15 @@ replaces the file schema and the evaluator internals — the call sites
 
 ## 4. Open empirical questions (the pilot answers them)
 
-1. **The one live check**: does our bot's entity instance carry the
-   `hunger` tree (expected yes — player.json declares it for all player
-   entities; our bot is a server-side player entity)? One harness command
-   prints it.
+1. **RESOLVED 2026-10-04 (live, pilot world):** the bot did **not** carry the
+   `hunger` tree — `polisbot.json` never declared the behavior, while
+   `game:player` does (baseline: bot ABSENT, player 1500/1500). The one-line
+   declaration in `polisbot.json` fixed it for fresh spawns *and* the persisted
+   bot (resumed draining: 1500 → 1443/1500 within minutes). The `hunger`
+   harness command now prints saturation, the five nutrition levels, the five
+   delays and health for any bot and the player.
 2. Eating a berry end-to-end: does `OnEntityReceiveSaturation` + stack
-   consume produce the expected tree/HUD changes and the `EatenStack`?
+   consume produce the expected tree changes and the `EatenStack`?
    (Vanilla values may be quirky — Realistic-Starvation notes saturation
    ≈ 2× calories.)
 3. The operator's own client player is a separate entity with a separate
