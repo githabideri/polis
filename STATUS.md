@@ -80,18 +80,30 @@ on the model-mux box.
 
 ## Next (in binding order)
 
-1. **The 13.13 ring decision** (standing-range-2 / scaffold / 3x3 cap) —
+1. **Survival pilot prep (current driver).** Design settled in
+   `docs/design/food-hunger-skills-policies.md` (2026-10-04): policy engine
+   (food/wear/behavior allow-rules, one evaluator seam), `eat` action
+   (mod-privilege effect; the engine has no hunger state and no callable
+   item-use in 1.22), per-bot food pressure as a mission interrupt, light
+   RimWorld-inspired skills (XP curve, L1 hard req / L2 job threshold /
+   L3 scaling). Build order: policies + eat → forage-eat in the pilot →
+   skills with the copper milestone.
+2. **First survival pilot** — fresh world `polis-pilot-1` is up (normal
+   clock, survival); r2 live-mission (forage + eat + small hut, 2–3 in-game
+   days), world auto-creation on the startup path, operator-only-on-
+   failure; death = permanent (respawn is a debugging deity power).
+3. **Copper via the melting pot** (campfire + charcoal; *not* the
+   bloomery — that is iron/steel) — the first endogenous smelting
+   milestone, built through the building system.
+4. **The 13.13 ring decision** (standing-range-2 / scaffold / 3x3 cap) —
    unblocks bigger single-bot buildings.
-2. **Craft verbs** — knap/press/clayform into job types (workbench, then
-   furnace).
-3. **27B build-plan A/B gate** — make `build-plan` a 27B-plannable verb
-   (like `sow`).
-4. **Cross-mission memory** — persistent world model + episodic record +
+5. **Cross-mission memory** — persistent world model + episodic record +
    goal stack.
-5. **Repair path** — failed mission → re-plan.
-6. **27B degeneration guard** (see open issues).
-7. **First real-world pilot** — fresh small world, 3–5 permadays, "build a
-   small base", the agent guarded (operator only on failure).
+6. **Repair path** — failed mission → re-plan.
+7. **27B degeneration guard** (see open issues).
+
+(The 27B build-plan A/B gate and craft-verb work were completed and live-
+verified during 2026-10-03/04; craft is in the table above.)
 
 ## History
 
