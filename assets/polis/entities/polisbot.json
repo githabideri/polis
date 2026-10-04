@@ -24,7 +24,7 @@
       { "code": "nametag", "showtagonlywhentargeted": true },
       { "code": "controlledphysics", "stepHeight": 1.01 },
       { "code": "health", "currenthealth": 20, "maxhealth": 20 },
-      { "code": "hunger", "currentsaturation": 1500.0, "maxsaturation": 1500.0, "saturationlossdelay": 180.0 },
+      { "code": "polisbotHunger", "currentsaturation": 1500.0, "maxsaturation": 1500.0, "saturationlossdelay": 180.0 },
       { "code": "deaddecay", "hoursToDecay": 96, "decayedBlock": "drycarcass-humanoid1" }
     ]
   }

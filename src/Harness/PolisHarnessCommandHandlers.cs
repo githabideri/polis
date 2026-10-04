@@ -81,6 +81,8 @@ public partial class PolisSystem
                     return ExecuteHungerCommand(args, context);
                 case "eat":
                     return ExecuteEatCommand(args, context);
+                case "hungerpause":
+                    return ExecuteHungerPauseCommand(args, context);
                 case "takefrom":
                     return ExecuteTakeFromCommand(args, context);
                 case "putinto":
@@ -4706,6 +4708,37 @@ public partial class PolisSystem
                 healthAfter = e.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("currenthealth", 0f) ?? 0f,
                 steps,
             },
+        };
+    }
+
+    // --- Hunger drain gate (parked bots / debug) ---
+    // Usage: hungerpause [on|off]   (toggles the selected bot's
+    // EntityPolisBot.HungerSuspended: the polis hunger behavior suspends
+    // the engine drain while set; the policy engine will own this for
+    // parked bots later).
+
+    PolisTestHarness.CommandResult ExecuteHungerPauseCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        string mode = null;
+        if (args.Length > 0 && (args[0] == "on" || args[0] == "off"))
+        {
+            mode = args[0];
+        }
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        var pb = bot.Entity as EntityPolisBot;
+        if (pb == null)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "selected entity is not a polisbot" };
+
+        if (mode == null) mode = pb.HungerSuspended ? "off" : "on";
+        pb.HungerSuspended = mode == "on";
+
+        float sat = pb.Entity.WatchedAttributes.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f;
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"hunger drain {mode} (saturation {sat:F0}/1500)",
+            Data = new { hungerSuspended = pb.HungerSuspended, saturation = sat },
         };
     }
 

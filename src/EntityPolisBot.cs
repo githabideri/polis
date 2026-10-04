@@ -21,6 +21,14 @@ public class EntityPolisBot : EntityHumanoid
     /// </summary>
     public InventoryGeneric Cargo;
 
+    /// <summary>
+    /// True while the bot is parked (no active mission): the polis hunger
+    /// behavior (EntityBehaviorPolisHunger) suspends the engine's drain so
+    /// idle bots don't starve in ~4 in-game hours. The policy engine /
+    /// mission system owns this flag; `harness: hungerpause` toggles it.
+    /// </summary>
+    public bool HungerSuspended;
+
     public override bool StoreWithChunk => true;
 
     public override ItemSlot RightHandItemSlot => Cargo?[0] ?? base.RightHandItemSlot;

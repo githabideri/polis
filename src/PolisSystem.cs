@@ -70,6 +70,7 @@ public partial class PolisSystem : ModSystem
         if (Environment.GetEnvironmentVariable("POLIS_API_PROBE") == "1")
             Polis.PolisApiProbe.DumpTypes();
         api.RegisterEntity("EntityPolisBot", typeof(EntityPolisBot));
+        api.RegisterEntityBehaviorClass("polisbotHunger", typeof(EntityBehaviorPolisHunger));
     }
 
     public override void StartServerSide(ICoreServerAPI api)
