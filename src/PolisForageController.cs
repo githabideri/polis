@@ -757,6 +757,24 @@ public partial class PolisSystem
         {
             LogForage($"bot#{ep.BotId}: target attempt {ep.Attempt} failed: {failReason}");
         }
+
+        // An eat that "failed partway" because the bot hit full before the
+        // berries ran out is the goal achieved: if saturation is at or over
+        // the rearm line, the episode succeeded - don't book it as a failure
+        // (observed 2026-10-04: bot satiated 1426->1500, ate 3/6, and the
+        // episode was marked "FAILED: partially fed (1500/1500)").
+        if (failReason != null)
+        {
+            float satNow = PolisEatService.SaturationOf(bot.Entity);
+            float maxNow = PolisEatService.MaxSaturationOf(bot.Entity);
+            if (maxNow > 0f && satNow >= ep.Rearm * maxNow)
+            {
+                CompleteEpisode(bot, ep, true,
+                    $"satiated by a stopped eat: {satNow:F0}/{maxNow:F0} (>={ep.Rearm * maxNow:F0} rearm) after {ep.Attempt} target(s)");
+                return;
+            }
+        }
+
         if (ep.Attempt >= ep.MaxTargets)
         {
             float sat = PolisEatService.SaturationOf(bot.Entity);
