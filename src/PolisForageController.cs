@@ -374,7 +374,7 @@ public partial class PolisSystem
                 continue;
             }
 
-            var cell = ep.Scan.ShellCells[ep.Cursor++];
+            var cell = ep.Scan.ShellCells[ep.Scan.Cursor++];
             budget--;
             for (int y = 0; y <= 16; y++)
             {
@@ -491,7 +491,7 @@ public partial class PolisSystem
             return;
         }
 
-        var owner = sapi.World.PlayerByUid(ep.OwnerUid);
+        var owner = sapi.World.PlayerByUid(ep.OwnerUid) as IServerPlayer;
         if (owner == null)
         {
             CompleteEpisode(bot, ep, false, "owner offline — cannot harvest (claims)");
@@ -550,7 +550,7 @@ public partial class PolisSystem
 
     void BeginContainerTake(BotState bot, ForageEpisode ep)
     {
-        var owner = sapi.World.PlayerByUid(ep.OwnerUid);
+        var owner = sapi.World.PlayerByUid(ep.OwnerUid) as IServerPlayer;
         if (owner == null)
         {
             CompleteEpisode(bot, ep, false, "owner offline — cannot take from container");
@@ -709,7 +709,7 @@ public partial class PolisSystem
         foragePendingStart.Remove(ep.BotId);
         forageNextRetryMs[ep.BotId] = ok ? 0 : NowMs() + 90_000;   // backoff on failure
         bot.JobRunning = false;
-        bot.RecordActionResult(ep.Source == "container" ? "feed" : "forage", ok, detail);
+        bot.RecordActionResult(ep.Source == "container" ? "feed" : "forage", ok, detail, sapi.World.ElapsedMilliseconds);
         string episodeOutcome = ok ? "SUCCESS" : "FAILED";
         LogForage($"bot#{ep.BotId}: episode {episodeOutcome}: {detail} (sat now {PolisEatService.SaturationOf(bot.Entity):F0})");
         ForageQueueEvent("forage_episode", new

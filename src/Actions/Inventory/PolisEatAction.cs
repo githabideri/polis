@@ -3,6 +3,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.Essentials;
 using Vintagestory.GameContent;
+using Polis.Core;
 
 namespace Polis.Actions.Inventory
 {
