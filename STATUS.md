@@ -81,13 +81,17 @@ on the model-mux box.
 ## Next (in binding order)
 
 1. **Survival pilot prep (current driver).** Design settled in
-   `docs/design/food-hunger-skills-policies.md` (2026-10-04): policy engine
-   (food/wear/behavior allow-rules, one evaluator seam), `eat` action
-   (mod-privilege effect; the engine has no hunger state and no callable
-   item-use in 1.22), per-bot food pressure as a mission interrupt, light
-   RimWorld-inspired skills (XP curve, L1 hard req / L2 job threshold /
-   L3 scaling). Build order: policies + eat → forage-eat in the pilot →
-   skills with the copper milestone.
+   `docs/design/food-hunger-skills-policies.md` (2026-10-04, corrected the
+   same day after research): the engine *does* have hunger (satiety bar,
+   0–1500, starvation damage; state in the game assembly's BehaviorHunger;
+   `EnumDamageType.Hunger`, `StatModifiers.hungerrate`, item
+   `NutritionProps` are the API surface). Polis reads the engine meter,
+   adds the decision layer: policy engine (food/wear/behavior allow-rules,
+   one evaluator seam), `eat` action (seam: item `NutritionProps` are
+   readable, the engine eat call is not public in 1.22), food-pressure
+   interrupt, light RimWorld-inspired skills (L1 hard req / L2 job
+   threshold / L3 scaling). Build order: policies + eat → forage-eat in
+   the pilot → skills with the copper milestone.
 2. **First survival pilot** — fresh world `polis-pilot-1` is up (normal
    clock, survival); r2 live-mission (forage + eat + small hut, 2–3 in-game
    days), world auto-creation on the startup path, operator-only-on-
