@@ -31,6 +31,9 @@ namespace Polis
         long armedAtMs;
         bool closedOnce;
 
+        public double RenderOrder => 0.5; // order irrelevant: we only read GUI state
+        public int RenderRange => 0; // always run (no distance culling)
+
         public PolisCharSelectWatchRenderer(ICoreClientAPI capi)
         {
             this.capi = capi;
