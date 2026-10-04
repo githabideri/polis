@@ -390,7 +390,7 @@ public partial class PolisSystem
             budget--;
             // The bush sits at ground level, i.e. at the bot's own height.
             // Keep the Y window tight around the bot instead of 0..16.
-            int yb = bot.Entity.ServerPos.Y;
+            int yb = (int)Math.Round(bot.Entity.ServerPos.Y);
             for (int y = yb - 1; y <= yb + 2; y++)
             {
                 if (y < 0) continue;
