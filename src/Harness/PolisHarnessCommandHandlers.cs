@@ -4619,7 +4619,10 @@ public partial class PolisSystem
         if (!TryResolveStack(code, 1, out var unit, out string resErr))
             return new PolisTestHarness.CommandResult { Ok = false, Message = resErr };
         var collectible = unit.Collectible;
-        var nut = collectible?.NutritionProps;
+        // The engine's per-stack nutrition resolution (1.22: variant-based
+        // food items carry their tables via this seam; falls back to the
+        // collectible's base NutritionProps).
+        var nut = collectible?.GetNutritionProperties(sapi.World, unit, bot.Entity) ?? collectible?.NutritionProps;
         if (nut == null)
             return new PolisTestHarness.CommandResult { Ok = false, Message = $"{code} is not edible (no NutritionProps)" };
 
@@ -4653,6 +4656,20 @@ public partial class PolisSystem
                 }, -nut.Health);
             }
 
+            // 1.22 extras: the intoxication/psychedelic tree floats the
+            // drinking path maintains — keep them in sync for foods that
+            // carry those fields.
+            if (Math.Abs(nut.Intoxication) > 1e-4f)
+            {
+                float cur = e.WatchedAttributes.GetFloat("intoxication", 0f);
+                e.WatchedAttributes.SetFloat("intoxication", Math.Min(1.1f, cur + nut.Intoxication));
+            }
+            if (Math.Abs(nut.Psychedelic) > 1e-4f)
+            {
+                float cur2 = e.WatchedAttributes.GetFloat("psychedelic", 0f);
+                e.WatchedAttributes.SetFloat("psychedelic", Math.Min(2f, cur2 + nut.Psychedelic));
+            }
+
             if (nut.EatenStack != null && nut.EatenStack.Code != null && nut.EatenStack.StackSize > 0)
             {
                 if (TryResolveStack(nut.EatenStack.Code.ToString(), 1, out var leftover, out _))
@@ -4679,6 +4696,8 @@ public partial class PolisSystem
                 category = nut.FoodCategory.ToString(),
                 satietyPerUnit = nut.Satiety,
                 healthPerUnit = nut.Health,
+                intoxicationPerUnit = nut.Intoxication,
+                psychedelicPerUnit = nut.Psychedelic,
                 saturationLossDelay = nut.SaturationLossDelay,
                 eatenStack = nut.EatenStack?.Code?.ToString() ?? null,
                 before,
