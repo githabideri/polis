@@ -147,7 +147,7 @@ class PolisPickBushAction : EntityActionBase
         };
 
         // --- Vanilla claims/state gate + start sound ---
-        EnumHandling handling = EnumHandling.None;
+        EnumHandling handling = EnumHandling.PassThrough;
         if (!bush.OnBlockInteractStart(world, player, blockSel, ref handling))
         {
             Fail("interaction blocked (bush state or claims)");
@@ -177,7 +177,7 @@ class PolisPickBushAction : EntityActionBase
 
         // --- Accumulate the hold, driving the vanilla step (effects) ---
         elapsedTime += dt;
-        EnumHandling handling = EnumHandling.None;
+        EnumHandling handling = EnumHandling.PassThrough;
         bool cont = bush.OnBlockInteractStep(elapsedTime, world, player, blockSel, ref handling);
 
         if (!cont || elapsedTime >= harvestTime)
@@ -204,8 +204,9 @@ class PolisPickBushAction : EntityActionBase
                 if (stack == null || stack.StackSize <= 0 || stack.Collectible == null) continue;
 
                 int originalSize = stack.StackSize;
+                int pickedUp = 0;
                 bool inserted = agent != null
-                    && PolisInventoryHelpers.TryInsertIntoBotInventory(agent, stack, out int pickedUp, out string err, debugLog);
+                    && PolisInventoryHelpers.TryInsertIntoBotInventory(agent, stack, out pickedUp, out string err, debugLog);
 
                 if (inserted)
                 {
