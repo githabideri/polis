@@ -77,6 +77,8 @@ public partial class PolisSystem
                     return ExecuteTestStateCommand(args, context);
                 case "bots":
                     return ExecuteBotsCommand(args, context);
+                case "hunger":
+                    return ExecuteHungerCommand(args, context);
                 case "takefrom":
                     return ExecuteTakeFromCommand(args, context);
                 case "putinto":
@@ -4512,6 +4514,81 @@ public partial class PolisSystem
             Ok = true,
             Message = $"{botList.Count} bot(s) found",
             Data = new { bots = botList }
+        };
+    }
+
+    // --- Hunger / Satiety introspection (the engine's EntityBehaviorHunger) ---
+    //
+    // Usage: hunger [botId]   (no arg: all bots + the local human player).
+    // Reads the synced "hunger" tree attribute (currentsaturation/
+    // maxsaturation, the five nutrition levels, the five delays) plus the
+    // health tree. Pure read — no state changes.
+
+    PolisTestHarness.CommandResult ExecuteHungerCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        var targets = new List<(string Label, Entity E)>();
+        if (args.Length > 0 && long.TryParse(args[0], out var bid) && bots.TryGetValue(bid, out var b))
+        {
+            targets.Add(("bot#" + bid, b.Entity));
+        }
+        else
+        {
+            foreach (var b in bots.Values) targets.Add(("bot#" + b.Entity.EntityId, b.Entity));
+            var lp = sapi.World?.Player;
+            if (lp?.Entity != null) targets.Add((lp.PlayerName + " (local player)", lp.Entity));
+        }
+        if (targets.Count == 0)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "No bots and no local player found" };
+
+        var rows = new List<object>();
+        foreach (var (label, e) in targets)
+        {
+            var row = new Dictionary<string, object>
+            {
+                ["name"] = label,
+                ["entityCode"] = e.Code?.ToString() ?? "?",
+                ["hasHungerBehavior"] = e.GetBehavior<EntityBehaviorHunger>() != null,
+            };
+
+            var hunger = e.WatchedAttributes.GetTreeAttribute("hunger");
+            if (hunger == null)
+            {
+                row["hunger"] = "ABSENT";
+            }
+            else
+            {
+                row["saturation"] = hunger.GetFloat("currentsaturation", 0f);
+                row["maxSaturation"] = hunger.GetFloat("maxsaturation", 0f);
+                row["levels"] = new Dictionary<string, float>
+                {
+                    ["fruit"] = hunger.GetFloat("fruitLevel", 0f),
+                    ["vegetable"] = hunger.GetFloat("vegetableLevel", 0f),
+                    ["protein"] = hunger.GetFloat("proteinLevel", 0f),
+                    ["grain"] = hunger.GetFloat("grainLevel", 0f),
+                    ["dairy"] = hunger.GetFloat("dairyLevel", 0f),
+                };
+                row["delays"] = new Dictionary<string, float>
+                {
+                    ["fruit"] = hunger.GetFloat("saturationlossdelayfruit", 0f),
+                    ["vegetable"] = hunger.GetFloat("saturationlossdelayvegetable", 0f),
+                    ["protein"] = hunger.GetFloat("saturationlossdelayprotein", 0f),
+                    ["grain"] = hunger.GetFloat("saturationlossdelaygrain", 0f),
+                    ["dairy"] = hunger.GetFloat("saturationlossdelaydairy", 0f),
+                };
+            }
+
+            var health = e.WatchedAttributes.GetTreeAttribute("health");
+            row["health"] = health?.GetFloat("currenthealth", 0f) ?? 0f;
+            row["maxHealth"] = health?.GetFloat("maxhealth", 0f) ?? 0f;
+
+            rows.Add(row);
+        }
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"{rows.Count} entity(ies)",
+            Data = new { entities = rows },
         };
     }
 
