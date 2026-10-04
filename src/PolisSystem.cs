@@ -1386,7 +1386,7 @@ public partial class PolisSystem : ModSystem
             if (p.GetModData<bool>("createCharacter", false))
                 return;
             p.SetModData("createCharacter", true);
-            sapi.Logger.Notification($"[polis] confirmed character selection for {p.Name} (dialog won't open on the next join)");
+            sapi.Logger.Notification($"[polis] confirmed character selection for {p.PlayerName} (dialog won't open on the next join)");
         }
         catch (Exception ex)
         {
