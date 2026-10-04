@@ -1,6 +1,8 @@
 using System;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
+using Vintagestory.Essentials;
+using Vintagestory.GameContent;
 
 namespace Polis.Actions.Inventory
 {

@@ -295,12 +295,12 @@ namespace Polis.Core
         public System.Collections.Generic.Dictionary<string, PolicyProfile> profiles { get; set; }
     }
 
-    internal class PolicyProfile
+    public class PolicyProfile
     {
         public System.Collections.Generic.Dictionary<string, DomainPolicy> domains { get; set; }
     }
 
-    internal class DomainPolicy
+    public class DomainPolicy
     {
         public string @default { get; set; } = "deny";
         public bool defaultAllow => string.Equals(@default, "allow", StringComparison.OrdinalIgnoreCase);
@@ -312,7 +312,7 @@ namespace Polis.Core
         public PreemptParams preempt { get; set; }
     }
 
-    internal class PolicyRule
+    public class PolicyRule
     {
         public string id { get; set; }
         public PolicyMatch match { get; set; }
@@ -320,7 +320,7 @@ namespace Polis.Core
         public int priority { get; set; }
     }
 
-    internal class PolicyMatch
+    public class PolicyMatch
     {
         public string category { get; set; }
         public string code { get; set; }
@@ -331,7 +331,7 @@ namespace Polis.Core
     /// trigger: below this the interrupt fires; rearm: the interrupt
     /// re-arms only above this (hysteresis).
     /// </summary>
-    internal class FoodPressure
+    public class FoodPressure
     {
         public float trigger { get; set; } = 0.25f;
         public float rearm { get; set; } = 0.40f;
@@ -345,7 +345,7 @@ namespace Polis.Core
     /// '*' wildcards on the full block code (wild fruiting bushes by
     /// default — the forage skill targets nature, not planted crops).
     /// </summary>
-    internal class ForageParams
+    public class ForageParams
     {
         public int maxRadius { get; set; } = 192;
         public int ringWidth { get; set; } = 32;
@@ -362,7 +362,7 @@ namespace Polis.Core
     /// "harvest", "place", ...) that carry side effects and are
     /// therefore only preempted at their finish (safe-point mode).
     /// </summary>
-    internal class PreemptParams
+    public class PreemptParams
     {
         public string mode { get; set; } = "safe-point";
         public System.Collections.Generic.List<string> waitTypes { get; set; } =

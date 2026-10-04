@@ -5,6 +5,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
+using Vintagestory.Essentials;
 using Vintagestory.GameContent;
 using Polis.Actions.Blocks;
 using Polis.Actions.Harvesting;
