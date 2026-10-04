@@ -388,8 +388,12 @@ public partial class PolisSystem
 
             var cell = ep.Scan.ShellCells[ep.Scan.Cursor++];
             budget--;
-            for (int y = 0; y <= 16; y++)
+            // The bush sits at ground level, i.e. at the bot's own height.
+            // Keep the Y window tight around the bot instead of 0..16.
+            int yb = bot.Entity.ServerPos.Y;
+            for (int y = yb - 1; y <= yb + 2; y++)
             {
+                if (y < 0) continue;
                 var b = ba.GetBlock(new BlockPos(cell.X, y, cell.Z));
                 if (b == null || b.Id == 0) continue;
                 if (MatchesPatterns(b.Code?.ToString(), ep.Params.blockPatterns))
@@ -413,12 +417,24 @@ public partial class PolisSystem
     {
         var center = bots[ep.BotId].Entity.ServerPos.XYZ.AsBlockPos;
         int r = ep.Scan.Ring;
+        // Scan a BAND, not a 1-block shell: rings advance by RingWidth, so
+        // a shell at max==r would leave the cells at d in (r-RingWidth, r)
+        // never queried (a bush at d=10 sat in the gap forever). The band
+        // covers d in (r-RingWidth, r] — no gaps, no overlap between rings.
+        // The first band (r == RingWidth) includes the centre (d == 0).
+        int inner = r - ep.RingWidth;
         var cells = new List<BlockPos>();
-        // outer shell of the square: max(|dx|, |dz|) == r
         for (int dx = -r; dx <= r; dx++)
+        {
+            int adx = Math.Abs(dx);
             for (int dz = -r; dz <= r; dz++)
-                if (Math.Max(Math.Abs(dx), Math.Abs(dz)) == r)
+            {
+                int d = Math.Max(adx, Math.Abs(dz));
+                bool inBand = d <= r && (d > inner || (inner <= 0 && d == 0));
+                if (inBand)
                     cells.Add(new BlockPos(center.X + dx, 0, center.Z + dz));
+            }
+        }
         if (cells.Count == 0) return false;
         ep.Scan.ShellCells = cells;
         ep.Scan.Cursor = 0;
