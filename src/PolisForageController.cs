@@ -480,8 +480,8 @@ public partial class PolisSystem
             new PolisGotoAction(
                 bot.Activity, gotoCell, true, "walk", 1f, 1f,
                 LogForage, null, true, true,
-                null, true, false,
-                (ok, msg) => OnForageGotoResult(bot, ep, ok, msg)));
+                (ok, msg) => OnForageGotoResult(bot, ep, ok, msg),
+                true, false));
     }
 
     void OnForageGotoResult(BotState bot, ForageEpisode ep, bool ok, string msg)
