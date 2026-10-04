@@ -320,19 +320,18 @@ details.rail-section[open] > summary::before { content: '\2013'; }
 .pad-move {
     grid-template-columns: repeat(3, 1fr);
     grid-template-areas:
-        ".   up    ."
-        "left W    right"
-        ".   S    ."
-        "down D   .";
-    grid-template-rows: 40px 40px 40px 30px;
+        ".      W     ."
+        "left   S     right"
+        "up     .     down";
+    grid-template-rows: 40px 40px 30px;
     justify-items: center;
 }
 .pad-view {
     grid-template-columns: repeat(3, 1fr);
     grid-template-areas:
-        "lookup   .      ."
-        "turnleft mid    turnright"
-        "lookdown .      .";
+        ".        lookup    ."
+        "turnleft mid      turnright"
+        ".        lookdown  .";
     grid-template-rows: 34px 34px 34px;
     justify-items: center;
 }
@@ -584,7 +583,7 @@ details.rail-section[open] > summary::before { content: '\2013'; }
     body.m-nav[data-mpage="stage"] .meta { font-size: 10px; margin-bottom: 4px; }
     body.m-nav[data-mpage="stage"] .pad { margin-bottom: 0; }
     body.m-nav[data-mpage="stage"] .pad-view { grid-template-rows: 32px 32px 32px; }
-    body.m-nav[data-mpage="stage"] .pad-move { grid-template-rows: 28px 28px 28px 24px; }
+    body.m-nav[data-mpage="stage"] .pad-move { grid-template-rows: 30px 30px 26px; }
     body.m-nav[data-mpage="stage"] .pad-btn { width: 48px; min-width: 40px; min-height: 40px; font-size: 12px; }
     body.m-nav[data-mpage="stage"] #stage { flex: 1.35; }
     /* Oikistes is a section inside the control rail; its page shows only it */
