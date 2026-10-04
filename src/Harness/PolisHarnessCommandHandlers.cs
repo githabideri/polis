@@ -79,6 +79,8 @@ public partial class PolisSystem
                     return ExecuteBotsCommand(args, context);
                 case "hunger":
                     return ExecuteHungerCommand(args, context);
+                case "eat":
+                    return ExecuteEatCommand(args, context);
                 case "takefrom":
                     return ExecuteTakeFromCommand(args, context);
                 case "putinto":
@@ -4590,6 +4592,149 @@ public partial class PolisSystem
             Message = $"{rows.Count} entity(ies)",
             Data = new { entities = rows },
         };
+    }
+
+    // --- Eat (the engine's own satiety path) ---
+    //
+    // Usage: eat <itemCode> [count=1]   [botId via select/POLIS_BOT_ID]
+    // Gives the bot the item if it doesn't hold it, then per unit calls
+    // Entity.ReceiveSaturation with the item's FoodNutritionProperties
+    // (dispatches into EntityBehaviorHunger: clamping, nutrition levels,
+    // delays, client sync — the same path a human's right-click-eat takes),
+    // applies the item's Health field (negative = damage), consumes one
+    // stack and hands back the EatenStack if the item defines one.
+
+    PolisTestHarness.CommandResult ExecuteEatCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 1)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: eat <itemCode> [count=1]" };
+        if (!TryGetHarnessBot(context, out var bot, out var selErr))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = selErr };
+
+        string code = args[0];
+        int count = 1;
+        if (args.Length > 1) int.TryParse(args[1], out count);
+        if (count < 1) count = 1;
+
+        var collectible = sapi.Collectibles.GetByName(code);
+        if (collectible == null)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"Unknown item: {code}" };
+        var nut = collectible.NutritionProps;
+        if (nut == null)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"{code} is not edible (no NutritionProps)" };
+
+        var e = bot.Entity;
+        float before = e.WatchedAttributes.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f;
+        float healthBefore = e.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("currenthealth", 0f) ?? 0f;
+
+        int have = CountBotItems(e, code);
+        if (have < count)
+        {
+            var stack = new ItemStack(collectible, count - have);
+            if (!PolisInventoryHelpers.TryInsertIntoBotInventory(e, stack, out int moved, out string giveErr))
+                return new PolisTestHarness.CommandResult { Ok = false, Message = $"Could not give {code}: {giveErr}" };
+        }
+
+        var steps = new List<object>();
+        for (int i = 0; i < count; i++)
+        {
+            if (!ConsumeOneBotItem(e, code, out string consErr))
+                return new PolisTestHarness.CommandResult { Ok = false, Message = $"Consume failed: {consErr}" };
+
+            e.ReceiveSaturation(nut.Satiety, nut.FoodCategory, nut.SaturationLossDelay, 1f);
+
+            if (Math.Abs(nut.Health) > 1e-4f)
+            {
+                e.ReceiveDamage(new DamageSource
+                {
+                    Type = EnumDamageType.Hunger,
+                    Source = EnumDamageSource.Internal,
+                }, -nut.Health);
+            }
+
+            if (nut.EatenStack != null && !nut.EatenStack.IsNullOrEmpty())
+                PolisInventoryHelpers.TryInsertIntoBotInventory(e, nut.EatenStack.ToItemStack(1), out _, out _);
+
+            steps.Add(new
+            {
+                unit = i + 1,
+                saturation = e.WatchedAttributes.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f,
+                health = e.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("currenthealth", 0f) ?? 0f,
+            });
+        }
+
+        float after = e.WatchedAttributes.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f;
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"Ate {count}x {code} ({nut.FoodCategory}): {before:F1} -> {after:F1} saturation",
+            Data = new
+            {
+                item = code,
+                category = nut.FoodCategory.ToString(),
+                satietyPerUnit = nut.Satiety,
+                healthPerUnit = nut.Health,
+                saturationLossDelay = nut.SaturationLossDelay,
+                eatenStack = nut.EatenStack?.Code ?? null,
+                before,
+                after,
+                healthBefore,
+                healthAfter = e.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("currenthealth", 0f) ?? 0f,
+                steps,
+            },
+        };
+    }
+
+    int CountBotItems(EntityAgent agent, string code)
+    {
+        int total = 0;
+        var cargo = PolisInventoryHelpers.BotCargo(agent);
+        if (cargo != null)
+            for (int i = 0; i < cargo.Count; i++)
+            {
+                var it = cargo[i].Itemstack;
+                if (it != null && !it.Empty && it.Code == code) total += it.StackSize;
+            }
+        foreach (var hand in new[] { agent.RightHandItemSlot, agent.LeftHandItemSlot })
+        {
+            var it = hand?.Itemstack;
+            if (it != null && !it.Empty && it.Code == code) total += it.StackSize;
+        }
+        return total;
+    }
+
+    bool ConsumeOneBotItem(EntityAgent agent, string code, out string error)
+    {
+        error = null;
+        var cargo = PolisInventoryHelpers.BotCargo(agent);
+        ItemSlot[] hands = { agent.RightHandItemSlot, agent.LeftHandItemSlot };
+        foreach (var slot in cargo != null ? cargo.Cast<ItemSlot>().ToArray() : new ItemSlot[0])
+        {
+            if (ConsumeOneInSlot(slot, code)) return true;
+        }
+        foreach (var slot in hands)
+        {
+            if (slot != null && ConsumeOneInSlot(slot, code)) return true;
+        }
+        error = $"bot has no {code} left";
+        return false;
+    }
+
+    static bool ConsumeOneInSlot(ItemSlot slot, string code)
+    {
+        var it = slot?.Itemstack;
+        if (it == null || it.Empty || it.Code != code) return false;
+        if (it.StackSize > 1)
+        {
+            it.StackSize--;
+            slot.MarkDirty();
+        }
+        else
+        {
+            slot.EmptySlot();
+        }
+        return true;
     }
 
     bool TryGetContextPlayer(PolisTestHarness.CommandContext context, out IServerPlayer player, out string error)
