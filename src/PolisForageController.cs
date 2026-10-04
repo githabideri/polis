@@ -360,7 +360,7 @@ public partial class PolisSystem
                     if (best != null)
                     {
                         var b = ba.GetBlock(best);
-                        if (b != null && b.Id != 0 && MatchesPatterns(b.Code?.ToString(), ep.Params.blockPatterns))
+                        if (IsForageable(b, best, ep.Params.blockPatterns))
                         {
                             StartTarget(bot, ep, best, b.Code.ToString());
                             return;
@@ -397,7 +397,7 @@ public partial class PolisSystem
                 if (y < 0) continue;
                 var b = ba.GetBlock(new BlockPos(cell.X, y, cell.Z));
                 if (b == null || b.Id == 0) continue;
-                if (MatchesPatterns(b.Code?.ToString(), ep.Params.blockPatterns))
+                if (IsForageable(b, new BlockPos(cell.X, y, cell.Z), ep.Params.blockPatterns))
                 {
                     ep.Scan.RingCandidates.Add(new BlockPos(cell.X, y, cell.Z));
                     break;   // one candidate per column is enough
@@ -412,6 +412,24 @@ public partial class PolisSystem
         foreach (var p in patterns)
             if (PolisPolicyEngine.WildcardMatchPublic(p, code)) return true;
         return false;
+    }
+
+    /// <summary>
+    /// Pattern match + the ripeness gate. A fruiting bush's CODE does
+    /// not change between bare and fruiting (every variant stays
+    /// "-free"); only the block entity's growth state does
+    /// (Young=0 Mature=1 Flowering=2 Ripening=3 Ripe=4). An episode was
+    /// burned walking to a Mature bush and failing the pick (2026-10-04
+    /// pilot) — only Ripe bushes are forageable.
+    /// </summary>
+    bool IsForageable(Block b, BlockPos pos, List<string> patterns)
+    {
+        if (b == null || b.Id == 0) return false;
+        if (!MatchesPatterns(b.Code?.ToString(), patterns)) return false;
+        var be = sapi.World.BlockAccessor.GetBlockEntity(pos);
+        if (be?.GetBehavior<BEBehaviorFruitingBush>() is { } bush)
+            return bush.BState.Growthstate == EnumFruitingBushGrowthState.Ripe;
+        return true;
     }
 
     bool BuildShell(ForageEpisode ep)

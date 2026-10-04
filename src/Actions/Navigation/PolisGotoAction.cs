@@ -129,8 +129,28 @@ class PolisGotoAction : EntityActionBase
         if (vas.wppathTraverser == null) vas.wppathTraverser = new WaypointsTraverser(vas.Entity);
     }
 
+    /// <summary>
+    /// Re-prime the entity's traversers with fresh instances.
+    /// 1.22 (measured 2026-10-04 pilot): a traverser whose route state
+    /// wedges (async slot left over a save/reload, a half-consumed
+    /// route) never recovers — the bot oscillates its heading in a
+    /// 3-cycle or freezes with the traverser inactive, while a
+    /// brand-new traverser on the same entity walks the same path
+    /// fine. Cheap enough to do on every navigation start and ladder
+    /// transition, so a wedged entity degrades to one failed attempt
+    /// instead of every future one.
+    /// </summary>
+    void ResetTraversers()
+    {
+        vas.linepathTraverser?.Stop();
+        vas.wppathTraverser?.Stop();
+        vas.linepathTraverser = new StraightLineTraverser(vas.Entity);
+        vas.wppathTraverser = new WaypointsTraverser(vas.Entity);
+    }
+
     void navTo(Vec3d target)
     {
+        ResetTraversers();
         phaseElapsed = 0f;
         EnumAICreatureType ct = EnumAICreatureType.Default;
         var serverAttrs = vas.Entity?.Properties?.Server?.Attributes;
@@ -299,6 +319,7 @@ class PolisGotoAction : EntityActionBase
         phaseElapsed = 0f;
         debugLog?.Invoke($"[goto] phase {navPhase} timed out, degrading");
         stop();
+        ResetTraversers();
         navPhase++;
         if (navPhase == 1 && Astar && vas.wppathTraverser != null)
         {
@@ -358,6 +379,21 @@ class PolisGotoAction : EntityActionBase
         // Stop momentum immediately to prevent overshoot/sliding
         vas.Entity.ServerPos.Motion.Set(0, 0, 0);
         vas.Entity.Pos.Motion.Set(0, 0, 0);
+
+        // Honest arrival (2026-10-04 pilot): a wedged traverser can fire
+        // OnDone on a 1-node "direct" path while the bot is still blocks
+        // away; snapping would be a teleport dressed as a walk. Only snap
+        // when the traverser actually got the bot there.
+        double dist = vas.Entity.ServerPos.XYZ.DistanceTo(hereTarget);
+        if (dist > 1.5)
+        {
+            debugLog?.Invoke($"[goto] done but {dist:F1} blocks from target (wedged route?) — not snapping");
+            ExecutionHasFailed = true;
+            ReportResult(false, $"traverser reported done {dist:F1} blocks from target");
+            Finish();
+            return;
+        }
+
         // Snap to exact target position to prevent landing on adjacent blocks
         // This ensures bot ends up exactly where requested, not on nearby obstacles
         vas.Entity.ServerPos.SetPos(hereTarget.X, hereTarget.Y, hereTarget.Z);
