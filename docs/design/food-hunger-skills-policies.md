@@ -1,95 +1,118 @@
 # Design — food, hunger, policies & skills (survival pilot)
 
-Status: **proposed** (engine facts below are reflection-verified against
-1.22.7; nothing in this doc is implemented yet). Owner: the polis layer.
+Status: **proposed** (engine facts below verified by decompiling the
+1.22.7 assemblies; nothing in this doc is implemented yet). Owner: the
+polis layer.
 Constraint that shapes everything: *whatever lands now must let a full
 system tie in later without big code rewriting* — so every pillar is
 data-driven with one evaluation seam.
 
-## 1. Verified engine facts (1.22.7)
+## 1. Verified engine facts (1.22.7 — decompiled ground truth)
 
-*(Corrected 2026-10-04 after web research — the earlier "no hunger state"
-claim was wrong: the probe only covered `EntityAgent`/`EntityPlayer`/
-`IPlayer` and missed the behavior that actually holds the state.)*
+*(Second revision, 2026-10-04. The 1.22.7 assemblies were decompiled
+(ilspycmd) and read directly; this section is what the code says.)*
 
-- **Hunger is real and engine-owned.** The player's **satiety** bar (green,
-  above the hotbar; max **1500**) drains continuously — 0.24/s idle, 0.96/s
-  moving, 2.46/s sprinting — with modifiers: occupied off-hand +20%, cold
-  outdoors up to +25% (below 2 °C, removed inside a room), class trait
-  (+30% for Blackguard), slowed healing below 75% satiety. At zero the
-  player **starves: damage over time until death**. The state lives in the
-  game assembly's `BehaviorHunger` entity behavior (wiki cites
-  `Entity/Behavior/BehaviorHunger.cs`), introduced in 1.2.3; it is *not*
-  in the public API data types (`IWorldPlayerData` has no satiety member),
-  but the API surface around it is: `EnumDamageType.Hunger` (starvation is
-  a first-class damage type), `StatModifiers.hungerrate`,
-  `GlobalConstants.HungerSpeedModifier`, world config `playerHungerSpeed`.
-- **Nutrition is item data — and readable from the API.**
-  `CollectibleObject.NutritionProps` / `GetNutritionProperties()`
-  (confirmed in 1.22; the XSkills mod calls `Collectible.NutritionProps?.
-  Satiety` directly). `FoodNutritionProperties` carries `Satiety`, `Health`,
-  `Saturation`, `SaturationLossDelay`, `Intoxication`, `Psychedelic`,
-  `FoodCategory` (Fruit, Vegetable, Protein, Grain, Dairy, Unknown,
-  NoNutrition), `EatenStack`. A second layer: five **nutrition category
-  bars** (character dialog, `C`) — 40% of eaten satiety per category,
-  each full bar +2.5 max HP (+12.5 total) — plus **nutrition delay**: claypot
-  meals/pies pause satiety drain (hidden bonus satiety per category).
-- **Animals:** vanilla tracks **animal weight** (a suggestion thread notes
-  weight "is already in game") and has feeding behaviors (pigs eat from
-  troughs or the ground; hares eat dropped food), but no explicit hunger
-  levels — a mod (Truth and Beauty: Detailed Animals) adds them
-  (starving/losing weight, grazing, weaning, hand-feeding).
-- **Mods build on top, not around:** *Max's Simple Starvation* (current for
-  1.22, 6k downloads) reinterprets the satiety bar as stomach→body weight,
-  removes vanilla starvation damage/delay/health coupling, and applies
-  weight-based buffs/debuffs **through `StatModifiers`**; *Realistic
-  Starvation* (1.19-era) replaces the model with kJ energy balance (BMR,
-  METs from animation, weight/BMI).
-- 1.22 item-use is still **not a callable API** (only `OnHeldInteract*`
-  callbacks; `IPlayer` is thin) — and engine "skills" remain a slot, not a
-  model (`ItemSlotSkill` + `ISkillItemRenderer` only).
+- **The hunger behavior is `EntityBehaviorHunger`, defined in the
+  first-party `essentials` mod** (`Mods/VSEssentials.dll` — on disk and
+  referenceable, though we do not need to). The state is a **synced
+  server-side tree attribute** on the entity: `WatchedAttributes["hunger"]`
+  with `currentsaturation` / `maxsaturation` (the player entity JSON
+  declares `{ code: "hunger", currentsaturation: 1500, maxsaturation: 1500,
+  saturationlossdelay: 180 }`) plus the five nutrition levels
+  (`fruitLevel` … `dairyLevel`) and five `saturationlossdelay*` values.
+  All changes `MarkPathDirty("hunger")` — the client only renders it
+  (the green HUD bar).
+- **It is a player-entity mechanism, not a human-client mechanism.** The
+  behavior is declared in `assets/game/entities/humanoid/player.json` —
+  every server-side player entity gets it. Its `OnGameTick` runs per
+  instance and skips **only** non-survival game modes; there is no
+  human-vs-bot check. Activity detection reads `EntityControls`
+  (TriesToMove / Sprint / mouse buttons) — exactly what our movement code
+  sets — so a moving bot drains faster than an idle one. 10-second drain
+  cycle: 0.96×counter (+1.5×sprint), ÷4 when idle >3 s, scaled by calendar
+  speed and `Stats.GetBlended("hungerrate")` (off-hand, cold, class are
+  stat modifiers on the same entity; world config `playerHungerSpeed`).
+  In 1.22.7 **no animal entity declares it** (the code is
+  EntityAgent-generic — animal hunger is architecturally possible, not
+  wired up).
+- **Eating is a public-API call.** The API's `Entity` base declares the
+  documented virtual
+  `OnEntityReceiveSaturation(float saturation, EnumFoodCategory foodCat,
+  float saturationLossDelay, float nutritionGainMultiplier)`;
+  `EntityBehaviorHunger` implements it (clamps to max, raises the
+  matching nutrition level by `saturation/2.5×mult` unless already full,
+  keeps the max delay, updates the nutrient health boost, syncs). The
+  vanilla eat flow (survival mod decompiled): per-ingredient
+  `FoodNutritionProperties` → that method per ingredient → consume the
+  stack → drop the `EatenStack` → body-temperature adjustment. A mod can
+  make an entity eat **using only `VintagestoryAPI`** — no reflection, no
+  reference into game assemblies.
+- **Starvation is engine damage**: `Saturation <= 0 →
+  ReceiveDamage(DamageSource{ Type = EnumDamageType.Hunger }, 0.125)`
+  every 10 s — the same death path for a bot as for a human. A built-in
+  server command can print/set a player's satiety/health/oxygen (the
+  setter clamps 0–1 of max) — a ready-made debug lever.
+- **Item nutrition is public**: `CollectibleObject.NutritionProps` /
+  `GetNutritionProperties()` (`Satiety`, `Health`, `FoodCategory`,
+  `SaturationLossDelay`, `Intoxication`, `Psychedelic`, `EatenStack`, …);
+  XSkills compiles against it in 1.22.
+- 1.22 item *use* is still not a callable API (only `OnHeldInteract*`
+  callbacks; `IPlayer` is thin) — but the eat action does not need it.
+  Engine "skills" remain a slot, not a model (`ItemSlotSkill` +
+  `ISkillItemRenderer`).
+- Mods for comparison: *Max's Simple Starvation* (1.22-current:
+  reinterprets the bar as stomach→weight, `StatModifiers`-based
+  weight effects), *Realistic Starvation* (1.19-era, kJ energy balance;
+  notes vanilla saturation ≈ 2× calories).
 - Recalled from the craft work: sticks are foraged, not craftable; copper
   melts in a **melting pot** on a campfire (charcoal), not a bloomery;
-  bloomery = iron/steel; the world carries 12,995 grid recipes (`/polis/recipes`).
+  bloomery = iron/steel; the world carries 12,995 grid recipes
+  (`/polis/recipes`).
 
-**Consequence:** satiety is *the engine's* state — polis reads it (runtime
-reflection on the player entity's `BehaviorHunger`; the game assembly is
-opaque to build-time reflection but fully reflectable in-process), treats
-low satiety as an interrupt condition, and checks the *item's own*
-`NutritionProps` in the food policy. No fake meters. What polis adds: the
-*decision* layer (what to eat, when, where to get it, how it feeds skills),
-never a second hunger system.
+**Consequence:** the engine already keeps the entire hunger state for our
+bots — polis never invents a second meter. Polis (a) **reads**
+`WatchedAttributes["hunger"]` on the bot entity (public API types — no
+reflection), (b) treats low `currentsaturation` as the interrupt
+condition, (c) implements `eat` as inventory ops +
+`OnEntityReceiveSaturation` per ingredient (the engine does clamping,
+nutrition, delays, the health boost, client sync — the bot's own HUD will
+show the bar), and (d) reads food values from the item's `NutritionProps`
+in the policy engine. What polis adds is the *decision* layer: what to
+eat, when, where to get it, and how it feeds skills.
 
 ## 2. The three pillars
 
 ### A. Food & hunger (read the engine meter, decide in polis)
 
-- **Food state (per bot):** the engine's satiety + nutrition bars are the
-  ground truth. Read path (live-verified in the pilot, this is the first
-  empirical task): the player entity's `BehaviorHunger` behavior via
-  in-process reflection (game assembly — build-time opaque, runtime
-  fine); fallback signal: `EnumDamageType.Hunger` damage events + health
-  trend. Polis keeps only the *derived* decision state: a `foodPressure`
-  threshold (e.g. satiety < 25% or falling) and the last eat event.
+- **Food state (per bot):** straight from the engine —
+  `entity.WatchedAttributes.GetTreeAttribute("hunger")` on the bot's
+  player entity (`currentsaturation`, `maxsaturation`, the five
+  `*Level` nutrition bars, the five delay values — all public API types,
+  no reflection; the built-in server entity command prints the same for
+  quick checks). Polis keeps only derived decision state: a
+  `foodPressure` threshold (e.g. `currentsaturation < 25% of max`, or
+  falling with nothing in inventory) and the last eat event.
 - **EAT action.** Harness command `eat [itemCode]` and an r2 job type
-  `eat`. Implementation (the seam): pick the best inventory stack the
-  policy engine allows → consume it → apply the effect (satiety via the
-  engine's state if the behavior field is writable, else our effect)
-  reading values from the item's own `NutritionProps` (public API —
-  confirmed usable in 1.22 by XSkills) → drop the `EatenStack`.
-  Deterministic and version-stable; if a future system wants *authentic*
-  engine eating (animations, the client pipeline), it swaps **this one
-  method** — held-interact synthesis or a Harmony patch — without touching
-  policy, planner or state.
+  `eat`. Implementation: pick the best inventory stack the policy engine
+  allows → for each ingredient's `NutritionProps`: call the engine's
+  `OnEntityReceiveSaturation(satiety, foodCategory, delay, multiplier)`
+  on the bot's entity (documented public virtual — the engine applies
+  clamping, nutrition levels, delays, the health boost, and client sync)
+  → consume the stack → drop the `EatenStack` (optionally the body-
+  temperature adjustment vanilla does). No reflection, no references into
+  game assemblies, stable across 1.2x while the API keeps the virtual.
+  One live check remains: confirm the bot's entity instance actually
+  carries the `hunger` tree (expected — player.json declares it for every
+  player entity).
 - **Hunger interrupt.** In the mission loop, `foodPressure` above
   threshold preempts the current job at a safe checkpoint (same tier as
   the navigation-wedge interrupt): forage (berry bushes) → carry → eat.
   Thresholds and the "safe checkpoint" rule are data, not code.
 - **Starvation is an engine event, not a mystery**: satiety 0 →
-  `EnumDamageType.Hunger` damage → death. Polis observes it as a failure
-  signal (a bot dying of hunger is a foraging-pipeline bug, reported as
-  such); the *Max's Simple Starvation* style re-weighting is out of scope
-  but `StatModifiers` is the door if we ever want it.
+  `EnumDamageType.Hunger` damage 0.125 per 10 s → death. A bot dying of
+  hunger is a foraging-pipeline bug, reportable as such (the damage type
+  is unambiguous). *Max's Simple Starvation*-style weight re-weighting is
+  out of scope; `StatModifiers` is the door if we ever want it.
 
 ### B. Policy engine (the interaction-rules layer)
 
@@ -159,16 +182,19 @@ replaces the file schema and the evaluator internals — the call sites
 
 ## 4. Open empirical questions (the pilot answers them)
 
-1. **The read path:** can the polis mod read (and write) the player's
-   `BehaviorHunger` state in-process (field names/values of the live
-   instance)? First implementation task; fallback is `EnumDamageType.Hunger`
-   damage events + health trend.
-2. What does eating a berry *do* in practice (satiety gain vs. the item's
-   declared `Satiety` — the mod's Realistic-Starvation author notes vanilla
-   values are often ~2x the calories, so expect rounding/quirks).
-3. Is the held-interact route viable for authentic eating (deferred)?
-4. Do vanilla animal feeding behaviors (pigs + trough) matter to us yet
-   (husbandry milestone, later)?
+1. **The one live check**: does our bot's entity instance carry the
+   `hunger` tree (expected yes — player.json declares it for all player
+   entities; our bot is a server-side player entity)? One harness command
+   prints it.
+2. Eating a berry end-to-end: does `OnEntityReceiveSaturation` + stack
+   consume produce the expected tree/HUD changes and the `EatenStack`?
+   (Vanilla values may be quirky — Realistic-Starvation notes saturation
+   ≈ 2× calories.)
+3. The operator's own client player is a separate entity with a separate
+   meter — irrelevant to the bot; the bot's bar renders in the bot's
+   player view (free observability on the possession screen).
+4. Animal feeding (pigs + trough) — only when husbandry becomes a
+   milestone (no animal declares the hunger behavior in 1.22.7 data).
 
 ## 5. Build order
 
