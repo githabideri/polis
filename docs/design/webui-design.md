@@ -63,7 +63,9 @@ and no beige/serif "anti-slop" tell. The design is derived from the function:
   emoji.
 - **Layout**: top bar (identity + world state + connection) / left rail
   World / center Stage / right rail Control / bottom Console. The Stage is
-  the largest area. No hero, no cards, no marketing structure.
+  the largest area. No hero, no cards, no marketing structure. (Narrow
+  viewports < 860 px get the mobile/field variant — fixed bottom tab bar,
+  stage-first, pinned command bar, prominent STOP: `webui-mobile.md`.)
 - **Controls are physical, not clicky.** Movement and view use **hold to
   repeat** (pointer down = continuous, ~100 ms cadence; up/leave = stop) and
   keyboard bindings (arrows/WASD). A dedicated 180° "turn around" command
