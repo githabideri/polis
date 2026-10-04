@@ -1,23 +1,39 @@
 {
-  "version": 1,
-  "note": "polis interaction-rules layer (design: docs/design/food-hunger-skills-policies.md B). Highest-priority matching rule wins; no match -> domain default. Hot-reloaded on file change. 'code' supports '*' wildcards.",
-  "domains": {
-    "food": {
-      "default": "deny",
-      "rules": [
-        { "id": "forage-fruit", "match": { "category": "Fruit" }, "allow": true, "priority": 10 },
-        { "id": "cooked-meat", "match": { "code": "game:bushmeat-cooked" }, "allow": true, "priority": 20 },
-        { "id": "cooked-meat", "match": { "code": "game:redmeat-cooked" }, "allow": true, "priority": 20 },
-        { "id": "cooked-meat", "match": { "code": "game:poultry-cooked" }, "allow": true, "priority": 20 }
-      ]
-    },
-    "wear": {
-      "default": "deny",
-      "rules": []
-    },
-    "behavior": {
-      "default": "allow",
-      "rules": []
+  "version": 2,
+  "note": "polis interaction-rules layer (design: docs/design/food-hunger-skills-policies.md B). v2: rules are PER PLAYER — 'profiles' is keyed by player uid, 'default' is the fallback (and the only profile the pilot uses: per-settlement is a future layer beyond current scope, 2026-10-04 decision). Within a domain: highest-priority matching rule wins, no match -> domain default. Hot-reloaded on file change; 'code' supports '*' wildcards. The food domain also carries the decision parameters of the food-pressure interrupt and the forage skill (data, not code): pressure {trigger,rearm} as fractions of max saturation, forage {maxRadius,ringWidth,blocksPerTick,maxTargets,blockPatterns}, preempt {mode,waitTypes}.",
+  "profiles": {
+    "default": {
+      "domains": {
+        "food": {
+          "default": "deny",
+          "rules": [
+            { "id": "forage-fruit", "match": { "category": "Fruit" }, "allow": true, "priority": 10 },
+            { "id": "cooked-meat", "match": { "code": "game:bushmeat-cooked" }, "allow": true, "priority": 20 },
+            { "id": "cooked-meat", "match": { "code": "game:redmeat-cooked" }, "allow": true, "priority": 20 },
+            { "id": "cooked-meat", "match": { "code": "game:poultry-cooked" }, "allow": true, "priority": 20 }
+          ],
+          "pressure": { "trigger": 0.25, "rearm": 0.40 },
+          "forage": {
+            "maxRadius": 192,
+            "ringWidth": 32,
+            "blocksPerTick": 1024,
+            "maxTargets": 3,
+            "blockPatterns": ["*fruitingbush-wild-*"]
+          },
+          "preempt": {
+            "mode": "safe-point",
+            "waitTypes": ["harvest", "harvestcrop", "mine", "place", "break", "craft"]
+          }
+        },
+        "wear": {
+          "default": "deny",
+          "rules": []
+        },
+        "behavior": {
+          "default": "allow",
+          "rules": []
+        }
+      }
     }
   }
 }

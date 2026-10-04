@@ -691,6 +691,7 @@ public partial class PolisSystem : ModSystem
                 }
                 bot.Activity?.OnTick(dt);
             }
+            ForageOnTick(dt);
             for (int i = 0; i < toRemoveFromMemory.Count; i++)
             {
                 bots.Remove(toRemoveFromMemory[i]);
@@ -1207,6 +1208,9 @@ public partial class PolisSystem : ModSystem
             Pos = new[] { pos.X, pos.Y, pos.Z },
             CurrentHealth = currentHealth,
             MaxHealth = maxHealth,
+            Foraging = IsForaging(entity.EntityId),
+            Saturation = PolisEatService.SaturationOf(entity) is float satv && satv > 0f ? Math.Round(satv, 1) : null,
+            MaxSaturation = PolisEatService.MaxSaturationOf(entity) is float maxsv && maxsv > 0f ? Math.Round(maxsv, 1) : null,
             RightHand = rightStack != null && rightStack.StackSize > 0
                 ? new PolisTestHarness.TestStateResult.SlotInfo
                 {
@@ -2674,6 +2678,25 @@ public partial class PolisSystem : ModSystem
 
     void StartActionSequence(BotState bot, string name, params IEntityAction[] actions)
     {
+        // The forage/feed guard: while a bot is in a forage episode, no
+        // new job action may displace it — the mission layer (r2) sees
+        // the refusal in LastAction and simply waits out the meal.
+        // The forage controller itself bypasses this (its own phases).
+        if (!forageBypassGuard && forageEpisodes.ContainsKey(bot.Entity.EntityId))
+        {
+            bot.RecordActionResult(name, false, "refused:foraging (food-pressure episode in progress; retry after it ends)");
+            return;
+        }
+        // The action name doubles as the safe-point key for the food-
+        // pressure interrupt: the policy's `preempt.waitTypes` lists the
+        // job names with side effects (harvest/mine/place/...) that are
+        // only preempted at their finish.
+        bot.LastActionType = name;
+        if (!name.StartsWith("forage-"))
+        {
+            bot.JobRunning = true;
+            foragePendingStart.Remove(bot.Entity.EntityId);   // a new job displaces any deferred start
+        }
         bot.Activity.CancelAll();
 
         var activity = new EntityActivity(bot.Activity)
@@ -3545,6 +3568,14 @@ public partial class PolisSystem : ModSystem
 
         // Action result tracking for testing/diagnostics
         public string LastActionName { get; private set; }
+        public string LastActionType { get; set; }
+        /// <summary>
+        /// True while a (non-forage) job action is running — the safe-point
+        /// contract of the food-pressure interrupt (PolisForageController):
+        /// side-effect jobs are only preempted at their finish, which is
+        /// where this flag clears (RecordActionResult).
+        /// </summary>
+        public bool JobRunning { get; set; }
         public bool LastActionOk { get; private set; }
         public string LastActionMsg { get; private set; }
         public long LastActionMs { get; private set; }
@@ -3574,6 +3605,19 @@ public partial class PolisSystem : ModSystem
             LastActionMsg = msg;
             LastActionMs = elapsedMs;
             LastActionId++;
+
+            // A "refused:foraging" record is a rejected RETRY of a job
+            // that is still running — it must not clear JobRunning
+            // (that would break the safe-point contract: the episode
+            // would start and cancel the side-effect job).
+            bool isRefusal = msg != null && msg.StartsWith("refused:foraging");
+            if (!actionName.StartsWith("forage-") && !isRefusal)
+            {
+                JobRunning = false;
+                // A side-effect job that ran to its finish is the safe
+                // point where a deferred forage start proceeds.
+                BeginEpisodeWhenIdle(this, "finish");
+            }
 
             // Notify listeners (e.g., WebSocket broadcaster)
             OnActionRecorded?.Invoke(Entity.EntityId, actionName, ok, msg, elapsedMs, LastActionId);

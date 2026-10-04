@@ -281,6 +281,66 @@ internal static class PolisInventoryHelpers
         return movedInto;
     }
 
+    /// <summary>
+    /// Total carried units of an item (cargo + both hands).
+    /// </summary>
+    internal static int CountBotItems(EntityAgent agent, string code)
+    {
+        int total = 0;
+        var cargo = BotCargo(agent);
+        if (cargo != null)
+            for (int i = 0; i < cargo.Count; i++)
+            {
+                var it = cargo[i].Itemstack;
+                if (IsItem(it, code)) total += it.StackSize;
+            }
+        foreach (var hand in new[] { agent.RightHandItemSlot, agent.LeftHandItemSlot })
+        {
+            var it = hand?.Itemstack;
+            if (IsItem(it, code)) total += it.StackSize;
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// Consume one unit of an item from the bot's cargo + hands (the
+    /// shared consume path of PolisEatService and the harness eat command).
+    /// </summary>
+    internal static bool ConsumeOneFromBotInventory(EntityAgent agent, string code)
+    {
+        var cargo = BotCargo(agent);
+        if (cargo != null)
+            for (int i = 0; i < cargo.Count; i++)
+            {
+                if (ConsumeOneInSlot(cargo[i], code)) return true;
+            }
+        foreach (var slot in new[] { agent.RightHandItemSlot, agent.LeftHandItemSlot })
+        {
+            if (slot != null && ConsumeOneInSlot(slot, code)) return true;
+        }
+        return false;
+    }
+
+    internal static bool IsItem(ItemStack it, string code)
+        => it != null && it.StackSize > 0 && it.Collectible?.Code?.ToString() == code;
+
+    private static bool ConsumeOneInSlot(ItemSlot slot, string code)
+    {
+        var it = slot?.Itemstack;
+        if (!IsItem(it, code)) return false;
+        if (it.StackSize > 1)
+        {
+            it.StackSize--;
+            slot.MarkDirty();
+        }
+        else
+        {
+            slot.Itemstack = null;
+            slot.MarkDirty();
+        }
+        return true;
+    }
+
     private static int TryPutIntoSlot(IWorldAccessor world, ItemSlot sourceSlot, ItemSlot destSlot, bool markDestDirty)
     {
         if (world == null || sourceSlot == null || destSlot == null || sourceSlot.Empty)

@@ -1158,6 +1158,30 @@ def main():
     finish(args.out, run, t0)
 
 
+def _is_food_preempt(detail):
+    """The food-pressure interrupt signatures (the mod's forage
+    controller records them on the preempted job and on refused
+    retries). The mission re-runs the job after the episode - it is
+    NOT a plan failure (2026-10-04: the bot survives its mission by
+    foraging; the interrupted job is retried, the plan stands)."""
+    return bool(detail) and any(s in detail for s in
+                                ("preempted:food_pressure",
+                                 "refused:foraging"))
+
+def wait_not_foraging(pol, bot, timeout=300):
+    """Wait out the mod-side forage episode. It is mod-driven
+    (PolisForageController) and self-terminates - satiation, target
+    exhaustion, or its 4-minute watchdog - so r2 only polls
+    state.Bot.Foraging. Never re-issues a job action during it: that
+    is what the mod refuses ("refused:foraging")."""
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        st = pol.state(bot)
+        if not (st.get("Bot") or {}).get("Foraging"):
+            return True
+        time.sleep(2)
+    return False
+
 def run_jobs(pol, bot, base, gs, job, run, wm):
     wm.new_tick(reason="pre_action", caused_by=job.id)
     if job.type in ("mine", "harvest"):
@@ -1168,6 +1192,31 @@ def run_jobs(pol, bot, base, gs, job, run, wm):
     try:
         (ok, detail, measured,
          execution, oracle) = execute_job(pol, bot, base, job, wm, run)
+        # The food-pressure interrupt: if the job was preempted (or
+        # refused mid-forage), the meal runs out first and the SAME
+        # job is re-run - up to two times. The plan is untouched.
+        attempts = 0
+        while not ok and _is_food_preempt(detail) and attempts < 2:
+            attempts += 1
+            run["steps"].append({
+                "job": job.id, "type": job.type, "ok": False,
+                "detail": detail,
+                "note": "food-pressure: job interrupted, waiting out "
+                        "the forage episode (attempt %d)" % attempts,
+                "origin": job.origin,
+                "execution": execution, "oracle": {},
+                "wall_s": round(time.time() - t0, 1)})
+            print("  [r2] job %s preempted by food pressure - "
+                  "waiting for the forage episode to finish" % job.id)
+            if not wait_not_foraging(pol, bot):
+                detail = ("food-pressure: forage episode did not end "
+                          "in 300s (stuck?); job not re-run")
+                break
+            print("  [r2] forage episode done - re-running job %s "
+                  "(attempt %d)" % (job.id, attempts))
+            wm.new_tick(reason="pre_action_retry", caused_by=job.id)
+            (ok, detail, measured,
+             execution, oracle) = execute_job(pol, bot, base, job, wm, run)
     except Exception as e:
         import traceback
         open("/tmp/r2-job-traceback.txt", "w").write(

@@ -38,6 +38,14 @@ public class PolisTestHarness : IDisposable
             public double[] Pos { get; set; }
             public float? CurrentHealth { get; set; }
             public float? MaxHealth { get; set; }
+            /// <summary>
+            /// True while the bot is in a forage/feed episode (the
+            /// food-pressure skill). While true, new job actions are
+            /// refused for this bot — observers/retriers wait it out.
+            /// </summary>
+            public bool Foraging { get; set; }
+            public float? Saturation { get; set; }
+            public float? MaxSaturation { get; set; }
             public SlotInfo RightHand { get; set; }
             public SlotInfo LeftHand { get; set; }
             public SlotInfo[] Backpack { get; set; }

@@ -85,6 +85,10 @@ public partial class PolisSystem
                     return ExecuteHungerPauseCommand(args, context);
                 case "policy":
                     return ExecutePolicyCommand(args, context);
+                case "forage":
+                    return ExecuteForageCommand(args, context);
+                case "feed":
+                    return ExecuteFeedCommand(args, context);
                 case "takefrom":
                     return ExecuteTakeFromCommand(args, context);
                 case "putinto":
@@ -4620,110 +4624,46 @@ public partial class PolisSystem
         if (args.Length > 1) int.TryParse(args[1], out count);
         if (count < 1) count = 1;
 
-        if (!TryResolveStack(code, 1, out var unit, out string resErr))
-            return new PolisTestHarness.CommandResult { Ok = false, Message = resErr };
-        var collectible = unit.Collectible;
-        // The engine's per-stack nutrition resolution (1.22: variant-based
-        // food items carry their tables via this seam; falls back to the
-        // collectible's base NutritionProps).
-        var nut = collectible?.GetNutritionProperties(sapi.World, unit, bot.Entity) ?? collectible?.NutritionProps;
-        if (nut == null)
-            return new PolisTestHarness.CommandResult { Ok = false, Message = $"{code} is not edible (no NutritionProps)" };
-
-        // Policy gate (design: food-hunger-skills-policies.md B): the
-        // interaction-rules layer decides whether the bot may consume this
-        // food, before anything is given or consumed. Denials are logged as
-        // rejection data (they land in the command event stream).
-        {
-            var (allowed, reason) = PolisPolicyEngine.Instance.Evaluate("food", code, nut.FoodCategory.ToString());
-            if (!allowed)
-                return new PolisTestHarness.CommandResult
-                {
-                    Ok = false,
-                    Message = $"policy denied: {reason}",
-                    Data = new { domain = "food", item = code, reason },
-                };
-        }
+        // The policy gate and the engine's satiety path live in the
+        // shared eat core (PolisEatService) — the same code the forage
+        // and feed skills run through. This command's only privilege on
+        // top: it may hand the bot food it doesn't carry yet.
+        string owner = null;
+        if (globalData.Bots.TryGetValue(bot.Entity.EntityId, out var rec)) owner = rec.OwnerUid;
 
         var e = bot.Entity;
-        float before = e.WatchedAttributes.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f;
-        float healthBefore = e.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("currenthealth", 0f) ?? 0f;
-
-        int have = CountBotItems(e, code);
+        int have = PolisInventoryHelpers.CountBotItems(e, code);
         if (have < count)
         {
             if (!TryResolveStack(code, count - have, out var toGive, out string giveErr2))
                 return new PolisTestHarness.CommandResult { Ok = false, Message = giveErr2 };
-            if (!PolisInventoryHelpers.TryInsertIntoBotInventory(e, toGive, out int moved, out string giveErr))
+            if (!PolisInventoryHelpers.TryInsertIntoBotInventory(e, toGive, out _, out string giveErr))
                 return new PolisTestHarness.CommandResult { Ok = false, Message = $"Could not give {code}: {giveErr}" };
         }
 
-        var steps = new List<object>();
-        for (int i = 0; i < count; i++)
+        var (ok, reason, before, after, units) = PolisEatService.Eat(e, owner, code, count, sapi.Logger.Debug);
+
+        string category = null;
+        if (TryResolveStack(code, 1, out var unit2, out _))
         {
-            if (!ConsumeOneBotItem(e, code, out string consErr))
-                return new PolisTestHarness.CommandResult { Ok = false, Message = $"Consume failed: {consErr}" };
-
-            e.ReceiveSaturation(nut.Satiety, nut.FoodCategory, nut.SaturationLossDelay, 1f);
-
-            if (Math.Abs(nut.Health) > 1e-4f)
-            {
-                e.ReceiveDamage(new DamageSource
-                {
-                    Type = EnumDamageType.Hunger,
-                    Source = EnumDamageSource.Internal,
-                }, -nut.Health);
-            }
-
-            // 1.22 extras: the intoxication/psychedelic tree floats the
-            // drinking path maintains — keep them in sync for foods that
-            // carry those fields.
-            if (Math.Abs(nut.Intoxication) > 1e-4f)
-            {
-                float cur = e.WatchedAttributes.GetFloat("intoxication", 0f);
-                e.WatchedAttributes.SetFloat("intoxication", Math.Min(1.1f, cur + nut.Intoxication));
-            }
-            if (Math.Abs(nut.Psychedelic) > 1e-4f)
-            {
-                float cur2 = e.WatchedAttributes.GetFloat("psychedelic", 0f);
-                e.WatchedAttributes.SetFloat("psychedelic", Math.Min(2f, cur2 + nut.Psychedelic));
-            }
-
-            if (nut.EatenStack != null && nut.EatenStack.Code != null && nut.EatenStack.StackSize > 0)
-            {
-                if (TryResolveStack(nut.EatenStack.Code.ToString(), 1, out var leftover, out _))
-                    PolisInventoryHelpers.TryInsertIntoBotInventory(e, leftover, out _, out _);
-            }
-
-            steps.Add(new
-            {
-                unit = i + 1,
-                saturation = e.WatchedAttributes.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f,
-                health = e.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("currenthealth", 0f) ?? 0f,
-            });
+            var c2 = unit2.Collectible;
+            var nut2 = c2?.GetNutritionProperties(sapi.World, unit2, e) ?? c2?.NutritionProps;
+            category = nut2?.FoodCategory.ToString();
         }
-
-        float after = e.WatchedAttributes.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f;
 
         return new PolisTestHarness.CommandResult
         {
-            Ok = true,
-            Message = $"Ate {count}x {code} ({nut.FoodCategory}): {before:F1} -> {after:F1} saturation",
+            Ok = ok,
+            Message = ok
+                ? $"Ate {units}x {code}{(category != null ? $" ({category})" : "")}: {before:F1} -> {after:F1} saturation"
+                : $"eat failed: {reason}",
             Data = new
             {
                 item = code,
-                category = nut.FoodCategory.ToString(),
-                satietyPerUnit = nut.Satiety,
-                healthPerUnit = nut.Health,
-                intoxicationPerUnit = nut.Intoxication,
-                psychedelicPerUnit = nut.Psychedelic,
-                saturationLossDelay = nut.SaturationLossDelay,
-                eatenStack = nut.EatenStack?.Code?.ToString() ?? null,
+                category,
                 before,
                 after,
-                healthBefore,
-                healthAfter = e.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("currenthealth", 0f) ?? 0f,
-                steps,
+                units,
             },
         };
     }
@@ -4733,6 +4673,12 @@ public partial class PolisSystem
     // EntityPolisBot.HungerSuspended: the polis hunger behavior suspends
     // the engine drain while set; the policy engine will own this for
     // parked bots later).
+
+    // --- Hunger drain gate (parked bots / debug) ---
+    // Usage: hungerpause            → query (no state change)
+    //        hungerpause on|off     → set the selected bot's
+    //        EntityPolisBot.HungerSuspended (the polis hunger behavior
+    //        suspends the engine drain while set).
 
     PolisTestHarness.CommandResult ExecuteHungerPauseCommand(string[] args, PolisTestHarness.CommandContext context)
     {
@@ -4747,21 +4693,103 @@ public partial class PolisSystem
         if (pb == null)
             return new PolisTestHarness.CommandResult { Ok = false, Message = "selected entity is not a polisbot" };
 
-        if (mode == null) mode = pb.HungerSuspended ? "off" : "on";
-        pb.HungerSuspended = mode == "on";
-
         float sat = pb.WatchedAttributes.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f;
+        if (mode == null)
+        {
+            // query — a no-arg call must not toggle state
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = $"hunger drain {(pb.HungerSuspended ? "suspended" : "active")} (saturation {sat:F0}/1500)",
+                Data = new { hungerSuspended = pb.HungerSuspended, saturation = sat, foraging = IsForaging(bot.Entity.EntityId) },
+            };
+        }
+        pb.HungerSuspended = mode == "on";
         return new PolisTestHarness.CommandResult
         {
             Ok = true,
             Message = $"hunger drain {mode} (saturation {sat:F0}/1500)",
-            Data = new { hungerSuspended = pb.HungerSuspended, saturation = sat },
+            Data = new { hungerSuspended = pb.HungerSuspended, saturation = sat, foraging = IsForaging(bot.Entity.EntityId) },
+        };
+    }
+
+    // --- Forage / feed (the food-pressure skills, manual entry) ---
+    // Usage: forage
+    //   Start a forage episode on the selected bot NOW (manual entry to
+    //   the machine the food-pressure interrupt uses): discover a wild
+    //   fruiting bush (policy patterns), walk to it, harvest the fruit
+    //   into its cargo, eat it (policy-gated). Preempts the current job
+    //   at the policy's safe point. Thresholds come from the owner's
+    //   policy profile; this command bypasses the saturation check but
+    //   not the policy.
+    //
+    // Usage: feed <x> <y> <z> [itemCode] [count]
+    //   Same machine with a known storage container (a storage vessel):
+    //   walk to it, take a policy-allowed edible stack (itemCode when
+    //   given), eat it. The pilot's survival story: the bot notices the
+    //   pressure and feeds from its own storage before it starves.
+
+    PolisTestHarness.CommandResult ExecuteForageCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (!TryGetHarnessBot(context, out var bot, out var selErr))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = selErr };
+        if (IsForaging(bot.Entity.EntityId))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "bot is already in a forage episode" };
+
+        string owner = null;
+        if (globalData.Bots.TryGetValue(bot.Entity.EntityId, out var rec)) owner = rec.OwnerUid;
+        var (trigger, rearm) = PolisPolicyEngine.Instance.GetFoodPressure(owner);
+
+        bool started = StartForageEpisode(bot, "wild", owner, trigger, rearm, "manual");
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = started,
+            Message = started
+                ? $"bot#{bot.Entity.EntityId}: forage episode started (manual; trigger={trigger:0.##}, rearm={rearm:0.##})"
+                : "forage episode could not start (bot busy or no scan ring)",
+            Data = new { bot = bot.Entity.EntityId, cause = "manual", trigger, rearm },
+        };
+    }
+
+    PolisTestHarness.CommandResult ExecuteFeedCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 3)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: feed <x> <y> <z> [itemCode] [count]" };
+        if (!TryGetHarnessBot(context, out var bot, out var selErr))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = selErr };
+        if (IsForaging(bot.Entity.EntityId))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "bot is already in a forage episode" };
+
+        if (!int.TryParse(args[0], out int x) || !int.TryParse(args[1], out int y) || !int.TryParse(args[2], out int z))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "invalid container coordinates" };
+        string code = args.Length > 3 ? args[3] : null;
+        int count = args.Length > 4 && int.TryParse(args[4], out int c) ? c : 0;
+
+        var cpos = new BlockPos(x, y, z);
+        if (!(sapi.World.BlockAccessor.GetBlockEntity(cpos) is IBlockEntityContainer))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"no container at {x},{y},{z}" };
+
+        string owner = null;
+        if (globalData.Bots.TryGetValue(bot.Entity.EntityId, out var rec)) owner = rec.OwnerUid;
+        var (trigger, rearm) = PolisPolicyEngine.Instance.GetFoodPressure(owner);
+
+        bool started = StartForageEpisode(bot, "container", owner, trigger, rearm, "manual", cpos, code);
+        if (started && count > 0)
+            forageEpisodes[bot.Entity.EntityId].FeedCount = count;
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = started,
+            Message = started
+                ? $"bot#{bot.Entity.EntityId}: feed episode started (manual; container {x},{y},{z}{(code != null ? $", item {code}" : "")})"
+                : "feed episode could not start (bot busy)",
+            Data = new { bot = bot.Entity.EntityId, cause = "manual", container = new[] { x, y, z }, item = code, count },
         };
     }
 
     // --- Policy introspection (the interaction-rules layer) ---
-    // Usage: policy                     → dump the policy file
-    //        policy <domain> <itemCode> → evaluate an item against a domain
+    // Usage: policy                              → dump the policy file
+    //        policy <domain> <itemCode>          → evaluate (default profile)
+    //        policy <domain> <itemCode> <player> → evaluate for a player profile
 
     PolisTestHarness.CommandResult ExecutePolicyCommand(string[] args, PolisTestHarness.CommandContext context)
     {
@@ -4787,6 +4815,7 @@ public partial class PolisSystem
 
         string domain = args[0];
         string code = args[1];
+        string player = args.Length > 2 ? args[2] : null;
 
         // Resolve the food category (needed for category-based rules)
         string category = null;
@@ -4797,68 +4826,13 @@ public partial class PolisSystem
             category = nut?.FoodCategory.ToString();
         }
 
-        var (allowed, reason) = PolisPolicyEngine.Instance.Evaluate(domain, code, category);
+        var (allowed, reason) = PolisPolicyEngine.Instance.Evaluate(player, domain, code, category);
         return new PolisTestHarness.CommandResult
         {
             Ok = true,
-            Message = $"{domain}/{code}: {(allowed ? "allow" : "deny")} ({reason})",
-            Data = new { domain, item = code, category, allow = allowed, reason },
+            Message = $"{domain}/{code}{(player != null ? " [" + player + "]" : "")}: {(allowed ? "allow" : "deny")} ({reason})",
+            Data = new { domain, item = code, player = player ?? "default", category, allow = allowed, reason },
         };
-    }
-
-    int CountBotItems(EntityAgent agent, string code)
-    {
-        int total = 0;
-        var cargo = PolisInventoryHelpers.BotCargo(agent);
-        if (cargo != null)
-            for (int i = 0; i < cargo.Count; i++)
-            {
-                var it = cargo[i].Itemstack;
-                if (IsItem(it, code)) total += it.StackSize;
-            }
-        foreach (var hand in new[] { agent.RightHandItemSlot, agent.LeftHandItemSlot })
-        {
-            var it = hand?.Itemstack;
-            if (IsItem(it, code)) total += it.StackSize;
-        }
-        return total;
-    }
-
-    static bool IsItem(ItemStack it, string code)
-        => it != null && it.StackSize > 0 && it.Collectible?.Code?.ToString() == code;
-
-    bool ConsumeOneBotItem(EntityAgent agent, string code, out string error)
-    {
-        error = null;
-        var cargo = PolisInventoryHelpers.BotCargo(agent);
-        if (cargo != null)
-            for (int i = 0; i < cargo.Count; i++)
-            {
-                if (ConsumeOneInSlot(cargo[i], code)) return true;
-            }
-        foreach (var slot in new[] { agent.RightHandItemSlot, agent.LeftHandItemSlot })
-        {
-            if (slot != null && ConsumeOneInSlot(slot, code)) return true;
-        }
-        error = $"bot has no {code} left";
-        return false;
-    }
-
-    static bool ConsumeOneInSlot(ItemSlot slot, string code)
-    {
-        var it = slot?.Itemstack;
-        if (!IsItem(it, code)) return false;
-        if (it.StackSize > 1)
-        {
-            it.StackSize--;
-            slot.MarkDirty();
-        }
-        else
-        {
-            slot.Itemstack = null;
-            slot.MarkDirty();
-        }
-        return true;
     }
 
     bool TryGetContextPlayer(PolisTestHarness.CommandContext context, out IServerPlayer player, out string error)
