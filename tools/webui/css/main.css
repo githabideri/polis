@@ -521,9 +521,13 @@ details.rail-section[open] > summary::before { content: '\2013'; }
     .theme-toggle { display: none; }
     #selection-info { font-size: 11px; }
 
-    /* the layout becomes a page host: fixed, full area, no scroll of its own */
+    /* the layout becomes a page host: fixed, full area, no scroll of its own.
+       Flex-column so the stage page can STACK its areas vertically:
+       video on top, controls beneath it (the steering feedback loop must
+       not be a page away - 2026-10-04 phone feedback). */
     #layout {
-        display: block;
+        display: flex;
+        flex-direction: column;
         position: fixed;
         top: var(--topbar-h);
         left: 0; right: 0;
@@ -545,6 +549,34 @@ details.rail-section[open] > summary::before { content: '\2013'; }
     body.m-nav[data-mpage="world"] #world-rail,
     body.m-nav[data-mpage="control"] #control-rail,
     body.m-nav[data-mpage="oik"] #control-rail { display: block; }
+    /* Oikistes is a section inside the control rail; its page shows only it */
+    body.m-nav[data-mpage="oik"] #control-rail > .rail-section:not(#oikistes-section),
+    body.m-nav[data-mpage="oik"] #control-rail > details { display: none; }
+
+    /* THE FIELD PAGE (stage): video above, controls below, one screen.
+       #stage owns the top share; #control-rail (view pad, move pad, bots)
+       the rest, scrolling under the pinned command bar. No page change
+       needed to steer while watching. */
+    body.m-nav[data-mpage="stage"] #stage {
+        display: flex;
+        position: static;
+        flex: 1.25;
+        min-height: 0;
+        overflow: hidden;
+    }
+    body.m-nav[data-mpage="stage"] #control-rail {
+        display: block;
+        position: static;
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        /* room for the pinned command bar over the rail's end */
+        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+    /* the chat history stays on its own page; on the field page the
+       pinned command bar is the chat box */
+    body.m-nav[data-mpage="stage"] #control-rail > #oikistes-section { display: none; }
+    body.m-nav[data-mpage="stage"] .rail-section { padding: 8px; }
     /* Oikistes is a section inside the control rail; its page shows only it */
     body.m-nav[data-mpage="oik"] #control-rail > .rail-section:not(#oikistes-section),
     body.m-nav[data-mpage="oik"] #control-rail > details { display: none; }
