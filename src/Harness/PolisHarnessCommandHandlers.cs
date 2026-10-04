@@ -4739,7 +4739,8 @@ public partial class PolisSystem
         }
         else
         {
-            slot.EmptySlot();
+            slot.Itemstack = null;
+            slot.MarkDirty();
         }
         return true;
     }
