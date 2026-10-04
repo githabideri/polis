@@ -83,6 +83,16 @@ public partial class PolisSystem : ModSystem
         tickListenerId = api.Event.RegisterGameTickListener(OnTick, 50);
         api.Event.RegisterGameTickListener(OnZoneTrackingTick, 1000);
 
+        // Unattended-pilot fix (part 1 of 2): confirm character selection for
+        // each player on join. The survival mod opens the character dialog
+        // on join when the player lacks the "createCharacter" moddata, and
+        // that dialog pauses the singleplayer server. Our join handler runs
+        // after the survival mod's (it registers first), so the flag takes
+        // effect from the NEXT join - the first one is made harmless by
+        // PolisPauseGameBlockPatch (part 2), which keeps the tick running
+        // even while a pause dialog is on screen.
+        api.Event.PlayerJoin += OnPlayerJoinConfirmCharSelection;
+
         // Register the possession mountable so clients can reconstruct the seat
         api.RegisterMountable(PolisPossessableSeat.MountableClassName, PolisPossessableSeat.CreateFromTree);
 
@@ -168,13 +178,9 @@ public partial class PolisSystem : ModSystem
 
         sapi.Logger.Notification($"[polis] Loaded bot registry: {globalData.Bots.Count} bot(s)");
 
-        // Unattended-pilot fix: confirm character selection for existing
-        // players BEFORE they join. The survival mod opens the character
-        // dialog on join when the player lacks the "createCharacter"
-        // moddata, and that dialog pauses the singleplayer server
-        // (ClientProgram suspends the tick while IsGamePaused) - the
-        // "startup wedge" that froze pilot runs for minutes at world entry.
-        ConfirmCharacterSelectionForPlayers();
+        // (character-selection confirmation happens on PlayerJoin -
+        // OnPlayerJoinConfirmCharSelection - because players don't exist
+        // at save-load time yet)
 
         // Load container registry
         byte[] containerData = sapi.WorldManager.SaveGame.GetData("polis-containers");
@@ -1349,35 +1355,38 @@ public partial class PolisSystem : ModSystem
         screenshotRenderer = new PolisScreenCaptureRenderer();
         screenshotRenderer.Register(api);
 
-        // Bounded watcher that unpauses the game if the survival mod's
-        // character-selection dialog opened at join (see
-        // ConfirmCharacterSelectionForPlayers for the root cause).
+        // Bounded watcher that closes the survival mod's
+        // character-selection dialog if it opened at join (see
+        // OnPlayerJoinConfirmCharSelection + PolisPauseGameBlockPatch for
+        // the full "startup wedge" story).
         StartClientSide_CharSelectWatcher(api);
         api.Event.LevelFinalize += () => charSelectWatcher?.Arm();
+
+        // Client-side Harmony: block ClientMain.PauseGame(true) so no
+        // pause dialog can ever suspend the singleplayer server tick.
+        PolisHarmony.ApplyClient(api);
     }
 
     // --- Character-selection confirmation (prevents the join-time pause) ---
 
     /// <summary>
-    /// Marks every existing player as having confirmed character selection
-    /// (the survival mod's "createCharacter" moddata). Without it the client
-    /// opens GuiDialogCreateCharacter on join, which pauses the game
-    /// (PauseGame(true) in the dialog's OnGuiOpened) and - in a singleplayer
-    /// world - suspends the server tick (ClientProgram: IsGamePaused loop).
-    /// Runs on save load, before any player joins, so the flag is in place
-    /// when CharacterSystem.Event_PlayerJoinServer reads it. Idempotent.
+    /// Sets the survival mod's "createCharacter" moddata for a player on
+    /// join, so the character dialog (which pauses the singleplayer game -
+    /// PauseGame(true) in its OnGuiOpened, and ClientProgram suspends the
+    /// server tick while IsGamePaused) does not open on the player's NEXT
+    /// join. Runs after CharacterSystem's own PlayerJoin handler (which
+    /// registered first), so this join already got DidSelect=false - that
+    /// one is covered by the client-side PauseGame block + the dialog
+    /// watcher. Idempotent.
     /// </summary>
-    void ConfirmCharacterSelectionForPlayers()
+    void OnPlayerJoinConfirmCharSelection(IServerPlayer p)
     {
         try
         {
-            foreach (IServerPlayer p in sapi.World.GetPlayers())
-            {
-                if (p.GetModData<bool>("createCharacter", false))
-                    continue;
-                p.SetModData("createCharacter", true);
-                sapi.Logger.Notification($"[polis] confirmed character selection for {p.Name} (prevents join-time game pause)");
-            }
+            if (p.GetModData<bool>("createCharacter", false))
+                return;
+            p.SetModData("createCharacter", true);
+            sapi.Logger.Notification($"[polis] confirmed character selection for {p.Name} (dialog won't open on the next join)");
         }
         catch (Exception ex)
         {

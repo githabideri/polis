@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 using HarmonyLib;
+using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
@@ -13,6 +14,8 @@ internal static class PolisHarmony
 {
     private static bool applied;
     private static Harmony harmony;
+    private static bool appliedClient;
+    private static Harmony harmonyClient;
 
     public static void Apply(ICoreServerAPI api)
     {
@@ -27,6 +30,38 @@ internal static class PolisHarmony
         applied = true;
 
         api.Logger.Notification("[polis] Harmony patches applied (tall grass pathing).");
+    }
+
+    /// <summary>
+    /// Client-side patches. The star is PolisPauseGameBlockPatch: it keeps
+    /// ClientMain.PauseGame(true) from ever flipping IsPaused, which in a
+    /// singleplayer world is what makes ClientProgram suspend the server
+    /// tick (the "startup wedge" - any pause dialog, most notoriously the
+    /// character-selection dialog that opens when a player joins without
+    /// the createCharacter moddata, used to freeze the bots for minutes).
+    /// Resume calls (paused: false) still run, so state stays consistent.
+    /// </summary>
+    public static void ApplyClient(ICoreClientAPI api)
+    {
+        if (appliedClient)
+        {
+            return;
+        }
+
+        harmonyClient = new Harmony("polis.client");
+        PolisPauseGameBlockPatch.logger = api.Logger;
+        var pauseGame = AccessTools.Method(
+            typeof(Vintagestory.Client.ClientMain), "PauseGame", new[] { typeof(bool) });
+        if (pauseGame != null)
+        {
+            harmonyClient.Patch(pauseGame, prefix: new HarmonyMethod(typeof(PolisPauseGameBlockPatch), "Prefix"));
+            api.Logger.Notification("[polis] client Harmony patch applied (PauseGame block - server tick stays running through pause dialogs).");
+        }
+        else
+        {
+            api.Logger.Warning("[polis] ClientMain.PauseGame not found - PauseGame block NOT applied (game version change?)");
+        }
+        appliedClient = true;
     }
 
     public static void Unapply(ICoreServerAPI api)
@@ -241,4 +276,43 @@ internal static class PolisNanPosGuardPatch
 
     static bool HasNanMotion(EntityPos p)
         => double.IsNaN(p.Motion.X) || double.IsNaN(p.Motion.Y) || double.IsNaN(p.Motion.Z);
+}
+
+// "Startup wedge" fix (2026-10-04): in a singleplayer world, ClientProgram
+// suspends the embedded server whenever the client's IsPaused flag is set
+// (its main loop: Suspend(true) while platform.IsGamePaused). The client
+// sets IsPaused via PauseGame(true) whenever a pause-flavor dialog opens -
+// the escape menu, the handbooks, and, the killer for unattended runs, the
+// character-selection dialog that opens on join when the player lacks the
+// createCharacter moddata (the dialog stayed open unattended, so the
+// server tick - and with it every game-tick-driven thing: bot navigation,
+// the harness command queue, autosaves - froze for minutes at world entry).
+//
+// This mod runs an unattended bot world where pausing is never wanted: a
+// human at the VNC can still open menus (the world keeps running behind
+// them, which is the desired pilot behavior), so the PAUSE half of
+// PauseGame is blocked here. The RESUME half still runs so the flag and
+// world-calendar state stay consistent when dialogs close.
+internal static class PolisPauseGameBlockPatch
+{
+    internal static Vintagestory.API.Common.ILogger logger;
+    static int skipCount;
+
+    // No [HarmonyPatch] attribute on purpose: PolisHarmony.ApplyClient
+    // patches this explicitly (the server-side PatchAll must not also pick
+    // it up and double-apply in the singleplayer process).
+    static bool Prefix(Vintagestory.Client.ClientMain __instance, bool paused)
+    {
+        if (!paused)
+        {
+            return true; // resume: let it run
+        }
+        skipCount++;
+        if (skipCount <= 5 || skipCount % 100 == 0)
+        {
+            logger?.Notification(
+                $"[polis] blocked client PauseGame(true) (occurrence {skipCount}) - server tick keeps running while the pause dialog is open");
+        }
+        return false; // skip the pause
+    }
 }
