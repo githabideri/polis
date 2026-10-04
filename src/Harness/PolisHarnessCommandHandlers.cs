@@ -313,8 +313,13 @@ public partial class PolisSystem
         bot.Activity.Debug = debugEnabled;
         bots[entity.EntityId] = bot;
 
-        // Add to persistent registry - use context player as owner if available
-        var ownerUid = contextPlayer?.PlayerUID ?? "harness";
+        // Add to persistent registry - use context player as owner if available;
+        // else the single online player (a harness-spawned bot with owner
+        // "harness" is unusable by every owner-scoped action: PlayerByUid
+        // never resolves a harness pseudo-uid).
+        var ownerUid = contextPlayer?.PlayerUID
+            ?? sapi.Server?.Players?.FirstOrDefault(p => p?.Entity != null)?.PlayerUID
+            ?? "harness";
         globalData.Bots[entity.EntityId] = new BotRecord
         {
             EntityId = entity.EntityId,
