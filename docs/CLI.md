@@ -142,6 +142,13 @@ token-efficient format the agent loops consume.
 | `container-remove` | Remove container from registry |
 | `container-set` | Set container slot directly (x y z slot itemCode |
 
+### Food & satiety
+
+| Command | What |
+|---------|------|
+| `hunger` | Read the engine's `hunger` tree (saturation 0-1500, 5 nutrition levels, delays, health) for all bots + the player, or one bot by id: `hunger [botId]` |
+| `eat` | Engine satiety path: `eat <itemCode> [count=1]` — gives the item if missing, calls `ReceiveSaturation` with the item's per-variant `FoodNutritionProperties` (clamping, nutrition levels, sync), applies Health, maintains the 1.22 intoxication/psychedelic floats, consumes the stack, hands back `EatenStack`. Verified: `eat game:fruit-blueberry 3` = exactly +240 saturation |
+
 ### View & capture
 
 | Command | What |

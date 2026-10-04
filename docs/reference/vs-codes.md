@@ -287,23 +287,46 @@ This document lists commonly used block and item codes for the polis project. Th
 
 ## Food/Plants
 
-### Berry Bushes (Harvestable)
-**Pattern:** `game:{size}berrybush-{type}-{state}`
+> **1.22 food model (verified 2026-10-04):** foods are *variant-based* — the
+> registered code is `base-variant` (e.g. `game:fruit-blueberry`,
+> `game:bushmeat-raw`) and the per-variant nutrition table lives in
+> `nutritionPropsByType` (satiety, health, foodcategory, plus new-in-1.22
+> intoxication/psychedelic fields). The domain is `game:` even for assets
+> stored under the survival mod's asset dir. There is no plain `game:berry`
+> anymore.
 
-States: `ripe`, `empty`, `flowering`
+### Berry Bushes (Harvestable)
+
+**1.22 pattern:** `game:fruitingbush-{state}-{type}` (the 1.21
+`{size}berrybush-{type}-{state}` codes are gone)
+
+- `state`: `wild` (affects the forage stat, `forageStatAffectedByType`),
+  `grown` (planted)
+- `type`: `beautyberry`, `blueberry`, `cloudberry`, `cranberry`, `blackberry`,
+  `blackcurrant`, `raspberry`, `redcurrant`, `whitecurrant`, `strawberry`
 
 | Code | Description |
 |------|-------------|
-| `game:bigberrybush-redcurrant-ripe` | Ripe red currant bush (large) |
-| `game:smallberrybush-blueberry-ripe` | Ripe blueberry bush (small) |
-| `game:bigberrybush-blackcurrant-ripe` | Ripe black currant bush |
+| `game:fruitingbush-grown-blueberry` | Grown blueberry bush |
+| `game:fruitingbush-wild-cranberry` | Wild cranberry bush |
+
+Harvest with `harvest`; the drop is the matching `game:fruit-{type}` item.
 
 ### Fruit (Harvested)
-| Code | Description |
-|------|-------------|
-| `game:fruit-blueberry` | Blueberry |
-| `game:fruit-redcurrant` | Red currant |
-| `game:fruit-blackcurrant` | Black currant |
+
+**Pattern:** `game:fruit-{type}` (bush fruits + tree fruits)
+
+| Code | Satiety | Notes |
+|------|---------|-------|
+| `game:fruit-blueberry` | 80 (default) | no spoil |
+| `game:fruit-cranberry` | 60 | spoils to rot (~12h) |
+| `game:fruit-cherry` | 40 | |
+| `game:fruit-lychee` | 40 | spoils (360h) |
+| `game:fruit-saguaro` | 60 | +1 health |
+| `game:fruit-breadfruit` | 200 | |
+
+All are `foodcategory: Fruit`. (Table: survival mod
+`itemtypes/food/fruit.json` → `nutritionPropsByType`; `"*"` = 80 default.)
 
 ### Crops
 **Pattern:** `game:crop-{type}-{stage}`
@@ -317,13 +340,33 @@ Stages: 1-9 (varies by crop), higher = more mature
 | `game:crop-spelt-9` | Mature spelt |
 
 ### Meat/Animal Products
+**Pattern:** `game:{meat}-{state}` (raw / cooked / cured)
+
 | Code | Description |
 |------|-------------|
-| `game:redmeat-raw` | Raw red meat (from sheep, pig) |
-| `game:poultry-raw` | Raw poultry (from chicken) |
+| `game:redmeat-raw` | Raw red meat (sheep, pig) |
+| `game:bushmeat-raw` | Raw bushmeat (small game) — confirmed live |
+| `game:poultry-raw` | Raw poultry (chicken) |
 | `game:feather` | Feather |
 | `game:fat` | Animal fat |
 | `game:hide-*` | Animal hide |
+
+### Other Foods (variant-based, `game:` domain)
+
+| Code pattern | Notes |
+|--------------|-------|
+| `game:vegetable-{type}` | e.g. `game:vegetable-bambooshoot` (satiety 100, category NoNutrition — a trap: "vegetable" base has no nutrition) |
+| `game:dough-{type}`, `game:grain-{type}`, `game:fishraw-*`, `game:fishchunk-*`, `game:fishfillet-*`, `game:egg-*`, `game:cheese-*`, `game:butter`, `game:pemmican`, `game:insect-*`, `game:spice-*`, `game:legume-*`, `game:pickledlegume-*`, `game:pickledvegetable-*`, `game:rawcassava-*`, `game:rawcheese-*`, `game:ontree-*` | one JSON per family under `itemtypes/food/`, each with its own per-variant `nutritionPropsByType` |
+| `game:liquid-alcohol` / `-vinegarportion` / `-spirit` | drinks — intoxication values live here (see below) |
+
+**Intoxication (new in 1.22):** top-level tree floats `intoxication` (≤ 1.1)
+and `psychedelic` (≤ 2.0) on the entity's `WatchedAttributes`; the drinking
+path maintains them. `detox`-style effects = lowering those floats.
+
+**Satiety mechanics:** entities declare the `hunger` behavior to carry the
+synced `hunger` tree (0-1500 saturation + 5 nutrition levels); bots do —
+see `polisbot.json` and `docs/design/food-hunger-skills-policies.md`.
+`harness: hunger` reads it, `harness: eat` applies it.
 
 ---
 
@@ -420,6 +463,10 @@ Stages: 1-9 (varies by crop), higher = more mature
 
 # Spawn entities
 ./scripts/poliscli.py spawnkill game:sheep-bighorn-adult-male
+
+# Food & satiety
+./scripts/poliscli.py hunger                # read saturation/levels/health (all bots + player)
+./scripts/poliscli.py eat game:fruit-blueberry 3   # engine satiety path (verified: 3x80)
 ```
 
 ---
