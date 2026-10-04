@@ -207,11 +207,27 @@ replaces the file schema and the evaluator internals — the call sites
    player view (free observability on the possession screen).
 4. Animal feeding (pigs + trough) — only when husbandry becomes a
    milestone (no animal declares the hunger behavior in 1.22.7 data).
+5. **RESOLVED 2026-10-04 (creative/dev worlds):** the engine gates drain
+   for *players* by game mode, but the polis bot drains unconditionally
+   (a parked bot starves in ~4 in-game hours and dies: 7 points of
+   damage/hour at 0 saturation). Settled as `EntityBehaviorPolisHunger`:
+   it inherits the whole engine behavior and suspends only the drain
+   tick for two reasons — (a) the bot is **parked** (no active mission;
+   `EntityPolisBot.HungerSuspended`, toggled by the `hungerpause`
+   harness command, owned later by the policy engine) and (b) a
+   **per-world switch** `<VSDATA>/Saves/<world>/polis/hunger.json`
+   `{"hungerMode":"off"}` for dev/creative/debug worlds. Missing file /
+   `"full"` = engine behavior unmodified, so survival pilot worlds run
+   the real drain. All three states live-verified (drain running / flat
+   with file off / flat with bot paused; resumes on release).
 
 ## 5. Build order
 
-1. `polis-policies.json` + `PolicyEngine` + `eat` action (one small
-   session; live-verify on a berry in the pilot world).
+1. ~~`polis-policies.json` + `PolicyEngine` + `eat` action~~ — `eat` action
+   shipped (harness command, engine path, live-verified 2026-10-04);
+   **the policy engine (`polis-policies.json` + tick-loop evaluator) is
+   the remaining piece of step 1** — live-verify on a berry in the pilot
+   world.
 2. Food state + forage-eat interrupt inside the first survival pilot
    mission (fresh world is up: normal clock, survival).
 3. Skill state + XP + L2 job gates — with the copper/melting-pot
