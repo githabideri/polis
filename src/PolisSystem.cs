@@ -390,6 +390,38 @@ public partial class PolisSystem : ModSystem
                 sapi.Logger.Notification($"[polis] Recovered bot {entity.EntityId} from entity attributes");
             }
         }
+
+        // Saturation persistence fix: a bot saved while starving reloads
+        // starving (the hunger tree is persisted with the entity) and would
+        // otherwise sit at the starvation-damage floor until something fed
+        // it. Refuel to 75% of max so a reloaded bot can work — and can eat
+        // right away if a job's food-pressure check trips (trigger sits at
+        // 25%). Fresh spawns already start at 100% (entity JSON default),
+        // so this only fires for actually starved loads.
+        if (entity is EntityPolisBot pbot)
+        {
+            RefuelStarvedBot(pbot);
+        }
+    }
+
+    /// <summary>
+    /// Refuel a bot that reloaded below the forage trigger (25% of max)
+    /// up to 75% of max. Writes the synced hunger tree directly (no
+    /// ReceiveSaturation: a refuel is not an eating event, it must not
+    /// move the nutrition levels or their loss delays).
+    /// </summary>
+    void RefuelStarvedBot(EntityPolisBot bot)
+    {
+        var hunger = bot.WatchedAttributes.GetTreeAttribute("hunger");
+        if (hunger == null) return;
+        float max = hunger.GetFloat("maxsaturation", 0f);
+        if (max <= 0f) return;
+        float cur = hunger.GetFloat("currentsaturation", 0f);
+        if (cur >= 0.25f * max) return;
+
+        hunger.SetFloat("currentsaturation", 0.75f * max);
+        bot.WatchedAttributes.MarkPathDirty("hunger");
+        sapi.Logger.Notification($"[polis] Bot {bot.EntityId} reloaded starving ({cur:F0}/{max:F0}) — refueled to 75% ({0.75f * max:F0})");
     }
     
     private void OnEntityDespawn(Entity entity, EntityDespawnData data)

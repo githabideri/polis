@@ -547,6 +547,22 @@ public partial class PolisSystem
         // the cargo diff shows once the auto-collect ran.
         ep.InvBefore = SnapshotCarried(bot);
 
+        // Fruiting bushes are NOT BlockBehaviorHarvestable — their berry
+        // drop is the block entity's long-interact. Route them to the
+        // dedicated pick action (same downstream: cargo diff -> eat).
+        var targetBlock = sapi.World.BlockAccessor.GetBlock(ep.Target);
+        if (targetBlock?.GetBehavior<BlockBehaviorFruitingBush>() != null)
+        {
+            ep.Phase = "harvest";
+            ep.PhaseStartMs = NowMs();
+            StartForageAction(bot, "forage-pickbush",
+                new PolisPickBushAction(
+                    ep.Target, owner, 4.5f,
+                    LogForage,
+                    (ok, msg) => OnForageHarvestResult(bot, ep, ok, msg)));
+            return;
+        }
+
         ep.Phase = "harvest";
         ep.PhaseStartMs = NowMs();
         StartForageAction(bot, "forage-harvest",

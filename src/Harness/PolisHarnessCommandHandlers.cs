@@ -141,6 +141,8 @@ public partial class PolisSystem
                     return ExecutePlaceCommand(args, context);
                 case "setblock":
                     return ExecuteSetBlockCommand(args, context);
+                case "ripen":
+                    return ExecuteRipenCommand(args, context);
                 case "equip":
                     return ExecuteEquipCommand(args, context);
                 case "scan":
@@ -179,7 +181,7 @@ public partial class PolisSystem
                     return ExecuteViewpointScreenshotCommand(args, context);
                 default:
                     result.Ok = false;
-                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, break, harvest, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, animate, teleport, place, setblock, equip, scan, verify, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot";
+                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, break, harvest, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot";
                     break;
             }
         }
@@ -1941,6 +1943,49 @@ public partial class PolisSystem
             Ok = true,
             Message = $"Set {code} at ({pos.X}, {pos.Y}, {pos.Z})",
             Data = new { blockCode = code, pos = new[] { pos.X, pos.Y, pos.Z } }
+        };
+    }
+
+    PolisTestHarness.CommandResult ExecuteRipenCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: ripen <x> <y> <z>
+        // Test lever: force a fruiting bush's block-entity growth state to
+        // Ripe (it would otherwise take in-game months to ripen) so a
+        // forage/pick cycle can be exercised without waiting for the
+        // growth clock. Report the previous state.
+        if (args.Length < 3)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: ripen <x> <y> <z>" };
+        }
+        if (!int.TryParse(args[0], out var x) || !int.TryParse(args[1], out var y) || !int.TryParse(args[2], out var z))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+
+        var pos = new BlockPos(x, y, z);
+        var block = sapi.World.BlockAccessor.GetBlock(pos);
+        if (block == null || block.Id == 0 || block.GetBehavior<BlockBehaviorFruitingBush>() == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"not a fruiting bush at ({x}, {y}, {z}): {block?.Code ?? "air"}" };
+        }
+        var bush = sapi.World.BlockAccessor.GetBlockEntity(pos)?.GetBehavior<BEBehaviorFruitingBush>();
+        if (bush == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"bush at ({x}, {y}, {z}) has no block-entity state" };
+        }
+
+        var before = bush.BState.Growthstate;
+        bush.BState.Growthstate = EnumFruitingBushGrowthState.Ripe;
+        bush.BState.TransitionHoursLeft = bush.GetHoursForNextStage();
+        bush.Blockentity.MarkDirty(true, null);
+
+        sapi.Logger.Notification($"[polis] ripen: {block.Code} at ({x}, {y}, {z}) {before} -> Ripe");
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"{block.Code} at ({x}, {y}, {z}) was {before}, now Ripe",
+            Data = new { blockCode = block.Code.ToString(), pos = new[] { x, y, z }, before = before.ToString(), now = "Ripe" }
         };
     }
 
