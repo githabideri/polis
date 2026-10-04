@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="fonts/fonts.css">
     <link rel="stylesheet" href="css/main.css">
 </head>
-<body>
+<body data-mpage="stage">
 
     <!-- ── Top bar: identity, world state, connection ─────────────────── -->
     <header id="topbar">
@@ -27,6 +27,11 @@
         </div>
         <div class="tb-mid">
             <span id="world-clock" class="world-clock mono">—</span>
+            <!-- current-step (2026-10-04 mobile/field variant, webui-mobile.md):
+                 what the agent / decision loop is doing right now — the last
+                 agent- or harness-actor event, so the operator doesn't have to
+                 open a tab to know what the autonomous side is up to. -->
+            <span id="current-step" class="current-step mono">—</span>
         </div>
         <div class="tb-right">
             <div class="theme-toggle" id="theme-toggle" title="Theme — auto follows your OS">
@@ -66,6 +71,13 @@
                     <button id="btn-screenshot" class="chip chip-btn">capture frame</button>
                     <label class="chip"><input type="checkbox" id="frames-auto">auto 5s</label>
                     <span id="shot-status" class="stream-status dim"></span>
+                </div>
+                <!-- STOP (2026-10-04, webui-mobile.md): the one always-visible
+                     override — bot.Activity.CancelAll() on the selected bot.
+                     Step-level intervention is what agent-UX work says
+                     operators value most; on a phone it is THE control. -->
+                <div class="stage-tools" id="tools-stop">
+                    <button id="btn-stop" class="chip chip-btn chip-danger" data-oneshot="stop" title="Stop the selected bot's current action">STOP</button>
                 </div>
             </div>
             <div class="stage-body">
@@ -163,6 +175,19 @@
             <button id="btn-diag" class="chip chip-btn" title="Export a JSON diagnostics blob (network, errors, state) — attach it when reporting a bug">diag</button>
         </div>
     </footer>
+
+    <!-- ── Mobile/field variant (2026-10-04, docs/design/webui-mobile.md):
+         fixed bottom tab bar. The five areas are one-at-a-time pages
+         (body[data-mpage]); each owns the whole screen — no more clipped,
+         equal-weight stacked panels. Thumb-reachable, ≥44 px, label +
+         glyph (icon-only strips lose context). Desktop CSS ignores it. ── -->
+    <nav id="mobile-tabs" aria-label="sections">
+        <button class="mtab" data-mpage="stage"><span class="mtab-glyph">▣</span><span class="mtab-label">Stage</span></button>
+        <button class="mtab" data-mpage="control"><span class="mtab-glyph">✥</span><span class="mtab-label">Control</span></button>
+        <button class="mtab" data-mpage="world"><span class="mtab-glyph">◎</span><span class="mtab-label">World</span></button>
+        <button class="mtab" data-mpage="console"><span class="mtab-glyph">≡</span><span class="mtab-label">Console</span></button>
+        <button class="mtab" data-mpage="oik"><span class="mtab-glyph">⌂</span><span class="mtab-label">Oikistes</span></button>
+    </nav>
 
     <script type="module" src="js/api.js"></script>
     <script type="module" src="js/state.js"></script>

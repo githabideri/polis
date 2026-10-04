@@ -76,6 +76,16 @@ class HarnessClient {
     }
 
     /**
+     * GET the world clock (2026-10-04): a plain GET, not a `time` command —
+     * commands record events with actor attribution, and the UI's 5 s
+     * heartbeat was flooding the log (and the agent's action stream) with
+     * 12 identical lines per minute. The server route is /polis/clock.
+     */
+    async getClock() {
+        return this.get('/polis/clock');
+    }
+
+    /**
      * Make a GET request
      * @param {string} path - API path (e.g., '/polis/status')
      * @param {Object} params - Query parameters

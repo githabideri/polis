@@ -455,14 +455,160 @@ details.rail-section[open] > summary::before { content: '\2013'; }
     }
     .pad-move, .pad-view { grid-template-rows: 34px 34px 34px 26px; }
 }
-@media (max-width: 860px) {
+/* ── Mobile / field variant (<860 px) — docs/design/webui-mobile.md ─────
+   The desktop grid becomes five one-at-a-time pages (body[data-mpage]):
+   each area owns the whole screen instead of a clipped, equal-weight
+   stacked panel. The fixed bottom tab bar is the only navigation
+   (always visible, thumb-reachable, ≥44 px, label + glyph — icon-only
+   strips lose context). The command bar is pinned above the tab bar on
+   EVERY page — one thumb-motion from anywhere; on the console page the
+   log owns the screen. The theme toggle drops out (auto follows the OS;
+   the full toggle stays a desktop affordance). Desktop CSS untouched. */
+
+:root { --tabbar-h: 52px; }
+#mobile-tabs { display: none; }
+
+.chip-danger { color: var(--err); border-color: rgba(217,111,111,0.5); }
+.chip-danger:hover { border-color: var(--err); color: var(--err); background: transparent; }
+#tools-stop { margin-left: 10px; }
+#btn-stop { font-weight: 600; letter-spacing: 0.1em; min-width: 58px; justify-content: center; }
+#btn-stop:active { background: rgba(217,111,111,0.15); }
+
+@media (max-width: 859px) {
+    :root { --topbar-h: 60px; }
+
+    /* the tab bar */
+    #mobile-tabs {
+        display: flex;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: 50;
+        height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        background: var(--bg1);
+        border-top: 1px solid var(--line);
+    }
+    .mtab {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-height: 44px;
+        padding: 2px;
+        background: transparent;
+        border: none;
+        border-top: 2px solid transparent;
+        color: var(--text-dim);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+    }
+    .mtab .mtab-glyph { font-size: 15px; line-height: 1; }
+    .mtab.active { color: var(--accent); border-top-color: var(--accent); }
+
+    /* top bar: identity row, then the current-step line */
+    #topbar { padding: 8px 12px 6px; }
+    .tb-mid { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; }
+    .current-step {
+        font-size: 10.5px;
+        color: var(--text-dim);
+        max-width: 42vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .theme-toggle { display: none; }
+    #selection-info { font-size: 11px; }
+
+    /* the layout becomes a page host: fixed, full area, no scroll of its own */
     #layout {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr auto auto;
+        display: block;
+        position: fixed;
+        top: var(--topbar-h);
+        left: 0; right: 0;
+        bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+        height: auto;
+        min-height: 0;
+        gap: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+    body.m-nav .rail,
+    body.m-nav #stage {
+        display: none;
+        position: absolute;
+        inset: 6px;
         overflow-y: auto;
     }
-    .stage { min-height: 320px; }
+    body.m-nav[data-mpage="stage"] #stage { display: flex; }
+    body.m-nav[data-mpage="world"] #world-rail,
+    body.m-nav[data-mpage="control"] #control-rail,
+    body.m-nav[data-mpage="oik"] #control-rail { display: block; }
+    /* Oikistes is a section inside the control rail; its page shows only it */
+    body.m-nav[data-mpage="oik"] #control-rail > .rail-section:not(#oikistes-section),
+    body.m-nav[data-mpage="oik"] #control-rail > details { display: none; }
+
+    /* console: pinned above the tab bar on every page (the command is
+       always one thumb away); on the console page the log owns the
+       screen and the input sits at its bottom. */
+    body.m-nav #console {
+        position: fixed;
+        left: 0; right: 0;
+        bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+        z-index: 30;
+        margin: 0;
+        min-height: 0;
+        max-height: none;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    body.m-nav #log-entries { display: none; }
+    body.m-nav.m-cmd-expanded #log-entries { display: block; max-height: 34vh; }
+    body.m-nav[data-mpage="console"] #console {
+        top: var(--topbar-h);
+        bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+    }
+    body.m-nav[data-mpage="console"] #log-entries { display: block; max-height: none; flex: 1; }
+
+    /* tap targets: WCAG 2.5.5 (44 px) where the layout allows */
+    .pad-btn { min-width: 44px; min-height: 44px; }
+    .stage-tab { min-width: 64px; min-height: 40px; }
+    .entity-item { min-height: 44px; }
+    .cmd-row { padding: 10px 12px; }
+    .chip { min-height: 34px; }
+    #btn-stop { min-height: 40px; min-width: 64px; }
 }
+
+/* Phone in landscape: back to the two/three-pane shape (close to the
+   desktop grid) — watching the bot while on the move; the mobile page
+   model and tab bar go away. Later in the file = wins over the block
+   above at equal specificity. */
+@media (max-width: 859px) and (max-height: 420px) and (orientation: landscape) {
+    body.m-nav #mobile-tabs { display: none; }
+    body.m-nav #layout {
+        display: grid;
+        position: static;
+        grid-template-columns: 150px 1fr 170px;
+        gap: 8px;
+        padding: 8px;
+        height: calc(100vh - var(--topbar-h) - var(--console-min) - 66px);
+        top: auto; bottom: auto; left: auto; right: auto;
+    }
+    body.m-nav .rail,
+    body.m-nav #stage {
+        position: static;
+        display: block;
+        inset: auto;
+    }
+    body.m-nav #stage { display: flex; }
+    body.m-nav #console { position: static; margin: 0 8px 8px; min-height: 120px; }
+    body.m-nav #log-entries { display: block; max-height: none; }
+    body.m-nav[data-mpage="oik"] #control-rail > .rail-section:not(#oikistes-section),
+    body.m-nav[data-mpage="oik"] #control-rail > details { display: block; }
+}
+
 
 /* ── Oikistes panel (2026-09-27 re-scope) ─────────────────────────────────
    The settlement agent's cockpit card. Autonomy is live (writes the

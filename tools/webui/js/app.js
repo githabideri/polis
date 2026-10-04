@@ -34,6 +34,7 @@ const $ = (id) => document.getElementById(id);
 const el = {
     conn: $('conn-badge'), connLabel: $('conn-label'),
     worldClock: $('world-clock'),
+    currentStep: $('current-step'),
     selectionInfo: $('selection-info'),
     botsList: $('bots-list'), botCount: $('bot-count'),
     playersList: $('players-list'), playerCount: $('player-count'),
@@ -227,6 +228,16 @@ async function oneshot(kind) {
                 : (b.Backpack ?? b.backpack ? 'has backpack' : '—');
             log(`bot #${botId}: hp ${b.CurrentHealth ?? b.currentHealth ?? '?'} | right ${b.RightHand ?? b.rightHand ?? '—'} | left ${b.LeftHand ?? b.leftHand ?? '—'} | backpack ${bp}`, 'success');
         } catch (e) { log(`scan #${botId}: ${e.message}`, 'error'); }
+    } else if (kind === 'stop') {
+        // The always-visible override (webui-mobile.md): stop the selected
+        // bot's current action — bot.Activity.CancelAll() server-side.
+        const ctx = { actor: 'user' };
+        const botId = getSelectedBotId();
+        if (botId != null) ctx.botId = Number(botId);
+        const r = await api.command('stop', [], ctx).catch(e => ({ Ok: false, Message: e.message }));
+        log(`stop: ${r.Message || (r.Ok ? 'ok' : 'failed')}`, r.Ok ? 'success' : 'error');
+        setAgentStep(null);
+        pollStatus();
     }
 }
 function getSelectedBotId() {
@@ -559,9 +570,10 @@ function handleEvent(ev) {
             const ok = data.ok;
             const msg = ok ? (data.msg || `cmd ${data.cmd}`) : `${data.cmd} — ${data.msg || 'failed'}`;
             log(msg, ok ? '' : 'error', data.actor);
+            if (data.actor === 'agent' || data.actor === 'harness') setAgentStep(`${data.actor} · ${msg}`);
             break;
         }
-        case 'action_complete':  log(`[action] ${data.action}: ${data.msg}`, data.ok ? 'success' : 'error'); pollStatus(); break;
+        case 'action_complete':  log(`[action] ${data.action}: ${data.msg}`, data.ok ? 'success' : 'error'); setAgentStep(`action · ${data.action}`); pollStatus(); break;
         case 'bot_spawned':      log(`[spawn] #${data.botId} ${pos(data.pos)}`); pollStatus(); break;
         case 'bot_died':         log(`[death] #${data.botId} ${data.cause || ''}`, 'error'); pollStatus(); break;
         case 'bot_unloaded':     log(`[unload] #${data.botId}`); pollStatus(); break;
@@ -572,12 +584,27 @@ function handleEvent(ev) {
 }
 
 async function pollClock() {
+    // A GET, not the `time` command (2026-10-04): the command recorded an
+    // event per poll, flooding the log and the agent's action stream with
+    // world-clock heartbeats on long-open pages.
     try {
-        const r = await api.command('time');
-        const m = (r?.Message || r?.message || '');
-        el.worldClock.textContent = m || '';
+        const c = await api.getClock();
+        if (c?.ok) el.worldClock.textContent = c.date || '';
     } catch (e) { /* clock is decorative */ }
 }
+
+/* ── current step (2026-10-04, webui-mobile.md) ────────────────────────
+   One line in the top bar: what the autonomous side (the v5 loop =
+   "harness", the Oikistes = "agent") is doing right now. Derived from the
+   event stream the page already polls — no new endpoint. It is the
+   last agent/harness-actor event, never cleared: the most recent thing
+   the agent did is still the right thing to show a returning operator. */
+function setAgentStep(text) {
+    if (!el.currentStep) return;
+    el.currentStep.textContent = text || '—';
+    el.currentStep.title = text || '';
+}
+
 
 /* ── command bar ──────────────────────────────────────────────────────── */
 
@@ -609,6 +636,38 @@ function wireConsole() {
         pollStatus();
         log('pose re-synced from server');
     });
+    // Mobile (webui-mobile.md): the command bar is pinned above the tab
+    // bar on every page; focusing the input expands a log preview above
+    // it, blurring collapses it again.
+    el.cmdInput.addEventListener('focus', () => {
+        if (document.body.classList.contains('m-nav') && document.body.dataset.mpage !== 'console') {
+            document.body.classList.add('m-cmd-expanded');
+        }
+    });
+    el.cmdInput.addEventListener('blur', () => document.body.classList.remove('m-cmd-expanded'));
+}
+
+/* ── mobile / field variant (2026-10-04, docs/design/webui-mobile.md) ──
+   Below 860 px the single desktop grid becomes five one-at-a-time pages
+   (body[data-mpage]), each owning the whole screen — the bottom tab bar
+   is the only navigation (always visible, thumb-reachable). The CSS
+   (main.css) does the layout; this wires the bar and the m-nav class
+   the mobile rules key on. Default page is Stage: the console's center
+   of gravity is the live image, and a field operator opens the UI to
+   SEE, not to find the video. */
+function wireMobile() {
+    const mq = matchMedia('(max-width: 859px)');
+    const apply = () => document.body.classList.toggle('m-nav', mq.matches);
+    apply();
+    mq.addEventListener?.('change', apply);
+    const tabs = document.querySelectorAll('#mobile-tabs .mtab');
+    const setActive = (page) => tabs.forEach(b => b.classList.toggle('active', b.dataset.mpage === page));
+    tabs.forEach(b => b.addEventListener('click', () => {
+        document.body.dataset.mpage = b.dataset.mpage;
+        document.body.classList.remove('m-cmd-expanded');
+        setActive(b.dataset.mpage);
+    }));
+    setActive(document.body.dataset.mpage || 'stage');
 }
 
 /* ── Oikistes (2026-09-27 re-scope, inaugurated 2026-09-28) ────────────
@@ -859,6 +918,7 @@ async function init() {
     wireStage();
     wireConsole();
     wireTheme();
+    wireMobile();
     $('btn-diag').addEventListener('click', exportDiagnostics);
 
     state.onChange((type) => {

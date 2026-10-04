@@ -304,6 +304,38 @@ public class PolisTestHarness : IDisposable
                 });
             }
 
+            // World clock as a GET (2026-10-04): the web UI's header clock
+            // used to poll the `time` COMMAND every 5 s, which recorded a
+            // command event per poll and flooded the log/action stream with
+            // heartbeats (12 identical lines per minute on a phone). A GET
+            // is not a command: no event, no actor attribution, no
+            // pollution of the agent's action stream. Main-thread task
+            // because Calendar reads belong there (mirrors the `time`
+            // handler, whose shape we reuse verbatim).
+            else if (path == "/polis/clock" && request.HttpMethod == "GET")
+            {
+                sapi.Event.EnqueueMainThreadTask(() =>
+                {
+                    try
+                    {
+                        var cal = sapi.World?.Calendar;
+                        tcs.SetResult(cal == null ? new { ok = false, error = "no world" } : new
+                        {
+                            ok = true,
+                            date = cal.PrettyDate(),
+                            hourOfDay = cal.HourOfDay,
+                            totalDays = cal.TotalDays,
+                            speedOfTime = cal.SpeedOfTime,
+                            moonPhase = (int)cal.MoonPhaseExact
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.SetResult(new { ok = false, error = ex.Message });
+                    }
+                }, "polis-harness-clock");
+            }
+
             // 1.22.7 grid-recipe table (the headless craft capability's
             // knowledge base): enumerate world.GridRecipes with resolved
             // output + ingredients. Optional ?output=<code> filters to

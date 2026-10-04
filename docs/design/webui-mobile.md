@@ -50,12 +50,17 @@ zero-scroll and one-thumb. Everything else is secondary.
 2. **Stage is the default page**: video full-width; one compact control
    row under it — a single Live/Frames segmented control, one stream
    toggle (the duplicated "stream on" label goes away), capture-frame as
-   an icon button on the right. The movement/view **hold-to-repeat pads
-   live here**, thumb-reachable; the continuity UX and the
-   minimum-interval guards are unchanged.
-3. **Command bar pinned** at the bottom edge (above the tab bar),
-   collapsed to one 44 px "⌘" button that expands into the input — the
-   chat-app pattern. One thumb-motion from anywhere on any page.
+   an icon button on the right, and the **prominent STOP** (item 4).
+   The movement/view hold-to-repeat pads live at the **top of the
+   adjacent Control tab** (one tap from seeing to nudging) rather than
+   under the video: moving them in the DOM would risk the pointer-
+   capture state of an in-flight hold, and one tap is close enough to
+   thumb-reachable. The continuity UX and minimum-interval guards are
+   unchanged.
+3. **Command bar pinned** above the tab bar on **every page** (the
+   chat-app pattern): collapsed it is one line — prompt, input, submit —
+   and focusing the input expands a log preview above it. One thumb-
+   motion from anywhere on any page; the Console tab is the full log.
 4. **One prominent STOP** in the stage control row (the existing one-shot
    `stop`; server guards unchanged). The agent-UX literature agrees on
    what operators value most: *step-level intervention* — pausing or
@@ -74,17 +79,19 @@ zero-scroll and one-thumb. Everything else is secondary.
    asks." One mono line, truncated: the difference between "I can watch
    from anywhere" and "I must open the app."
 6. **Log hygiene (a code fix, not a layout one)**: the 5 s world-clock
-   poll is a *status*, not an event — it renders into the header clock
-   (already there) and stops being appended to the log. The log keeps
-   real events only (harness events, commands, errors). This is the
-   single highest-value fix: the console becomes signal instead of
-   noise.
+   poll was issued as a `time` *command*, which recorded a command event
+   per poll — 12 identical lines per minute, and it polluted the
+   agent's action stream to boot. The fix is a plain `GET /polis/clock`
+   (a GET is not a command: no event, no actor attribution) that the
+   header clock reads instead. The log keeps real events only.
 7. **Tap targets ≥ 44×44 CSS px** everywhere (WCAG 2.2 SC 2.5.5; the AA
    minimum is 2.5.8's 24 px — TestParty: *"interactive targets must be
    at least 24x24 CSS pixels … the stricter WCAG 2.5.5 (Level AAA)
-   requires 44x44"*). The theme dots, the ⋯ menu (which becomes a real
-   44 px menu button — today a touch dead-end), the pad cells, the
-   tabs.
+   requires 44x44"*): tab bar, pad cells, stage tabs, entity rows, the
+   STOP. The theme dots (the three little circles in the top bar — auto
+   / dark / light) are dropped on mobile in favour of **auto** (follows
+   the OS, the contract's default); the full toggle stays a desktop
+   affordance — three 44 px dots would eat the header on a narrow screen.
 8. **Landscape bonus**: a short-height/landscape query → two-pane
    Stage | Control, which is already close to the desktop grid — the
    "watch the bot while on the move" case.

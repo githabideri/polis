@@ -21,7 +21,7 @@ before end of 2026.
 | R2 job system | **live verified** (M1 + M2) | goal grammar, 8-job catalog, deterministic compiler, 27B planner (precision 1.000 / coverage ~0.5, 5-way failure attribution). Live: mine 11.4 s, two-job external supply 8.5 s, endogenous harvest→sow 9.6 s |
 | Building plan system | **live verified** | a building is data (`builds/*.json`); the executor climbs its own work, per-cell verified; the 25-block hut built in 131 s and looked at |
 | Oikistes (settlement agent) | **live** | swappable brains (27B default / 35B alt, live switch), mod-owned autonomy (`free\|guarded\|strict`), lean tool surface — work only happens through the `mission` tool into R2 |
-| Web UI | **live** | the instrument panel at `/polis/ui/`; design contract `docs/design/webui-design.md` |
+| Web UI | **live** | the instrument panel at `/polis/ui/`; design contract `docs/design/webui-design.md` + the mobile/field variant `docs/design/webui-mobile.md` (bottom tab bar, stage-first, pinned command bar, prominent STOP, GET-based clock — implemented 2026-10-04) |
 
 **Where the models run** (roles — deployment details are operator-side, not
 in this repo): Decider-2B FT on the 3060 card (~0.3 s/row), Laya 421M via
