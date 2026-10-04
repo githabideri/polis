@@ -83,6 +83,8 @@ public partial class PolisSystem
                     return ExecuteEatCommand(args, context);
                 case "hungerpause":
                     return ExecuteHungerPauseCommand(args, context);
+                case "policy":
+                    return ExecutePolicyCommand(args, context);
                 case "takefrom":
                     return ExecuteTakeFromCommand(args, context);
                 case "putinto":
@@ -4628,6 +4630,21 @@ public partial class PolisSystem
         if (nut == null)
             return new PolisTestHarness.CommandResult { Ok = false, Message = $"{code} is not edible (no NutritionProps)" };
 
+        // Policy gate (design: food-hunger-skills-policies.md B): the
+        // interaction-rules layer decides whether the bot may consume this
+        // food, before anything is given or consumed. Denials are logged as
+        // rejection data (they land in the command event stream).
+        {
+            var (allowed, reason) = PolisPolicyEngine.Instance.Evaluate("food", code, nut.FoodCategory.ToString());
+            if (!allowed)
+                return new PolisTestHarness.CommandResult
+                {
+                    Ok = false,
+                    Message = $"policy denied: {reason}",
+                    Data = new { domain = "food", item = code, reason },
+                };
+        }
+
         var e = bot.Entity;
         float before = e.WatchedAttributes.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f;
         float healthBefore = e.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("currenthealth", 0f) ?? 0f;
@@ -4739,6 +4756,53 @@ public partial class PolisSystem
             Ok = true,
             Message = $"hunger drain {mode} (saturation {sat:F0}/1500)",
             Data = new { hungerSuspended = pb.HungerSuspended, saturation = sat },
+        };
+    }
+
+    // --- Policy introspection (the interaction-rules layer) ---
+    // Usage: policy                     → dump the policy file
+    //        policy <domain> <itemCode> → evaluate an item against a domain
+
+    PolisTestHarness.CommandResult ExecutePolicyCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length == 0)
+        {
+            string path = PolisPolicyEngine.Instance.AutoInit();
+            if (path == null || !System.IO.File.Exists(path))
+                return new PolisTestHarness.CommandResult { Ok = false, Message = $"policy file not found: {path}" };
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = "policy file",
+                Data = new
+                {
+                    path,
+                    mtime = System.IO.File.GetLastWriteTimeUtc(path).ToString("o"),
+                    file = System.IO.File.ReadAllText(path),
+                },
+            };
+        }
+        if (args.Length < 2)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: policy [domain <itemCode>]" };
+
+        string domain = args[0];
+        string code = args[1];
+
+        // Resolve the food category (needed for category-based rules)
+        string category = null;
+        if (TryResolveStack(code, 1, out var unit, out _))
+        {
+            var c = unit.Collectible;
+            var nut = c?.GetNutritionProperties(sapi.World, unit, null) ?? c?.NutritionProps;
+            category = nut?.FoodCategory.ToString();
+        }
+
+        var (allowed, reason) = PolisPolicyEngine.Instance.Evaluate(domain, code, category);
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"{domain}/{code}: {(allowed ? "allow" : "deny")} ({reason})",
+            Data = new { domain, item = code, category, allow = allowed, reason },
         };
     }
 

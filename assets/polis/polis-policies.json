@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "note": "polis interaction-rules layer (design: docs/design/food-hunger-skills-policies.md B). Highest-priority matching rule wins; no match -> domain default. Hot-reloaded on file change. 'code' supports '*' wildcards.",
+  "domains": {
+    "food": {
+      "default": "deny",
+      "rules": [
+        { "id": "forage-fruit", "match": { "category": "Fruit" }, "allow": true, "priority": 10 },
+        { "id": "cooked-meat", "match": { "code": "game:bushmeat-cooked" }, "allow": true, "priority": 20 },
+        { "id": "cooked-meat", "match": { "code": "game:redmeat-cooked" }, "allow": true, "priority": 20 },
+        { "id": "cooked-meat", "match": { "code": "game:poultry-cooked" }, "allow": true, "priority": 20 }
+      ]
+    },
+    "wear": {
+      "default": "deny",
+      "rules": []
+    },
+    "behavior": {
+      "default": "allow",
+      "rules": []
+    }
+  }
+}
