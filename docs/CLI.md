@@ -149,6 +149,7 @@ token-efficient format the agent loops consume.
 | `hunger` | Read the engine's `hunger` tree (saturation 0-1500, 5 nutrition levels, delays, health) for all bots + the player, or one bot by id: `hunger [botId]` |
 | `eat` | Engine satiety path: `eat <itemCode> [count=1]` — gives the item if missing, calls `ReceiveSaturation` with the item's per-variant `FoodNutritionProperties` (clamping, nutrition levels, sync), applies Health, maintains the 1.22 intoxication/psychedelic floats, consumes the stack, hands back `EatenStack`. Verified: `eat game:fruit-blueberry 3` = exactly +240 saturation |
 | `hungerpause` | `hungerpause [on|off]` (selected bot) — toggles the bot-level gate of the polis hunger behavior (parked bots: no active mission ⇒ no drain). The world-level gate is a file, not a command: `<VSDATA>/Saves/<world>/polis/hunger.json` with `{"hungerMode":"off"}` suspends the drain for the whole world (dev/creative/debug worlds). Both verified 2026-10-04: flat saturation while set, drain resumes on release. See `docs/design/food-hunger-skills-policies.md` (creative/dev world decision) and `src/EntityBehaviorPolisHunger.cs` |
+| `policy` | Policy layer (the interaction rules): no args → dump the live `polis-policies.json` (path + mtime + content); `policy <domain> <itemCode>` → verdict (`allow`/`deny` + reason + resolved food category). The file is committed at `assets/polis/polis-policies.json` and hot-reloaded on change (no restart) — the `eat` command is gated by it (denial = `Ok:false` with the reason, no items given) |
 
 ### View & capture
 

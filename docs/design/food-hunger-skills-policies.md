@@ -1,8 +1,11 @@
 # Design — food, hunger, policies & skills (survival pilot)
 
-Status: **proposed** (engine facts below verified by decompiling the
-1.22.7 assemblies; nothing in this doc is implemented yet). Owner: the
-polis layer.
+Status: **partially implemented** (engine facts below verified by decompiling the
+1.22.7 assemblies; the `hunger`/`eat`/`hungerpause` harness commands,
+the `EntityBehaviorPolisHunger` drain gate, and the `PolisPolicyEngine` +
+`polis-policies.json` rules layer are live in the pilot world as of
+2026-10-04; remaining: the forage skill + the food-pressure interrupt,
+then skill state/XP). Owner: the polis layer.
 Constraint that shapes everything: *whatever lands now must let a full
 system tie in later without big code rewriting* — so every pillar is
 data-driven with one evaluation seam.
@@ -142,6 +145,19 @@ start empty. A future full system (per-pawn profiles, UI, conditions)
 replaces the file schema and the evaluator internals — the call sites
 (planner filter, eat action, any future use-check) never change.
 
+**Implemented 2026-10-04** (`src/Core/PolisPolicyEngine.cs` +
+`assets/polis/polis-policies.json`): the committed file is hot-reloaded
+on mtime change (dev iteration without a restart); `match` supports
+`category` (case-insensitive `FoodNutritionProperties.FoodCategory`
+name) and `code` (`*` wildcards); highest-priority matching rule wins,
+ties broken by later rule; no match → domain default; unknown domain →
+deny. The `eat` command consults it before giving/consuming anything
+(denial: `Ok:false`, reason in the message and the command event stream
+— rejection data, not noise); `policy` (no args) dumps the live file,
+`policy <domain> <itemCode>` prints a verdict. Live-verified: blueberry
+allowed via the `Fruit` rule, raw meat denied by default, a live rule
+flip denied the next `eat` within seconds, restore re-allowed it.
+
 ### C. Skills (RimWorld-inspired, deliberately lighter)
 
 - **State:** per-bot `SkillSet` (persisted mod state): `{ name, xp,
@@ -223,13 +239,15 @@ replaces the file schema and the evaluator internals — the call sites
 
 ## 5. Build order
 
-1. ~~`polis-policies.json` + `PolicyEngine` + `eat` action~~ — `eat` action
-   shipped (harness command, engine path, live-verified 2026-10-04);
-   **the policy engine (`polis-policies.json` + tick-loop evaluator) is
-   the remaining piece of step 1** — live-verify on a berry in the pilot
-   world.
-2. Food state + forage-eat interrupt inside the first survival pilot
-   mission (fresh world is up: normal clock, survival).
+1. ~~`polis-policies.json` + `PolicyEngine` + `eat` action~~ — **done
+   2026-10-04** (all live-verified in the pilot world, including the
+   hot-reload flip test).
+2. Forage skill + food-pressure interrupt inside the first survival
+   pilot mission (fresh world is up: normal clock, survival): the
+   engine meter, the policy gate and the `eat` action it lands in are
+   all in place — the remaining piece is the forage sequence itself
+   (find bush → goto → harvest → eat) and the preemption seam in the
+   mission loop.
 3. Skill state + XP + L2 job gates — with the copper/melting-pot
    milestone (the first jobs that want a threshold).
 4. `wear`/`behavior` policy domains when the bot actually wears things.
