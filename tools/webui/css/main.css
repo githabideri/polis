@@ -364,7 +364,7 @@ details.rail-section[open] > summary::before { content: '\2013'; }
 .pad-w { grid-area: W; }
 .pad-a { grid-area: left; }
 .pad-s { grid-area: S; }
-.pad-d { grid-area: D; }
+.pad-d { grid-area: right; }
 .pad-up { grid-area: up; }
 .pad-down { grid-area: down; }
 
