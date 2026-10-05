@@ -250,6 +250,69 @@ def goto_arrive(pol, bot, cell, timeout=45):
     return False
 
 
+def recheck_and_recover(pol, bot, label=""):
+    """Embodiment recheck + one recovery attempt (2026-10-05).
+
+    The traverser sometimes lands a bot ONE BLOCK LOW: on hilly soil
+    terrain an approach candidate built at the target block's y is the
+    top-solid level, so the bot ends up standing IN the top soil layer
+    (feet cell solid, head cell air/plant). Such a bot can still move -
+    it is sunk, not wedged - so the recovery is to re-goto the correct
+    stand height for its own column (top solid + 1). A bot whose HEAD
+    cell is solid (fully buried) or whose body is clear but all four
+    neighbours solid (TRAPPED) cannot be recovered by a goto.
+
+    Returns (ok, state, detail): ok=True means the bot is standing
+    (OK or recovered-OK). ok=False means the bot is wedged/trapped
+    and the caller must abort the job with `detail`.
+    """
+    def _scan_and_classify():
+        pos = pol.state(bot)["Bot"]["Pos"]
+        bx, by, bz = int(pos[0]), int(pos[1]), int(pos[2])
+        box = pol.cmd("scan", [str(bx - 1), str(by - 2), str(bz - 1),
+                               str(bx + 1), str(by + 2), str(bz + 1)],
+                      bot)
+        blocks = (box.get("Data") or {}).get("blocks") or []
+        cellmap = {}
+        for b in blocks:
+            pb = b.get("pos")
+            code = b.get("code")
+            if pb and code and code != "game:air":
+                cellmap[(pb[0], pb[1], pb[2])] = code
+        # top solid y in the bot's own column (from the same scan)
+        top = None
+        for (cx, cy, cz), code in cellmap.items():
+            if cx == bx and cz == bz and is_solid(code):
+                top = cy if top is None else max(top, cy)
+        state, detail = _embodiment_fn(pos, cellmap)
+        return state, detail, top, (bx, by, bz)
+
+    state, detail, top, (bx, by, bz) = _scan_and_classify()
+    if state == "OK":
+        return True, state, "body clear%s" % ((" " + label) if label else "")
+    if state != "EMBEDDED":
+        # TRAPPED: no goto recovery exists (all 4 neighbours solid)
+        return False, state, "%s%s" % ((label + ": ") if label else "",
+                                       detail)
+    # EMBEDDED: try one recovery - re-goto the correct stand height
+    # (top solid + 1) in the bot's own column
+    if top is not None:
+        target = (bx, top + 1, bz)
+        v5.goto_wait(pol, bot, target, timeout=25)
+        time.sleep(2)
+        state2, detail2, _top2, _ = _scan_and_classify()
+        if state2 == "OK":
+            return True, "recovered", \
+                ("%s: was %s (feet y%d, top solid y%d) - re-goto stand "
+                 "height y%d -> OK" % (label, state, by, top, top + 1))
+        return False, state2, \
+            ("%s: recovery failed - was %s, after re-goto to y%d "
+             "still %s: %s" % (label, state, top + 1, state2, detail2))
+    # embedded but no solid in the column from the scan (odd) - abort
+    return False, state, \
+        "%s: %s (no top solid found to recover to)" % (label, detail)
+
+
 def execute_job(pol, bot, base, job, wm, run):
     """One job's actuation + oracle. Returns (ok, detail, measured,
     execution, oracle). The split is the 13.2 invariant: the ENGINE'S
@@ -588,25 +651,23 @@ def execute_job(pol, bot, base, job, wm, run):
             posn = pol.state(bot)["Bot"]["Pos"]
             fy = int(posn[1])
             max_y_seen = max(max_y_seen, fy)
-            bx, by, bz = int(posn[0]), fy, int(posn[2])
-            box = pol.cmd("scan", [str(bx - 1), str(by - 2), str(bz - 1),
-                                   str(bx + 1), str(by + 2), str(bz + 1)],
-                          bot)
-            bb = (box.get("Data") or {}).get("blocks") or []
 
-            def _bodycode(dy):
-                p = [bx, by + dy, bz]
-                return next((b.get("code") for b in bb
-                             if b.get("pos") == p), None)
-            if _bodycode(0) not in (None, "game:air") or \
-                    _bodycode(1) not in (None, "game:air"):
+            # EMBODIMENT GUARD (2026-10-05): classify the body's relation
+            # to the solid world. A SUNK bot (feet in the top soil layer,
+            # head clear) is recoverable - recheck_and_recover re-gotos
+            # the correct stand height and the loop continues. A bot whose
+            # head is solid (fully buried) or that is TRAPPED is not:
+            # abort with an honest diagnosis instead of a silent stall.
+            rec_ok, rec_state, rec_detail = recheck_and_recover(
+                pol, bot, "after %d mined" % mined)
+            if not rec_ok:
                 return (False,
-                        detail + (" | ABORT: bot wedged in solid terrain "
-                                  "(body cells solid) after %d mined" % mined),
+                        detail + (" | ABORT: %s (after %d mined)"
+                                  % (rec_detail, mined)),
                         measured, {"last_action": last_la},
                         {"block_gone": mined >= 1, "measured": measured,
                          "mined": mined, "required": need,
-                         "wedge": "embedded"})
+                         "wedge": rec_state})
             if max_y_seen - fy >= 2:
                 return (False,
                         detail + (" | ABORT: bot fell into a deep hollow "
