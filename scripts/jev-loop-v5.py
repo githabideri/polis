@@ -1102,6 +1102,24 @@ def run_once(a, pol, fault_phases):
         # (corpus: the Decider endorses goto_base over goto_target at ~0.76),
         # while the Decider's task-tuned readout is the second confirmation
         # that catches Laya false-yes. The 27B only runs on disagreement.
+        # --- pre-veto scorer (A/B on-arm): re-rank the candidate actions ----
+        # mine/harvest get the verified scorer's learned order; build and any
+        # low-margin readout abstain -> the original order stands. The decider
+        # is a T=1.3 option-letter softmax argmax that may be position-biased,
+        # so the re-ranked order is what the A/B measures; the decider still
+        # makes the call, it just sees the scorer's preference first.
+        options = list(MISSIONS[mission]["actions"])
+        scorer_out = None
+        if getattr(a, "scorer_rank", None) is not None \
+                and mission in ("mine", "harvest"):
+            try:
+                scorer_out = a.scorer_rank(state_text, options)
+                if not scorer_out.get("abstained"):
+                    options = list(scorer_out["ranked"])
+            except Exception as _se:
+                print("[scorer] rank failed: %r" % (_se,), file=sys.stderr)
+                scorer_out = None
+        # ---------------------------------------------------------------------
         reflex = laya_noul(a.openjev, state_text, proposal, mission)
         p, reflex_ms = reflex["p"], reflex["ms"]
         dref = None
@@ -1110,19 +1128,25 @@ def run_once(a, pol, fault_phases):
                 dref = decider_readout_fast(a.prompt or a.decider,
                                             a.decider_fast,
                                             a.decider_fast_model, state_text,
-                                            MISSIONS[mission]["actions"])
+                                            options)
                 if dref["error"] and a.decider:
                     dref = decider_readout(a.decider, state_text,
-                                           MISSIONS[mission]["actions"]) # CPU fallback
+                                           options) # CPU fallback
             else:
-                dref = decider_readout(a.decider, state_text, MISSIONS[mission]["actions"])
+                dref = decider_readout(a.decider, state_text, options)
         judge = None
         if needs_judge(reflex, dref, proposal, a.tau_yes, a.tau_dec, a.tau_strong):
             judge = llm_judge(a.llm, a.llm_model, state_text, proposal,
                               mission, frame_b64=_judge_frame())
         path, final, stall_bypass, p_dec = decide_cascade(
-            reflex, dref, judge, proposal, MISSIONS[mission]["actions"],
+            reflex, dref, judge, proposal, options,
             last_final, a.tau_yes, a.tau_dec, a.tau_strong)
+        # hard override: a confident scorer's top pick replaces the pick
+        if a.scorer_override and scorer_out \
+                and not scorer_out.get("abstained") \
+                and scorer_out.get("chosen") and scorer_out["chosen"] != final:
+            final = scorer_out["chosen"]
+            path += "+scorer-override"
 
         # The stall-bypass wedge shot (decide_cascade flagged the bypass).
         dashcam_frozen = None
@@ -1217,7 +1241,15 @@ def run_once(a, pol, fault_phases):
             "oracle": correct, "match": match, "fault_corrected": fault_corrected,
             "last_resort_repair": last_resort,
             "since_last_step": since,
-            "options": list(MISSIONS[mission]["actions"]),
+            "options": options,
+            "scorer": (None if scorer_out is None else {
+                "chosen": scorer_out.get("chosen"),
+                "margin": scorer_out.get("margin"),
+                "abstained": scorer_out.get("abstained"),
+                "scores": scorer_out.get("scores"),
+                "ranked": scorer_out.get("ranked"),
+                "overrode": a.scorer_override and not scorer_out.get("abstained")
+                            and scorer_out.get("chosen") == final}),
             "items": ground_items,
             "state_text": state_text, "laya_ms": reflex_ms,
             "reflex_state": reflex_state,
@@ -1394,6 +1426,19 @@ def main():
     ap.add_argument("--llm", default=os.environ.get("POLIS_LLM", "http://the 27B judge"),
                     help="27B doubt-arbiter endpoint (vLLM the 27B box on the 5600X host)")
     ap.add_argument("--llm-model", default="qwen3.8-27b-dual")
+    ap.add_argument("--scorer", action="store_true",
+                    help="pre-veto scorer A/B ON-arm: load the verified scorer "
+                         "(scorer-fly.pt) and re-rank the mission's candidate "
+                         "actions before the decider. Mine/harvest only; build "
+                         "and low-margin readouts abstain -> original order.")
+    ap.add_argument("--scorer-override", action="store_true",
+                    help="with --scorer, hard mode: when the scorer is confident "
+                         "(not abstained) its top-ranked action REPLACES the "
+                         "cascade's pick, not just the option order")
+    ap.add_argument("--scorer-dir", default=None,
+                    help="scorer bundle dir (circuit.json, vocab.json, "
+                         "scorer-fly.pt, scorer/, polis/); default <polis>/scorer "
+                         "relative to this script")
     ap.add_argument("--uid", default=None)
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
@@ -1421,6 +1466,30 @@ def main():
     else:
         a.dashcam_dir = None
 
+    # Pre-veto scorer (A/B): load once, attach to args so run_once can use it.
+    a.scorer_rank = None
+    if a.scorer:
+        sdir = a.scorer_dir or os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "scorer")
+        try:
+            import importlib.util
+            rp = os.path.join(sdir, "polis", "ranker.py")
+            spec = importlib.util.spec_from_file_location("scorer_ranker", rp)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)   # ranker.py self-inserts its root
+            a.scorer_rank = mod.load_ranker(
+                os.path.join(sdir, "circuit.json"),
+                os.path.join(sdir, "scorer-fly.pt"),
+                os.path.join(sdir, "vocab.json"))
+            a.scorer_dir = sdir
+            print("[scorer] loaded ranker from %s (override=%s)"
+                  % (sdir, a.scorer_override), file=sys.stderr, flush=True)
+        except Exception as _e:
+            a.scorer_rank = None
+            print("[scorer] FAILED to load from %s: %r -> OFF-arm"
+                  % (sdir, _e), file=sys.stderr, flush=True)
+
     all_rows, all_outcomes = [], []
     for a.run in range(1, a.repeat + 1):
         rows, outcome = run_once(a, pol, fault_phases)
@@ -1447,6 +1516,14 @@ def main():
         "world": "dist=%d%s%s%s" % (a.dist, ", no-autocollect" if a.no_autocollect else "",
                                     ", drop-after-harvest" if a.drop_after_harvest else "",
                                     ", drop-after-mine" if a.drop_after_mine else ""),
+        "scorer": ("on (override=%s, dir=%s)" % (a.scorer_override, a.scorer_dir)
+                   if getattr(a, "scorer_rank", None) is not None
+                   else ("on-failed->off" if a.scorer else "off")),
+        "scorer_calls": sum(1 for r in all_rows if r.get("scorer")),
+        "scorer_abstained": sum(1 for r in all_rows
+                                if r.get("scorer") and r["scorer"].get("abstained")),
+        "scorer_overrides": sum(1 for r in all_rows
+                                if r.get("scorer") and r["scorer"].get("overrode")),
         "runs": a.repeat, "bot": a.bot, "steps_total": n,
         "mission_complete": [o["mission_complete"] for o in all_outcomes],
         "goal_steps": [o["goal_step"] for o in all_outcomes],
