@@ -1456,9 +1456,15 @@ def main():
                                             if jobs else [])})
                 raw = json.dumps(jobs)
             else:
-                raw = json.dumps({"id": "j1", "type": "build_plan",
-                                  "plan": goal.object, "target": goal.at,
-                                  "origin": "deterministic"})
+                # external supply (12.10 (a)): the material is pre-given
+                # in step 2b, so the plan is JUST the build job - no mine.
+                # (Define `jobs` here too: run["planner"] below reads it
+                # for mine_prep; the old single-object `raw` left it
+                # unbound - UnboundLocalError, run v7.)
+                jobs = [{"id": "j1", "type": "build_plan",
+                         "plan": goal.object, "target": goal.at,
+                         "origin": "deterministic"}]
+                raw = json.dumps(jobs)
             run["planner"] = {"mode": "deterministic",
                               "chosen": {"plan": goal.object,
                                          "site": goal.at,
