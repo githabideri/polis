@@ -1285,7 +1285,13 @@ def main():
                                               "harness supply)"
                                     % (m, need_q, have_q)})
                         return finish(args.out, run, t0)
-                    shortfall = need_q - have_q
+                    # oversample (2026-10-05): a 1:1 target risks a
+                    # shortfall at the build's material preflight because
+                    # some cluster cells are buried (no air above) or
+                    # already dug, so the bot cannot mine them all. Mine
+                    # ~35% extra; the build_plan uses only what the plan
+                    # needs, the surplus stays in the backpack.
+                    shortfall = int(round(need_q * 1.35)) - have_q
                     cands = [index[k] for k in index
                              if k.startswith("res-")
                              and index[k].material == m]
