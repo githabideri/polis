@@ -29,6 +29,19 @@ EXACT_MAP = {
     "air": ("air", "air", {}),
     "dirt": ("soil", "dirt", {}),
     "soil-medium-normal": ("soil", "dirt", {}),
+    # 1.22.7 soil block: one `soil` blocktype, variants are FERTILITY
+    # (verylow/low/medium/high/compost) x grass coverage (none/normal/...),
+    # full cube (class BlockSoil, cube shape). Mining one drops exactly one
+    # `soil-{fertility}-none` item, which places the same block - the
+    # honest dirt-hut material (builds/hut-dirt.json, 2026-10-05).
+    "soil-verylow-none": ("soil", "dirt", {}),
+    "soil-verylow-normal": ("soil", "dirt", {}),
+    "soil-low-none": ("soil", "dirt", {}),
+    "soil-low-normal": ("soil", "dirt", {}),
+    "soil-high-none": ("soil", "dirt", {}),
+    "soil-high-normal": ("soil", "dirt", {}),
+    "soil-compost-none": ("soil", "dirt", {}),
+    "soil-compost-normal": ("soil", "dirt", {}),
 }
 
 # Prefix rule (on the prefix-stripped code) -> (kind, material, props-fn)

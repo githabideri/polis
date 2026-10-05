@@ -61,13 +61,18 @@ GIVE_ITEM = {
     "stone": "stone-granite",
     "rye": "crop-rye-2",
     "carrot": "crop-carrot-7",
+    # 2026-10-05: digging a soil block drops one soil-{fertility}-none
+    # item, which places the same block (the blocktype's own drop
+    # declaration). The honest dirt-hut material (builds/hut-dirt.json).
+    "dirt": "soil-low-none",
 }
 
 #: material name -> the BLOCK code a place/build of it leaves in the
 #: world (the oracle's count predicate). granite's placeable block is
 #: rock-granite (the 2026-09-28 probe: the item is stone-granite, the
 #: placed block is rock-granite).
-MATERIAL_BLOCK = {"granite": "rock-granite", "stone": "rock-granite"}
+MATERIAL_BLOCK = {"granite": "rock-granite", "stone": "rock-granite",
+                  "dirt": "soil"}
 
 
 def parse_goal_line(line):

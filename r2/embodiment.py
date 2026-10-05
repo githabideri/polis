@@ -35,7 +35,7 @@ stone) are solid; air, soil, crops and unknowns are not (the scan's
 from r2.queries import classify
 
 #: kinds that solidly block a body
-SOLID_KINDS = ("rock", "stone")
+SOLID_KINDS = ("rock", "stone", "soil")  # 2026-10-05: 1.22 soil is a full cube (class BlockSoil)
 
 
 def _strip(code):
