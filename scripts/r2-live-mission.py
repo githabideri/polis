@@ -517,7 +517,14 @@ def execute_job(pol, bot, base, job, wm, run):
         # `need` are down or the cluster is exhausted; the oracle
         # reports the shortfall (a 3-of-103 job is an honest 3-of-103,
         # never a "done").
-        cells = list(rec.cells)
+        # WALK THE MINEABLE SURFACE ONLY (2026-10-05, the failed hut
+        # run): a big soil blob is ~97% buried interior - iterating all
+        # its cells meant scanning thousands of unminable blocks. The
+        # mineable subset (top cells, computed at scan time) is what a
+        # bare hand can actually reach; the per-cell _exposed/gone
+        # guards below still guard against staleness.
+        cells = list(rec.mineable_cells) if rec.mineable_cells \
+            else list(rec.cells)
         # walk order: nearest cell first (the cluster's stored order is
         # scan order - a distance sort keeps the bot's travel short)
         bp = tuple(pol.state(bot)["Bot"]["Pos"])
@@ -728,9 +735,23 @@ def execute_job(pol, bot, base, job, wm, run):
                             {"block_gone": mined >= 1, "measured": measured,
                              "mined": mined, "required": need,
                              "wedge": "deep-hollow"})
-        ok = mined >= need
-        detail += (" | %d of %d mined (%s)"
-                   % (mined, need, ", ".join(parts[:8])))
+        # A shortfall is NOT automatically fatal (2026-10-05, the failed
+        # hut run). The loop got here either by reaching `need` or by
+        # exhausting the cluster's mineable surface (a wedge aborts inside
+        # the loop and returns before this point). An honest exhaustion
+        # that still mined at least one block is a SOFT SUCCESS: the
+        # build_plan's material preflight is the authoritative gate for
+        # whether the total inventory is enough. Parking the whole
+        # shortfall on one cluster had made a 74/139 partial read as a
+        # fatal goal abort before the build's preflight could decide.
+        reached = mined >= need
+        partial = (not reached) and (mined >= 1)
+        ok = reached or partial
+        detail += (" | %d of %d mined%s (%s)"
+                   % (mined, need,
+                      "" if reached
+                      else (" (surface exhausted)" if partial else ""),
+                      ", ".join(parts[:8])))
         if len(parts) > 8:
             detail += " ... (+%d more cells)" % (len(parts) - 8)
         return ok, detail, measured, \
@@ -739,7 +760,8 @@ def execute_job(pol, bot, base, job, wm, run):
              "approach_attempts": last_attempts,
              "cells_tried": len(parts)}, \
             {"block_gone": mined >= 1, "measured": measured,
-             "mined": mined, "required": need}
+             "mined": mined, "required": need,
+             "reached": reached, "partial": partial}
 
     if job.type == "build":
         fix = wm.fixtures.get(job.target)
@@ -1261,7 +1283,8 @@ def main():
             bp5 = st["Bot"]["Pos"]
             prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
                                                  center=(bp5[0], 0,
-                                                         bp5[2]))
+                                                         bp5[2]),
+                                                 max_candidates=64)
             if getattr(goal, "supply", None) != "external":
                 # mine-prep (2026-10-05): a short inventory is not a
                 # rejection when the missing material is hand-minable
@@ -1301,7 +1324,16 @@ def main():
                     for rec in cands:
                         if shortfall <= 0:
                             break
-                        take = min(shortfall, len(rec.cells))
+                        # allocate by the MINEABLE surface (top cells), not
+                        # the full cell count - a big blob is ~97% buried
+                        # interior, so len(cells) overstates what a bare
+                        # hand can reach. Using the mineable count spreads
+                        # the shortfall across several clusters instead of
+                        # parking it all on the nearest one.
+                        n_mine = (len(rec.mineable_cells)
+                                  if rec.mineable_cells
+                                  else len(rec.cells))
+                        take = min(shortfall, n_mine)
                         if take <= 0:
                             continue
                         jobs.append({"id": "j%d" % (len(jobs) + 1),

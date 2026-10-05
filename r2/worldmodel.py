@@ -67,6 +67,11 @@ class ResourceRecord:
         self.code = code
         self.properties = dict(properties)
         self.cells = list(cells)
+        self.mineable_cells = None   # the MINEABLE surface subset: cells
+                                     # whose layer ABOVE is not solid
+                                     # (the rest are buried interior cells
+                                     # a bare hand cannot reach). Set by
+                                     # observe_scan from the raw scan.
         self.centroid = None
         self.observed_quantity = len(cells)
         self.is_complete_extent = False
@@ -184,6 +189,9 @@ class WorldModel:
                                       # view; JobQueue owns the claims)
         self._res_seq = 0
         self._obs_log = []            # (seq, reason, kind, target) - provenance
+        self._solid_cells = set()     # (x,y,z) of solid blocks in the last
+                                      # scan - used to mark the mineable
+                                      # (top) surface of each cluster
 
     # --------------------------------------------------------- sequence ----
 
@@ -202,12 +210,20 @@ class WorldModel:
         records at the current sequence value (12.2/12.3). Returns the
         touched ResourceRecords."""
         from r2 import queries
+        from r2.embodiment import is_solid
         now = time.monotonic() * 1000.0
         wall = int(time.time() * 1000)
         self._obs_log.append((self.seq, reason, "scan", caused_by))
+        raw_blocks = (scan_resp.get("Data") or {}).get("blocks", []) or []
+        # the solid surface of the scanned region - a cluster cell whose
+        # layer above is solid is buried interior and a bare hand cannot
+        # mine it (the failed hut run learned this the hard way: a big
+        # soil blob is ~97% buried, so allocating to len(cells) is a lie).
+        self._solid_cells = {tuple(b["pos"]) for b in raw_blocks
+                             if b.get("code") and b.get("pos")
+                             and is_solid(b["code"])}
         out = []
-        for cl in queries.cluster_cells(
-                (scan_resp.get("Data") or {}).get("blocks", [])):
+        for cl in queries.cluster_cells(raw_blocks):
             key = (cl["kind"], cl["material"], tuple(cl["centroid"]))
             rid = self._resource_keys.get(key)
             if rid is None:
@@ -220,6 +236,13 @@ class WorldModel:
                     source="fixture" if reason == "fixture_setup" else "scan")
             rec = self.resources[rid]
             rec.cells = cl["cells"]
+            # the mineable surface: cluster cells with a non-solid layer
+            # above (open to the sky). A cell whose above is outside the
+            # scan window is treated as open (a benign false positive -
+            # the per-cell pre-check at mine time still guards it).
+            sc = self._solid_cells
+            rec.mineable_cells = [c for c in cl["cells"]
+                                  if (c[0], c[1] + 1, c[2]) not in sc]
             rec.centroid = cl["centroid"]
             rec.observed_quantity = cl["observed_quantity"]
             rec.properties.update(cl["properties"])
