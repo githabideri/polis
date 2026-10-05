@@ -642,7 +642,35 @@ def execute_job(pol, bot, base, job, wm, run):
             return True
 
         max_y_seen = int(pol.state(bot)["Bot"]["Pos"][1])
-        for cell in cells:
+        # v6 (2026-10-05): RE-TARGET DURING the job. v5's cell list was
+        # sorted by the START position; once the few nearest were mined
+        # the bot walked to far list cells while ignoring the ones that
+        # became exposed beside it, and stalled at 3 of 139. Re-scan every
+        # few iterations for cells CURRENTLY exposed near the bot's
+        # current position (nearest first): it keeps digging its local
+        # area instead of wandering. `tried` avoids revisits; a bounded
+        # attempt count stops infinite churn. Mining still yields ~1 block
+        # per column (the self-guard forbids digging one's own support),
+        # so local density is what the re-targeting buys.
+        tried = set()
+        cells_tried = 0
+        max_cells_tried = need + 80
+        scan_every = 3
+        iters_since_scan = 0
+        while mined < need and cells_tried < max_cells_tried:
+            iters_since_scan += 1
+            if iters_since_scan >= scan_every or not cells:
+                iters_since_scan = 0
+                bp2 = tuple(pol.state(bot)["Bot"]["Pos"])
+                fresh = _fresh_exposed(pol, bot, rec, wm, target_mat)
+                cells = [c for c in fresh if c not in tried]
+                cells.sort(key=lambda c: abs(c[0] - bp2[0]) +
+                           abs(c[2] - bp2[2]))
+            if not cells:
+                break
+            cell = cells.pop(0)
+            tried.add(cell)
+            cells_tried += 1
             if mined >= need:
                 break
             if _in_site(cell):
