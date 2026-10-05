@@ -84,10 +84,17 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None):
         except ValueError as e:
             return None, Failure(
                 "planner_invalid_json", "%s" % e, job_id=jid)
-        if j.quantity and j.quantity > MAX_QUANTITY:
+        # a build-plan goal sizes its acquisition to the plan (the 103-
+        # block hut needs a 103-block mine - that is not a plan smell).
+        # 2026-10-05.
+        cap = MAX_QUANTITY
+        if goal is not None and \
+                getattr(goal, "verb", None) == "build-plan":
+            cap = max(MAX_QUANTITY, 150)
+        if j.quantity and j.quantity > cap:
             return None, Failure(
                 "planner_invalid_json",
-                "quantity %d exceeds the %d cap" % (j.quantity, MAX_QUANTITY),
+                "quantity %d exceeds the %d cap" % (j.quantity, cap),
                 job_id=jid)
         # build_plan is GOAL-SCOPED (13.11): it exists in the catalog
         # but only the deterministic compiler may emit it - a planner

@@ -74,6 +74,11 @@ GIVE_ITEM = {
 MATERIAL_BLOCK = {"granite": "rock-granite", "stone": "rock-granite",
                   "dirt": "soil"}
 
+#: materials a bare hand mines (no harness tool privilege - the honest
+#: survival path: soil breaks by hand in 1.22, so the dirt hut needs no
+#: iron where the world gives none). 2026-10-05.
+HAND_MINABLE = {"dirt"}
+
 
 def parse_goal_line(line):
     """'place granite at site-A x1 supply external' ->
@@ -106,7 +111,7 @@ def parse_goal_line(line):
     return goal
 
 
-def boot(pol, radius=12):
+def boot(pol, radius=14):
     """Fresh bot + first world observation. Returns (bot, wm, state)."""
     pol.sweep_bots(keep=None)
     time.sleep(2)
@@ -118,9 +123,13 @@ def boot(pol, radius=12):
     pos = st["Bot"]["Pos"]
     wm = WorldModel()
     wm.new_tick(reason="planner_scan")
-    x0, z0 = int(pos[0]), int(pos[2])
-    scan = pol.cmd("scan", [str(x0 - radius), "2", str(z0 - radius),
-                            str(x0 + radius), "6", str(z0 + radius)], bot)
+    x0, y0, z0 = int(pos[0]), int(pos[1]), int(pos[2])
+    # bot-relative box (2026-10-05): the flat world lived at y2-6; the
+    # Standard terrain of a survival world lives at y140+ - a hard-coded
+    # low box scans the void (or the hillside) there.
+    scan = pol.cmd("scan", [str(x0 - radius), str(y0 - 4), str(z0 - radius),
+                            str(x0 + radius), str(y0 + 8), str(z0 + radius)],
+                   bot)
     wm.observe_scan(scan, reason="planner_scan")
     return bot, wm, st
 
@@ -148,7 +157,7 @@ def normalize_inv(inv):
     return out
 
 
-def register_site(wm, pol, bot, goal, fixtures):
+def register_site(wm, pol, bot, goal, fixtures, operator_site=None):
     """Make sure the goal's site exists as a fixture (we created it -
     authoritative identity, doc 5.3). Convention (the one the P5
     fixtures use, e.g. C3): a build-site's REQUIREMENT is an empty
@@ -182,17 +191,21 @@ def register_site(wm, pol, bot, goal, fixtures):
             wm.register_fixture(goal.at, "farmland", cell, "farmland")
             wm.observe_fixture(goal.at, True, reason="fixture_setup:%s" % src)
         else:
-            cell, empty = None, False
-            for dx in range(2, 6):
-                cand = (bx + dx, 3, bz)
-                blocks = pol.cell_blocks(bot, cand, pad=0)
-                filled = any(b.get("pos") == [cand[0], cand[1], cand[2]]
-                             for b in blocks)
-                if not filled:
-                    cell, empty = list(cand), True
-                    break
-            if cell is None:  # everything filled - the site cannot be a
-                cell = [bx + 2, 3, bz]   # place target (empty cell absent)
+            by = int(pos[1])  # the bot's own standing layer (2026-10-05)
+            if operator_site:  # the operator surveyed the spot (run JSON)
+                cell = list(operator_site)
+            else:
+                cell, empty = None, False
+                for dx in range(2, 6):
+                    cand = (bx + dx, by, bz)
+                    blocks = pol.cell_blocks(bot, cand, pad=0)
+                    filled = any(b.get("pos") == [cand[0], cand[1],
+                                                  cand[2]] for b in blocks)
+                    if not filled:
+                        cell, empty = list(cand), True
+                        break
+                if cell is None:  # everything filled - the site cannot
+                    cell = [bx + 2, by, bz]  # be a place target
             wm.register_fixture(goal.at, "build-site", cell, "empty")
             wm.observe_fixture(goal.at, empty, reason="fixture_setup")
     for fid, f in sorted(wm.fixtures.items()):
@@ -389,11 +402,20 @@ def execute_job(pol, bot, base, job, wm, run):
             return (False, "resource %s vanished from the model" % job.source,
                     measured, {}, {"block_gone": None,
                                    "measured": measured})
-        cell = rec.cells[0]
-        pre = inventory_of(pol.state(bot))
-        # the mine path needs a tool (granite is tier 2): v5's mission
-        # setup gave one implicitly; the live orchestrator does the same
-        # deterministically and records it (harness privilege)
+        need = job.quantity or 1
+        # 2026-10-05: the quantity loop. A cluster holds more blocks
+        # than one approach+act pair, so walk the cluster's cells until
+        # `need` are down or the cluster is exhausted; the oracle
+        # reports the shortfall (a 3-of-103 job is an honest 3-of-103,
+        # never a "done").
+        cells = list(rec.cells)
+        # walk order: nearest cell first (the cluster's stored order is
+        # scan order - a distance sort keeps the bot's travel short)
+        bp = tuple(pol.state(bot)["Bot"]["Pos"])
+        cells.sort(key=lambda c: abs(c[0] - bp[0]) + abs(c[2] - bp[2]))
+        # the mine path needs a tool (granite is tier 2) - EXCEPT
+        # hand-minable material: no harness privilege where the world
+        # gives none (the honest survival path)
         st0 = pol.state(bot)
         b0 = st0.get("Bot") or {}
         tool_codes = set()
@@ -402,98 +424,111 @@ def execute_job(pol, bot, base, job, wm, run):
             if it and it.get("Code"):
                 tool_codes.add(it["Code"])
         for it in (b0.get("Backpack") or []):
-            if it.get("Code"):
+            if it and it.get("Code"):
                 tool_codes.add(it["Code"])
-        if job.type == "mine" and not any(
-                (t or "").startswith(("pickaxe", "shovel", "axe", "hoe"))
-                for t in tool_codes):
+        has_tool = any((t or "").startswith(
+            ("pickaxe", "shovel", "axe", "hoe")) for t in tool_codes)
+        if job.type == "mine" and not has_tool and \
+                classify(rec.code)[1] not in HAND_MINABLE:
             tr = pol.cmd("give", ["pickaxe-iron", "1"], bot)
-            pre = inventory_of(pol.state(bot))
             detail = ("%s %s -> gave pickaxe-iron ok=%s; "
                       % (job.type, rec.code, bool(tr.get("Ok"))))
         else:
             detail = "%s %s -> " % (job.type, rec.code)
-        # 13.6 step 1: APPROACH resolution. goto(position) and
-        # approach(target, interaction) are separate concepts: a mine/
-        # harvest job means "interact successfully with the target
-        # block" - for an occupied solid block the valid destinations
-        # are the neighbouring walkable cells. The driver walks the
-        # candidates (target first, then neighbours by distance, solids
-        # filtered), retries on stuck/range/LOS, and stops on a
-        # definitive engine verdict. From the queue's perspective this
-        # whole loop is ONE job attempt; the per-candidate log goes to
-        # the run JSON.
         cmd_name = {"mine": "mine", "harvest": "harvestcrop"}.get(job.type)
-        solid = [b["pos"] for b in pol.cell_blocks(bot, cell, pad=2)
-                 if (b.get("code") or "") != "game:air"]
-        from_pos = tuple(pol.state(bot)["Bot"]["Pos"])
-
-        def _goto(c):
-            return v5.goto_wait(pol, bot, c, timeout=25)
-
-        def _act():
-            r = pol.cmd(cmd_name, [str(cell[0]), str(cell[1]),
-                                   str(cell[2]), "true"], bot)
-            st_p = pol.state(bot)
-            pre_ms = st_p.get("LastActionMs") or 0
-            t0 = time.time()
-            la2 = {}
-            while time.time() - t0 < 45:
-                st2 = pol.state(bot)
-                la2 = st2.get("LastAction") or {}
-                if la2.get("Name") in (cmd_name, job.type) \
-                        and la2.get("Ok") is not None \
-                        and (st2.get("LastActionMs") or 0) > pre_ms:
-                    break
-                time.sleep(1)
-            return {"ok": la2.get("Ok") is True, "last_action": la2}
-
-        if cmd_name is not None:
-            aok, adetail, attempts, la = r2approach.approach(
-                _goto, _act, from_pos, cell, solid)
-        else:
-            # pickup targets an ITEM entity, not a block cell - v5's
-            # item-entity approach stands
-            res = v5.execute(pol, bot, "pickup_item", cell, base, "pickup")
-            la = pol.state(bot).get("LastAction") or {}
-            aok = bool(res.get("ok"))
-            adetail = ("pickup -> %s" % (res.get("msg") or
-                                         la.get("Msg") or ""))
-            attempts = []
-        # the drop lands in the cargo ASYNCHRONOUSLY (measured ~8 s after
-        # the block is gone, run 12) - poll for it instead of a fixed
-        # sleep; the block-gone check and the cargo diff are separate
-        # oracles on the same fresh observations
-        blocks = pol.cell_blocks(bot, cell)
-        # 'gone' must be vacuity-proof: an empty scan (failure, air box)
-        # is NOT proof the block is gone - the box always contains the
-        # ground layer, so a non-empty scan is expected
-        gone = bool(blocks) and not any(
-            b.get("code") == rec.code and b.get("pos") == list(cell)
-            for b in blocks)
-        la_ok = la.get("Name") in ("mine", "mine_target", "harvestcrop",
-                                   "harvest_target", "pickup",
-                                   "pickup_item") \
-            and la.get("Ok") is True
-        post = {}
-        for _ in range(9):  # up to ~18 s for the cargo registration
-            time.sleep(2)
-            post = inventory_of(pol.state(bot))
-            if any(post.get(k, 0) > pre.get(k, 0)
-                   for k in set(pre) | set(post)):
+        mined, parts = 0, []
+        last_la, last_attempts = {}, []
+        for cell in cells:
+            if mined >= need:
                 break
-        for k in set(pre) | set(post):
-            if post.get(k, 0) > pre.get(k, 0):
-                measured[k] = post.get(k, 0) - pre.get(k, 0)
-        ok = aok and gone
-        detail += (" | %s | last_action_ok=%s (%s) gone=%s measured=%s"
-                   % (adetail, la.get("Ok"), (la.get("Msg") or "")[:60],
-                      gone, measured))
+            # cheap staleness check: a cell whose block is already gone
+            # costs an approach for nothing
+            bs0 = pol.cell_blocks(bot, tuple(cell), pad=0) or []
+            if not any(b.get("pos") == list(cell) and
+                       (b.get("code") or "") == rec.code for b in bs0):
+                parts.append("%s:already-gone" % (cell,))
+                continue
+            pre = inventory_of(pol.state(bot))
+            # 13.6 step 1: APPROACH resolution (per cell). goto and
+            # approach are separate concepts: a mine job means "interact
+            # successfully with the target block" - for an occupied
+            # solid block the valid destinations are the neighbouring
+            # walkable cells. The driver walks the candidates and stops
+            # on a definitive engine verdict.
+            solid = [b["pos"] for b in pol.cell_blocks(bot, cell, pad=2)
+                     if (b.get("code") or "") != "game:air"]
+            from_pos = tuple(pol.state(bot)["Bot"]["Pos"])
+
+            def _goto(c):
+                return v5.goto_wait(pol, bot, c, timeout=25)
+
+            def _act():
+                r = pol.cmd(cmd_name, [str(cell[0]), str(cell[1]),
+                                       str(cell[2]), "true"], bot)
+                st_p = pol.state(bot)
+                pre_ms = st_p.get("LastActionMs") or 0
+                t_a = time.time()
+                la2 = {}
+                while time.time() - t_a < 45:
+                    st2 = pol.state(bot)
+                    la2 = st2.get("LastAction") or {}
+                    if la2.get("Name") in (cmd_name, job.type) \
+                            and la2.get("Ok") is not None \
+                            and (st2.get("LastActionMs") or 0) > pre_ms:
+                        break
+                    time.sleep(1)
+                return {"ok": la2.get("Ok") is True, "last_action": la2}
+
+            if cmd_name is not None:
+                aok, adetail, attempts, la = r2approach.approach(
+                    _goto, _act, from_pos, cell, solid)
+            else:
+                # pickup targets an ITEM entity, not a block cell -
+                # v5's item-entity approach stands
+                res = v5.execute(pol, bot, "pickup_item", cell, base,
+                                 "pickup")
+                la = pol.state(bot).get("LastAction") or {}
+                aok = bool(res.get("ok"))
+                adetail = ("pickup -> %s" % (res.get("msg") or
+                                             la.get("Msg") or ""))
+                attempts = []
+            last_la, last_attempts = la, attempts
+            # the drop lands in the cargo ASYNCHRONOUSLY (~8 s, run 12)
+            # - poll for it instead of a fixed sleep; the block-gone
+            # check and the cargo diff are separate oracles
+            blocks = pol.cell_blocks(bot, cell)
+            gone = bool(blocks) and not any(
+                b.get("code") == rec.code and b.get("pos") == list(cell)
+                for b in blocks)
+            post = {}
+            for _ in range(9):  # up to ~18 s for the cargo registration
+                time.sleep(2)
+                post = inventory_of(pol.state(bot))
+                if any(post.get(k, 0) > pre.get(k, 0)
+                       for k in set(pre) | set(post)):
+                    break
+            for k in set(pre) | set(post):
+                if post.get(k, 0) > pre.get(k, 0):
+                    measured[k] = measured.get(k, 0) + \
+                        (post.get(k, 0) - pre.get(k, 0))
+            if aok and gone:
+                mined += 1
+                parts.append("%s:down" % (cell,))
+            else:
+                parts.append("%s:failed(ok=%s gone=%s)"
+                             % (cell, la.get("Ok"), gone))
+        ok = mined >= need
+        detail += (" | %d of %d mined (%s)"
+                   % (mined, need, ", ".join(parts[:8])))
+        if len(parts) > 8:
+            detail += " ... (+%d more cells)" % (len(parts) - 8)
         return ok, detail, measured, \
-            {"last_action": {k: la.get(k) for k in
+            {"last_action": {k: last_la.get(k) for k in
                              ("Name", "Ok", "Msg")},
-             "approach_attempts": attempts}, \
-            {"block_gone": gone, "measured": measured}
+             "approach_attempts": last_attempts,
+             "cells_tried": len(parts)}, \
+            {"block_gone": mined >= 1, "measured": measured,
+             "mined": mined, "required": need}
 
     if job.type == "build":
         fix = wm.fixtures.get(job.target)
@@ -604,7 +639,42 @@ def execute_job(pol, bot, base, job, wm, run):
         origin = list(fix.cell)
         w, d = plan.footprint
 
+        # material preflight (2026-10-05): 103 phantom place attempts
+        # with an empty cargo are not a mission - check the cargo once,
+        # before ANY cell, and say what is missing.
+        inv_now = normalize_inv(inventory_of(pol.state(bot)))
+        short = {m: (q, inv_now.get(m, 0))
+                 for m, q in plan.materials.items()
+                 if inv_now.get(m, 0) < q}
+        if short:
+            return (False, "build-plan %s: material short - %s (the "
+                    "mine jobs must land first)"
+                    % (job.plan,
+                       ", ".join("%s need %d have %d"
+                                 % (m, q, h)
+                                 for m, (q, h) in
+                                 sorted(short.items()))),
+                    measured, {}, {"cells": None})
+
         def _item(m):
+            # dirt: use the soil-<variant> the bot actually carries
+            # (a soil-low-normal block drops soil-low-none - but another
+            # fertility cluster drops its own code, and the place
+            # command matches the exact block). 2026-10-05.
+            if m == "dirt":
+                have = {}
+                b = (pol.state(bot).get("Bot") or {})
+                for k in ("RightHand", "LeftHand"):
+                    it = b.get(k)
+                    if it and (it.get("Code") or "").startswith("soil"):
+                        have[it["Code"]] = have.get(it["Code"], 0) + \
+                            (it.get("Qty") or 1)
+                for it in (b.get("Backpack") or []):
+                    if it and (it.get("Code") or "").startswith("soil"):
+                        have[it["Code"]] = have.get(it["Code"], 0) + \
+                            (it.get("Qty") or 1)
+                if have:
+                    return sorted(have, key=lambda c: -have[c])[0]
             return GIVE_ITEM.get(m, m)
 
         def _prefix(m):
@@ -866,6 +936,10 @@ def main():
     ap.add_argument("--llm-model", default="")
     ap.add_argument("--goal", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--site", default="",
+                    help="operator-declared build-site 'x,y,z' (the "
+                         "driver registers it as the goal's site fixture, "
+                         "logged in the run JSON)")
     ap.add_argument("--pregive", action="append", default=[],
                     help="external setup before the goal: '<item> <qty>' "
                          "(logged in the run JSON - a harness privilege, "
@@ -929,7 +1003,17 @@ def main():
             st = pol.state(bot)
 
     inv = normalize_inv(inventory_of(st))
-    fixtures = register_site(wm, pol, bot, goal, None)
+    op_site = None
+    if args.site:
+        try:
+            op_site = [int(v) for v in args.site.split(",")]
+            assert len(op_site) == 3
+        except ValueError:
+            run.update({"outcome": "rejected",
+                        "reason": "--site must be 'x,y,z' ints"})
+            return finish(args.out, run, t0)
+        run["site"] = {"declared": op_site, "origin": "operator"}
+    fixtures = register_site(wm, pol, bot, goal, None, op_site)
     gfail = check_goal(goal, [f["id"] for f in fixtures])
     if gfail is not None:
         run.update({"outcome": "rejected",
@@ -963,26 +1047,75 @@ def main():
                             % (goal.object, avail)})
                 return finish(args.out, run, t0)
             bp = _bp.load_plan(plan_path)
-            if getattr(goal, "supply", None) != "external":
-                missing = {m: (q, inv.get(m, 0))
-                           for m, q in bp.materials.items()
-                           if inv.get(m, 0) < q}
-                if missing:
-                    run.update({"outcome": "rejected",
-                                "reason": "resource_not_found: %s "
-                                          "(declare 'supply external' "
-                                          "for harness supply)"
-                                % ", ".join("%s need %d have %d" % (m, q, h)
-                                            for m, (q, h) in
-                                            sorted(missing.items()))})
-                    return finish(args.out, run, t0)
             bp5 = st["Bot"]["Pos"]
-            raw = json.dumps({"id": "j1", "type": "build_plan",
-                              "plan": goal.object, "target": goal.at,
-                              "origin": "deterministic"})
             prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
                                                  center=(bp5[0], 0,
                                                          bp5[2]))
+            if getattr(goal, "supply", None) != "external":
+                # mine-prep (2026-10-05): a short inventory is not a
+                # rejection when the missing material is hand-minable
+                # in the scanned world - the compiler walks the
+                # clusters (nearest first, as the planner would) and
+                # prepends one mine job per cluster until the shortfall
+                # is covered. The plan is [mine.., build_plan]; the
+                # ledger and the build_plan's own material preflight
+                # both still apply (unknown is never yes).
+                missing = {m: (q, inv.get(m, 0))
+                           for m, q in bp.materials.items()
+                           if inv.get(m, 0) < q}
+                jobs = []
+                for m, (need_q, have_q) in sorted(missing.items()):
+                    if m not in HAND_MINABLE:
+                        run.update({"outcome": "rejected",
+                                    "reason": "resource_not_found: %s "
+                                              "need %d have %d (not "
+                                              "hand-minable - declare "
+                                              "'supply external' for "
+                                              "harness supply)"
+                                    % (m, need_q, have_q)})
+                        return finish(args.out, run, t0)
+                    shortfall = need_q - have_q
+                    cands = [index[k] for k in index
+                             if k.startswith("res-")
+                             and index[k].material == m]
+                    cands.sort(key=lambda r: abs(
+                        (r.centroid or [0, 0, 0])[0] - bp5[0]) + abs(
+                        (r.centroid or [0, 0, 0])[2] - bp5[2]))
+                    for rec in cands:
+                        if shortfall <= 0:
+                            break
+                        take = min(shortfall, len(rec.cells))
+                        if take <= 0:
+                            continue
+                        jobs.append({"id": "j%d" % (len(jobs) + 1),
+                                     "type": "mine",
+                                     "source": rec.id, "material": m,
+                                     "quantity": take,
+                                     "origin": "deterministic",
+                                     "depends_on": ([jobs[-1]["id"]]
+                                                    if jobs else [])})
+                        shortfall -= take
+                    if shortfall > 0:
+                        run.update({"outcome": "rejected",
+                                    "reason": "resource_not_found: %s: "
+                                              "scanned clusters cover "
+                                              "%d of %d (declare 'supply "
+                                              "external' for harness "
+                                              "supply)"
+                                    % (m, (need_q - have_q) - shortfall,
+                                       need_q - have_q)})
+                        return finish(args.out, run, t0)
+                jobs.append({"id": "j%d" % (len(jobs) + 1),
+                             "type": "build_plan",
+                             "plan": goal.object, "target": goal.at,
+                             "origin": "deterministic",
+                             "depends_on": ([jobs[-1]["id"]]
+                                            if jobs else [])})
+                raw = json.dumps(jobs)
+            else:
+                raw = json.dumps({"id": "j1", "type": "build_plan",
+                                  "plan": goal.object, "target": goal.at,
+                                  "origin": "deterministic"})
             run["planner"] = {"mode": "deterministic",
                               "chosen": {"plan": goal.object,
                                          "site": goal.at,
@@ -990,11 +1123,18 @@ def main():
                                          "supply": "external"
                                          if getattr(goal, "supply",
                                                     None) == "external"
-                                         else "inventory"},
+                                         else "inventory",
+                                         "mine_prep": [
+                                             {"job": j["id"],
+                                              "material": j["material"],
+                                              "source": j["source"],
+                                              "quantity": j["quantity"]}
+                                             for j in jobs
+                                             if j["type"] == "mine"]},
                               "candidates": sorted(index)}
-            jobs, failure = validate_plan(raw, index, inv, goal=goal)
+            jobs_v, failure = validate_plan(raw, index, inv, goal=goal)
             run["plan"] = {"raw": raw, "latency_ms": 0,
-                           "jobs": [j.to_dict() for j in jobs] if jobs else None,
+                           "jobs": [j.to_dict() for j in jobs_v] if jobs_v else None,
                            "failure": failure.to_dict() if failure else None}
         elif goal.verb == "build":
             # the ring platform (09-28): ONE composite job that places
