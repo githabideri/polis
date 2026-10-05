@@ -290,10 +290,19 @@ def recheck_and_recover(pol, bot, label=""):
     state, detail, top, (bx, by, bz) = _scan_and_classify()
     if state == "OK":
         return True, state, "body clear%s" % ((" " + label) if label else "")
-    if state != "EMBEDDED":
-        # TRAPPED: no goto recovery exists (all 4 neighbours solid)
-        return False, state, "%s%s" % ((label + ": ") if label else "",
-                                       detail)
+    if state == "TRAPPED":
+        # "all 4 foot-level neighbours solid" is a 1-block dip on hilly
+        # terrain, not a sealed pit: the VS agent auto-climbs ONE block,
+        # so if any neighbour's stand height is within 1 block the bot
+        # walks out. Only a pit whose walls are all >=2 blocks up is
+        # genuinely inescapable.
+        up_ok, up_detail = climb_out_possible(pol, bot)
+        if up_ok:
+            return True, "trapped-but-climbable", \
+                ("%s: %s but %s (continuing)" % (label, detail,
+                                                 up_detail))
+        return False, state, \
+            ("%s: %s and %s (no climb-out)" % (label, detail, up_detail))
     # EMBEDDED: try one recovery - re-goto the correct stand height
     # (top solid + 1) in the bot's own column
     if top is not None:
