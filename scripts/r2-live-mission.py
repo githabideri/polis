@@ -313,6 +313,41 @@ def recheck_and_recover(pol, bot, label=""):
         "%s: %s (no top solid found to recover to)" % (label, detail)
 
 
+def climb_out_possible(pol, bot):
+    """Can the bot walk/climb out of where it stands? (2026-10-05)
+
+    The VS agent auto-climbs ONE block; it cannot scale a 2-block wall.
+    A bot that has descended is only stuck in a deep hollow if EVERY
+    horizontal neighbour's standing height (top solid + 1) is >=2
+    blocks above its feet. If any neighbour is within 1 block (or lower
+    - an easy walk), the bot is on open ground, not in a pit, and the
+    descent is normal terrain. Returns (possible, detail).
+    """
+    pos = pol.state(bot)["Bot"]["Pos"]
+    bx, by, bz = int(pos[0]), int(pos[1]), int(pos[2])
+    box = pol.cmd("scan", [str(bx - 1), str(by - 2), str(bz - 1),
+                           str(bx + 1), str(by + 2), str(bz + 1)], bot)
+    blocks = (box.get("Data") or {}).get("blocks") or []
+    tops = {}
+    for b in blocks:
+        pb, code = b.get("pos"), b.get("code") or ""
+        if pb and (is_solid(code)):
+            tops[(pb[0], pb[2])] = max(tops.get((pb[0], pb[2]), pb[1]), pb[1])
+    best = None
+    for (nx, nz) in ((bx + 1, bz), (bx - 1, bz), (bx, bz + 1), (bx, bz - 1)):
+        t = tops.get((nx, nz))
+        if t is None:
+            continue  # no solid in that column from this scan
+        climb = (t + 1) - by  # neighbour stand height minus bot feet
+        best = climb if best is None else min(best, climb)
+    if best is None:
+        # no solid neighbours found - treat as open ground (not a pit)
+        return True, "no walled neighbours (open ground)"
+    if best <= 1:
+        return True, "climbable neighbour (%d block up)" % best
+    return False, "all %d neighbours >=2 blocks up (deep hollow)" % best
+
+
 def execute_job(pol, bot, base, job, wm, run):
     """One job's actuation + oracle. Returns (ok, detail, measured,
     execution, oracle). The split is the 13.2 invariant: the ENGINE'S
@@ -669,14 +704,21 @@ def execute_job(pol, bot, base, job, wm, run):
                          "mined": mined, "required": need,
                          "wedge": rec_state})
             if max_y_seen - fy >= 2:
-                return (False,
-                        detail + (" | ABORT: bot fell into a deep hollow "
-                                  "(feet y%d, max y%d) after %d mined"
-                                  % (fy, max_y_seen, mined)),
-                        measured, {"last_action": last_la},
-                        {"block_gone": mined >= 1, "measured": measured,
-                         "mined": mined, "required": need,
-                         "wedge": "deep-hollow"})
+                # descended 2+ blocks - but that is normal on hilly
+                # terrain. Only a bot with NO climbable neighbour is
+                # truly stuck in a deep hollow (the VS agent climbs 1,
+                # not 2). A 1-block-up neighbour means open ground.
+                up_ok, up_detail = climb_out_possible(pol, bot)
+                if not up_ok:
+                    return (False,
+                            detail + (" | ABORT: bot in a deep hollow "
+                                      "(feet y%d, max y%d; %s) after %d "
+                                      "mined"
+                                      % (fy, max_y_seen, up_detail, mined)),
+                            measured, {"last_action": last_la},
+                            {"block_gone": mined >= 1, "measured": measured,
+                             "mined": mined, "required": need,
+                             "wedge": "deep-hollow"})
         ok = mined >= need
         detail += (" | %d of %d mined (%s)"
                    % (mined, need, ", ".join(parts[:8])))
