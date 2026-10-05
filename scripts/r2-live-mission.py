@@ -194,6 +194,8 @@ def register_site(wm, pol, bot, goal, fixtures, operator_site=None):
             by = int(pos[1])  # the bot's own standing layer (2026-10-05)
             if operator_site:  # the operator surveyed the spot (run JSON)
                 cell = list(operator_site)
+                blocks = pol.cell_blocks(bot, tuple(cell), pad=0)
+                empty = not any(b.get("pos") == cell for b in blocks)
             else:
                 cell, empty = None, False
                 for dx in range(2, 6):
