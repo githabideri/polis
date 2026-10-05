@@ -440,15 +440,45 @@ def execute_job(pol, bot, base, job, wm, run):
         cmd_name = {"mine": "mine", "harvest": "harvestcrop"}.get(job.type)
         mined, parts = 0, []
         last_la, last_attempts = {}, []
+
+        def _in_site(c):
+            # a hole in the footprint is a hole in the floor - never
+            # mine inside (or at the edge of) a declared build site
+            for f in wm.fixtures.values():
+                if f.kind == "build-site" and f.cell:
+                    ox, oz = f.cell[0], f.cell[2]
+                    if ox - 1 <= c[0] <= ox + 6 and oz - 1 <= c[2] <= oz + 6:
+                        return True
+            return False
+
+        def _exposed(c):
+            # only the surface is directly mineable: a buried cell's
+            # top must be walkable
+            a = [c[0], c[1] + 1, c[2]]
+            ab = pol.cell_blocks(bot, tuple(a), pad=0) or []
+            for b in ab:
+                if b.get("pos") == a and (b.get("code") or "") != "game:air":
+                    return False
+            return True
+
         for cell in cells:
             if mined >= need:
                 break
-            # cheap staleness check: a cell whose block is already gone
-            # costs an approach for nothing
+            if _in_site(cell):
+                parts.append("%s:site" % (cell,))
+                continue
+            if not _exposed(cell):
+                parts.append("%s:buried" % (cell,))
+                continue
+            # staleness is MATERIAL-based, not code-based: a cluster
+            # groups same-material cells that may carry different
+            # codes (soil-low-normal vs -none) - the code comparison
+            # false-"already-gone"d every cell (run 2026-10-05)
             bs0 = pol.cell_blocks(bot, tuple(cell), pad=0) or []
-            if not any(b.get("pos") == list(cell) and
-                       (b.get("code") or "") == rec.code for b in bs0):
-                parts.append("%s:already-gone" % (cell,))
+            code0 = next((b.get("code") for b in bs0
+                          if b.get("pos") == list(cell)), None)
+            if code0 is None or code0 == "game:air":
+                parts.append("%s:gone" % (cell,))
                 continue
             pre = inventory_of(pol.state(bot))
             # 13.6 step 1: APPROACH resolution (per cell). goto and
