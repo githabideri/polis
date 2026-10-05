@@ -357,6 +357,65 @@ def climb_out_possible(pol, bot):
     return False, "all %d neighbours >=2 blocks up (deep hollow)" % best
 
 
+def _fresh_exposed(pol, bot, rec, wm, mat, radius=20):
+    """Cells of material `mat` that are CURRENTLY exposed (air directly
+    above), from a fresh scan of the region around the build site AND the
+    resource's bounding box (2026-10-05 v5). The scan-time mineable subset
+    (worldmodel.observe_scan) is unreliable on hilly terrain: the boot scan
+    window can resolve a buried pocket's interior - where every cell has a
+    solid layer above - while the genuinely exposed top cells sit elsewhere,
+    so the executor was handed all-buried targets and mined 0 (run v4).
+    Re-deriving exposure at execution time (air above RIGHT NOW) fixes it.
+    Mining a top cell exposes the one below; the driver re-scans on each
+    (re-)run, so columns dig deeper across runs. Returns [] on any failure
+    (the caller falls back to the scan-time subset)."""
+    try:
+        xs = [c[0] for c in rec.cells]
+        ys = [c[1] for c in rec.cells]
+        zs = [c[2] for c in rec.cells]
+        for f in wm.fixtures.values():
+            if getattr(f, "kind", None) == "build-site" and \
+                    getattr(f, "cell", None):
+                sx, sy, sz = f.cell
+                for dx in (-radius, radius):
+                    for dz in (-radius, radius):
+                        xs.append(sx + dx)
+                        zs.append(sz + dz)
+                ys.append(sy - 6)
+                ys.append(sy + 6)
+        if not xs:
+            return []
+        x1, x2 = min(xs), max(xs)
+        z1, z2 = min(zs), max(zs)
+        y1 = min(ys) - 1
+        y2 = max(ys) + 2   # include the layer above the tops
+        # keep the scan bounded (the harness caps at 1M blocks)
+        if (x2 - x1 + 1) > 80 or (z2 - z1 + 1) > 80 or (y2 - y1 + 1) > 50:
+            cx, cz = (x1 + x2) // 2, (z1 + z2) // 2
+            x1, x2 = cx - 40, cx + 40
+            z1, z2 = cz - 40, cz + 40
+            y2 = min(y2, y1 + 49)
+        r = pol.cmd("scan", [str(x1), str(y1), str(z1),
+                             str(x2), str(y2), str(z2)], bot)
+        blocks = (r.get("Data") or {}).get("blocks", []) or []
+        solid = {tuple(b["pos"]) for b in blocks
+                 if b.get("code") and b.get("pos") and is_solid(b["code"])}
+        cells = []
+        for b in blocks:
+            code = b.get("code") or ""
+            pos = b.get("pos")
+            if not code or not pos or code == "game:air":
+                continue
+            if classify(code)[1] != mat:
+                continue
+            if (pos[0], pos[1] + 1, pos[2]) not in solid:
+                cells.append((pos[0], pos[1], pos[2]))
+        return cells
+    except Exception as e:
+        sys.stderr.write("  _fresh_exposed: %r\n" % (e,))
+        return []
+
+
 def execute_job(pol, bot, base, job, wm, run):
     """One job's actuation + oracle. Returns (ok, detail, measured,
     execution, oracle). The split is the 13.2 invariant: the ENGINE'S
@@ -517,16 +576,23 @@ def execute_job(pol, bot, base, job, wm, run):
         # `need` are down or the cluster is exhausted; the oracle
         # reports the shortfall (a 3-of-103 job is an honest 3-of-103,
         # never a "done").
-        # WALK THE MINEABLE SURFACE ONLY (2026-10-05, the failed hut
-        # run): a big soil blob is ~97% buried interior - iterating all
-        # its cells meant scanning thousands of unminable blocks. The
-        # mineable subset (top cells, computed at scan time) is what a
-        # bare hand can actually reach; the per-cell _exposed/gone
-        # guards below still guard against staleness.
-        cells = list(rec.mineable_cells) if rec.mineable_cells \
-            else list(rec.cells)
-        # walk order: nearest cell first (the cluster's stored order is
-        # scan order - a distance sort keeps the bot's travel short)
+        # WALK ACTUALLY-EXPOSED CELLS (2026-10-05 v5, the failed hut run):
+        # re-derive the target set at execution time from a FRESH scan -
+        # a cell is mineable only if its layer directly above is air RIGHT
+        # NOW. The scan-time mineable subset (worldmodel) resolved a buried
+        # pocket's interior here (all cells roofed) and mined 0 of 139;
+        # the exposed top cells sit around the build site, so the fresh
+        # scan is centred on the site (and the resource's bbox). Sorting by
+        # distance makes the bot dig its local area first; mining a top
+        # cell exposes the one below, and the driver re-scans on each
+        # (re-)run so columns dig deeper. Falls back to the scan-time
+        # subset if the fresh scan finds nothing.
+        target_mat = classify(rec.code)[1]
+        cells = _fresh_exposed(pol, bot, rec, wm, target_mat)
+        if not cells:
+            cells = list(rec.mineable_cells) if rec.mineable_cells \
+                else list(rec.cells)
+        # walk order: nearest cell first (keeps the bot's travel short)
         bp = tuple(pol.state(bot)["Bot"]["Pos"])
         cells.sort(key=lambda c: abs(c[0] - bp[0]) + abs(c[2] - bp[2]))
         # the mine path needs a tool (granite is tier 2) - EXCEPT
