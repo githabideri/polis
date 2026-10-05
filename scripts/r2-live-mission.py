@@ -461,6 +461,7 @@ def execute_job(pol, bot, base, job, wm, run):
                     return False
             return True
 
+        max_y_seen = int(pol.state(bot)["Bot"]["Pos"][1])
         for cell in cells:
             if mined >= need:
                 break
@@ -469,6 +470,15 @@ def execute_job(pol, bot, base, job, wm, run):
                 continue
             if not _exposed(cell):
                 parts.append("%s:buried" % (cell,))
+                continue
+            # self-guard (2026-10-05 incident): never mine the bot's own
+            # body cell or its support cell - digging out one's own
+            # foundation is how the bot ended up buried in solid soil
+            posn = pol.state(bot)["Bot"]["Pos"]
+            feet = (int(posn[0]), int(posn[1]), int(posn[2]))
+            if tuple(cell) in (feet, (feet[0], feet[1] - 1, feet[2]),
+                               (feet[0], feet[1] + 1, feet[2])):
+                parts.append("%s:own" % (cell,))
                 continue
             # staleness is MATERIAL-based, not code-based: a cluster
             # groups same-material cells that may carry different
@@ -495,21 +505,39 @@ def execute_job(pol, bot, base, job, wm, run):
                 return v5.goto_wait(pol, bot, c, timeout=25)
 
             def _act():
+                # the CommandResult verdict is IMMEDIATE and DEFINITIVE:
+                # a validation refusal (no path / out of range / target
+                # gone) never records a LastAction - waiting 45 s for
+                # one was the 2026-10-05 12-minute stall.
                 r = pol.cmd(cmd_name, [str(cell[0]), str(cell[1]),
                                        str(cell[2]), "true"], bot)
-                st_p = pol.state(bot)
-                pre_ms = st_p.get("LastActionMs") or 0
+                if r.get("Ok") is False:
+                    return {"ok": False,
+                            "last_action": {"Name": cmd_name,
+                                             "Ok": False,
+                                             "Msg": r.get("Message") or ""}}
+                # accepted: poll the ORACLE (the block) and the record;
+                # the LastAction is a hint, the block-gone is the proof
                 t_a = time.time()
                 la2 = {}
-                while time.time() - t_a < 45:
+                while time.time() - t_a < 60:
+                    time.sleep(2)
                     st2 = pol.state(bot)
                     la2 = st2.get("LastAction") or {}
                     if la2.get("Name") in (cmd_name, job.type) \
-                            and la2.get("Ok") is not None \
-                            and (st2.get("LastActionMs") or 0) > pre_ms:
+                            and la2.get("Ok") is not None:
                         break
-                    time.sleep(1)
-                return {"ok": la2.get("Ok") is True, "last_action": la2}
+                    bs = pol.cell_blocks(bot, tuple(cell), pad=0) or []
+                    if not any(b.get("pos") == list(cell) and
+                               (b.get("code") or "") != "game:air"
+                               for b in bs):
+                        break  # the block is gone - the work is done
+                gone_now = not any(
+                    (b.get("code") or "") != "game:air" and
+                    b.get("pos") == list(cell)
+                    for b in (pol.cell_blocks(bot, tuple(cell), pad=0) or []))
+                return {"ok": gone_now or la2.get("Ok") is True,
+                        "last_action": la2}
 
             if cmd_name is not None:
                 aok, adetail, attempts, la = r2approach.approach(
@@ -549,6 +577,45 @@ def execute_job(pol, bot, base, job, wm, run):
             else:
                 parts.append("%s:failed(ok=%s gone=%s)"
                              % (cell, la.get("Ok"), gone))
+
+            # WEDGE GUARD (2026-10-05 incident): one box scan around the
+            # bot. Two fatal states abort the walk with an honest
+            # diagnosis instead of a 12-minute silent stall: (1) the
+            # bot's own body cells report solid - it is buried; (2) its
+            # feet fell >=2 blocks below the highest it reached in this
+            # job - it is at the bottom of a hole it cannot climb out
+            # of (the VS agent climbs 1, not 2).
+            posn = pol.state(bot)["Bot"]["Pos"]
+            fy = int(posn[1])
+            max_y_seen = max(max_y_seen, fy)
+            bx, by, bz = int(posn[0]), fy, int(posn[2])
+            box = pol.cmd("scan", [str(bx - 1), str(by - 2), str(bz - 1),
+                                   str(bx + 1), str(by + 2), str(bz + 1)],
+                          bot)
+            bb = (box.get("Data") or {}).get("blocks") or []
+
+            def _bodycode(dy):
+                p = [bx, by + dy, bz]
+                return next((b.get("code") for b in bb
+                             if b.get("pos") == p), None)
+            if _bodycode(0) not in (None, "game:air") or \
+                    _bodycode(1) not in (None, "game:air"):
+                return (False,
+                        detail + (" | ABORT: bot wedged in solid terrain "
+                                  "(body cells solid) after %d mined" % mined),
+                        measured, {"last_action": last_la},
+                        {"block_gone": mined >= 1, "measured": measured,
+                         "mined": mined, "required": need,
+                         "wedge": "embedded"})
+            if max_y_seen - fy >= 2:
+                return (False,
+                        detail + (" | ABORT: bot fell into a deep hollow "
+                                  "(feet y%d, max y%d) after %d mined"
+                                  % (fy, max_y_seen, mined)),
+                        measured, {"last_action": last_la},
+                        {"block_gone": mined >= 1, "measured": measured,
+                         "mined": mined, "required": need,
+                         "wedge": "deep-hollow"})
         ok = mined >= need
         detail += (" | %d of %d mined (%s)"
                    % (mined, need, ", ".join(parts[:8])))
