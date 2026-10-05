@@ -1135,6 +1135,7 @@ def main():
                                              if j["type"] == "mine"]},
                               "candidates": sorted(index)}
             jobs_v, failure = validate_plan(raw, index, inv, goal=goal)
+            jobs = jobs_v
             run["plan"] = {"raw": raw, "latency_ms": 0,
                            "jobs": [j.to_dict() for j in jobs_v] if jobs_v else None,
                            "failure": failure.to_dict() if failure else None}
