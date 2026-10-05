@@ -108,9 +108,37 @@ class PolisGotoAction : EntityActionBase
 
         EnsureTraversers();
         InitializeCustomPathfinding();
+        LiftIfEmbedded();
         PolisSystem.TrySetTraverserDebug(vas?.wppathTraverser, false, debugLog);
         debugLog?.Invoke($"[goto] start target={PolisSystem.FormatPos(hereTarget)} astar={Astar} usePolisAStar={UsePolisAStar} speed={WalkSpeed.ToString(CultureInfo.InvariantCulture)}");
         navTo(hereTarget);
+    }
+
+    /// <summary>
+    /// Self-rescue (2026-10-05): if the body's feet cell is solid - the
+    /// bot is buried, from any source (a legacy snap, a physics slip) -
+    /// lift it up one block at a time until its feet are in a clear cell.
+    /// A body inside a solid cannot start any path, so no navigation can
+    /// even begin until it is out. Bounded to 4 blocks.
+    /// </summary>
+    void LiftIfEmbedded()
+    {
+        var e = vas?.Entity;
+        if (e == null) return;
+        var ba = e.Api.World.BlockAccessor;
+        for (int i = 0; i < 4; i++)
+        {
+            var feet = e.ServerPos.AsBlockPos;
+            var b = ba.GetBlock(feet);
+            bool solid = b != null
+                && b.CollisionBoxes != null && b.CollisionBoxes.Length > 0
+                && !string.IsNullOrEmpty(b.Code?.Path)
+                && !b.Code.Path.StartsWith("air");
+            if (!solid) break;
+            e.ServerPos.Y += 1.0;
+            e.Pos.Y += 1.0;
+            debugLog?.Invoke($"[goto] self-rescue: feet in solid {b.Code?.Path} at {feet} - lifted to y{e.ServerPos.Y:F1}");
+        }
     }
 
     void InitializeCustomPathfinding()
@@ -394,10 +422,30 @@ class PolisGotoAction : EntityActionBase
             return;
         }
 
-        // Snap to exact target position to prevent landing on adjacent blocks
-        // This ensures bot ends up exactly where requested, not on nearby obstacles
-        vas.Entity.ServerPos.SetPos(hereTarget.X, hereTarget.Y, hereTarget.Z);
-        vas.Entity.Pos.SetPos(hereTarget.X, hereTarget.Y, hereTarget.Z);
+        // Snap to exact target position to prevent landing on adjacent
+        // blocks - but NEVER into a solid cell. 2026-10-05 root cause of
+        // the dirt-mine wedge: the approach's first candidate IS the solid
+        // block being mined; the traverser correctly stops one cell short,
+        // but an unconditional snap pulled the bot INTO that solid, and a
+        // body inside a block cannot start any path ("stuck" forever).
+        // If the target cell is solid, the bot is already in interaction
+        // range one cell away - leave it there.
+        var targetCell = hereTarget.AsBlockPos;
+        var targetBlock = vas.Entity.Api.World.BlockAccessor.GetBlock(targetCell);
+        bool targetIsSolid = targetBlock != null
+            && targetBlock.CollisionBoxes != null
+            && targetBlock.CollisionBoxes.Length > 0
+            && !string.IsNullOrEmpty(targetBlock.Code?.Path)
+            && !targetBlock.Code.Path.StartsWith("air");
+        if (targetIsSolid)
+        {
+            debugLog?.Invoke($"[goto] target {targetCell} is solid ({targetBlock.Code?.Path}) - not snapping; bot stays one cell short (in range)");
+        }
+        else
+        {
+            vas.Entity.ServerPos.SetPos(hereTarget.X, hereTarget.Y, hereTarget.Z);
+            vas.Entity.Pos.SetPos(hereTarget.X, hereTarget.Y, hereTarget.Z);
+        }
 
         // Close doors that were opened during navigation
         if (CloseDoors && doorHandler != null && openedDoors != null && openedDoors.Count > 0)

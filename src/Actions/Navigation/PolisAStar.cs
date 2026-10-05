@@ -308,7 +308,10 @@ public class PolisAStar
 
     /// <summary>
     /// Get a valid start position near the given position.
-    /// Handles cases where entity is slightly inside a block.
+    /// Handles cases where entity is slightly inside a block: the escape
+    /// is UP (the cell above a sunk body is air/plant), not horizontal -
+    /// a body buried in a flat soil layer has solid neighbours on every
+    /// side at the same level, so only the cell above is open.
     /// </summary>
     public BlockPos GetStartPos(Vec3d startPos)
     {
@@ -319,6 +322,15 @@ public class PolisAStar
         if (IsBlockTraversable(startBlock))
         {
             return result;
+        }
+
+        // Sunk one block: the cell above the feet is the valid stand
+        // position (air/plant), with air/plant above that too.
+        var above = result.UpCopy();
+        if (IsBlockTraversable(blockAccessor.GetBlock(above))
+            && IsBlockTraversable(blockAccessor.GetBlock(above.UpCopy())))
+        {
+            return above;
         }
 
         // Try adjacent positions
