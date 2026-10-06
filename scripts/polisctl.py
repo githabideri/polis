@@ -154,8 +154,10 @@ def cmd_scan(a):
 def cmd_map(a):
     """Column-height map over a footprint + interior-air check (house verifier)."""
     ox, oy, oz, w, d = (int(a.ox), int(a.oy), int(a.oz), int(a.w), int(a.d))
-    res = _post("scan", [ox - 1, oy - 3, oz - 1,
-                         ox + w, oy + 6, oz + d], get_uid(a))
+    # NOTE: the harness deserializes args as string[] — ints in the JSON body
+    # fail the whole request silently (0 blocks). Keep these strings.
+    res = _post("scan", [str(ox - 1), str(oy - 3), str(oz - 1),
+                         str(ox + w), str(oy + 6), str(oz + d)], get_uid(a))
     cells = {}
     for b in _blocks(res):
         p = b.get("pos")
