@@ -195,6 +195,24 @@ def cmd_respawn(a):
     _say(_post("respawn", [u], u))
 
 
+def cmd_godmode(a):
+    """Pin-health god mode: pins maxhealth+currenthealth of every bot and the
+    local player to 100000 every tick (counters damage AND starvation; a dead
+    target is revived first). Not persisted — re-issue after a game restart.
+    `godmode on|off [entityId]` (no id = all bots + first player)."""
+    args = [a.onoff] + ([a.id] if a.id else [])
+    _say(_post("godmode", args))
+
+
+def cmd_gamemode(a):
+    """Set the target player's VS game mode (the /gamemode path): 0=guest
+    1=survival 2=creative 3=spectator, or by name. Creative is the proper
+    god-mode for the HUMAN player (no hunger, no death, F3 fly/noclip).
+    `gamemode <player> [mode]` — no mode = query the current one."""
+    args = [a.player] + ([a.mode] if a.mode else [])
+    _say(_post("gamemode", args))
+
+
 # ---- screenshots -----------------------------------------------------------
 def _capture(a):
     u = get_uid(a)
@@ -322,6 +340,16 @@ def main():
     sub.add_parser("players").set_defaults(fn=cmd_players)
     sub.add_parser("bots").set_defaults(fn=cmd_bots)
     sub.add_parser("respawn", help="revive the player (VS starves it at sat 0; bot-only hunger levers don't apply)").set_defaults(fn=cmd_respawn)
+
+    p = sub.add_parser("godmode", help="pin-health god mode: on|off [entityId] (all bots + first player; revives dead targets)")
+    p.add_argument("onoff", choices=["on", "off"])
+    p.add_argument("id", nargs="?", help="target a single entity id instead of all bots + player")
+    p.set_defaults(fn=cmd_godmode)
+
+    p = sub.add_parser("gamemode", help="set the player's game mode: 0=guest 1=survival 2=creative 3=spectator (no mode = query)")
+    p.add_argument("player")
+    p.add_argument("mode", nargs="?")
+    p.set_defaults(fn=cmd_gamemode)
 
     p = sub.add_parser("shotat", help="photo a target from a vantage: computes yaw/pitch from geometry")
     p.add_argument("name"); p.add_argument("vx"); p.add_argument("vy"); p.add_argument("vz")

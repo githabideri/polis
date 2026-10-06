@@ -26,6 +26,195 @@ using Polis.Helpers;
 /// </summary>
 public partial class PolisSystem
 {
+    // ---- god mode: keep flagged entities effectively invulnerable ----
+    // (harness aid so test bots survive mobs over long unattended runs;
+    //  not persisted -- the driver re-issues `godmode on` at boot)
+    internal readonly HashSet<long> godModeEntities = new HashSet<long>();
+    readonly Dictionary<long, float> godModeOrigMax = new Dictionary<long, float>();
+    const float GodModeMaxHealth = 100000f;
+
+    void GodModeOnTick(float dt)
+    {
+        if (godModeEntities.Count == 0) return;
+        foreach (var id in godModeEntities)
+        {
+            Entity ent = null;
+            if (bots.TryGetValue(id, out var bs) && bs?.Entity != null) ent = bs.Entity;
+            if (ent == null) ent = sapi?.World?.GetEntityById(id);
+            if (ent == null || !ent.Alive) continue;
+            var h = ent.WatchedAttributes.GetTreeAttribute("health");
+            if (h == null) continue;
+            h.SetFloat("maxhealth", GodModeMaxHealth);
+            h.SetFloat("currenthealth", GodModeMaxHealth);
+        }
+    }
+
+    PolisTestHarness.CommandResult ExecuteGodModeCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 1)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: godmode <on|off> [entityId]" };
+        bool on = args[0].Equals("on", StringComparison.OrdinalIgnoreCase);
+        long? singleId = (args.Length > 1 && long.TryParse(args[1], out var bid)) ? (long?)bid : null;
+
+        var targets = new List<(string Label, Entity E, long Id)>();
+        if (singleId != null)
+        {
+            var e = (bots.TryGetValue(singleId.Value, out var bs1) && bs1?.Entity != null) ? bs1.Entity : sapi?.World?.GetEntityById(singleId.Value);
+            if (e == null) return new PolisTestHarness.CommandResult { Ok = false, Message = "Entity " + singleId + " not found" };
+            targets.Add(("entity#" + singleId, e, singleId.Value));
+        }
+        else
+        {
+            foreach (var kv in bots) if (kv.Value?.Entity != null) targets.Add(("bot#" + kv.Key, kv.Value.Entity, kv.Key));
+            var lp = sapi?.Server?.Players?.FirstOrDefault(p => p?.Entity != null);
+            if (lp != null) targets.Add((lp.PlayerName + " (player)", lp.Entity, lp.Entity.EntityId));
+        }
+        if (targets.Count == 0)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "No bots and no local player found" };
+
+        var msgs = new List<string>();
+        foreach (var t in targets)
+        {
+            var h = t.E.WatchedAttributes.GetTreeAttribute("health");
+            float origMax = h?.GetFloat("maxhealth", 10f) ?? 10f;
+            if (on)
+            {
+                if (!godModeEntities.Contains(t.Id)) { godModeEntities.Add(t.Id); godModeOrigMax[t.Id] = origMax; }
+                if (h != null) { h.SetFloat("maxhealth", GodModeMaxHealth); h.SetFloat("currenthealth", GodModeMaxHealth); }
+                string revived = "";
+                if (!t.E.Alive)
+                {
+                    // Dead entities are skipped by GodModeOnTick, so an already
+                    // dead target (e.g. a starved player on the death screen)
+                    // must be revived first: force Alive and call the engine's
+                    // own Revive() so clients clear the death screen.
+                    t.E.Alive = true;
+                    if (t.E is Vintagestory.API.Common.Entities.Entity ce) ce.Revive();
+                    revived = " (revived)";
+                }
+                msgs.Add(t.Label + ": ON (max " + origMax.ToString("F0") + "->" + GodModeMaxHealth.ToString("F0") + ")" + revived);
+            }
+            else
+            {
+                godModeEntities.Remove(t.Id);
+                float om = godModeOrigMax.TryGetValue(t.Id, out var m) ? m : 10f;
+                if (h != null) { h.SetFloat("maxhealth", om); h.SetFloat("currenthealth", om); }
+                msgs.Add(t.Label + ": OFF (restored max " + om.ToString("F0") + ")");
+            }
+        }
+        return new PolisTestHarness.CommandResult { Ok = true, Message = string.Join("; ", msgs) };
+    }
+
+    /// <summary>
+    /// 2026-10-06: Set a connected player's game mode server-side, mirroring the
+    /// engine's own /gamemode handler (1.22.7 CmdPlayer.SetGameMode): set the
+    /// mode on the player's IWorldPlayerData, adjust FreeMove/NoClip the way the
+    /// engine does, then BroadcastPlayerData so the client applies it (the
+    /// IWorldPlayerData contract: "if you want modify any value, also broadcast
+    /// the playerdata"). Creative (2) is the proper god-mode for the HUMAN
+    /// player: no hunger, no death, F3 fly/noclip -- pin-health godmode can't
+    /// fly, and bots can't be creative, so both mechanisms coexist.
+    /// Args: [playerNameOrUid, 0|1|2|3 or guest|survival|creative|spectator].
+    /// </summary>
+    PolisTestHarness.CommandResult ExecuteGamemodeCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 1)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: gamemode <player> <0|1|2|3|guest|survival|creative|spectator>" };
+
+        // NOTE: `context` is null unless the JSON body carries a "context"
+        // field - never dereference it directly.
+        string who = args[0];
+        var all = sapi?.Server?.Players;
+        IServerPlayer target = null;
+        for (int i = 0; all != null && i < all.Length; i++)
+        {
+            var p = all[i];
+            if (p == null) continue;
+            if (p.PlayerUID == who || string.Equals(p.PlayerName, who, StringComparison.OrdinalIgnoreCase))
+            {
+                target = p;
+                break;
+            }
+        }
+        if (target == null)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"gamemode: no online player '{who}'" };
+
+        string step = "";
+        System.Exception ex = null;
+        IWorldPlayerData wd = null;
+        var old = EnumGameMode.Survival;
+        var newMode = old;
+        try
+        {
+            step = "worlddata";
+            wd = target.WorldData;
+            if (wd == null)
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "gamemode: player has no world data (never connected?)" };
+
+            step = "read-mode";
+            old = wd.CurrentGameMode;
+            newMode = old;
+
+            step = "parse";
+            if (args.Length > 1)
+            {
+                if (int.TryParse(args[1], out int n) && Enum.IsDefined(typeof(EnumGameMode), n))
+                    newMode = (EnumGameMode)n;
+                else
+                {
+                    switch (args[1].ToLowerInvariant())
+                    {
+                        case "g": case "guest": newMode = EnumGameMode.Guest; break;
+                        case "s": case "survival": newMode = EnumGameMode.Survival; break;
+                        case "c": case "creative": newMode = EnumGameMode.Creative; break;
+                        case "sp": case "spectator": newMode = EnumGameMode.Spectator; break;
+                        default: return new PolisTestHarness.CommandResult { Ok = false, Message = "gamemode: invalid mode '" + args[1] + "'" };
+                    }
+                }
+            }
+
+            if (newMode != old)
+            {
+                step = "set-mode";
+                // Engine-mirrored side effects of a mode switch (read the old
+                // FreeMove/NoClip BEFORE mutating, as the engine handler does):
+                bool oldFreeMove = wd.FreeMove;
+                bool oldNoClip = wd.NoClip;
+                bool newIsCreativeLike = newMode == EnumGameMode.Creative || newMode == EnumGameMode.Spectator;
+                wd.CurrentGameMode = newMode; // setter also re-partitions the entity
+                wd.FreeMove = (oldFreeMove && newIsCreativeLike) || newMode == EnumGameMode.Spectator;
+                wd.NoClip = (oldNoClip && newIsCreativeLike) || newMode == EnumGameMode.Spectator;
+                if (newMode == EnumGameMode.Survival || newMode == EnumGameMode.Guest)
+                {
+                    wd.MoveSpeedMultiplier = 1f;
+                    wd.PickingRange = GlobalConstants.DefaultPickingRange;
+                }
+            }
+
+            // Notify all clients (incl. the player itself) of the modified data.
+            step = "broadcast";
+            target.BroadcastPlayerData(sendInventory: false);
+            step = "repartition";
+            target.Entity?.UpdatePartitioning();
+        }
+        catch (System.Exception e)
+        {
+            ex = e;
+        }
+        if (ex != null)
+        {
+            sapi?.Logger?.Error("[polis] gamemode failed at step '" + step + "' for " + target.PlayerName + ": " + ex);
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"gamemode: failed at '{step}': {ex.Message}" };
+        }
+
+        sapi?.Logger?.Notification($"[polis] gamemode {target.PlayerName}: {old} -> {newMode} (freeMove={wd.FreeMove}, noClip={wd.NoClip})");
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"{target.PlayerName}: gamemode {old} -> {newMode} (freeMove={wd.FreeMove}, noClip={wd.NoClip})"
+        };
+    }
+
     /// <summary>
     /// Execute a command from HTTP API.
     /// </summary>
@@ -133,6 +322,12 @@ public partial class PolisSystem
                     return ExecuteSpawnEntityCommand(args, context);
                 case "killentity":
                     return ExecuteKillEntityCommand(args, context);
+                case "respawn":
+                    return ExecuteRespawnCommand(args, context);
+                case "godmode":
+                    return ExecuteGodModeCommand(args, context);
+                case "gamemode":
+                    return ExecuteGamemodeCommand(args, context);
                 case "animate":
                     return ExecuteAnimateCommand(args, context);
                 case "teleport":
@@ -181,7 +376,7 @@ public partial class PolisSystem
                     return ExecuteViewpointScreenshotCommand(args, context);
                 default:
                     result.Ok = false;
-                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, break, harvest, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot";
+                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, break, harvest, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot";
                     break;
             }
         }
@@ -583,6 +778,59 @@ public partial class PolisSystem
 
         bot.Entity.Die(EnumDespawnReason.Removed);
         return new PolisTestHarness.CommandResult { Ok = true, Message = $"Despawned bot #{bot.Entity.EntityId}" };
+    }
+
+    /// <summary>
+    /// 2026-10-05: Revive a dead player entity in place. When a player's health
+    /// hits 0 the VS client shows a death screen and the entity is marked dead
+    /// (Alive=false). `teleport` does NOT un-kill a dead player (it repositions
+    /// but the death state persists), which left the test player stuck on the
+    /// death screen after an over-head vantage-point screenshot. This restores
+    /// the health tree to max, forces Alive, and calls the engine's own
+    /// Revive() so the client clears the death screen and the player is usable
+    /// again. The reliable reset the episode harness (A/B game battery) needs:
+    /// a player can die mid-run and must come back without a full reconnect.
+    /// Args: [optional playerUid] (context player if omitted).
+    /// </summary>
+    PolisTestHarness.CommandResult ExecuteRespawnCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        var uid = args.Length > 0 ? args[0] : context?.PlayerUid;
+        if (string.IsNullOrEmpty(uid))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "respawn: no player (no uid arg and no context player)" };
+
+        var player = sapi.World?.PlayerByUid(uid);
+        if (player == null)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"respawn: no player with uid {uid} (not connected?)" };
+
+        var en = player.Entity;
+        if (en == null)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"respawn: player {uid} has no entity (disconnected/despawned) - reconnect the client first" };
+
+        bool wasAlive = en.Alive;
+
+        // 1. Restore the health tree to max (VS decides IsDead from this).
+        var ht = en.WatchedAttributes.GetTreeAttribute("health");
+        float cur = 0f, max = 0f;
+        if (ht != null)
+        {
+            cur = ht.GetFloat("curhealth", 0f);
+            max = ht.GetFloat("maxhealth", 10f);
+            if (max <= 0f) max = 10f;
+            ht.SetFloat("maxhealth", max);
+            ht.SetFloat("curhealth", max);
+        }
+
+        // 2. Force alive + call the engine's own revive (drives client sync so
+        //    the death screen clears).
+        en.Alive = true;
+        if (en is Vintagestory.API.Common.Entities.Entity ce) ce.Revive();
+
+        sapi.Logger.Debug($"[polis] respawn {uid}: wasAlive={wasAlive} health {cur:F1}->{max:F1}");
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"Respawned {uid}: health {cur:F1}->{max:F1}, alive={wasAlive}->true"
+        };
     }
 
     /// <summary>
