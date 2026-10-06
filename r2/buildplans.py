@@ -30,7 +30,7 @@ class PlanError(Exception):
 
 class BuildingPlan:
     def __init__(self, name, footprint, materials, blocks, entry,
-                 provides, openings=()):
+                 provides, openings=(), floorless=False):
         self.name = name
         self.footprint = tuple(footprint)          # (w, d) in blocks
         self.materials = dict(materials)           # material -> total qty
@@ -38,6 +38,9 @@ class BuildingPlan:
                        for b in blocks]            # [(dx,dy,dz), material]
         self.entry = tuple(entry)                  # (dx, dz[, door_height])
         self.provides = list(provides)             # survival function tags
+        # a wall box standing on the site base: no built floor layer
+        # (the terrain is the floor), dy=0 is the base wall layer.
+        self.floorless = bool(floorless)
         # architectural openings the sequencer must never fill: local
         # (dx, dy, dz) cells that are part of the building's design
         # (windows, skylights) - they stay open forever and double as
@@ -95,17 +98,26 @@ class BuildingPlan:
         # the opening (1 .. door_height). The floor below is a
         # threshold, the layer above the opening a lintel (optional),
         # and the top layers an overhang - all normal architecture.
-        for (dx, dy, dz), _ in self.blocks:
-            if (dx, dz) == (ex, ez) and 1 <= dy <= self.door_height:
-                raise PlanError("entry cell (%d,%d) is blocked at layer %d "
-                                "- the door must stay open" % (ex, ez, dy))
-        # the floor layer must be solid - nothing is built on air
-        floor = {(dx, dz) for (dx, dy, dz), _ in self.blocks if dy == 0}
-        for x in range(w):
-            for z in range(d):
-                if (x, z) not in floor:
-                    raise PlanError("floor is not solid: cell (%d,%d) "
-                                    "missing" % (x, z))
+        #
+        # A floorless plan is a wall box standing on the site base:
+        # the terrain is the floor (no built dy=0 slab), so the forced
+        # floor-solidity check is relaxed; its "door" is simply an
+        # omitted block (declare it via `openings`), so the forced
+        # door-open check is relaxed too. Both stay on by default.
+        if not self.floorless:
+            for (dx, dy, dz), _ in self.blocks:
+                if (dx, dz) == (ex, ez) and 1 <= dy <= self.door_height:
+                    raise PlanError("entry cell (%d,%d) is blocked at "
+                                    "layer %d - the door must stay open"
+                                    % (ex, ez, dy))
+            # the floor layer must be solid - nothing is built on air
+            floor = {(dx, dz) for (dx, dy, dz), _ in self.blocks
+                     if dy == 0}
+            for x in range(w):
+                for z in range(d):
+                    if (x, z) not in floor:
+                        raise PlanError("floor is not solid: cell (%d,%d) "
+                                        "missing" % (x, z))
         return self
 
     # -- compilation -----------------------------------------------------
@@ -177,7 +189,8 @@ def load_plan(path):
         blocks=d.get("blocks") or [],
         entry=d.get("entry") or (0, 0),
         provides=d.get("provides") or [],
-        openings=d.get("openings") or [])
+        openings=d.get("openings") or [],
+        floorless=bool(d.get("floorless", False)))
     if not p.blocks:
         raise PlanError("plan has no blocks")
     p.validate()

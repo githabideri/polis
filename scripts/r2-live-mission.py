@@ -1124,11 +1124,35 @@ def execute_job(pol, bot, base, job, wm, run):
                 # the candidates - standing on one embeds the bot)
                 cands = [c for c in cands if _standable(c)]
                 if not cands:
+                    # (2026-10-05 wedge fix) the target's whole foot-level ring
+                    # is filled, so no horizontal approach at its own level
+                    # exists. Try the levels adjacent to the target instead:
+                    #   L-1: stand on the level BELOW and place UP - how a wall
+                    #         goes on a floor (stand on the floor / the border,
+                    #         place the wall one over + one up).
+                    #   L+1: stand on top of a filled neighbour and place DOWN
+                    #         - fills the interior cell of a closing floor.
+                    for lvl in (L - 1, L + 1):
+                        alt = [[cell[0] - 1, lvl, cell[2]],
+                               [cell[0] + 1, lvl, cell[2]],
+                               [cell[0], lvl, cell[2] - 1],
+                               [cell[0], lvl, cell[2] + 1]]
+                        alt = [c for c in alt if _standable(c)]
+                        if not alt:
+                            continue
+                        alt.sort(key=lambda c: abs(c[0] - cell[0])
+                                 + abs(c[2] - cell[2]))
+                        cands = alt
+                        print("[build] %s %s: no ledge at level %d -> "
+                              "stand at level %d: %s"
+                              % (phase, cell, L, lvl, cands[0]),
+                              flush=True)
+                        break
+                if not cands:
                     return (False, "structural: no standable candidate "
-                            "for %s%s (all neighbours at foot level %s "
-                            "are occupied) - the plan geometry or a "
-                            "neighbouring structure leaves no ledge"
-                            % (phase, cell, L),
+                            "for %s%s (levels %d/%d/%d all unusable) - "
+                            "the plan geometry or a neighbouring structure "
+                            "leaves no ledge" % (phase, cell, L - 1, L, L + 1),
                             measured, {}, {"cells": None})
                 placed_here = False
                 for cand in cands:
