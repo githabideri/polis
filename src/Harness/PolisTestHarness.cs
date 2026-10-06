@@ -940,6 +940,101 @@ public class PolisTestHarness : IDisposable
                     }, "polis-harness-screenshot");
                 }
             }
+            else if (path == "/polis/cine-screenshot" && request.HttpMethod == "GET")
+            {
+                // Cinematic screenshot (2026-10-25): a DETERMINISTIC view.
+                // Arms the native cinematic camera (PolisCinematicCamera) to a
+                // pinned yaw/pitch, then captures. The eye stays at the
+                // player's own position (the world is rendered relative to
+                // it); to get a raised/wide vantage the caller teleports the
+                // player there first, then pins the look direction.
+                //   GET /polis/cine-screenshot?playerUid=&yaw=&pitch=[&frames=N][&save=true]
+                //   yaw/pitch are in RADIANS (the game's mouse convention).
+                //   frames= how many render frames to hold the view (default 15)
+                var playerUid = QueryValue(request, "playerUid") ?? QueryValue(request, "uid");
+                var saveToFile = request.QueryString["save"] == "true";
+
+                if (!double.TryParse(request.QueryString["yaw"], NumberStyles.Float, CultureInfo.InvariantCulture, out var yaw) ||
+                    !double.TryParse(request.QueryString["pitch"], NumberStyles.Float, CultureInfo.InvariantCulture, out var pitch))
+                {
+                    tcs.SetResult(new { error = "Invalid or missing yaw, pitch (radians)" });
+                }
+                else
+                {
+                    int frames = 15;
+                    if (int.TryParse(request.QueryString["frames"], out var f) && f > 0) frames = f;
+
+                    if (requestScreenshotFunc == null)
+                    {
+                        tcs.SetResult(new { error = "Screenshot functionality not available" });
+                    }
+                    else if (string.IsNullOrWhiteSpace(playerUid))
+                    {
+                        tcs.SetResult(new { error = "Missing playerUid parameter" });
+                    }
+                    else
+                    {
+                        bool shotFree = Interlocked.Exchange(ref observerShotInFlight, 1) != 1;
+                        if (!shotFree)
+                        {
+                            tcs.SetResult(new { ok = false, error = "screenshot already in flight; try again shortly" });
+                        }
+                        if (shotFree)
+                        {
+                            sapi.Event.EnqueueMainThreadTask(() =>
+                            {
+                                try
+                                {
+                                    // Arm the native cinematic camera to the fixed
+                                    // view, then request the Done-stage capture.
+                                    // The capture lands inside the armed window and
+                                    // the frame is exactly this view.
+                                    PolisCinematicCamera.Arm(yaw, pitch, frames);
+                                    requestScreenshotFunc(playerUid, saveToFile, result =>
+                                    {
+                                        try
+                                        {
+                                            // let the held view run off after the
+                                            // capture is already grabbed
+                                            sapi.Event.EnqueueMainThreadTask(PolisCinematicCamera.Disarm, "polis-cine-cam-disarm");
+
+                                            if (result == null)
+                                            {
+                                                tcs.SetResult(new { error = "Screenshot response timeout" });
+                                            }
+                                            else if (!result.Success)
+                                            {
+                                                tcs.SetResult(new { ok = false, error = result.Error ?? "Screenshot capture failed" });
+                                            }
+                                            else
+                                            {
+                                                tcs.SetResult(new
+                                                {
+                                                    ok = true,
+                                                    width = result.Width,
+                                                    height = result.Height,
+                                                    base64 = result.Base64Png,
+                                                    filePath = result.FilePath,
+                                                    captureTimeMs = result.CaptureTimeMs
+                                                });
+                                            }
+                                        }
+                                        finally
+                                        {
+                                            Interlocked.Exchange(ref observerShotInFlight, 0);
+                                        }
+                                    });
+                                }
+                                catch (Exception ex)
+                                {
+                                    Interlocked.Exchange(ref observerShotInFlight, 0);
+                                    tcs.SetResult(new { error = ex.Message });
+                                }
+                            }, "polis-cine-screenshot");
+                        }
+                    }
+                }
+            }
             else if (path == "/polis/observer-screenshot" && request.HttpMethod == "GET")
             {
                 // Observer screenshot: teleport player to viewpoint, capture, restore position

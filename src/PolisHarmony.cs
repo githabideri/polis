@@ -61,6 +61,27 @@ internal static class PolisHarmony
         {
             api.Logger.Warning("[polis] ClientMain.PauseGame not found - PauseGame block NOT applied (game version change?)");
         }
+
+        // Cinematic capture camera (2026-10-25): while a screenshot is armed,
+        // a postfix on OnBeforeRenderFrame3D (the Before render stage) forces
+        // the exact view matrix from an explicit eye->target, so the
+        // Done-stage capture grabs a stable, deterministic frame - immune to
+        // the idle-mouse clobber that breaks observer-screenshot. No
+        // [HarmonyPatch] attribute on the class; patched explicitly here so
+        // the server-side PatchAll does not double-apply it.
+        PolisCinematicCamera.SetLogger(api.Logger);
+        var onBeforeRender = AccessTools.Method(
+            typeof(Vintagestory.Client.NoObf.PlayerCamera), "OnBeforeRenderFrame3D", new[] { typeof(float) });
+        if (onBeforeRender != null)
+        {
+            harmonyClient.Patch(onBeforeRender, prefix: new HarmonyMethod(typeof(PolisCinematicCamera), "OnBeforeRenderFrame3D_Prefix"));
+            api.Logger.Notification("[polis] client Harmony patch applied (cinematic capture camera - deterministic screenshots).");
+        }
+        else
+        {
+            api.Logger.Warning("[polis] PlayerCamera.OnBeforeRenderFrame3D not found - cinematic camera NOT applied (game version change?)");
+        }
+
         appliedClient = true;
     }
 
