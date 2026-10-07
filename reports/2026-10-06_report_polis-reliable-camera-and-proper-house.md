@@ -1,13 +1,13 @@
 ---
 title: Reliable screenshots + the proper-house build (findings & plan)
-date: 2026-10-25
+date: 2026-10-06
 tags: [polis, harness, camera, camera-patch, proper-house, build, last-cell, door]
 status: draft
 ---
 
 # Reliable screenshots + the proper-house build
 
-Answering two questions from the 2026-10-25 session: (1) can we get a
+Answering two questions from the all-night session (2026-10-04 → 06): (1) can we get a
 RELIABLE screenshot of a built structure, and (2) what does it take — workflow
 and harness-wise — to get from the current "hollow hut" to a proper building
 (5×5×3 or elongated 5×3, a roof, one door opening, one crude door)? The camera
@@ -39,7 +39,7 @@ Confirmed in source: `src/Harness/PolisScreenCaptureRenderer.cs`
 `src/Harness/PolisViewResetTimer.cs`, `src/Harness/PolisAutonomyClient.cs`
 (`SetViewDirection`).
 
-## 2. Reliable-screenshot approaches (researched 2026-10-25)
+## 2. Reliable-screenshot approaches (researched 2026-10-06)
 
 The whole VS camera mod scene runs on the same primitive: **force the
 `PlayerCamera` transform on the render path** and/or **patch
@@ -114,8 +114,8 @@ stand). Sequencer-proven `ok=True`. So "a proper building" needs these
    `r2/sequencer.py`); the door is deliberately NOT part of the placement
    sequence. So the door is a **post-build install step**: after the shell
    passes the gate, `setblock survival:door-crude` at the two gap cells
-   ((2,1,0),(2,2,0) → absolute site coords). **Verified on CT 114
-   (2026-10-25):** `setblock survival:door-crude <x> <y> <z>` succeeds
+   ((2,1,0),(2,2,0) → absolute site coords). **Verified on the game
+   testbed (2026-10-06):** `setblock survival:door-crude <x> <y> <z>` succeeds
    (`Ok:true`, places a `game:door-crude` block) and a throwaway test
    placed/removed cleanly. A crude door is a **single-cell thin slab**
    (`survival:door-crude`, a `Door`-behavior block entity; there are also
@@ -139,11 +139,12 @@ hollow, roof closed, door present) as the always-reliable gate, plus the
 2. **Door-install step**: after the shell gate, `setblock survival:door-crude`
    at the 1×2 gap (absolute coords from the plan origin + entry).
 3. **Camera patch** (§2): native Harmony "cinematic capture" (freeze +
-   prefix-`OnBeforeRenderFrame`) in the Polis mod; rebuild + redeploy to CT 114.
+   prefix-`OnBeforeRenderFrame`) in the Polis mod; rebuild + redeploy to the
+   game testbed.
 4. **Rebuild** the hut (flush → walls → gate → roof → gate → door →
    screenshot). Verify hollow via scan-assert **and** via the new stable photo.
 
-## Sources (2026-10-25, websearch SearXNG)
+## Sources (2026-10-06, websearch SearXNG)
 
 - GitHub Mist1117/SaltysFreeLook (Free Look, v1.0.1) — patches
   `PlayerCamera.OnBeforeRenderFrame`; **1.21.1 crash** on
@@ -157,3 +158,9 @@ hollow, roof closed, door present) as the always-reliable gate, plus the
   toggle).
 - VS Wiki "Controls" — F3+V (toggle view rotation), F3+J (lock rotation),
   F3+S (spectate).
+
+_Dating note (corrected 2026-10-07): the original draft carried 2026-10-25
+throughout — a date the writing session misstated. All of this work (the
+camera research, the door verification, this report) happened on the night
+of 2026-10-05 → 06 in a session that had started the all-night run on
+2026-10-04._
