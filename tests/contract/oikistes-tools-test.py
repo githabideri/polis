@@ -159,6 +159,17 @@ check("digest is compact and case-tolerant",
       and "EntityPlayerBot(id=7)@512016,155,512012" in obs
       and len(obs) <= 400, obs)
 
+# the 27B passes a JSON object with the zone= key (the endpoint's own
+# parameter name is the shape it reaches for) - same result as the
+# positional form
+oik.polis.get_calls.clear()
+obs2 = oik.do_tool("query", {"zone": "berries", "mode": "all"}, "strict")
+path2, params2 = oik.polis.get_calls[0]
+check("zone= object key works (the 27B shape)",
+      path2 == "/polis/targets" and params2.get("zone") == "berries"
+      and params2.get("mode") == "all" and obs2 == obs,
+      str((params2, obs2)))
+
 # --- query: the digest's ceiling ------------------------------------------------
 d = oikistes._targets_digest(
     {"Blocks": [{"Code": "game:stone", "Pos": [i, 0, i]}

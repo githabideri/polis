@@ -510,7 +510,10 @@ class Oikistes:
         capped list of code/position (uid for entities) - under 400
         chars, LLM-friendly. JSON case is tolerated (the harness
         serializes POCOs PascalCase; older payloads camelCase)."""
-        target = str(a.get("target") or "").strip()
+        # the model passes the zone either as the positional target or
+        # as a zone=<name> object key (the endpoint's own parameter
+        # name is the shape 27B reaches for - accept both)
+        target = str(a.get("target") or a.get("zone") or "").strip()
         parts = target.split()
         if not parts:
             return "query: give a zone name, or 'x z [radius]'"
@@ -657,9 +660,10 @@ class Oikistes:
             "granite at site-A x1 supply external'); "
             "query=<zonename | x z [radius]> [mode=blocks|entities|all] "
             "[code=<substr>] what is in a named zone or around a point "
-            "(a compact digest of the targets scan - counts plus a "
-            "capped code/position list; the coordinate form walks your "
-            "body there first); "
+            "(positional, e.g. 'query storage1' or 'query 512020 512025 '"
+            "radius=8'; a compact digest of the targets scan - counts "
+            "plus a capped code/position list; the coordinate form walks "
+            "your body there first); "
             "zone=list|show|define|remove|rename named rectangular "
             "world regions (define <name> x1 y1 z1 x2 y2 z2; "
             "show/remove <name>; rename <old> <new> - writes are "
