@@ -710,8 +710,8 @@ public class PolisTestHarness : IDisposable
                                     Name = zoneName,
                                     Bounds = new TargetsResult.ZoneBounds
                                     {
-                                        Min = new[] { zoneBounds.Value.X1, zoneBounds.Value.Y1, zoneBounds.Value.Z1 },
-                                        Max = new[] { zoneBounds.Value.X2, zoneBounds.Value.Y2, zoneBounds.Value.Z2 }
+                                        Min = new[] { zoneBounds.X1, zoneBounds.Y1, zoneBounds.Z1 },
+                                        Max = new[] { zoneBounds.X2, zoneBounds.Y2, zoneBounds.Z2 }
                                     }
                                 };
                             }
@@ -723,12 +723,12 @@ public class PolisTestHarness : IDisposable
                             {
                                 int r = (int)Math.Ceiling(radius);
                                 int xMin, xMax, yMin, yMax, zMin, zMax;
-                                if (zoneBounds.HasValue)
+                                if (zoneBounds != null)
                                 {
                                     // zone AABB replaces the radius box
-                                    xMin = zoneBounds.Value.X1; xMax = zoneBounds.Value.X2;
-                                    yMin = zoneBounds.Value.Y1; yMax = zoneBounds.Value.Y2;
-                                    zMin = zoneBounds.Value.Z1; zMax = zoneBounds.Value.Z2;
+                                    xMin = zoneBounds.X1; xMax = zoneBounds.X2;
+                                    yMin = zoneBounds.Y1; yMax = zoneBounds.Y2;
+                                    zMin = zoneBounds.Z1; zMax = zoneBounds.Z2;
                                 }
                                 else
                                 {
@@ -757,7 +757,7 @@ public class PolisTestHarness : IDisposable
 
                                             var blockCenter = new Vec3d(pos.X + 0.5, pos.Y + 0.5, pos.Z + 0.5);
                                             var dist = blockCenter.DistanceTo(center);
-                                            if (!zoneBounds.HasValue && dist > radius) continue;
+                                            if (!zoneBounds != null && dist > radius) continue;
 
                                             var behaviors = block.BlockBehaviors?
                                                 .Select(b => b?.GetType().Name)
@@ -800,11 +800,11 @@ public class PolisTestHarness : IDisposable
                                 // exactly the zone AABB; plain scan: the
                                 // radius box around the center.
                                 Entity[] entities;
-                                if (zoneBounds.HasValue)
+                                if (zoneBounds != null)
                                 {
                                     entities = sapi.World.GetEntitiesInsideCuboid(
-                                        new BlockPos(zoneBounds.Value.X1, zoneBounds.Value.Y1, zoneBounds.Value.Z1),
-                                        new BlockPos(zoneBounds.Value.X2, zoneBounds.Value.Y2, zoneBounds.Value.Z2),
+                                        new BlockPos(zoneBounds.X1, zoneBounds.Y1, zoneBounds.Z1),
+                                        new BlockPos(zoneBounds.X2, zoneBounds.Y2, zoneBounds.Z2),
                                         e => includeDead || e.Alive);
                                 }
                                 else
@@ -816,16 +816,16 @@ public class PolisTestHarness : IDisposable
                                     if (entity is EntityPlayer) continue;
 
                                     var dist = entity.ServerPos.XYZ.DistanceTo(center);
-                                    if (!zoneBounds.HasValue && dist > radius) continue;
+                                    if (!zoneBounds != null && dist > radius) continue;
 
-                                    if (zoneBounds.HasValue)
+                                    if (zoneBounds != null)
                                     {
                                         // AABB containment (edge rounding of
                                         // the cuboid query at the borders)
                                         var eb = entity.ServerPos.AsBlockPos;
-                                        if (eb.X < zoneBounds.Value.X1 || eb.X > zoneBounds.Value.X2
-                                            || eb.Y < zoneBounds.Value.Y1 || eb.Y > zoneBounds.Value.Y2
-                                            || eb.Z < zoneBounds.Value.Z1 || eb.Z > zoneBounds.Value.Z2)
+                                        if (eb.X < zoneBounds.X1 || eb.X > zoneBounds.X2
+                                            || eb.Y < zoneBounds.Y1 || eb.Y > zoneBounds.Y2
+                                            || eb.Z < zoneBounds.Z1 || eb.Z > zoneBounds.Z2)
                                         {
                                             continue;
                                         }

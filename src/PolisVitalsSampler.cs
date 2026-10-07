@@ -68,7 +68,7 @@ public partial class PolisSystem
 {
     // ----- vitals sampler (1 Hz; called from OnTick like ForageOnTick) -----
 
-    readonly PolisVitalsConfig vitalsConfig = new PolisVitalsConfig();
+    PolisVitalsConfig vitalsConfig = new PolisVitalsConfig();
     string vitalsConfigPath;
     DateTime vitalsConfigMtime = DateTime.MinValue;
     readonly Dictionary<long, VitalsSample> vitalsLatest = new();

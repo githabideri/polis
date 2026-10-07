@@ -6760,7 +6760,7 @@ public partial class PolisSystem
             // the empty smelted crucible reverts to its emptiedBlockCode.
             string emptiedCode = null;
             var emTok = crucibleStack.Collectible is Block emBlock ? emBlock.Attributes?["emptiedBlockCode"] : null;
-            if (emTok != null) emptiedCode = emTok.Value<string>();
+            if (emTok != null) emptiedCode = emTok.AsString();
             var emptiedBlock = emTok != null && emptiedCode != null
                 ? world.GetBlock(AssetLocation.Create(emptiedCode, ((Block)crucibleStack.Collectible).Code.Domain))
                 : null;
