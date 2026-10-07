@@ -65,14 +65,26 @@ if [ "$DEPLOY" = true ]; then
     echo "Deploying to game Mods folder..."
     # rm-then-copy (2026-09-27): cp -r never removes stale files - a renamed
     # subdirectory (webui-v2 -> webui) survived the deploy and the harness 404'd.
+    # Exec-bit net (2026-10-07): the git index is the source of truth for +x
+    # (a `git reset --hard` on a mirror consumer reproduces it), but the
+    # build/copy chain has dropped bits before - polisctl shipped
+    # non-executable and the CLI symlink got "Permission denied". Re-assert
+    # on every deployed copy so the CLI layer survives regardless.
+    deploy_to() {
+        local dest="$1"
+        rm -rf "$dest/polis"
+        cp -r bin/Release/Mods/polis "$dest/"
+        find "$dest/polis/scripts" \( -name "*.py" -o -name "*.sh" \) -exec chmod +x {} + 2>/dev/null || true
+    }
     if [ -n "$VINTAGE_STORY" ]; then
-        rm -rf "$VINTAGE_STORY/Mods/polis"
-        cp -r bin/Release/Mods/polis "$VINTAGE_STORY/Mods/"
+        deploy_to "$VINTAGE_STORY/Mods"
+        [ -x "$VINTAGE_STORY/Mods/polis/scripts/polisctl.py" ] \
+            || echo "WARN: deployed polisctl.py is not executable - the CLI will fail"
     fi
     if [ -n "$VSDATA" ]; then
-        rm -rf "$VSDATA/Mods/polis"
-        cp -r bin/Release/Mods/polis "$VSDATA/Mods/"
+        deploy_to "$VSDATA/Mods"
     fi
+    echo "Post-deploy gate: scripts/deploy-check.sh (advisory - look at the PNG it prints)"
 fi
 
 echo "Done."
