@@ -678,6 +678,7 @@ public partial class PolisSystem : ModSystem
     void OnTick(float dt)
     {
         GodModeOnTick(dt);
+        SanityOnTick(dt);
         DaylockTick(dt);
         hbAccum += dt;
         if (hbAccum >= 10f)

@@ -206,6 +206,28 @@ def cmd_godmode(a):
     _say(_post("godmode", args))
 
 
+def cmd_sanity(a):
+    """Temporal stability — 1.22's 'sanity' meter (the blue gear above the
+    hotbar). The engine calls it SystemTemporalStability: per-player 0..1
+    value in the watched attribute 'temporalStability'. Drains in unstable
+    areas (~1%/7.5s) and near temporal rifts (~3%/s), recovers in stable
+    areas (~1%/4s), clamped by active temporal storms; at 0 = 'Rust World'
+    (damage + glitch overlay). Storms/rifts are scheduled on calendar days,
+    so under daylock (frozen clock) a storm never ends and rifts never
+    expire — use 'storms off' / 'rifts off' (persisted + live-cleared) to
+    settle a wedged world.
+
+    No args: status (per-player meter, storm state, rift count, config).
+    <0-1> [player]: set + pin (re-asserted every second, godmode-style).
+    off: release the pin.
+    storms <off|veryrare|rare|sometimes|often>: world config (persisted);
+    'off' also zeroes the live storm + broadcast (screen clears at once).
+    rifts <off|invisible|visible>: world config (persisted); 'off' also
+    wipes the existing rifts now.
+    clear: wipe existing rifts without touching the config."""
+    _say(_post("sanity", a.rest))
+
+
 def cmd_gamemode(a):
     """Set the target player's VS game mode (the /gamemode path): 0=guest
     1=survival 2=creative 3=spectator, or by name. Creative is the proper
@@ -347,6 +369,10 @@ def main():
     p.add_argument("onoff", choices=["on", "off"])
     p.add_argument("id", nargs="?", help="target a single entity id instead of all bots + player")
     p.set_defaults(fn=cmd_godmode)
+
+    p = sub.add_parser("sanity", help="temporal stability ('sanity') meter + storms/rifts: status | <0-1> [player] | off | storms <preset> | rifts <mode> | clear")
+    p.add_argument("rest", nargs="*", help="(no args)=status; <0-1>[player]=set+pin; off=unpin; storms <off|veryrare|rare|sometimes|often>; rifts <off|invisible|visible>; clear=wipe rifts")
+    p.set_defaults(fn=cmd_sanity)
 
     p = sub.add_parser("gamemode", help="set the player's game mode: 0=guest 1=survival 2=creative 3=spectator (no mode = query)")
     p.add_argument("player")

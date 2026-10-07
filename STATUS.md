@@ -17,6 +17,7 @@ before end of 2026.
 | Core loop (load → spawn → goto → verify) | **live verified** | the fire-and-verify discipline holds; short and long (100-block) gotos arrive; smoke mission PASS |
 | Possession (player mounts a bot) | **live verified** | mount-based; the NaN seat crash is closed (the guard also zeroes NaN *motion* — see gotchas) |
 | Block / inventory / workstation actions | **live verified** | mine, harvest, pickup, place, equip, the workstation set (grind, press, clayform, knap, seal, forge, anvil); placement is verified by oracle, never by the `ok` flag |
+| Temporal-stability control (1.22 "sanity") | **live verified** | the `sanity` harness command: per-player meter query (watched attribute `temporalStability`, the blue gear), set + pin (re-asserted every second, godmode-style), and `storms` / `rifts` world-config switches (persisted AND live-cleared + broadcast). Needed to settle the world under daylock: a frozen clock keeps an active temporal storm open forever and spawned rifts never expire (2026-10-07: the meter sat at 0 and the screen carried the glitch overlay; settled with `sanity storms off; sanity rifts off; sanity 1`) |
 | Jev decision loop (v5) | **measured** | three-tier cascade: Laya 421M noul pre-veto → Decider-2B readout → 27B doubt-arbiter; reflex model as of the FT-2 round: `qwen35-decider-2b-ft2`; reports in `docs/reports/` |
 | R2 job system | **live verified** (M1 + M2) | goal grammar, 8-job catalog, deterministic compiler, 27B planner (precision 1.000 / coverage ~0.5, 5-way failure attribution). Live: mine 11.4 s, two-job external supply 8.5 s, endogenous harvest→sow 9.6 s |
 | Building plan system | **live verified** | a building is data (`builds/*.json`); the executor climbs its own work, per-cell verified; the 25-block hut built in 131 s and looked at |
@@ -77,6 +78,19 @@ on the model-mux box.
   noVNC clicks don't land on in-game UI buttons; the keyboard works.
 - `observer-screenshot --save` returns `filePath: null` (silent write
   failure; the base64 path works).
+- **Temporal stability under a frozen clock (2026-10-07).** 1.22 renamed
+  "sanity" to temporal stability (`SystemTemporalStability` +
+  `ModSystemRifts`): the per-player meter is the watched attribute
+  `temporalStability` (0..1; the blue gear above the hotbar). Temporal
+  storms (world config `temporalStorms`) clamp it and drive the full-screen
+  glitch; temporal rifts (`temporalRifts`) drain anyone standing near
+  them. Both are scheduled on **calendar days**, so under daylock (frozen
+  clock) an active storm never ends and spawned rifts never expire — the
+  survival world wedged at 0% meter / glitch overlay / rifts piled up.
+  Settled with the `sanity` command (persisted config + live zero +
+  broadcast + pinned meter); the in-game `/worldconfig` changes the config
+  but not the live system state. Public reference: the wiki pages
+  "Temporal stability" and "Temporal rift".
 
 ## Next (in binding order)
 

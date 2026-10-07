@@ -7,6 +7,7 @@ using System.Text.Json;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Config;
+using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.Essentials;
@@ -254,6 +255,9 @@ public partial class PolisSystem
                     return ExecuteTimeCommand(args, context);
                 case "daylock":
                     return ExecuteDayLockCommand(args, context);
+                case "sanity":
+                case "stability":
+                    return ExecuteSanityCommand(args, context);
                 case "autonomy":
                     return ExecuteAutonomyCommand(args, context);
                 case "activate":
@@ -678,6 +682,227 @@ public partial class PolisSystem
                 window = new { start = daylockWinStart, end = daylockWinEnd }
             }
         };
+    }
+
+    // ---- temporal stability (1.22's "sanity" meter) ---------------------
+    // The engine's SystemTemporalStability (Vintagestory.GameContent) keeps a
+    // per-player 0..1 value in the watched attribute "temporalStability"
+    // (the blue gear above the hotbar). It drains in temporally-unstable
+    // areas (~1%/7.5s), drains fast near temporal rifts (~3%/s), recovers in
+    // stable areas (~1%/4s), and is clamped by an active temporal storm
+    // (value <= 1 - glitchStrength). At 0 the player enters the "Rust
+    // World" (unavoidable damage, glitch overlay, hallucination spawns).
+    // Storms and rifts are scheduled on calendar days, so under a FROZEN
+    // clock (daylock) an active storm never ends and spawned rifts never
+    // expire (DieAtTotalHours is a calendar time that never arrives) — the
+    // state our world fell into: meter at 0, glitch overlay, rifts piling
+    // up. This command is the godmode/daylock-style lever: query the meter,
+    // pin a value (re-asserted every second), and switch storms/rifts off
+    // (persisted in the world config AND cleared live + broadcast, so no
+    // restart is needed to see the screen clear).
+    internal double sanityPin = -1;   // -1 = not pinned; else the value re-asserted below
+    internal string sanityPinUid;
+    float sanityAccum;
+
+    internal void SanityOnTick(float dt)
+    {
+        if (sanityPin < 0 || sanityPinUid == null || sapi?.World == null) return;
+        sanityAccum += dt;
+        if (sanityAccum < 1f) return;
+        sanityAccum = 0;
+        var p = sapi.World.PlayerByUid(sanityPinUid);
+        if (p?.Entity == null) return;
+        SetStability(p.Entity, (float)sanityPin);
+    }
+
+    static double GetStability(Entity e)
+    {
+        if (e == null) return -1;
+        if (e.WatchedAttributes is TreeAttribute t)
+            return t.GetDouble("temporalStability", 1.0);
+        return 1.0;
+    }
+
+    static void SetStability(Entity e, double v)
+    {
+        if (e == null) return;
+        v = Math.Max(0, Math.Min(1, v));
+        if (e.WatchedAttributes is TreeAttribute t)
+            t.SetDouble("temporalStability", v);
+    }
+
+    static void SetPrivate(object o, string field, object value)
+    {
+        o.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(o, value);
+    }
+
+    PolisTestHarness.CommandResult ExecuteSanityCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        var world = sapi?.World;
+        if (world == null) return new PolisTestHarness.CommandResult { Ok = false, Message = "no world loaded" };
+
+        string sub = (args != null && args.Length > 0 ? args[0] : "status").ToLowerInvariant();
+
+        var sys = sapi.ModLoader.GetModSystem<SystemTemporalStability>(true);
+        var riftSys = sapi.ModLoader.GetModSystem<ModSystemRifts>(true);
+        if (sys == null) return new PolisTestHarness.CommandResult { Ok = false, Message = "temporal-stability system not available (is temporalStability enabled?)" };
+
+        var storm = sys.StormData;
+        string cfgStorms = world.Config.GetString("temporalStorms", (string)null);
+        string cfgRifts = world.Config.GetString("temporalRifts", (string)null);
+        bool cfgEnabled = world.Config.GetBool("temporalStability", true);
+
+        if (sub == "status" || sub == "get")
+        {
+            var players = new List<object>();
+            var playerLines = new List<string>();
+            foreach (var p in world.AllOnlinePlayers)
+            {
+                players.Add(new
+                {
+                    name = p.PlayerName,
+                    uid = p.PlayerUID,
+                    stability = (double)GetStability(p.Entity),
+                    gamemode = (int)p.WorldData.CurrentGameMode
+                });
+                playerLines.Add($"{p.PlayerName} {(double)GetStability(p.Entity):P0}");
+            }
+            var riftCount = riftSys?.riftsById.Count ?? -1;
+            string msg = "temporal stability: " +
+                (playerLines.Count == 0 ? "no players online" : string.Join(" | ", playerLines)) +
+                $" | storm active={storm.nowStormActive} glitch={storm.stormGlitchStrength:F2} next@{storm.nextStormTotalDays:F1}d"
+                + $" | rifts={riftCount} (config: storms={cfgStorms ?? "n/a"} rifts={cfgRifts ?? "n/a"} system={cfgEnabled})"
+                + (sanityPin >= 0 ? $" | PIN on ({sanityPinUid} at {sanityPin:F2})" : "");
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = msg,
+                Data = new
+                {
+                    players,
+                    storm = new { active = storm.nowStormActive, glitchStrength = (double)storm.stormGlitchStrength, nextStormTotalDays = storm.nextStormTotalDays, nextStorm = storm.nextStormStrength.ToString() },
+                    rifts = new { count = (long)riftCount, mode = cfgRifts },
+                    config = new { temporalStability = cfgEnabled, temporalStorms = cfgStorms, temporalRifts = cfgRifts },
+                    pin = new { on = sanityPin >= 0, value = (double)sanityPin, uid = sanityPinUid }
+                }
+            };
+        }
+
+        if (sub == "off" || sub == "unpin")
+        {
+            sanityPin = -1; sanityPinUid = null;
+            return new PolisTestHarness.CommandResult { Ok = true, Message = "stability pin released (the area/storm dynamics drive the meter again)" };
+        }
+
+        if (sub == "storms")
+        {
+            string preset = (args.Length > 1 ? args[1] : "").ToLowerInvariant();
+            if (preset == "" || preset == "status")
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: sanity storms <off|veryrare|rare|sometimes|often>  (config is persisted; 'off' also clears the live storm immediately)" };
+            // persist (survives restart) + runtime (affects the live system)
+            sapi.WorldManager.SaveGame.WorldConfiguration.SetString("temporalStorms", preset);
+            world.Config.SetString("temporalStorms", preset);
+            SetPrivate(sys, "stormsEnabled", preset != "off");
+            SetPrivate(sys, "worldConfigStorminess", preset);
+            if (preset == "off")
+            {
+                // zero the live storm state, persist it, and push it to the
+                // clients (their glitch overlay follows this packet)
+                storm.nowStormActive = false;
+                storm.stormGlitchStrength = 0f;
+                storm.stormActiveTotalDays = 0;
+                storm.stormDayNotify = 99;
+                storm.nextStormTotalDays = world.Calendar.TotalDays + 3650;
+                sys.modGlitchStrength = 0f;
+                try
+                {
+                    sapi.WorldManager.SaveGame.StoreData("temporalStormData",
+                        Vintagestory.API.Util.SerializerUtil.Serialize<TemporalStormRunTimeData>(storm));
+                    sapi.Network.GetChannel("temporalstability").BroadcastPacket(storm, Array.Empty<IServerPlayer>());
+                }
+                catch (Exception ex)
+                {
+                    return new PolisTestHarness.CommandResult { Ok = false, Message = $"storms: config set, but live clear failed: {ex.Message}" };
+                }
+                return new PolisTestHarness.CommandResult
+                {
+                    Ok = true,
+                    Message = "temporal storms OFF (persisted): live storm zeroed and broadcast; a frozen clock can no longer hold a storm open. Re-enable with 'sanity storms <veryrare|rare|sometimes|often>'"
+                };
+            }
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = $"temporal storms preset '{preset}' (persisted; scheduler resumes with the saved state)"
+            };
+        }
+
+        if (sub == "rifts")
+        {
+            string mode = (args.Length > 1 ? args[1] : "").ToLowerInvariant();
+            if (mode != "off" && mode != "invisible" && mode != "visible")
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: sanity rifts <off|invisible|visible>  (config is persisted; 'off' also wipes the existing rifts now)" };
+            sapi.WorldManager.SaveGame.WorldConfiguration.SetString("temporalRifts", mode);
+            world.Config.SetString("temporalRifts", mode);
+            if (riftSys != null)
+            {
+                SetPrivate(riftSys, "riftsEnabled", mode != "off");
+                SetPrivate(riftSys, "riftMode", mode);
+                if (mode == "off")
+                {
+                    WipeRifts(riftSys);
+                    try
+                    {
+                        sapi.WorldManager.SaveGame.StoreData("rifts", riftSys.riftsById);
+                        sapi.Network.GetChannel("rifts").BroadcastPacket(new RiftList(), Array.Empty<IServerPlayer>());
+                        sapi.Network.GetChannel("rifts").BroadcastPacket(new RiftsStatus { Enabled = false }, Array.Empty<IServerPlayer>());
+                    }
+                    catch (Exception ex)
+                    {
+                        return new PolisTestHarness.CommandResult { Ok = false, Message = $"rifts: config set, but live wipe failed: {ex.Message}" };
+                    }
+                }
+            }
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = $"temporal rifts '{mode}' (persisted)" + (mode == "off" ? "; existing rifts wiped server-side and clients told" : "; takes effect fully on next world load")
+            };
+        }
+
+        if (sub == "clear")
+        {
+            if (riftSys == null) return new PolisTestHarness.CommandResult { Ok = false, Message = "rift system not available" };
+            int before = riftSys.riftsById.Count;
+            WipeRifts(riftSys);
+            try
+            {
+                sapi.Network.GetChannel("rifts").BroadcastPacket(new RiftList(), Array.Empty<IServerPlayer>());
+            }
+            catch (Exception ex) { /* cosmetic only */ }
+            return new PolisTestHarness.CommandResult { Ok = true, Message = $"cleared {before} temporal rift(s) (config unchanged; they may respawn while rift activity is high)" };
+        }
+
+        // default: `sanity <value 0..1> [playerUid]` — set AND pin
+        if (!double.TryParse(sub, NumberStyles.Float, CultureInfo.InvariantCulture, out double v))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: sanity | sanity <0-1> [playerUid] | sanity off | sanity storms <preset> | sanity rifts <off|invisible|visible> | sanity clear" };
+        string uid = args.Length > 1 ? args[1] : null;
+        IPlayer target = uid != null ? world.PlayerByUid(uid) : world.AllOnlinePlayers.FirstOrDefault();
+        if (target == null) return new PolisTestHarness.CommandResult { Ok = false, Message = $"no such online player: {uid ?? "(none online)"}" };
+        SetStability(target.Entity, v);
+        sanityPin = v; sanityPinUid = target.PlayerUID; sanityAccum = 0;
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"{target.PlayerName}: temporal stability set to {v:P0} and PINNED (re-asserted every second, godmode-style). 'sanity off' releases the pin.",
+            Data = new { name = target.PlayerName, uid = target.PlayerUID, stability = (double)GetStability(target.Entity), pinned = true }
+        };
+    }
+
+    static void WipeRifts(ModSystemRifts r)
+    {
+        r.riftsById.Clear();
+        if (r.ServerRifts != null) r.ServerRifts.Clear();
     }
 
     PolisTestHarness.CommandResult ExecuteLookCommand(string[] args, PolisTestHarness.CommandContext context)
