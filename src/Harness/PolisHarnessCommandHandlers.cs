@@ -6317,7 +6317,10 @@ public partial class PolisSystem
         return new PolisTestHarness.CommandResult
         {
             Ok = true,
-            Message = $"firepit at {pos}: crucible in input ({inputState}), fuel {firepit.IsBurning ? "burning" : (fueled ? "loaded + armed" : "none - run crucible-fuel or drop charcoal in")}",
+            string fuelState = firepit.IsBurning ? "burning"
+                : (fueled ? "loaded + armed"
+                          : "none - run crucible-fuel or drop charcoal in");
+            Message = $"firepit at {pos}: crucible in input ({inputState}), fuel {fuelState}",
             Data = new
             {
                 pos = new { x = pos.X, y = pos.Y, z = pos.Z },
