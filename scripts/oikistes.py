@@ -510,10 +510,8 @@ class Oikistes:
         capped list of code/position (uid for entities) - under 400
         chars, LLM-friendly. JSON case is tolerated (the harness
         serializes POCOs PascalCase; older payloads camelCase)."""
-        # the model passes the zone either as the positional target or
-        # as a zone=<name> object key (the endpoint's own parameter
-        # name is the shape 27B reaches for - accept both)
-        target = str(a.get("target") or a.get("zone") or "").strip()
+        target = str(a.get("target") or a.get("zone")
+                     or a.get("zonename") or a.get("name") or "").strip()
         parts = target.split()
         if not parts:
             return "query: give a zone name, or 'x z [radius]'"
@@ -555,7 +553,8 @@ class Oikistes:
         read (guarded+); define/remove/rename write the registry
         (free only). Zone commands are world-scoped - no bot context.
         define <name> x1 y1 z1 x2 y2 z2; rename <old> <new>."""
-        sub = str(a.get("sub") or "").lower()
+        sub = str(a.get("sub") or a.get("cmd")
+                  or a.get("action") or "").lower()
         args = [str(x) for x in (a.get("args") or [])]
         if sub not in self.ZONE_READ_SUBS and autonomy != "free":
             return ("DENIED: autonomy=%s does not permit zone %r "
@@ -658,16 +657,17 @@ class Oikistes:
             "(goals like 'mine granite x1', 'harvest rye x1', 'sow rye "
             "x1 at site-A', 'build granite x4 at site-A', 'place "
             "granite at site-A x1 supply external'); "
-            "query=<zonename | x z [radius]> [mode=blocks|entities|all] "
+            "query={target:<zonename | x z [radius]>} [mode=blocks|entities|all] "
             "[code=<substr>] what is in a named zone or around a point "
-            "(positional, e.g. 'query storage1' or 'query 512020 512025 '"
-            "radius=8'; a compact digest of the targets scan - counts "
-            "plus a capped code/position list; the coordinate form walks "
-            "your body there first); "
-            "zone=list|show|define|remove|rename named rectangular "
-            "world regions (define <name> x1 y1 z1 x2 y2 z2; "
-            "show/remove <name>; rename <old> <new> - writes are "
-            "free-only); "
+            "(the target key takes the zone name or two coordinates, "
+            "e.g. {\"target\":\"storage1\"} or {\"target\":\"512020 512025\","
+            "\"mode\":\"all\"}; a compact digest of the targets scan - "
+            "counts plus a capped code/position list; the coordinate "
+            "form walks your body there first); "
+            "zone={sub:list|show|define|remove|rename, args:[...]} "
+            "named rectangular world regions (define <name> x1 y1 z1 "
+            "x2 y2 z2; show/remove <name>; rename <old> <new> - "
+            "writes are free-only); "
             "command=<cmd,args> "
             "a direct harness command (free only). A 'sow <crop> xN at "
             "<site>' mission is the COMPLETE endogenous chain - the "

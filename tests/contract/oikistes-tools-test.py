@@ -170,6 +170,16 @@ check("zone= object key works (the 27B shape)",
       and params2.get("mode") == "all" and obs2 == obs,
       str((params2, obs2)))
 
+# further alias shapes the 27B reaches for
+obs3 = oik.do_tool("query", {"zonename": "berries", "mode": "all"},
+                   "strict")
+check("zonename= alias works", obs3 == obs, obs3)
+oik.polis.cmd_calls.clear()
+obs4 = oik.do_tool("zone", {"cmd": "list"}, "guarded")
+check("zone cmd= alias reaches zone-list (guarded read)",
+      ("zone-list", []) in oik.polis.cmd_calls and "DENIED" not in obs4,
+      str((oik.polis.cmd_calls, obs4)))
+
 # --- query: the digest's ceiling ------------------------------------------------
 d = oikistes._targets_digest(
     {"Blocks": [{"Code": "game:stone", "Pos": [i, 0, i]}
