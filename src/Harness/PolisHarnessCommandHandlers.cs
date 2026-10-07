@@ -5823,12 +5823,13 @@ public partial class PolisSystem
         }
 
         var payload = GetVitalsEndpointPayload(uid);
+        string msg = string.IsNullOrWhiteSpace(uid)
+            ? ("vitals for " + vitalsLatest.Count + (vitalsLatest.Count == 1 ? "y" : "ies"))
+            : ("vitals for '" + uid + "'");
         return new PolisTestHarness.CommandResult
         {
             Ok = true,
-            Message = string.IsNullOrWhiteSpace(uid)
-                ? $"vitals for {vitalsLatest.Count} entit{vitalsLatest.Count == 1 ? "y" : "ies"}"
-                : $"vitals for '{uid}'",
+            Message = msg,
             Data = payload
         };
     }
@@ -6314,12 +6315,12 @@ public partial class PolisSystem
 
         bot.RecordActionResult("crucible-fire", true, $"firepit {pos}: input={inputState}", sapi.World.ElapsedMilliseconds);
 
+        string fuelState = firepit.IsBurning ? "burning"
+            : (fueled ? "loaded + armed"
+                      : "none - run crucible-fuel or drop charcoal in");
         return new PolisTestHarness.CommandResult
         {
             Ok = true,
-            string fuelState = firepit.IsBurning ? "burning"
-                : (fueled ? "loaded + armed"
-                          : "none - run crucible-fuel or drop charcoal in");
             Message = $"firepit at {pos}: crucible in input ({inputState}), fuel {fuelState}",
             Data = new
             {
