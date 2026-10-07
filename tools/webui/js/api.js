@@ -228,6 +228,15 @@ class HarnessClient {
     async getTargets(botId, radius = 16, mode = 'all') {
         return this.get('/polis/targets', { botId, radius, mode });
     }
+
+    /**
+     * Get world vitals (B4 data wiring, 2026-10-07). The raw object
+     * lands on the state store as-is (state.vitals); no presentation.
+     * Polling cadence lives in app.js alongside the bots poll.
+     */
+    async getVitals() {
+        return this.get('/polis/vitals');
+    }
 }
 
 // Export singleton instance

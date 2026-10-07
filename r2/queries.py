@@ -62,6 +62,11 @@ PREFIX_RULES = [
     ("crop-", "crop"),
     ("ore-", "ore"),
     ("stone-", "stone"),
+    # the 1.22.7 forageable (vs-codes): the fruiting bush block is a
+    # plant; its harvest drop (fruit-<type>) is food (2026-10-07
+    # survival run - the forage job's ledger needs the drop's kind).
+    ("fruitingbush-", "plant"),
+    ("fruit-", "food"),
 ]
 
 

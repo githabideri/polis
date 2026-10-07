@@ -37,6 +37,7 @@ e.g. `/time set 0`) and `/polis/admin/*` are **loopback-gated**.
 | `GET /polis/bots` | All polisbots (id, name, pos, activity) |
 | `GET /polis/look?uid=&range=48` | Ray-traces from the player's *actual* eye + orientation; returns the exact block hit (`blockSelection`) — the ground truth for aim questions |
 | `GET /polis/targets` | Nearby interactables (below) — the discovery workhorse |
+| `GET /polis/vitals?uid=` | The vitals sampler's latest samples (saturation/health/position/skills per bot + player) + the world clock; the per-world persistence behind the stats panel (see `docs/design/food-hunger-skills-policies.md`) |
 | `GET /polis/zones` / `/polis/zone-check?botId=` | Named zone registry / which zones a bot is in |
 | `GET /polis/container-contents?name=\|x=&y=&z=` | Container inventory (by name or coordinates) |
 | `GET /polis/events?limit=20` | Recent event-stream history (the same feed the WebSocket pushes) |
@@ -49,12 +50,17 @@ e.g. `/time set 0`) and `/polis/admin/*` are **loopback-gated**.
 ```
 GET /polis/targets?playerUid=<uid>&botId=<id>&radius=6&limit=20
             &mode=blocks|entities|all&q=<text>&codeContains=<substr>&requireEntityClass=<class>
+            &zone=<name>
 ```
 
 Anchor: `botId` (preferred once a bot exists) or `playerUid`. `radius`
 clamps 1..32, `limit` caps the response (keep it small — this endpoint is
 the token-budget killer by default). `q` matches block code *and* item
-code; `codeContains` is a substring filter.
+code; `codeContains` is a substring filter. `zone=<name>` constrains the
+scan to a named zone's AABB from the zone registry (radius still applies
+inside it; the response gains a `Zone` field) — this is how "what is
+stored in storage1" works: ground items are entities, so they appear in
+the `entities` results with their item codes.
 
 Block entry: `{ X, Y, Z, Code, ... }` (integer cell coords, `game:`-domain
 code). Entity entry: `{ Id, Code, Pos, ItemCode, ... }` (`ItemCode` set

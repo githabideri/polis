@@ -1425,3 +1425,50 @@ wall tier 1, 6 wall tier 2) stands at site-A (origin
 (512010, 3, 512029)). It is a legitimate artifact of the build
 system's honest failure - left in place as evidence.
 
+
+## 14. Job catalog growth: forage + crucible family (2026-10-07 survival run)
+
+The catalog (`r2/jobs.py`) grew from 13 to 19 types for the survival
+run; **`forage` and the five crucible types are campaign-only** —
+`PLANNER_JOB_TYPES` (the 27B-facing planner vocabulary) deliberately
+keeps them out: foraging is already an autonomous engine behavior
+(`PolisForageController`'s food-pressure interrupt) that the
+deterministic job exists to *supplement on demand* (Oikistes
+directed "get berries"), and the crucible steps are a fixed
+sequence that exists as a chain template, not free-plan material.
+
+| Type | Engine path | Notes |
+|------|-------------|-------|
+| `forage` | walk to a ripe fruiting bush + `PickFruitTree` (the shared action `PolisPickBushAction`, the same path the pressure interrupt uses) | `at` required (from a scan); `n` = pick rounds (default 1); measured yield = the picked items |
+| `crucible_fire` | `crucible-fire [color] [x y z]` C# command | places the `crucible-<color>-raw` clayform block from cargo into a firepit and ignites (colors fire/blue/red; no size axis in 1.22.7) |
+| `crucible_insert` | `crucible-insert <item> [count] [x y z]` | ore into the firepit's 4 cooking slots |
+| `crucible_fuel` | `crucible-fuel [item=charcoal] [count=8] [x y z]` | fuel slot + re-ignition |
+| `crucible_take` | `crucible-take [x y z]` | smelted output; `hot`/`hasTongs` advisory (1.22.7 tongs = wear mechanic, not a hard gate) |
+| `crucible_pour` | `crucible-pour <x y z> [units]` | pour into a mold at a ground position; the engine's solidification gate; crucible reverts fired-empty |
+
+**`r2/chains.py` (new)** — mission-plan templates as *data*: a chain
+is a registered function that renders a validated `--jobs` list from
+live-world parameters at invocation (positions, item codes, counts —
+never frozen in the template). `crucible-copper` is the first:
+give(clay) → craft `crucible-<color>-raw` (the `clayforming/crucible`
+clayform recipe) → fire → insert(ore) → fuel → wait(engine smelt
+time) → take → pour. A rendered chain passes the same pre-execution
+checks as any operator campaign (live scan, recipe table, material
+ledger). New chains are new functions, not new runner code.
+
+**Oikistes tools: `query` + `zone`** (the storage-area pattern,
+2026-10-07 — ground storage, loose items, a named zone as the
+shorthand): `query <zone|x z [radius]> [mode=blocks|entities|all]
+[code=substr]` → the `/polis/targets` digest (the zone form is the
+zone-constrained AABB scan; the response is capped so the digest
+stays ≤400 chars — the token-budget discipline); `zone
+<list|define|remove|rename|show>` wraps the harness zone commands
+(rename = the zones change names with the plan). Both are
+read/define-only by construction: no mission dispatch, no 27B.
+
+**Vitals** (data layer only; the panel is a later decision): the
+1 Hz `PolisVitalsSampler` (saturation/health/position/skills per bot +
+player, a per-world persistence ring, `GET /polis/vitals`, the
+`vitals` CLI command, per-world config) feeds the webui's `state.
+vitals` — the stats foundation the survival run's hunger/health
+evidence needs. See `docs/design/food-hunger-skills-policies.md`.

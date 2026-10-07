@@ -368,7 +368,11 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
         if goal is not None and \
                 getattr(goal, "verb", None) == "build-plan":
             cap = max(MAX_QUANTITY, 150)
-        if j.quantity and j.quantity > cap:
+        # a wait job's quantity is SECONDS (the time valve the
+        # crucible chain waits out engine smelt progress with), not a
+        # material count - the plan-smell cap does not apply (the
+        # execution-time budget is the stall valve).
+        if j.type != "wait" and j.quantity and j.quantity > cap:
             return None, Failure(
                 "planner_invalid_json",
                 "quantity %d exceeds the %d cap" % (j.quantity, cap),
@@ -392,6 +396,16 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
                 "planner_invalid_json",
                 "chop is outside the planner vocabulary "
                 "(operator-campaign scoped)",
+                job_id=jid)
+        # forage (2026-10-07) and the crucible family (2026-10-07)
+        # are campaign-scoped on the same precedent.
+        if j.type in ("forage", "crucible_fire", "crucible_insert",
+                      "crucible_fuel", "crucible_take", "crucible_pour") \
+                and not campaign:
+            return None, Failure(
+                "planner_invalid_json",
+                "%s is outside the planner vocabulary "
+                "(operator-campaign scoped)" % j.type,
                 job_id=jid)
         jobs.append(j)
 
@@ -420,22 +434,23 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
             "depends_on contradicts list order or references unknown ids: %s"
             % problems, job_id=problems[0] if problems else None)
 
-    # 4b. campaign cell jobs (2026-10-06 door campaign): the operator's
-    #     chop / cell-mine jobs name a fixed cell - validate each
-    #     against the live cell index before any execution (a job at
-    #     air dies here, not mid-approach; a declared `expect` family
-    #     must match the live block). The index is caller-provided (a
-    #     fresh scan); a missing entry reads as empty (unknown is
-    #     never yes).
+    # 4b. campaign cell jobs (2026-10-06 door campaign, 2026-10-07
+    #     forage): the operator's chop / cell-mine / cell-forage jobs
+    #     name a fixed cell - validate each against the live cell index
+    #     before any execution (a job at air dies here, not mid-
+    #     approach; a declared `expect`/`plant` family must match the
+    #     live block). The index is caller-provided (a fresh scan); a
+    #     missing entry reads as empty (unknown is never yes).
     if cells is not None:
         for j in jobs:
-            if j.type == "chop" or (j.type == "mine" and j.at):
+            if j.type == "chop" or (j.type in ("mine", "forage") and j.at):
                 key = tuple(int(v) for v in j.at) if j.at else None
                 code = None
                 if key is not None:
                     code = cells.get(key, cells.get("%d,%d,%d" % key))
-                f = check_chop_target(j.at, j.expect, code, job_id=j.id,
-                                      verb=j.type)
+                f = check_chop_target(
+                    j.at, (j.plant if j.type == "forage" else j.expect),
+                    code, job_id=j.id, verb=j.type)
                 if f is not None:
                     return None, f
 
@@ -574,10 +589,17 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
         if cat["produces"] and j.material:
             src = JOB_CATALOG[j.type]["source"]
             if src == "world":
-                # a cell-targeted mine/chop (operator campaign) names
-                # its own cell: the pre-scan above IS the reference
-                # check, and the declared material budgets the ledger.
-                if campaign and j.at and j.type in ("mine", "chop"):
+                # a cell-targeted mine/chop/forage (operator campaign)
+                # names its own cell: the pre-scan above IS the
+                # reference check, and the declared material budgets
+                # the ledger. forage without a cell (nearest instance
+                # found at run time) and the crucible_take's melt
+                # (symbolic intermediate of the smelt chain) budget
+                # their claim the same way: they are campaign-scoped,
+                # so no res-* reference exists by construction.
+                if campaign and (
+                        (j.at and j.type in ("mine", "chop"))
+                        or j.type in ("forage", "crucible_take")):
                     avail[j.material] = avail.get(j.material, 0) + \
                         (j.quantity or 1)
                     continue

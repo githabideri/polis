@@ -1,0 +1,6 @@
+{
+  "note": "polis vitals sampler config (A1, 2026-10-07). Hot-reloaded on file change (mtime). sampleHz = sampling rate in real-time Hz (default 1, the forage-controller tick). persistHz = in-game Hz at which the per-entity series is written to the world record (PolisGlobalData.Vitals, stored under the same 'polis-bots' world-data key as the bot/zone registry); 1/3600 = one sample per in-game hour. A real-time throttle (30 s minimum between writes) additionally guards the daylock 6000x fast-forward. fields = which keys each entity row carries in /polis/vitals; an empty list means all. Bounded: at most 1 sample per persist interval per entity, capped at 336 samples (~14 days at hourly).",
+  "sampleHz": 1.0,
+  "persistHz": 0.000277,
+  "fields": ["sat", "satMax", "hp", "hpMax", "pos", "skills"]
+}

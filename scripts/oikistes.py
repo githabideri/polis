@@ -40,7 +40,7 @@ import threading
 import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -83,6 +83,21 @@ class Polis:
                       {"cmd": c, "args": list(args), "context": ctx},
                       timeout=t)
         return r
+
+    def get(self, path, params=None, timeout=15):
+        """A plain GET with a query string (the targets endpoint, the
+        zone registry, vitals - anything that is not a command)."""
+        if params:
+            q = "&".join("%s=%s" % (k, quote(str(v), safe=""))
+                         for k, v in params.items() if v not in (None, ""))
+            path = "%s?%s" % (path, q)
+        return http_json(self.base + path, None, timeout)
+
+    def goto(self, bot, x, y, z, t=90):
+        """Walk the body to a cell (fire-and-forget; the caller settles
+        before the next observation - the harness' goto is a pathfind
+        order, not a transaction)."""
+        return self.cmd("goto", [str(x), str(y), str(z)], bot, t=t)
 
     def state(self, bot):
         r = http_json("%s/polis/state?botId=%d" % (self.base, bot),
@@ -149,6 +164,79 @@ class LLM:
         except (KeyError, IndexError) as e:
             raise RuntimeError("no completion: %r" % e)
         return (m.get("content") or "").strip()
+
+
+# ----------------------------------------------------------------------
+# the query tool's helpers (module level: pure, testable)
+# ----------------------------------------------------------------------
+
+def _query_args(parts):
+    """Parse the query tool's argument tokens. Two shapes:
+
+    zone form:      query <zonename ...> [mode=...] [code=...]
+                           [radius=N] [limit=N]
+    coordinate:     query <x> <z> [radius]
+
+    key=value tokens are mode / code / radius / limit / cap (any
+    order); the remaining tokens: two or more bare integers are the
+    'x z [radius]' coordinate form (a third integer is the radius),
+    one bare integer is the radius, other words join into the target
+    (a multi-word zone name). A zone name containing digits still
+    parses - only BARE integers are positional."""
+    keys = {}
+    bare = []
+    words = []
+    for p in parts:
+        if "=" in p:
+            k, v = p.split("=", 1)
+            keys[k.strip().lower()] = v.strip()
+        elif p.lstrip("-").isdigit():
+            bare.append(p)
+        else:
+            words.append(p)
+    a = {}
+    if len(bare) >= 2:
+        a["target"] = " ".join(bare[:2])
+        if len(bare) >= 3 and "radius" not in keys:
+            a["radius"] = bare[2]
+    elif bare:
+        a.setdefault("radius", bare[0])
+    if words:
+        a["target"] = " ".join(words) if "target" not in a \
+            else a["target"] + " " + " ".join(words)
+    a.update(keys)
+    return a
+
+
+def _targets_digest(r, cap=12):
+    """The compact LLM digest of a /polis/targets payload: counts
+    plus up to `cap` lines of code@position (entities carry their
+    uid). Tolerant of the harness' JSON case (the C# POCOs serialize
+    PascalCase - System.Text.Json's default for property names -
+    while older payloads are camelCase). Capped well under a full
+    scan's 200 rows: the agent wants the shape of the place, not a
+    spreadsheet."""
+    blocks = r.get("Blocks") or r.get("blocks") or []
+    ents = r.get("Entities") or r.get("entities") or []
+    lines = []
+    for b in blocks[:cap]:
+        code = (b.get("Code") or b.get("code") or "?")
+        code = code.split(":")[-1]
+        p = b.get("Pos") or b.get("pos") or []
+        lines.append("%s@%s" % (code, ",".join(str(int(v)) for v in p)))
+    for e in ents[:max(0, cap - len(lines))]:
+        code = (e.get("Code") or e.get("code") or "?").split(":")[-1]
+        p = e.get("Pos") or e.get("pos") or []
+        lines.append("%s(id=%s)@%s" % (code, e.get("Id") or e.get("id"),
+                                       ",".join(str(int(v)) for v in p)))
+    n = len(blocks) + len(ents)
+    out = "targets: %d (blocks=%d entities=%d)" % (n, len(blocks),
+                                                   len(ents))
+    if lines:
+        out += ": " + "; ".join(lines)
+    if n > len(lines):
+        out += " (+%d more)" % (n - len(lines))
+    return out[:400]
 
 
 # ----------------------------------------------------------------------
@@ -279,17 +367,24 @@ class Oikistes:
 
     KNOWN = frozenset(
         ("state", "scan", "screenshot", "events", "autonomy",
-         "mission", "give", "command"))
+         "mission", "give", "command", "query", "zone"))
 
     def check_tool(self, tool, autonomy):
         if tool not in self.KNOWN:
             return False          # the gate whitelists; unknown is denied
-        READONLY = ("state", "scan", "screenshot", "events", "autonomy")
+        READONLY = ("state", "scan", "screenshot", "events", "autonomy",
+                    "query")
         if autonomy == "strict":
             return tool in READONLY
         if autonomy == "guarded":
-            return tool in READONLY or tool in ("mission", "give")
+            return tool in READONLY or tool in ("mission", "give", "zone")
         return True  # free
+
+    # zone subcommands that READ (everything else writes the zone
+    # registry - do_tool gates those to free; check_tool cannot see
+    # the arguments)
+    ZONE_READ_SUBS = ("list", "show")
+    ZONE_WRITE_SUBS = ("define", "remove", "rename")
 
     def do_tool(self, tool, a, autonomy):
         # the model sometimes passes a bare string where the protocol
@@ -305,6 +400,12 @@ class Oikistes:
             elif tool == "command":
                 a = {"cmd": a.split()[0],
                      "args": a.split()[1:]} if a.strip() else {}
+            elif tool == "query":
+                a = _query_args(a.split())
+            elif tool == "zone":
+                parts = a.split()
+                a = {"sub": parts[0].lower(), "args": parts[1:]} \
+                    if parts else {}
             else:
                 a = {}
         if not self.check_tool(tool, autonomy):
@@ -383,6 +484,10 @@ class Oikistes:
                                              r.get("Message")))
             if tool == "mission":
                 return self.run_mission(str(a["goal"]))
+            if tool == "query":
+                return self._query(a)
+            if tool == "zone":
+                return self._zone(a, autonomy)
             if tool == "command":
                 r = self.polis.cmd(str(a["cmd"]),
                                    [str(x) for x in a.get("args", [])],
@@ -393,6 +498,86 @@ class Oikistes:
         except Exception as e:
             return "tool %s failed: %r" % (tool, e)
         return "unknown tool %r" % tool
+
+    def _query(self, a):
+        """query <zonename | x z [radius]> [mode=blocks|entities|all]
+        [code=<substr>] -> a compact digest of the /polis/targets
+        scan. Zone form: the zone= parameter (an AABB scan of the
+        named zone - Lane A's addition to the existing endpoint).
+        Coordinate form: the endpoint's existing radius mode centred
+        on the body - the (disposable) body walks there first; moving
+        a presence is not a world change. The digest is counts plus a
+        capped list of code/position (uid for entities) - under 400
+        chars, LLM-friendly. JSON case is tolerated (the harness
+        serializes POCOs PascalCase; older payloads camelCase)."""
+        target = str(a.get("target") or "").strip()
+        parts = target.split()
+        if not parts:
+            return "query: give a zone name, or 'x z [radius]'"
+        params = {"mode": str(a.get("mode") or "all"),
+                  "limit": str(int(a.get("limit") or 20))}
+        if a.get("code"):
+            params["codeContains"] = str(a["code"])
+        polys = self.polis
+        if len(parts) >= 2 and \
+                all(p.lstrip("-").isdigit() for p in parts[:2]):
+            # coordinate form: x z [radius]
+            x, z = int(parts[0]), int(parts[1])
+            rad = int(a.get("radius") or (
+                parts[2] if len(parts) > 2 and parts[2].lstrip("-").isdigit()
+                else 8))
+            bot = self.body()
+            by = int((polys.state(bot).get("Bot") or {}).get(
+                "Pos", [0, 0, 0])[1])
+            polys.goto(bot, x, by, z)
+            time.sleep(8)  # settle: the radius query centres on the
+            # body's actual stopping point, not the destination
+            params["botId"] = bot
+            params["radius"] = rad
+        else:
+            params["playerUid"] = self.args.uid
+            params["zone"] = target
+        try:
+            r = polys.get("/polis/targets", params)
+        except Exception as e:
+            return "query %s: harness unreachable (%s)" % (target, e)
+        if not r or r.get("Ok") is False:
+            return "query %s: %s" % (target, r.get("Message") or "no data")
+        return _targets_digest(r, int(a.get("cap") or 12))
+
+    def _zone(self, a, autonomy):
+        """zone list|show|define|remove|rename - the named rectangular
+        world regions the targets endpoint scans (the harness zone
+        commands; rename is Lane A's 2026-10-07 addition). list/show
+        read (guarded+); define/remove/rename write the registry
+        (free only). Zone commands are world-scoped - no bot context.
+        define <name> x1 y1 z1 x2 y2 z2; rename <old> <new>."""
+        sub = str(a.get("sub") or "").lower()
+        args = [str(x) for x in (a.get("args") or [])]
+        if sub not in self.ZONE_READ_SUBS and autonomy != "free":
+            return ("DENIED: autonomy=%s does not permit zone %r "
+                    "(writes are free-only; list/show read)"
+                    % (autonomy, sub))
+        if sub == "list":
+            cmd, args = "zone-list", []
+        elif sub == "show":
+            cmd, args = "zone-show", args[:1]
+        elif sub == "define":
+            cmd, args = "zone-define", args
+        elif sub == "remove":
+            cmd, args = "zone-remove", args[:1]
+        elif sub == "rename":
+            cmd, args = "zone-rename", args[:2]
+        else:
+            return ("zone: unknown subcommand %r (list|show|define|"
+                    "remove|rename)" % sub)
+        if sub != "list" and (not args or (sub == "define" and len(args) < 7)
+                              or (sub == "rename" and len(args) < 2)):
+            return ("zone %s: missing arguments (define needs "
+                    "<name> x1 y1 z1 x2 y2 z2; rename <old> <new>)" % sub)
+        r = self.polis.cmd(cmd, args, None, actor="oikistes")
+        return "zone %s: %s" % (sub, r.get("Message") or r.get("error")
+                                or ("ok" if r.get("Ok") else "no reply"))
 
     def run_mission(self, goal_line):
         """Order work through the R2 job system (the actuator).
@@ -449,7 +634,8 @@ class Oikistes:
 
     # -- the conversation loop ------------------------------------------
     def system_prompt(self, autonomy, digest, memory):
-        tools = """state, scan, screenshot, events, autonomy, give, mission, command"""
+        tools = ("state, scan, screenshot, events, autonomy, give, "
+                 "mission, query, zone, command")
         return (
             "You are the OIKISTES, the settlement's builder manager, a "
             "builder bot with a body in a block world. Your partners are "
@@ -468,7 +654,17 @@ class Oikistes:
             "mission=<goal line> order a job through the job system "
             "(goals like 'mine granite x1', 'harvest rye x1', 'sow rye "
             "x1 at site-A', 'build granite x4 at site-A', 'place "
-            "granite at site-A x1 supply external'); command=<cmd,args> "
+            "granite at site-A x1 supply external'); "
+            "query=<zonename | x z [radius]> [mode=blocks|entities|all] "
+            "[code=<substr>] what is in a named zone or around a point "
+            "(a compact digest of the targets scan - counts plus a "
+            "capped code/position list; the coordinate form walks your "
+            "body there first); "
+            "zone=list|show|define|remove|rename named rectangular "
+            "world regions (define <name> x1 y1 z1 x2 y2 z2; "
+            "show/remove <name>; rename <old> <new> - writes are "
+            "free-only); "
+            "command=<cmd,args> "
             "a direct harness command (free only). A 'sow <crop> xN at "
             "<site>' mission is the COMPLETE endogenous chain - the "
             "mission itself harvests the seed and sows it; never "
@@ -484,9 +680,11 @@ class Oikistes:
             "door), a roof over - a place to shelter from weather and "
             "the night. Suggest only work you can actually order from "
             "this vocabulary; if the user wants something outside it "
-            "(crafting, cooking, smelting), say plainly that the job "
-            "system has no verb for that yet, and offer the closest "
-            "thing you can order. After each action you see its "
+            "(e.g. foraging berries, smelting in a crucible - the "
+            "campaign chains are operator-ordered, not goal verbs), "
+            "say plainly that the job system has no goal verb for that "
+            "yet, and offer the closest thing you can order. After each "
+            "action you see its "
             "result; once you are done acting you MUST answer in "
             "plain text with a short report. You are the Oikistes: "
             "answer as it, in short plainspoken sentences - never "

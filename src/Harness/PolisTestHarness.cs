@@ -79,6 +79,8 @@ public class PolisTestHarness : IDisposable
     private readonly System.Func<string, long?, TestStateResult> getTestStateFunc;
     private readonly System.Func<string, string[], CommandContext, CommandResult> executeCommandFunc;
     private readonly System.Func<string, bool, System.Action<PolisScreenshotResponsePacket>, string> requestScreenshotFunc;
+    private readonly System.Func<string, object> getVitalsFunc;
+    private readonly System.Func<string, Cuboidi?> getZoneBoundsFunc;
     // In-flight guard for /polis/observer-screenshot: overlapping teleport-
     // capture-restore round trips produce bursts of server->client position
     // updates that the client's prediction can turn into NaN motion (crash
@@ -103,12 +105,16 @@ public class PolisTestHarness : IDisposable
         System.Func<string, long?, TestStateResult> getTestStateFunc,
         System.Func<string, string[], CommandContext, CommandResult> executeCommandFunc,
         System.Func<string, bool, System.Action<PolisScreenshotResponsePacket>, string> requestScreenshotFunc = null,
-        int port = PolisConstants.DefaultPort)
+        int port = PolisConstants.DefaultPort,
+        System.Func<string, object> getVitalsFunc = null,
+        System.Func<string, Cuboidi?> getZoneBoundsFunc = null)
     {
         this.sapi = sapi;
         this.getTestStateFunc = getTestStateFunc;
         this.executeCommandFunc = executeCommandFunc;
         this.requestScreenshotFunc = requestScreenshotFunc;
+        this.getVitalsFunc = getVitalsFunc;
+        this.getZoneBoundsFunc = getZoneBoundsFunc;
         this.port = port;
     }
 
@@ -342,6 +348,30 @@ public class PolisTestHarness : IDisposable
                         tcs.SetResult(new { ok = false, error = ex.Message });
                     }
                 }, "polis-harness-clock");
+            }
+
+            // Vitals (A1, 2026-10-07): the 1 Hz sampler's latest snapshot
+            // for every loaded bot and online player, plus the world
+            // clock. The web UI polls this (it is a GET, not a command:
+            // no event, no actor attribution - same shape as /polis/clock).
+            // Optional ?uid= filters to one entity (numeric EntityId or
+            // name).
+            else if (path == "/polis/vitals" && request.HttpMethod == "GET")
+            {
+                var uid = QueryValue(request, "uid");
+
+                sapi.Event.EnqueueMainThreadTask(() =>
+                {
+                    try
+                    {
+                        tcs.SetResult(getVitalsFunc?.Invoke(uid)
+                            ?? new { ok = false, error = "vitals sampler not wired" });
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.SetResult(new { ok = false, error = ex.Message });
+                    }
+                }, "polis-harness-vitals");
             }
 
             // 1.22.7 grid-recipe table (the headless craft capability's
@@ -610,6 +640,10 @@ public class PolisTestHarness : IDisposable
                 bool requireEntityClass = bool.TryParse(request.QueryString["requireEntityClass"], out var requireClass) && requireClass;
                 long? botId = long.TryParse(request.QueryString["botId"], out var parsedBotId) ? parsedBotId : (long?)null;
                 bool includeDead = bool.TryParse(request.QueryString["includeDead"], out var incDead) && incDead;
+                // A3 (2026-10-07): when zone=<name> is given, the zone's
+                // AABB (zone registry) REPLACES the radius sphere as the
+                // scan volume (contract A3); distance is still reported.
+                var zoneName = QueryValue(request, "zone");
 
                 if (float.TryParse(request.QueryString["radius"], out var parsedRadius))
                 {
@@ -662,19 +696,53 @@ public class PolisTestHarness : IDisposable
                                 Radius = radius
                             };
 
+                            Cuboidi? zoneBounds = null;
+                            if (!string.IsNullOrWhiteSpace(zoneName))
+                            {
+                                zoneBounds = getZoneBoundsFunc?.Invoke(zoneName);
+                                if (zoneBounds == null)
+                                {
+                                    tcs.SetResult(new { error = $"unknown zone '{zoneName}'" });
+                                    return;
+                                }
+                                result.Zone = new TargetsResult.ZoneInfo
+                                {
+                                    Name = zoneName,
+                                    Bounds = new TargetsResult.ZoneBounds
+                                    {
+                                        Min = new[] { zoneBounds.Value.X1, zoneBounds.Value.Y1, zoneBounds.Value.Z1 },
+                                        Max = new[] { zoneBounds.Value.X2, zoneBounds.Value.Y2, zoneBounds.Value.Z2 }
+                                    }
+                                };
+                            }
+
                             bool includeBlocks = mode == "blocks" || mode == "all";
                             bool includeEntities = mode == "entities" || mode == "all";
 
                             if (includeBlocks)
                             {
                                 int r = (int)Math.Ceiling(radius);
-                                for (int dx = -r; dx <= r; dx++)
+                                int xMin, xMax, yMin, yMax, zMin, zMax;
+                                if (zoneBounds.HasValue)
                                 {
-                                    for (int dy = -r; dy <= r; dy++)
+                                    // zone AABB replaces the radius box
+                                    xMin = zoneBounds.Value.X1; xMax = zoneBounds.Value.X2;
+                                    yMin = zoneBounds.Value.Y1; yMax = zoneBounds.Value.Y2;
+                                    zMin = zoneBounds.Value.Z1; zMax = zoneBounds.Value.Z2;
+                                }
+                                else
+                                {
+                                    xMin = centerBlock.X - r; xMax = centerBlock.X + r;
+                                    yMin = centerBlock.Y - r; yMax = centerBlock.Y + r;
+                                    zMin = centerBlock.Z - r; zMax = centerBlock.Z + r;
+                                }
+                                for (int dx = xMin; dx <= xMax; dx++)
+                                {
+                                    for (int dy = yMin; dy <= yMax; dy++)
                                     {
-                                        for (int dz = -r; dz <= r; dz++)
+                                        for (int dz = zMin; dz <= zMax; dz++)
                                         {
-                                            var pos = new BlockPos(centerBlock.X + dx, centerBlock.Y + dy, centerBlock.Z + dz);
+                                            var pos = new BlockPos(dx, dy, dz);
                                             var block = sapi.World.BlockAccessor.GetBlock(pos);
                                             if (block == null || block.Id == 0) continue;
 
@@ -689,7 +757,7 @@ public class PolisTestHarness : IDisposable
 
                                             var blockCenter = new Vec3d(pos.X + 0.5, pos.Y + 0.5, pos.Z + 0.5);
                                             var dist = blockCenter.DistanceTo(center);
-                                            if (dist > radius) continue;
+                                            if (!zoneBounds.HasValue && dist > radius) continue;
 
                                             var behaviors = block.BlockBehaviors?
                                                 .Select(b => b?.GetType().Name)
@@ -728,13 +796,40 @@ public class PolisTestHarness : IDisposable
 
                             if (includeEntities)
                             {
-                                var entities = sapi.World.GetEntitiesAround(center, radius, radius, e => includeDead || e.Alive);
+                                // zone scan: the engine's cuboid query covers
+                                // exactly the zone AABB; plain scan: the
+                                // radius box around the center.
+                                Entity[] entities;
+                                if (zoneBounds.HasValue)
+                                {
+                                    entities = sapi.World.GetEntitiesInsideCuboid(
+                                        new BlockPos(zoneBounds.Value.X1, zoneBounds.Value.Y1, zoneBounds.Value.Z1),
+                                        new BlockPos(zoneBounds.Value.X2, zoneBounds.Value.Y2, zoneBounds.Value.Z2),
+                                        e => includeDead || e.Alive);
+                                }
+                                else
+                                {
+                                    entities = sapi.World.GetEntitiesAround(center, radius, radius, e => includeDead || e.Alive);
+                                }
                                 foreach (var entity in entities)
                                 {
                                     if (entity is EntityPlayer) continue;
 
                                     var dist = entity.ServerPos.XYZ.DistanceTo(center);
-                                    if (dist > radius) continue;
+                                    if (!zoneBounds.HasValue && dist > radius) continue;
+
+                                    if (zoneBounds.HasValue)
+                                    {
+                                        // AABB containment (edge rounding of
+                                        // the cuboid query at the borders)
+                                        var eb = entity.ServerPos.AsBlockPos;
+                                        if (eb.X < zoneBounds.Value.X1 || eb.X > zoneBounds.Value.X2
+                                            || eb.Y < zoneBounds.Value.Y1 || eb.Y > zoneBounds.Value.Y2
+                                            || eb.Z < zoneBounds.Value.Z1 || eb.Z > zoneBounds.Value.Z2)
+                                        {
+                                            continue;
+                                        }
+                                    }
 
                                     string itemCode = null;
                                     int? itemQty = null;
@@ -1335,8 +1430,9 @@ public class PolisTestHarness : IDisposable
                         "GET /polis/players",
                         "GET /polis/player?uid=",
                         "GET /polis/look?uid=&range=48",
-                        "GET /polis/targets?playerUid=&botId=&radius=6&limit=20&mode=blocks|entities|all&q=&codeContains=&requireEntityClass=&includeDead=",
+                        "GET /polis/targets?playerUid=&botId=&radius=6&limit=20&mode=blocks|entities|all&q=&codeContains=&requireEntityClass=&includeDead=&zone=",
                         "GET /polis/bots",
+                        "GET /polis/vitals?uid= - Latest vitals snapshot (bots + players) + world clock",
                         "GET /polis/container-contents?name=|x=&y=&z= - Get container inventory",
                         "GET /polis/zones - List all named zones",
                         "GET /polis/zone-check?botId= - Check which zones a bot is in",
@@ -1687,6 +1783,24 @@ public class PolisTestHarness : IDisposable
         public float Radius { get; set; }
         public List<TargetBlockInfo> Blocks { get; set; } = new List<TargetBlockInfo>();
         public List<TargetEntityInfo> Entities { get; set; } = new List<TargetEntityInfo>();
+        /// <summary>
+        /// Set when the scan was constrained by ?zone=<name>: the zone's
+        /// AABB (min/max block coords, inclusive) from the zone registry.
+        /// </summary>
+        public ZoneInfo Zone { get; set; }
+
+        public class ZoneInfo
+        {
+            public string Name { get; set; }
+            /// <summary>AABB as { min:[x,y,z], max:[x,y,z] }, inclusive.</summary>
+            public ZoneBounds Bounds { get; set; }
+        }
+
+        public class ZoneBounds
+        {
+            public int[] Min { get; set; }
+            public int[] Max { get; set; }
+        }
 
         public class TargetBlockInfo
         {

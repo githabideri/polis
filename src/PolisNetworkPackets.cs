@@ -17,6 +17,9 @@ public class PolisGlobalData
 
     [ProtoMember(3)]
     public Dictionary<string, ViewpointRecord> Viewpoints = new Dictionary<string, ViewpointRecord>();
+
+    [ProtoMember(4)]
+    public PolisVitalsData Vitals = new PolisVitalsData();
 }
 
 [ProtoContract]
@@ -266,4 +269,49 @@ public class ContainerRecord
     /// <summary>Optional user description</summary>
     [ProtoMember(9)]
     public string Description;
+}
+
+// ============================================
+// Vitals (per-world survival telemetry)
+// ============================================
+
+/// <summary>
+/// A single vitals sample for one entity (bot or player), taken by the
+/// 1 Hz sampler. Position + vitals + behavior levels in one record.
+/// </summary>
+[ProtoContract]
+public class VitalsSample
+{
+    [ProtoMember(1)] public long EntityId;
+    [ProtoMember(2)] public string Code;
+    [ProtoMember(3)] public string Name;
+    [ProtoMember(4)] public float Sat;
+    [ProtoMember(5)] public float SatMax;
+    [ProtoMember(6)] public float Hp;
+    [ProtoMember(7)] public float HpMax;
+    [ProtoMember(8)] public double X;
+    [ProtoMember(9)] public double Y;
+    [ProtoMember(10)] public double Z;
+    /// <summary>In-game seconds since world start (day*86400 + hourOfDay*3600)</summary>
+    [ProtoMember(11)] public long GameTimeSec;
+    [ProtoMember(12)] public long GameDay;
+    /// <summary>Behavior levels the entity exposes (1 = present).</summary>
+    [ProtoMember(13)] public Dictionary<string, int> Skills;
+}
+
+/// <summary>
+/// Running per-world vitals record, stored in the world's save data
+/// (same StoreData path as the bot registry). Series is downsampled:
+/// at most one sample per persistence interval (default 1 in-game hour)
+/// per entity, capped at MaxSeriesSamples per entity.
+/// </summary>
+[ProtoContract]
+public class PolisVitalsData
+{
+    /// <summary>EntityId -> downsampled sample series (oldest first).</summary>
+    [ProtoMember(1)]
+    public Dictionary<long, List<VitalsSample>> Series = new Dictionary<long, List<VitalsSample>>();
+
+    /// <summary>Cap on stored samples per entity (oldest dropped).</summary>
+    [ProtoMember(2)] public int MaxSeriesSamples = 336;
 }

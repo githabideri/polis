@@ -187,13 +187,18 @@ class PolisPickBushAction : EntityActionBase
     }
 
     /// <summary>
-    /// Completion the way the engine does it, minus the player handoff:
-    /// drops computed by the bush itself, delivered to the bot's cargo,
-    /// bush advanced to Mature (regrows to Ripe later).
+    /// The shared completion path (also used by the harness `pick`
+    /// command, which runs the same completion synchronously instead of
+    /// across ticks): drops computed by the bush itself, delivered to
+    /// the agent's cargo (overflow drops in-world), onitemcollected
+    /// event + audit mirrored, bush advanced to Mature (regrows to Ripe
+    /// later, exactly like vanilla setGrowthState(Mature)).
+    /// Returns the total number of items placed in the agent.
     /// </summary>
-    void CompletePickToBot(IWorldAccessor world)
+    public static int CompletePickToBot(IWorldAccessor world, EntityAgent agent,
+        BEBehaviorFruitingBush bush, BlockSelection blockSel, IServerPlayer player,
+        Action<string> debugLog = null)
     {
-        var agent = vas.Entity as EntityAgent;
         int total = 0;
 
         var drops = bush.GetRipeDrops(player);
@@ -222,7 +227,7 @@ class PolisPickBushAction : EntityActionBase
                     }
 
                     world.Logger.Audit("{0} picked {1}x{2} from {3} at {4}.",
-                        player.PlayerName, pickedUp, stack.Collectible.Code, block.Code, blockSel.Position);
+                        player.PlayerName, pickedUp, stack.Collectible.Code, blockSel.Block.Code, blockSel.Position);
 
                     var evt = new TreeAttribute();
                     evt["itemstack"] = (IAttribute)new ItemstackAttribute(stack.Clone());
@@ -245,9 +250,16 @@ class PolisPickBushAction : EntityActionBase
         bush.BState.TransitionHoursLeft = bush.GetHoursForNextStage();
         bush.Blockentity.MarkDirty(true, player);
 
-        var sound = block.GetBehavior<BlockBehaviorFruitingBush>()?.HarvestingSound;
+        var sound = blockSel.Block.GetBehavior<BlockBehaviorFruitingBush>()?.HarvestingSound;
         if (sound != null)
             world.PlaySoundAt(sound, blockSel.Position, 0.0f, player, true, 32f, 1f);
+
+        return total;
+    }
+
+    void CompletePickToBot(IWorldAccessor world)
+    {
+        int total = CompletePickToBot(world, vas.Entity as EntityAgent, bush, blockSel, player, debugLog);
 
         done = true;
         debugLog?.Invoke($"[pickbush] picked {total}x berries, {block.Code} now Mature (regrowing)");

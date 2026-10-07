@@ -543,12 +543,14 @@ async function pollStatus() {
     try {
         const data = await api.getStatus();
         state.updateFromStatus(data);
-        const [bots, players] = await Promise.all([
+        const [bots, players, vitals] = await Promise.all([
             api.getBots().catch(() => null),
             api.getPlayers().catch(() => null),
+            api.getVitals().catch(() => null),
         ]);
         if (bots) state.updateFromBots(bots);
         if (players) state.updateFromPlayers(players);
+        if (vitals) state.updateFromVitals(vitals);
         if (state.selectedBotId) {
             const s = await api.getState(state.selectedBotId).catch(() => null);
             if (s) state.updateFromState(s);

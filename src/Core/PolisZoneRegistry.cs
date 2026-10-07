@@ -28,6 +28,29 @@ public class PolisZoneRegistry
         return zones.Remove(name);
     }
 
+    /// <summary>
+    /// Renames a zone, keeping its bounds. The zone registry lives in
+    /// PolisGlobalData, so the rename is persisted with the world save.
+    /// </summary>
+    public bool RenameZone(string oldName, string newName, out string error)
+    {
+        error = null;
+        if (!zones.TryGetValue(oldName, out var record))
+        {
+            error = $"zone '{oldName}' not found";
+            return false;
+        }
+        if (zones.ContainsKey(newName))
+        {
+            error = $"zone '{newName}' already exists";
+            return false;
+        }
+        zones.Remove(oldName);
+        record.Name = newName;
+        zones[newName] = record;
+        return true;
+    }
+
     public ZoneRecord GetZone(string name)
     {
         return zones.TryGetValue(name, out var record) ? record : null;

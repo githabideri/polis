@@ -125,7 +125,10 @@ public partial class PolisSystem : ModSystem
             sapi,
             GetTestStateResult,
             ExecuteHarnessCommand,
-            RequestScreenshotForHarness
+            RequestScreenshotForHarness,
+            PolisConstants.DefaultPort,
+            GetVitalsEndpointPayload,
+            name => zoneRegistry?.GetZone(name)?.Bounds
         );
         if (testHarness.Start())
         {
@@ -163,6 +166,14 @@ public partial class PolisSystem : ModSystem
         if (globalData.Bots == null)
         {
             globalData.Bots = new Dictionary<long, BotRecord>();
+        }
+
+        // Vitals record (A1, 2026-10-07): the field initializer supplies
+        // a fresh record; guard anyway in case an older save deserializes
+        // a null here.
+        if (globalData.Vitals == null)
+        {
+            globalData.Vitals = new PolisVitalsData();
         }
 
         foreach (var record in globalData.Bots.Values)
@@ -740,6 +751,7 @@ public partial class PolisSystem : ModSystem
                 bot.Activity?.OnTick(dt);
             }
             ForageOnTick(dt);
+            VitalsOnTick(dt);
             for (int i = 0; i < toRemoveFromMemory.Count; i++)
             {
                 bots.Remove(toRemoveFromMemory[i]);

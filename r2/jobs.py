@@ -136,6 +136,41 @@ JOB_CATALOG = {
     # planner's vocabulary never gained the verb, so it cannot emit one.
     "chop":      {"produces": True,  "consumes": False,
                   "source": "world",    "needs": ("at",)},
+    # forage (2026-10-07 survival run): gather the fruit of a forageable
+    # plant (the 1.22 fruiting bush, `fruitingbush-<state>-<type>`): the
+    # executor walks to an ADJACENT cell and issues the harness `pick`
+    # command on the target (Lane A's command - the same pick path the
+    # mod's forage interrupt uses), repeating until the count is met.
+    # `plant` names the block code or a family glob (`fruitingbush-*`);
+    # `at` is a known target cell (from a targets query) and optional -
+    # without it the executor finds the nearest instance within radius
+    # at run time; `deliver` is carry (default) | drop (at the bot's
+    # feet on completion); `material` claims the drop (the bush's fruit
+    # item) for the ledger. GOAL-SCOPED exactly like chop: catalog +
+    # ledger + executor, but NOT in the 27B planner vocabulary.
+    "forage":    {"produces": True,  "consumes": False,
+                  "source": "world",    "needs": ("plant",)},
+    # crucible smelt (2026-10-07 survival run): the pot-work family.
+    # Lane A's C# commands (the 1.22 crucible reuses the same base for
+    # the cooking pot later); the bot must stand at the crucible - the
+    # chain's goto walks there first. `material` is the slot item
+    # (crucible size for fire, ore for insert, fuel or the `charcoal`
+    # keyword for fuel, the melt for take/pour), `quantity` its count,
+    # `at` the firepit cell for fire (optional) and the mold cell for
+    # pour. Ledger: fire consumes the crucible item, insert/fuel
+    # consume, take produces the melt, pour consumes the melt (symbolic
+    # - the ingot is the oracle's measured delta). GOAL-SCOPED: campaign
+    # chains only, never in the 27B vocabulary.
+    "crucible_fire":   {"produces": False, "consumes": True,
+                        "source": "world",  "needs": ("material",)},
+    "crucible_insert": {"produces": False, "consumes": True,
+                        "source": "world",  "needs": ("material",)},
+    "crucible_fuel":   {"produces": False, "consumes": True,
+                        "source": "world",  "needs": ("material",)},
+    "crucible_take":   {"produces": True,  "consumes": False,
+                        "source": "world",  "needs": ("material",)},
+    "crucible_pour":   {"produces": False, "consumes": True,
+                        "source": "world",  "needs": ("material", "at")},
     "give_tool": {"produces": True,  "consumes": False,
                   "source": "external", "needs": ("material",)},
     "pickup":    {"produces": False, "consumes": False,
@@ -149,10 +184,14 @@ JOB_CATALOG = {
 #: job types the planner may emit in a plan (section 12.1 amended
 #: catalog). build_plan is EXCLUDED: goal-scoped to the deterministic
 #: compiler until an A/B round teaches the 27B the vocabulary.
-#: chop (2026-10-06) is EXCLUDED on the same precedent: the door
-#: campaign needs it, the 27B never learned it.
-PLANNER_JOB_TYPES = tuple(k for k in JOB_CATALOG
-                          if k not in ("build_plan", "chop"))
+#: chop (2026-10-06), forage (2026-10-07) and the crucible family
+#: (2026-10-07) are EXCLUDED on the same precedent: the campaigns
+#: need them, the 27B never learned them.
+PLANNER_JOB_TYPES = tuple(
+    k for k in JOB_CATALOG
+    if k not in ("build_plan", "chop", "forage", "crucible_fire",
+                 "crucible_insert", "crucible_fuel", "crucible_take",
+                 "crucible_pour"))
 
 #: provenance of a job's origin (13.1, frozen): the queue runs a mix of
 #: jobs made by different principals; the run JSON is the transparency
@@ -181,6 +220,11 @@ class Job:
                                    # The drop claim is `material`.
                                    # (a grown log block drops a placed
                                    # log - the two families differ)
+    plant: str | None = None       # forage: the forageable's block code
+                                   # or family glob (`fruitingbush-*`)
+    deliver: str | None = None     # forage: "carry" (default) | "drop"
+                                   # (drop everything at the bot's feet
+                                   # on completion)
     depends_on: list = field(default_factory=list)
     claims: list = field(default_factory=list)
     budget: int = 12               # max execution steps (the stall valve)
@@ -222,6 +266,13 @@ class Job:
         if expect is not None and not isinstance(expect, str):
             raise ValueError("job %s: expect must be a string"
                              % jid)
+        plant = d.get("plant")
+        if plant is not None and not isinstance(plant, str):
+            raise ValueError("job %s: plant must be a string" % jid)
+        deliver = d.get("deliver")
+        if deliver is not None and deliver not in ("carry", "drop"):
+            raise ValueError("job %s: deliver must be 'carry' or 'drop'"
+                             % jid)
         deps = d.get("depends_on") or []
         if not isinstance(deps, list) or not all(
                 isinstance(x, str) for x in deps):
@@ -234,6 +285,7 @@ class Job:
                    source=d.get("source"), target=d.get("target"),
                    material=d.get("material"), quantity=qty,
                    plan=d.get("plan"), at=at, expect=expect,
+                   plant=plant, deliver=deliver,
                    depends_on=list(deps),
                    claims=list(d.get("claims") or []),
                    budget=int(d.get("budget") or 12),

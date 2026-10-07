@@ -68,6 +68,7 @@ token-efficient format the agent loops consume.
 | `professions` | List available professions |
 | `scan` | Scan a region and return block data |
 | `verify` | Verify a blueprint against world state |
+| `vitals` | Latest vitals samples (saturation, health, position, skills) for all bots + the player, or one by uid: `vitals [uid]` — the 1 Hz sampler's snapshot (`PolisVitalsSampler`; per-world persistence + `GET /polis/vitals` see `docs/harness.md`) |
 | `zone-list` | List all named zones |
 | `zone-check` | Check which zones a bot is in |
 | `zone-show` | Highlight a zone's boundaries |
@@ -100,6 +101,7 @@ token-efficient format the agent loops consume.
 | `equip` | Equip item to bot slot |
 | `drop` | Drop items from bot hand |
 | `pickup` | Pick up nearby item |
+| `pick` | Pick a forageable plant (e.g. a ripe berry bush) at `x y z` (up to `[count]` pick rounds) — the bot must be adjacent; the same action path the food-pressure forage interrupt uses (`PolisPickBushAction`) |
 | `takefrom` | Take items from container (x y z slot [qty] OR -c name |
 | `putinto` | Put items into container (x y z slot [qty] OR -c name |
 | `loot` | Loot items from dead entity inventory |
@@ -151,6 +153,23 @@ token-efficient format the agent loops consume.
 | `hungerpause` | `hungerpause [on|off]` (selected bot) — toggles the bot-level gate of the polis hunger behavior (parked bots: no active mission ⇒ no drain). The world-level gate is a file, not a command: `<VSDATA>/Saves/<world>/polis/hunger.json` with `{"hungerMode":"off"}` suspends the drain for the whole world (dev/creative/debug worlds). Both verified 2026-10-04: flat saturation while set, drain resumes on release. See `docs/design/food-hunger-skills-policies.md` (creative/dev world decision) and `src/EntityBehaviorPolisHunger.cs` |
 | `policy` | Policy layer (the interaction rules): no args → dump the live `polis-policies.json` (path + mtime + content); `policy <domain> <itemCode>` → verdict (`allow`/`deny` + reason + resolved food category). The file is committed at `assets/polis/polis-policies.json` and hot-reloaded on change (no restart) — the `eat` command is gated by it (denial = `Ok:false` with the reason, no items given) |
 
+### Crucible (the smelting pot — pot work)
+
+The 1.22 crucible is a clayformed vessel that goes *into* the firepit
+(ground-storable → firepit → the engine's smelting-container engine),
+not a standalone block: clayform the block (`clayforming/crucible` recipe,
+input `clay-<color>`, output `crucible-<color>-raw` — colors fire/blue/
+red), place it into a firepit, load ore + fuel, the engine smelts, then
+take/pour. The same base serves the food cooking pot later.
+
+| Command | What |
+|---------|------|
+| `crucible-fire` | `crucible-fire [color] [x y z]` — places a `crucible-<color>-raw` block from the bot's cargo into a firepit (nearest from the bot, or the given cell) and ignites it |
+| `crucible-insert` | `crucible-insert <itemCode> [count] [x y z]` — move item stacks from the bot's cargo into the firepit's 4 cooking (smelt) slots |
+| `crucible-fuel` | `crucible-fuel [itemCode=charcoal] [count=8] [x y z]` — fuel into the firepit's fuel slot; re-asserts ignition |
+| `crucible-take` | `crucible-take [x y z]` — take the smelted output from the nearest fired crucible; reports `hot`/`hasTongs` (advisory — in 1.22.7 tongs are a wear mechanic, not a hard gate) |
+| `crucible-pour` | `crucible-pour <x y z> [units]` — pour the melt over a mold at a ground position (the engine's solidification gate; the crucible reverts to its fired-empty block when emptied) |
+
 ### View & capture
 
 | Command | What |
@@ -166,6 +185,7 @@ token-efficient format the agent loops consume.
 |---------|------|
 | `exec` | Execute raw server command (local only) |
 | `zone-define` | Define a named AABB zone |
+| `zone-rename` | `zone-rename <oldName> <newName>` — rename a zone in place (bounds preserved, persisted) — storage areas and the like change names with the plan |
 | `zone-remove` | Remove a named zone |
 
 ## Missions

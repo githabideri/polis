@@ -272,6 +272,8 @@ public partial class PolisSystem
                     return ExecuteBotsCommand(args, context);
                 case "hunger":
                     return ExecuteHungerCommand(args, context);
+                case "vitals":
+                    return ExecuteVitalsCommand(args, context);
                 case "eat":
                     return ExecuteEatCommand(args, context);
                 case "hungerpause":
@@ -294,6 +296,8 @@ public partial class PolisSystem
                     return ExecuteBreakCommand(args, context);
                 case "harvest":
                     return ExecuteHarvestCommand(args, context);
+                case "pick":
+                    return ExecutePickCommand(args, context);
                 case "harvestcrop":
                     return ExecuteHarvestCropCommand(args, context);
                 case "grind":
@@ -368,6 +372,18 @@ public partial class PolisSystem
                     return ExecuteZoneListCommand(args, context);
                 case "zone-check":
                     return ExecuteZoneCheckCommand(args, context);
+                case "zone-rename":
+                    return ExecuteZoneRenameCommand(args, context);
+                case "crucible-fire":
+                    return ExecuteCrucibleFireCommand(args, context);
+                case "crucible-insert":
+                    return ExecuteCrucibleInsertCommand(args, context);
+                case "crucible-fuel":
+                    return ExecuteCrucibleFuelCommand(args, context);
+                case "crucible-take":
+                    return ExecuteCrucibleTakeCommand(args, context);
+                case "crucible-pour":
+                    return ExecuteCruciblePourCommand(args, context);
                 case "zone-show":
                     return ExecuteZoneShowCommand(args, context);
                 case "viewpoint-define":
@@ -382,7 +398,7 @@ public partial class PolisSystem
                     return ExecuteViewpointScreenshotCommand(args, context);
                 default:
                     result.Ok = false;
-                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, chop, break, harvest, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot";
+                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, chop, break, harvest, pick, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-rename, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot, vitals, crucible-fire, crucible-insert, crucible-fuel, crucible-take, crucible-pour";
                     break;
             }
         }
@@ -5791,6 +5807,1006 @@ public partial class PolisSystem
             Ok = true,
             Message = $"Bot #{bot.Entity.EntityId} crafting {code} (result lands in state action results)",
             Data = new { output = code }
+        };
+    }
+
+    // --- A1: vitals ---
+
+    PolisTestHarness.CommandResult ExecuteVitalsCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: vitals [uid]   (uid = numeric EntityId or name; absent = all)
+        string uid = args != null && args.Length > 0 ? args[0] : null;
+
+        if (!VitalsHasEntity(uid))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"no vitals for uid '{uid}' (not sampled: offline bot or unknown name)" };
+        }
+
+        var payload = GetVitalsEndpointPayload(uid);
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = string.IsNullOrWhiteSpace(uid)
+                ? $"vitals for {vitalsLatest.Count} entit{vitalsLatest.Count == 1 ? "y" : "ies"}"
+                : $"vitals for '{uid}'",
+            Data = payload
+        };
+    }
+
+    // --- A3: zone-rename ---
+
+    PolisTestHarness.CommandResult ExecuteZoneRenameCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: zone-rename <old> <new>
+        if (args.Length < 2 || string.IsNullOrWhiteSpace(args[0]) || string.IsNullOrWhiteSpace(args[1]))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: zone-rename <old> <new>" };
+        }
+
+        if (zoneRegistry == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "zone registry not initialized (world not loaded?)" };
+        }
+
+        string oldName = args[0];
+        string newName = args[1];
+
+        if (!zoneRegistry.RenameZone(oldName, newName, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+
+        var bounds = zoneRegistry.GetZone(newName).Bounds;
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"zone '{oldName}' renamed to '{newName}' (bounds preserved; persists with the world save)",
+            Data = new
+            {
+                old = oldName,
+                name = newName,
+                bounds = new { x1 = bounds.X1, y1 = bounds.Y1, z1 = bounds.Z1, x2 = bounds.X2, y2 = bounds.Y2, z2 = bounds.Z2 }
+            }
+        };
+    }
+
+    // --- A3: pick ---
+
+    PolisTestHarness.CommandResult ExecutePickCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: pick <x> <y> <z> [count]
+        if (args.Length < 3 ||
+            !int.TryParse(args[0], out int x) ||
+            !int.TryParse(args[1], out int y) ||
+            !int.TryParse(args[2], out int z))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: pick <x> <y> <z> [count]" };
+        }
+
+        int count = 1;
+        if (args.Length >= 4 && int.TryParse(args[3], out int parsedCount))
+        {
+            count = Math.Max(1, Math.Min(16, parsedCount));
+        }
+
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+
+        // The pick is attributed to a player (audit line, onitemcollected,
+        // claims): the bot's owner, else the command-sending player.
+        IServerPlayer ownerPlayer = null;
+        if (globalData.Bots.TryGetValue(bot.Entity.EntityId, out var botRecord))
+        {
+            ownerPlayer = sapi.World.PlayerByUid(botRecord.OwnerUid) as IServerPlayer;
+        }
+        if (ownerPlayer == null && TryGetContextPlayer(context, out var ctxPlayer, out var _))
+        {
+            ownerPlayer = ctxPlayer as IServerPlayer;
+        }
+        if (ownerPlayer == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "no player to attribute the pick to (bot has no owner and no player in context)" };
+        }
+
+        var world = sapi.World;
+        var pos = new BlockPos(x, y, z);
+
+        // The pick happens in person: the bot has to be next to the bush.
+        var center = new Vec3d(pos.X + 0.5, pos.Y + 0.5, pos.Z + 0.5);
+        double dist = bot.Entity.ServerPos.XYZ.DistanceTo(center);
+        if (dist > 3.0)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"bot not adjacent to the bush ({dist:F1} blocks away; walk it over first)" };
+        }
+
+        var block = world.BlockAccessor.GetBlock(pos);
+        if (block == null || block.Id == 0)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"no block at {pos}" };
+        }
+        if (block.GetBehavior<BlockBehaviorFruitingBush>() == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"block {block.Code} is not a fruiting bush (use 'harvest' for harvestable crops)" };
+        }
+
+        var bush = world.BlockAccessor.GetBlockEntity(pos)?.GetBehavior<BEBehaviorFruitingBush>();
+        if (bush == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"bush at {pos} has no block-entity state" };
+        }
+        if (bush.BState.Growthstate != EnumFruitingBushGrowthState.Ripe)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"bush not ripe (growth state: {bush.BState.Growthstate}; 'ripen' it first)" };
+        }
+
+        var blockSel = new BlockSelection
+        {
+            Position = pos,
+            Face = BlockFacing.UP,
+            HitPosition = new Vec3d(0.5, 0.5, 0.5),
+            Block = block
+        };
+
+        var agent = bot.Entity as EntityAgent;
+        var debug = debugEnabled ? (Action<string>)(msg => sapi.Logger.Debug($"[polis] {msg}")) : null;
+
+        int totalPicked = 0;
+        for (int round = 0; round < count; round++)
+        {
+            if (bush.BState.Growthstate != EnumFruitingBushGrowthState.Ripe)
+            {
+                break; // a pick advances the bush to Mature; it regrows to Ripe over time
+            }
+
+            // First round through the vanilla start gate (claims +
+            // ripeness re-check + start sound), like the action's Start.
+            if (round == 0)
+            {
+                EnumHandling handling = EnumHandling.PassThrough;
+                if (!bush.OnBlockInteractStart(world, ownerPlayer, blockSel, ref handling))
+                {
+                    return new PolisTestHarness.CommandResult { Ok = false, Message = "interaction blocked (bush state or claims)" };
+                }
+            }
+
+            totalPicked += PolisPickBushAction.CompletePickToBot(world, agent, bush, blockSel, ownerPlayer, debug);
+        }
+
+        bot.RecordActionResult("pick", totalPicked > 0, $"picked {totalPicked}x berries from {block.Code}", sapi.World.ElapsedMilliseconds);
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = totalPicked > 0,
+            Message = totalPicked > 0
+                ? $"picked {totalPicked}x from {block.Code} at {pos} (bush now {bush.BState.Growthstate})"
+                : $"nothing picked from {block.Code} at {pos}",
+            Data = new
+            {
+                code = block.Code.ToString(),
+                pos = new { x, y, z },
+                picked = totalPicked,
+                bushState = (int)bush.BState.Growthstate,
+                bot = bot.Entity.EntityId
+            }
+        };
+    }
+
+    // --- A2: crucible commands (firepit as the crucible station) ---
+    //
+    // Engine ground truth (VSSurvivalMod 1.22.7 decompiled): a crucible is
+    // a BlockSmeltingContainer (raw/fired/smelted); there is NO dedicated
+    // crucible block entity. Its "cooking" is a firepit: BlockEntityFirepit
+    // holds it in the input slot, smelts raw->fired as ordinary smelting
+    // (BlockSmeltingContainer smelting recipe) and - once the crucible is
+    // fired - smelts container-requiring items placed in the firepit's four
+    // cooking slots INTO the crucible (DoSmelt writes the smelted crucible,
+    // carrying its metal as ItemStack attributes "output"+"units", into the
+    // output slot). A smelted crucible pours into an ILiquidMetalSink
+    // (BlockEntityIngotMold / BlockEntityToolMold) and reverts to the fired
+    // block when empty. So the harness drives the whole chain against a
+    // real firepit and a real mold:
+    //
+    //   crucible-fire    -> crucible into the firepit input + fuel + ignite
+    //   crucible-insert  -> smeltable item(s) into the crucible's cooking slots
+    //   crucible-fuel    -> add fuel / re-arm ignition
+    //   crucible-take    -> take the smelted crucible from the output (tongs = advisory wear, engine has no hard gate)
+    //   crucible-pour    -> empty the smelted crucible into a mold (ILiquidMetalSink)
+
+    static bool CrucibleCodeMatch(string code, string crucibleType)
+    {
+        if (string.IsNullOrEmpty(code)) return false;
+        string c = code;
+        int colon = c.IndexOf(':');
+        if (colon >= 0) c = c.Substring(colon + 1);
+        return c.StartsWith("crucible-", StringComparison.Ordinal) && c.EndsWith("-" + crucibleType, StringComparison.Ordinal);
+    }
+
+    static bool CodeMatchesLenient(string actualCode, string wanted)
+    {
+        if (string.IsNullOrEmpty(actualCode) || string.IsNullOrEmpty(wanted)) return false;
+        if (actualCode.Equals(wanted, StringComparison.OrdinalIgnoreCase)) return true;
+        int colon = wanted.IndexOf(':');
+        string bare = colon >= 0 ? wanted.Substring(colon + 1) : wanted;
+        return actualCode.Equals(bare, StringComparison.OrdinalIgnoreCase)
+            || actualCode.StartsWith("game:" + bare, StringComparison.OrdinalIgnoreCase)
+            || actualCode.StartsWith("survival:" + bare, StringComparison.OrdinalIgnoreCase);
+    }
+
+    static ItemSlot FindBlockInCargoDirect(EntityAgent agent, Block block)
+    {
+        var cargo = PolisInventoryHelpers.BotCargo(agent);
+        if (cargo == null || block == null) return null;
+        for (int i = 0; i < cargo.Count; i++)
+        {
+            var it = cargo[i]?.Itemstack;
+            if (it != null && it.Collectible is Block b && b.Code.Equals(block.Code))
+            {
+                return cargo[i];
+            }
+        }
+        return null;
+    }
+
+    static ItemSlot FindItemInCargoDirect(EntityAgent agent, string code)
+    {
+        var cargo = PolisInventoryHelpers.BotCargo(agent);
+        if (cargo == null) return null;
+        for (int i = 0; i < cargo.Count; i++)
+        {
+            if (PolisInventoryHelpers.IsItem(cargo[i]?.Itemstack, code))
+            {
+                return cargo[i];
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Moves up to <paramref name="maxQty"/> of a bot-side stack into a
+    /// destination slot (same merge rules as the inventory helpers):
+    /// empty slot via CanHold, occupied via CanTakeFrom/AutoMerge.
+    /// </summary>
+    static int MoveStackToSlot(ItemSlot source, ItemSlot dest, int maxQty)
+    {
+        if (source == null || dest == null || source.Empty || maxQty <= 0) return 0;
+        var stack = source.Itemstack;
+        if (stack == null || stack.StackSize <= 0) return 0;
+
+        int space;
+        if (dest.Empty)
+        {
+            if (!dest.CanHold(source)) return 0;
+            space = Math.Min(dest.GetRemainingSlotSpace(stack), stack.Collectible.MaxStackSize);
+        }
+        else
+        {
+            if (!dest.CanTakeFrom(source, EnumMergePriority.AutoMerge)) return 0;
+            // engine merge cap (CollectibleObject.GetMergableQuantity)
+            space = Math.Min(dest.GetRemainingSlotSpace(stack),
+                stack.Collectible.GetMergableQuantity(dest.Itemstack, stack, EnumMergePriority.AutoMerge));
+        }
+
+        int moved = Math.Min(maxQty, Math.Min(stack.StackSize, space));
+        if (moved <= 0) return 0;
+
+        if (dest.Empty)
+        {
+            dest.Itemstack = stack.Clone();
+            dest.Itemstack.StackSize = 0;
+        }
+        dest.Itemstack.StackSize += moved;
+        stack.StackSize -= moved;
+        if (stack.StackSize <= 0)
+        {
+            source.Itemstack = null;
+        }
+        source.MarkDirty();
+        dest.MarkDirty();
+        return moved;
+    }
+
+    static ItemSlot FindSmeltedCrucibleSlot(EntityAgent agent, out ItemStack smeltedStack)
+    {
+        smeltedStack = null;
+        var cargo = PolisInventoryHelpers.BotCargo(agent);
+        if (cargo == null) return null;
+        for (int i = 0; i < cargo.Count; i++)
+        {
+            var it = cargo[i]?.Itemstack;
+            if (it != null && CrucibleCodeMatch(it.Collectible?.Code?.ToString(), "smelted"))
+            {
+                smeltedStack = it;
+                return cargo[i];
+            }
+        }
+        return null;
+    }
+
+    IServerPlayer ResolveCommandOwner(BotState bot, PolisTestHarness.CommandContext context)
+    {
+        IServerPlayer owner = null;
+        if (globalData.Bots.TryGetValue(bot.Entity.EntityId, out var botRecord))
+        {
+            owner = sapi.World.PlayerByUid(botRecord.OwnerUid) as IServerPlayer;
+        }
+        if (owner == null && TryGetContextPlayer(context, out var ctxPlayer, out var _))
+        {
+            owner = ctxPlayer as IServerPlayer;
+        }
+        return owner;
+    }
+
+    /// <summary>
+    /// Explicit "x y z" (first three args, all int) or the nearest
+    /// firepit to the bot (49x5x49 box scan around the bot, y -2..+1).
+    /// </summary>
+    bool TryResolveCrucibleFirepit(BotState bot, string[] args, out BlockPos pos, out string error)
+    {
+        pos = default;
+        error = null;
+
+        if (args.Length >= 3 &&
+            int.TryParse(args[0], out int x) &&
+            int.TryParse(args[1], out int y) &&
+            int.TryParse(args[2], out int z))
+        {
+            pos = new BlockPos(x, y, z);
+            if (sapi.World.BlockAccessor.GetBlockEntity(pos) is BlockEntityFirepit)
+            {
+                return true;
+            }
+            error = $"no firepit at ({x}, {y}, {z})";
+            return false;
+        }
+
+        var botPos = bot.Entity.ServerPos.AsBlockPos;
+        BlockPos nearest = default;
+        int bestSq = int.MaxValue;
+        for (int bx = botPos.X - 24; bx <= botPos.X + 24; bx++)
+        {
+            for (int by = Math.Max(0, botPos.Y - 2); by <= botPos.Y + 1; by++)
+            {
+                for (int bz = botPos.Z - 24; bz <= botPos.Z + 24; bz++)
+                {
+                    if (!(sapi.World.BlockAccessor.GetBlockEntity(new BlockPos(bx, by, bz)) is BlockEntityFirepit))
+                    {
+                        continue;
+                    }
+                    int dx = bx - botPos.X;
+                    int dy = by - botPos.Y;
+                    int dz = bz - botPos.Z;
+                    int sq = dx * dx + dy * dy + dz * dz;
+                    if (sq < bestSq)
+                    {
+                        bestSq = sq;
+                        nearest = new BlockPos(bx, by, bz);
+                    }
+                }
+            }
+        }
+
+        if (nearest == default)
+        {
+            error = "no firepit found within 24 blocks of the bot (pass x y z)";
+            return false;
+        }
+
+        pos = nearest;
+        return true;
+    }
+
+    bool CrucibleInRange(BotState bot, BlockPos pos, out double dist, out string error)
+    {
+        dist = 0;
+        error = null;
+        var center = new Vec3d(pos.X + 0.5, pos.Y + 0.5, pos.Z + 0.5);
+        dist = bot.Entity.ServerPos.XYZ.DistanceTo(center);
+        if (dist > PolisConstants.DefaultActionRange)
+        {
+            error = $"firepit out of range ({dist:F1} blocks)";
+            return false;
+        }
+        return true;
+    }
+
+    PolisTestHarness.CommandResult ExecuteCrucibleFireCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: crucible-fire [color] [x y z]
+        //   color defaults to "fire". Raw crucibles exist for
+        //   fire/blue/red; fired crucibles for fire, blue, red->(baked
+        //   variants: black, brown, cream, earthyorange, gray, orange,
+        //   tan). "fire" works for both.
+        //   if the first arg is an integer it is the start of the coords.
+        string color = "fire";
+        int offset = 0;
+        if (args.Length > 0 && !int.TryParse(args[0], out _))
+        {
+            color = args[0];
+            offset = 1;
+        }
+        string[] coordArgs = args.Length > offset ? args.Skip(offset).ToArray() : Array.Empty<string>();
+
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+        if (!TryResolveCrucibleFirepit(bot, coordArgs, out var pos, out var resolveErr))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = resolveErr };
+        }
+        if (!CrucibleInRange(bot, pos, out _, out var rangeErr))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = rangeErr };
+        }
+
+        var world = sapi.World;
+        var firepit = world.BlockAccessor.GetBlockEntity(pos) as BlockEntityFirepit;
+        var owner = ResolveCommandOwner(bot, context);
+        var agent = bot.Entity as EntityAgent;
+        var debug = debugEnabled ? (Action<string>)(msg => sapi.Logger.Debug($"[polis] {msg}")) : null;
+
+        // Fired first (it smelts directly), raw second (fires in place).
+        var crucibleBlock = ResolveBlockLenient(world, $"crucible-{color}-fired")
+            ?? ResolveBlockLenient(world, $"crucible-{color}-raw");
+        if (crucibleBlock == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"no crucible-{color}-fired / crucible-{color}-raw in the block registry" };
+        }
+
+        string inputState;
+        if (firepit.inputSlot != null && !firepit.inputSlot.Empty)
+        {
+            var inCode = firepit.inputSlot.Itemstack.Collectible?.Code?.ToString();
+            if (inCode != null && inCode.Contains("crucible", StringComparison.OrdinalIgnoreCase))
+            {
+                inputState = inCode; // already loaded - that is the goal state
+            }
+            else
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = $"firepit input busy with {inCode} (crucible-take it first)" };
+            }
+        }
+        else
+        {
+            var crucibleSlot = FindBlockInCargoDirect(agent, crucibleBlock);
+            if (crucibleSlot == null)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = $"bot carries no crucible-{color} (fired or raw); craft one first" };
+            }
+            var taken = crucibleSlot.TakeOut(1);
+            if (taken == null || taken.StackSize <= 0)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "could not take the crucible out of the bot's cargo" };
+            }
+            if (firepit.inputSlot == null || firepit.inputSlot.Empty)
+            {
+                firepit.inputSlot.Itemstack = taken;
+            }
+            else
+            {
+                firepit.inputSlot.Itemstack.StackSize += taken.StackSize;
+            }
+            firepit.inputSlot.MarkDirty();
+            inputState = taken.Collectible.Code.ToString();
+        }
+
+        // Fuel: if not burning yet and the fuel slot is empty, take
+        // charcoal from the bot's cargo (one small stack).
+        bool fueled = false;
+        if (!firepit.IsBurning && (firepit.fuelSlot == null || firepit.fuelSlot.Empty))
+        {
+            var fuelSrc = FindItemInCargoDirect(agent, "charcoal");
+            var takenFuel = fuelSrc?.TakeOut(Math.Min(8, fuelSrc.Itemstack.StackSize));
+            if (takenFuel != null && takenFuel.StackSize > 0 && firepit.fuelSlot != null)
+            {
+                firepit.fuelSlot.Itemstack = takenFuel;
+                firepit.fuelSlot.MarkDirty();
+                fueled = true;
+            }
+        }
+
+        // Arm ignition the way the GUI does; the firepit's own OnBurnTick
+        // gate (canSmeltInput) decides when the burn actually starts.
+        firepit.canIgniteFuel = true;
+        firepit.MarkDirty(true, owner);
+
+        bot.RecordActionResult("crucible-fire", true, $"firepit {pos}: input={inputState}", sapi.World.ElapsedMilliseconds);
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"firepit at {pos}: crucible in input ({inputState}), fuel {firepit.IsBurning ? "burning" : (fueled ? "loaded + armed" : "none - run crucible-fuel or drop charcoal in")}",
+            Data = new
+            {
+                pos = new { x = pos.X, y = pos.Y, z = pos.Z },
+                color,
+                input = inputState,
+                fuel = firepit.fuelStack?.Collectible?.Code?.ToString(),
+                burning = firepit.IsBurning,
+                canIgniteFuel = firepit.canIgniteFuel,
+                canSmelt = firepit.canSmeltInput(),
+                hasCookingContainer = firepit.otherCookingSlots != null && firepit.otherCookingSlots.Length > 0,
+                temperature = firepit.furnaceTemperature,
+                maxTemperature = firepit.maxTemperature,
+                bot = bot.Entity.EntityId
+            }
+        };
+    }
+
+    PolisTestHarness.CommandResult ExecuteCrucibleInsertCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: crucible-insert <itemCode> [count] [x y z]
+        //   count 0/omitted = as much as fits in the empty cooking slots.
+        if (args.Length < 1)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: crucible-insert <itemCode> [count] [x y z]" };
+        }
+
+        string itemCode = args[0];
+        int count = 0;
+        int offset = 1;
+        if (args.Length > 1 && int.TryParse(args[1], out int parsedCount))
+        {
+            count = Math.Max(0, Math.Min(64, parsedCount));
+            offset = 2;
+        }
+        string[] coordArgs = args.Length > offset ? args.Skip(offset).ToArray() : Array.Empty<string>();
+
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+        if (!TryResolveCrucibleFirepit(bot, coordArgs, out var pos, out var resolveErr))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = resolveErr };
+        }
+        if (!CrucibleInRange(bot, pos, out _, out var rangeErr))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = rangeErr };
+        }
+
+        var world = sapi.World;
+        var firepit = world.BlockAccessor.GetBlockEntity(pos) as BlockEntityFirepit;
+        var owner = ResolveCommandOwner(bot, context);
+
+        if (firepit.inputSlot == null || firepit.inputSlot.Empty)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"no crucible in the firepit input at {pos} (run crucible-fire first)" };
+        }
+        var cooking = firepit.otherCookingSlots;
+        if (cooking == null || cooking.Length == 0)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"firepit at {pos} has a crucible-less input (no cooking container)" };
+        }
+
+        var agent = bot.Entity as EntityAgent;
+        var cargo = PolisInventoryHelpers.BotCargo(agent);
+
+        int remaining = count;
+        int total = 0;
+        if (cargo != null)
+        {
+            for (int i = 0; i < cargo.Count; i++)
+            {
+                var src = cargo[i];
+                if (src == null || src.Empty || !CodeMatchesLenient(src.Itemstack?.Collectible?.Code?.ToString(), itemCode))
+                {
+                    continue;
+                }
+                for (int c = 0; c < cooking.Length; c++)
+                {
+                    int want = remaining > 0 ? remaining : 64;
+                    int moved = MoveStackToSlot(src, cooking[c], want);
+                    if (moved > 0)
+                    {
+                        total += moved;
+                        if (remaining > 0) remaining -= moved;
+                    }
+                    if (remaining <= 0 && count > 0) break;
+                }
+                if (count > 0 && remaining <= 0) break;
+            }
+        }
+
+        if (total == 0)
+        {
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = false,
+                Message = count > 0
+                    ? $"bot carries no '{itemCode}' to insert (count {count} requested)"
+                    : $"no empty cooking slot in the crucible at {pos} (or the bot carries no '{itemCode}')"
+            };
+        }
+
+        firepit.MarkDirty(true, owner);
+        bot.RecordActionResult("crucible-insert", true, $"inserted {total}x {itemCode}", sapi.World.ElapsedMilliseconds);
+
+        var cookingNow = new List<object>();
+        foreach (var c in cooking)
+        {
+            cookingNow.Add(c.Empty ? null : $"{c.Itemstack.StackSize}x{c.Itemstack.Collectible?.Code}");
+        }
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"inserted {total}x {itemCode} into the crucible at {pos}",
+            Data = new
+            {
+                pos = new { x = pos.X, y = pos.Y, z = pos.Z },
+                inserted = total,
+                cookingSlots = cookingNow,
+                canSmelt = firepit.canSmeltInput(),
+                burning = firepit.IsBurning,
+                temperature = firepit.furnaceTemperature,
+                bot = bot.Entity.EntityId
+            }
+        };
+    }
+
+    PolisTestHarness.CommandResult ExecuteCrucibleFuelCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: crucible-fuel [itemCode] [count] [x y z]
+        //   defaults: charcoal x8, nearest firepit; if the first arg is an
+        //   integer it is the start of the coords.
+        string itemCode = "charcoal";
+        int count = 8;
+        string[] coordArgs = Array.Empty<string>();
+
+        if (args.Length > 0 && int.TryParse(args[0], out _))
+        {
+            coordArgs = args;
+        }
+        else if (args.Length > 0)
+        {
+            itemCode = args[0];
+            if (args.Length > 1)
+            {
+                if (args.Length - 1 >= 3 &&
+                    int.TryParse(args[1], out int c2) &&
+                    int.TryParse(args[2], out _) &&
+                    int.TryParse(args[3], out _) &&
+                    int.TryParse(args[4], out _))
+                {
+                    count = Math.Max(1, Math.Min(64, c2));
+                    coordArgs = args.Skip(2).ToArray();
+                }
+                else if (int.TryParse(args[1], out int parsedCount))
+                {
+                    count = Math.Max(1, Math.Min(64, parsedCount));
+                }
+            }
+        }
+
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+        if (!TryResolveCrucibleFirepit(bot, coordArgs, out var pos, out var resolveErr))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = resolveErr };
+        }
+        if (!CrucibleInRange(bot, pos, out _, out var rangeErr))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = rangeErr };
+        }
+
+        var firepit = sapi.World.BlockAccessor.GetBlockEntity(pos) as BlockEntityFirepit;
+        var owner = ResolveCommandOwner(bot, context);
+        var agent = bot.Entity as EntityAgent;
+
+        var fuelSrc = FindItemInCargoDirect(agent, itemCode);
+        if (fuelSrc == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"bot carries no '{itemCode}'" };
+        }
+
+        if (firepit.fuelSlot == null || firepit.fuelSlot.Empty)
+        {
+            var taken = fuelSrc.TakeOut(Math.Min(count, fuelSrc.Itemstack.StackSize));
+            if (taken == null || taken.StackSize <= 0)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "could not take fuel out of the bot's cargo" };
+            }
+            firepit.fuelSlot.Itemstack = taken;
+            firepit.fuelSlot.MarkDirty();
+        }
+        else if (CodeMatchesLenient(firepit.fuelSlot.Itemstack.Collectible?.Code?.ToString(), itemCode))
+        {
+            MoveStackToSlot(fuelSrc, firepit.fuelSlot, count);
+        }
+        else
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"firepit fuel slot holds {firepit.fuelSlot.Itemstack.Collectible?.Code}; clear it first" };
+        }
+
+        if (!firepit.IsBurning)
+        {
+            firepit.canIgniteFuel = true;
+        }
+        firepit.MarkDirty(true, owner);
+
+        bot.RecordActionResult("crucible-fuel", true, $"+{count}x {itemCode} to firepit {pos}", sapi.World.ElapsedMilliseconds);
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"fuel {firepit.fuelStack?.Collectible?.Code} in firepit at {pos}; burning={firepit.IsBurning}",
+            Data = new
+            {
+                pos = new { x = pos.X, y = pos.Y, z = pos.Z },
+                fuel = firepit.fuelStack?.Collectible?.Code?.ToString(),
+                fuelStackSize = firepit.fuelStack?.StackSize,
+                burnTime = firepit.fuelBurnTime,
+                maxBurnTime = firepit.maxFuelBurnTime,
+                burning = firepit.IsBurning,
+                canIgniteFuel = firepit.canIgniteFuel,
+                bot = bot.Entity.EntityId
+            }
+        };
+    }
+
+    PolisTestHarness.CommandResult ExecuteCrucibleTakeCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: crucible-take [x y z]
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+        if (!TryResolveCrucibleFirepit(bot, args, out var pos, out var resolveErr))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = resolveErr };
+        }
+        if (!CrucibleInRange(bot, pos, out _, out var rangeErr))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = rangeErr };
+        }
+
+        var world = sapi.World;
+        var firepit = world.BlockAccessor.GetBlockEntity(pos) as BlockEntityFirepit;
+        var owner = ResolveCommandOwner(bot, context);
+        var agent = bot.Entity as EntityAgent;
+
+        var outStack = firepit.outputSlot?.Itemstack;
+        if (outStack == null || outStack.StackSize <= 0)
+        {
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = false,
+                Message = $"nothing in the output slot yet (progress {firepit.inputStackCookingTime:F1}/{firepit.maxCookingTime():F1}s, burning={firepit.IsBurning}, {firepit.furnaceTemperature:F0}C)"
+            };
+        }
+
+        // Engine 1.22.7 ground truth: there is NO hard tongs gate for
+        // taking a hot crucible. The tongs mechanic is ModSystemSubTongsDurability
+        // (onitemcollected): picking up a stack hotter than
+        // TooHotToTouchTemperature while the tongs (EnumTool.Tongs == 31)
+        // are the OFFHAND tool damages the tongs by 1. The take always
+        // proceeds; heat + tongs facts are reported for the caller.
+        float outTemp = outStack.Collectible.GetTemperature(world, outStack);
+        bool hot = outTemp > GlobalConstants.TooHotToTouchTemperature;
+        var leftItem = agent?.LeftHandItemSlot?.Itemstack;
+        bool hasTongs = leftItem != null
+            && (leftItem.Collectible is ItemTongs || CodeMatchesLenient(leftItem.Collectible?.Code?.ToString(), "tongs"));
+
+        var taken = firepit.outputSlot.TakeOut(outStack.StackSize);
+        firepit.outputSlot.MarkDirty();
+        firepit.MarkDirty(true, owner);
+
+        int moved = 0;
+        if (PolisInventoryHelpers.TryInsertIntoBotInventory(agent, taken, out moved, out string reason, debugEnabled ? msg => sapi.Logger.Debug($"[polis] {msg}") : null))
+        {
+            if (moved < taken.StackSize)
+            {
+                var overflow = taken.Clone();
+                overflow.StackSize = taken.StackSize - moved;
+                world.SpawnItemEntity(overflow, pos);
+            }
+        }
+        else
+        {
+            world.SpawnItemEntity(taken, pos);
+        }
+
+        bot.RecordActionResult("crucible-take", true, $"took {taken.StackSize}x {taken.Collectible.Code}", sapi.World.ElapsedMilliseconds);
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"took {taken.StackSize}x {taken.Collectible.Code} ({outTemp:F0}C, tongs={hasTongs}{(hot ? " - carrying it hot wears the tongs (engine onitemcollected rule)" : "")}) from firepit at {pos}",
+            Data = new
+            {
+                pos = new { x = pos.X, y = pos.Y, z = pos.Z },
+                code = taken.Collectible.Code.ToString(),
+                units = taken.Attributes.GetInt("units", 0),
+                temperature = outTemp,
+                hot,
+                hasTongs,
+                bot = bot.Entity.EntityId
+            }
+        };
+    }
+
+    PolisTestHarness.CommandResult ExecuteCruciblePourCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: crucible-pour <x y z> [units]   (units omitted = all)
+        if (args.Length < 3 ||
+            !int.TryParse(args[0], out int x) ||
+            !int.TryParse(args[1], out int y) ||
+            !int.TryParse(args[2], out int z))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: crucible-pour <x y z> [units]" };
+        }
+
+        int units = 0;
+        if (args.Length >= 4 && int.TryParse(args[3], out int parsedUnits))
+        {
+            units = Math.Max(0, Math.Min(999, parsedUnits));
+        }
+
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+
+        var world = sapi.World;
+        var pos = new BlockPos(x, y, z);
+        var center = new Vec3d(pos.X + 0.5, pos.Y + 0.5, pos.Z + 0.5);
+        double dist = bot.Entity.ServerPos.XYZ.DistanceTo(center);
+        if (dist > PolisConstants.DefaultActionRange)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"mold out of range ({dist:F1} blocks)" };
+        }
+
+        var sink = world.BlockAccessor.GetBlockEntity(pos) as ILiquidMetalSink;
+        if (sink == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"no liquid-metal mold (ingotmold / toolmold) at {pos}" };
+        }
+
+        var agent = bot.Entity as EntityAgent;
+        var smeltedSlot = FindSmeltedCrucibleSlot(agent, out var crucibleStack);
+        if (smeltedSlot == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "bot carries no smelted crucible (crucible-take it from the firepit first)" };
+        }
+
+        // Contents live as attributes on the smelted crucible stack
+        // (BlockSmeltedContainer.SetContents / GetContents).
+        var content = crucibleStack.Attributes.GetItemstack("output", null);
+        int unitsAvail = crucibleStack.Attributes.GetInt("units", 0);
+        if (content == null || content.StackSize <= 0 || unitsAvail <= 0)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "the smelted crucible is empty (no metal contents)" };
+        }
+        content.ResolveBlockOrItem(world);
+
+        // The metal must still be liquid: engine HasSolidifed gate
+        // (crucible stack temperature vs 0.9x the metal's melting point).
+        float crucibleTemp = crucibleStack.Collectible.GetTemperature(world, crucibleStack);
+        float meltingPoint = content.Collectible.GetMeltingPoint(world, null, new DummySlot(content));
+        if (crucibleTemp < 0.9f * meltingPoint)
+        {
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = false,
+                Message = $"the metal has solidified (crucible {crucibleTemp:F0}C < 0.9x melting point {0.9f * meltingPoint:F0}C); heat it again (forge-heat)"
+            };
+        }
+
+        // Engine pour gate: the mold must be able to receive this metal.
+        sink.BeginFill(center);
+        if (sink is BlockEntityIngotMold ingotMold && ingotMold.QuantityMolds > 1)
+        {
+            // A two-mold block: if the currently selected side cannot
+            // receive but the other can, switch sides (like a player
+            // clicking the free half).
+            bool selectedOk = !ingotMold.SelectedIsFull && !ingotMold.SelectedShattered;
+            if (!selectedOk)
+            {
+                bool leftOk = !ingotMold.IsFullLeft && !ingotMold.ShatteredLeft;
+                bool rightOk = !ingotMold.IsFullRight && !ingotMold.ShatteredRight;
+                if ((ingotMold.IsRightSideSelected && rightOk) || (!ingotMold.IsRightSideSelected && leftOk))
+                {
+                    ingotMold.IsRightSideSelected = !ingotMold.IsRightSideSelected;
+                    ingotMold.MarkDirty(true, null);
+                }
+            }
+        }
+        if (!sink.CanReceiveAny)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"mold at {pos} cannot receive (full or shattered)" };
+        }
+        if (!sink.CanReceive(content))
+        {
+            string heldCode = sink is BlockEntityIngotMold im ? im.SelectedContents?.Collectible?.Code?.ToString()
+                : sink is BlockEntityToolMold tm ? tm.MetalContent?.Collectible?.Code?.ToString()
+                : null;
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = false,
+                Message = $"mold at {pos} cannot receive {content.Collectible.Code} (it already holds {heldCode ?? "other metal"})"
+            };
+        }
+
+        // Engine 1.22.7: the pour has a HasSolidifed gate (above) but NO
+        // tongs gate - the tongs mechanic is the same durability wear as
+        // for take (ModSystemSubTongsDurability, onitemcollected: hot
+        // stack + tongs as offhand tool -> tongs -1). Advisory facts only.
+        float contentTemp = content.Collectible.GetTemperature(world, content);
+        var leftItem = agent?.LeftHandItemSlot?.Itemstack;
+        bool hasTongs = leftItem != null
+            && (leftItem.Collectible is ItemTongs || CodeMatchesLenient(leftItem.Collectible?.Code?.ToString(), "tongs"));
+
+        int toPour = units > 0 ? Math.Min(units, unitsAvail) : unitsAvail;
+        int transferred = toPour;
+        sink.ReceiveLiquidMetal(content, ref transferred, crucibleTemp);
+
+        // Mirror the engine's OnHeldInteractStep bookkeeping: the crucible
+        // loses what arrived in the mold, and at zero units it reverts to
+        // its emptiedBlockCode (the fired crucible block).
+        int left = Math.Max(0, unitsAvail - (toPour - transferred));
+        crucibleStack.Attributes.SetInt("units", left);
+        if (left <= 0 && world is IServerWorldAccessor)
+        {
+            // BlockSmeltedContainer.OnHeldInteractStart does the same:
+            // the empty smelted crucible reverts to its emptiedBlockCode.
+            string emptiedCode = null;
+            var emTok = crucibleStack.Collectible is Block emBlock ? emBlock.Attributes?["emptiedBlockCode"] : null;
+            if (emTok != null) emptiedCode = emTok.Value<string>();
+            var emptiedBlock = emTok != null && emptiedCode != null
+                ? world.GetBlock(AssetLocation.Create(emptiedCode, ((Block)crucibleStack.Collectible).Code.Domain))
+                : null;
+            smeltedSlot.Itemstack = emptiedBlock != null ? new ItemStack(emptiedBlock, 1) : null;
+            smeltedSlot.MarkDirty();
+        }
+        sink.OnPourOver();
+
+        bot.RecordActionResult("crucible-pour", transferred > 0, $"poured {transferred} units of {content.Collectible.Code}", sapi.World.ElapsedMilliseconds);
+
+        object moldData = sink switch
+        {
+            BlockEntityIngotMold m => new
+            {
+                type = "ingotmold",
+                fillLevel = m.SelectedFillLevel,
+                requiredUnits = m.RequiredUnits,
+                isFull = m.SelectedIsFull,
+                isHardened = m.SelectedIsHardened,
+                shattered = m.SelectedShattered,
+                temperature = m.SelectedTemperature
+            },
+            BlockEntityToolMold m2 => new
+            {
+                type = "toolmold",
+                fillLevel = m2.FillLevel,
+                isHardened = m2.IsHardened,
+                shattered = m2.Shattered,
+                temperature = m2.Temperature,
+                metal = m2.MetalContent?.Collectible?.Code?.ToString()
+            },
+            _ => new { type = "liquidmetalsink" }
+        };
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = transferred > 0,
+            Message = transferred > 0
+                ? $"poured {transferred} of {unitsAvail} units of {content.Collectible.Code} into the mold at {pos} ({left} left in the crucible)"
+                : $"the mold at {pos} accepted nothing (fill guard)",
+            Data = new
+            {
+                pos = new { x, y, z },
+                metal = content.Collectible.Code.ToString(),
+                poured = transferred,
+                unitsInCrucible = left,
+                crucibleTemperature = crucibleTemp,
+                mold = moldData,
+                bot = bot.Entity.EntityId
+            }
         };
     }
 

@@ -50,14 +50,21 @@ check("unsupported_goal layer=goal", f.layer == "goal")
 
 # --- job catalog ----------------------------------------------------------
 check("catalog covers the v5 families + 12.1 + 13.7 sow + 09-28 build "
-      "+ 13.11 plan + 10-04 craft + 10-06 chop",
+      "+ 13.11 plan + 10-04 craft + 10-06 chop + 10-07 forage & crucible",
       set(JOB_CATALOG) == {"mine", "harvest", "place", "goto",
                            "give_tool", "pickup", "travel", "wait",
-                           "sow", "build", "build_plan", "craft", "chop"})
+                           "sow", "build", "build_plan", "craft", "chop",
+                           "forage",
+                           "crucible_fire", "crucible_insert",
+                           "crucible_fuel", "crucible_take",
+                           "crucible_pour"})
 from r2.jobs import PLANNER_JOB_TYPES
-check("build_plan + chop are GOAL-SCOPED (not in the planner vocabulary)",
-      "build_plan" not in PLANNER_JOB_TYPES and
-      "chop" not in PLANNER_JOB_TYPES and
+check("goal-scoped jobs stay out of the planner vocabulary "
+      "(build_plan, chop, forage, crucible*)",
+      all(t not in PLANNER_JOB_TYPES for t in
+          ("build_plan", "chop", "forage", "crucible_fire",
+           "crucible_insert", "crucible_fuel", "crucible_take",
+           "crucible_pour")) and
       "build" in PLANNER_JOB_TYPES and len(PLANNER_JOB_TYPES) == 11)
 g4 = Goal.from_dict({"verb": "build-plan", "object": "hut",
                     "at": "site-A"})
@@ -175,6 +182,79 @@ check("resource mine still needs a source",
                      "source": "res-x", "material": "granite"}).missing_refs() == []
       and Job.from_dict({"id": "m3", "type": "mine",
                          "material": "granite"}).missing_refs() == ["source"])
+
+# --- forage (2026-10-07 Lane B B1) ---------------------------------------
+check("forage catalog row (world producer, no tool, no material)",
+      JOB_CATALOG["forage"]["produces"] and
+      JOB_CATALOG["forage"]["source"] == "world" and
+      not JOB_CATALOG["forage"]["consumes"])
+f1 = Job.from_dict({"id": "f1", "type": "forage",
+                    "at": [512016, 155, 512012], "n": 2,
+                    "plant": "fruitingbush-*",
+                    "material": "fruit-corn", "deliver": "drop",
+                    "origin": "deterministic"})
+check("forage parses (at/n/plant/material/deliver/origin)",
+      f1.at == [512016, 155, 512012] and f1.quantity == 2 and
+      f1.plant == "fruitingbush-*" and f1.material == "fruit-corn" and
+      f1.deliver == "drop" and f1.ledger_deltas() == [("fruit-corn", +2)])
+check("forage default deliver is carry",
+      Job.from_dict({"id": "f2", "type": "forage", "n": 1,
+                     "plant": "fruitingbush-*"}).deliver is None)
+check("forage with plant but no at: no missing refs (nearest at run time)",
+      Job.from_dict({"id": "f3", "type": "forage", "n": 1,
+                     "plant": "fruitingbush-*"}).missing_refs() == [])
+check("forage without plant is missing its reference",
+      Job.from_dict({"id": "f3b", "type": "forage", "n": 1})
+      .missing_refs() == ["plant"])
+for bad, why in (({"id": "f4", "type": "forage", "n": 0,
+                   "plant": "x"}, "n>=1"),
+                 ({"id": "f5", "type": "forage", "deliver": "throw",
+                   "plant": "x"}, "bad deliver"),
+                 ({"id": "f6", "type": "forage", "at": [1, 2],
+                   "plant": "x"}, "at needs 3 ints")):
+    try:
+        Job.from_dict(bad)
+        check("forage rejects %s" % why, False, "no exception")
+    except ValueError:
+        check("forage rejects %s" % why, True)
+
+# --- crucible family (2026-10-07 Lane B B1) ------------------------------
+# The pot-work family is item-consuming / item-producing around a
+# fire: fire/insert/fuel consume the `material` slot item, take
+# produces the melt, pour consumes the melt at the mold cell (`at`).
+# Ledger: the ingot itself is never a ledger entry - it is the
+# oracle's measured delta (the melt pair stands in for the
+# simulation, like craft's produced-only delta).
+for t in ("crucible_fire", "crucible_insert", "crucible_fuel",
+          "crucible_pour"):
+    check("%s consumes its material slot" % t,
+          JOB_CATALOG[t]["consumes"] and
+          JOB_CATALOG[t]["needs"] == ("material",) +
+          (("at",) if t == "crucible_pour" else ()))
+check("crucible_take produces the melt",
+      JOB_CATALOG["crucible_take"]["produces"] and
+      not JOB_CATALOG["crucible_take"]["consumes"] and
+      JOB_CATALOG["crucible_take"]["needs"] == ("material",))
+c1 = Job.from_dict({"id": "cf1", "type": "crucible_fire",
+                    "material": "survival:crucible-small",
+                    "origin": "deterministic"})
+check("crucible_fire consumes the crucible item",
+      c1.material == "survival:crucible-small" and
+      c1.ledger_deltas() == [("survival:crucible-small", -1)])
+c2 = Job.from_dict({"id": "ct1", "type": "crucible_take",
+                    "material": "survival:crucible-melt",
+                    "quantity": 1, "origin": "deterministic"})
+check("crucible_take produces the melt",
+      c2.ledger_deltas() == [("survival:crucible-melt", +1)])
+c3 = Job.from_dict({"id": "cp1", "type": "crucible_pour",
+                    "material": "survival:crucible-melt",
+                    "at": [512020, 150, 512025], "origin": "deterministic"})
+check("crucible_pour consumes the melt at the mold cell",
+      c3.ledger_deltas() == [("survival:crucible-melt", -1)])
+check("crucible_pour without a mold cell is missing its reference",
+      Job.from_dict({"id": "cp2", "type": "crucible_pour",
+                     "material": "survival:crucible-melt"})
+      .missing_refs() == ["at"])
 
 print()
 print("jobs-test: %d passed, %d failed" % (PASS, FAIL))

@@ -41,6 +41,21 @@ function createState() {
             entities: [],
         },
 
+        // Vitals (from /polis/vitals) - the raw object, exposed as-is.
+        // B4 (2026-10-07): data wiring only, no presentation yet. The
+        // shape comes from Lane A's endpoint: { world: {time, day},
+        // entities: [{ uid, code, name, sat, satMax, hp, hpMax, pos,
+        // skills }] }. A null world means the endpoint has not answered
+        // yet (fresh boot / harness not up) - that is a state, not an
+        // error.
+        vitals: {
+            ok: false,
+            world: null,
+            entities: [],
+            raw: null,
+            lastSeen: null,
+        },
+
         // Current selection
         selection: {
             type: SelectionType.NONE,
@@ -103,6 +118,18 @@ function createState() {
          */
         get targets() {
             return { ..._state.targets };
+        },
+
+        /**
+         * Get vitals (raw object from /polis/vitals; B4 data wiring)
+         */
+        get vitals() {
+            return {
+                ..._state.vitals,
+                entities: [...(_state.vitals.entities || [])],
+                world: _state.vitals.world ? { ..._state.vitals.world } : null,
+                raw: _state.vitals.raw,
+            };
         },
 
         /**
@@ -278,6 +305,38 @@ function createState() {
             };
 
             notifyChange('targets');
+        },
+
+        /**
+         * Update from the /polis/vitals response (B4 data wiring).
+         * Stores the RAW object (exposed via `get vitals()` as `.raw`)
+         * plus a case-tolerant normalized view (the C# harness
+         * serializes POCOs PascalCase by default; older payloads are
+         * camel/lower). No presentation - a later panel reads this.
+         * A null/absent world is a state (endpoint not up yet), not an
+         * error.
+         */
+        updateFromVitals(data) {
+            if (data === null || data === undefined) return;
+
+            const ok = data.Ok ?? data.ok ?? true;
+            const worldRaw = data.world ?? data.World ?? null;
+            const entities = data.entities ?? data.Entities ?? [];
+
+            _state.vitals = {
+                ok: !!ok,
+                world: worldRaw ? {
+                    time: worldRaw.time ?? worldRaw.Time ?? null,
+                    day: worldRaw.day ?? worldRaw.Day ?? null,
+                } : null,
+                // keep the raw entity records untouched; the panel
+                // (when it exists) is what formats them
+                entities: [...entities],
+                raw: data,
+                lastSeen: Date.now(),
+            };
+
+            notifyChange('vitals');
         },
 
         /**

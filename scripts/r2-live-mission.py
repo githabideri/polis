@@ -40,6 +40,7 @@ Sanitization: the run JSON records model names and game-internal facts
 only - no host names or addresses (the repo is publication-staged).
 """
 import argparse
+import fnmatch
 import importlib.util
 import json
 import os
@@ -1449,8 +1450,19 @@ def execute_job(pol, bot, base, job, wm, run):
                 measured, {"goto": g.get("msg")},
                 {"arrived": bool(g.get("ok"))})
     if job.type == "wait":
-        time.sleep(2)
-        return True, "waited", measured, {}, {"waited": True}
+        # a time valve: quantity is SECONDS (default 2). The crucible
+        # chain (2026-10-07) uses it to wait out engine smelt progress
+        # (a template parameter); a bare wait is the 2-s beat.
+        secs = max(2, job.quantity or 2)
+        time.sleep(secs)
+        return True, "waited %ds" % secs, measured, {}, {"waited": secs}
+    # forage (2026-10-07, B1): the forageable-plant gather
+    if job.type == "forage":
+        return _forage(pol, bot, wm, job, run)
+    # the crucible pot-work steps (2026-10-07, B2)
+    if job.type in ("crucible_fire", "crucible_insert", "crucible_fuel",
+                    "crucible_take", "crucible_pour"):
+        return _crucible(pol, bot, job, measured)
     return (False, "unhandled job type %s" % job.type, measured, {},
             {})
 
@@ -1631,6 +1643,237 @@ def _cell_break(pol, bot, wm, job, run):
         {"block_gone": gone, "measured": measured}
 
 
+# --------------------------------------------------------------------------
+# Forage (2026-10-07 survival run, B1) and the crucible pot-work
+# --------------------------------------------------------------------------
+
+def _code_matches(code, plant):
+    """Exact code, family glob (`fruitingbush-*`) or family root
+    (prefix up to the next '-') - the plancheck convention."""
+    e = str(plant or "").split(":")[-1].lower()
+    if "*" in e:
+        return fnmatch.fnmatchcase(code, e)
+    return code == e or code.startswith(e + "-")
+
+
+def _nearest_target(pol, bot, plant, radius=24, limit=50):
+    """The nearest instance of a plant code / family glob from the
+    /polis/targets scan (the harness' interactable-block view, centred
+    on the bot; the zone= parameter on the same endpoint is Lane A's
+    addition, used by oikistes' query tool). Returns [x, y, z] or
+    None. JSON case is tolerated (the harness serializes POCOs
+    PascalCase; older payloads camelCase)."""
+    token = str(plant or "").split(":")[-1]
+    filter_ = token.split("*")[0]  # the codeContains substring
+    url = ("/polis/targets?botId=%d&mode=blocks&radius=%d&limit=%d"
+           "&codeContains=%s") % (bot, radius, limit, filter_)
+    r = pol.get(url) or {}
+    for key in ("Blocks", "blocks"):
+        for b in (r.get(key) or []):
+            code = (b.get("Code") or b.get("code") or "") \
+                .split(":")[-1].lower()
+            p = b.get("Pos") or b.get("pos")
+            if not p or len(p) < 3:
+                continue
+            if _code_matches(code, plant):
+                return [int(p[0]), int(p[1]), int(p[2])]
+    return None
+
+
+def _pick_once(pol, bot, cell, count):
+    """One pick round (Lane A's harness command: `pick x y z [count]`,
+    issued from an adjacent cell - it runs the same pick path the
+    mod's forage interrupt uses; the engine's verdict is immediate and
+    definitive, and the result carries the items gathered). Returns
+    the approach module's try_action shape."""
+    r = pol.cmd("pick", [str(cell[0]), str(cell[1]), str(cell[2]),
+                         str(max(1, count))], bot, timeout=120)
+    la = {"Name": "pick", "Ok": r.get("Ok"), "Msg": r.get("Message") or ""}
+    if r.get("Ok") is not False:
+        t_a = time.time()
+        while time.time() - t_a < 20:
+            la = pol.state(bot).get("LastAction") or {}
+            if la.get("Name") == "pick" and la.get("Ok") is not None:
+                break
+            time.sleep(1)
+    return {"ok": r.get("Ok") is True and la.get("Ok") is not False,
+            "last_action": la, "data": r.get("Data") or {}}
+
+
+def _forage(pol, bot, wm, job, run):
+    """Gather from a forageable plant (the 1.22 fruiting bush): walk
+    to an ADJACENT cell (the approach module's neighbour ring - a
+    bush is a solid block, the pick must come from next to it), then
+    repeat `pick` on the target until the count is met or the plant
+    yields nothing (exhausted - an honest stop, never a stall). The
+    target is the job's `at` cell (a known target from a targets
+    query) or, without one, the nearest instance of the plant code /
+    family found in the /polis/targets scan at run time. Drops are
+    MEASURED as the pre/post inventory delta, never assumed (chop's
+    precedent). deliver=drop drops everything at the bot's feet on
+    completion; carry (default) leaves the cargo in the bot."""
+    plant = (job.plant or "").split(":")[-1].lower()
+    cell = [int(v) for v in job.at] if job.at else \
+        _nearest_target(pol, bot, plant)
+    if cell is None:
+        return (False,
+                "forage %s: no instance of %r in range (targets scan)"
+                % (plant, job.plant), {},
+                {"cmd": "targets", "ok": False},
+                {"found": False})
+    want = job.quantity or 1
+    # staleness before the walk: the surveyed cell may already be gone
+    code0 = _cell_code(pol, bot, cell)
+    if code0 is None or (code0 or "").lower() in ("", "game:air", "air"):
+        return (False,
+                "forage %s: cell %s is empty (nothing to forage)"
+                % (plant, cell), {},
+                {"cmd": "pick", "ok": False,
+                 "reason": "cell empty at execution"},
+                {"target": list(cell), "measured": {}})
+    # the standable ring around the block
+    solid = [b["pos"] for b in (pol.cell_blocks(bot, tuple(cell), pad=2) or [])
+             if (b.get("code") or "") != "game:air"]
+    from_pos = tuple(pol.state(bot)["Bot"]["Pos"])
+    pre0 = inventory_of(pol.state(bot))
+
+    def _settle(baseline):
+        """wait for the drop to land in the cargo (short window - the
+        pick is fast, unlike a chop's 60s break poll)"""
+        post = inventory_of(pol.state(bot))
+        for _ in range(6):
+            if _delta_gain(pre0, post, job) > baseline:
+                return post
+            time.sleep(2)
+            post = inventory_of(pol.state(bot))
+        return post
+
+    def _goto(c):
+        return v5.goto_wait(pol, bot, c, timeout=25)
+
+    def _act():
+        return _pick_once(pol, bot, cell, want)
+
+    aok, adetail, attempts, la = r2approach.approach(
+        _goto, _act, from_pos, cell, solid)
+    rounds = 1
+    have = _delta_gain(pre0, _settle(0), job)
+    max_rounds = max(2, min(want + 2, job.budget))
+    last_pick_ok = aok
+    while have < want and rounds < max_rounds and last_pick_ok:
+        r = _pick_once(pol, bot, cell, want - have)
+        post = _settle(have)
+        now = _delta_gain(pre0, post, job)
+        if r["ok"] and now == have:
+            break  # the plant yielded nothing this round: exhausted
+        have = now
+        rounds += 1
+        last_pick_ok = r["ok"]
+    measured = _delta_dict(pre0, inventory_of(pol.state(bot)))
+    ok = aok and have >= want
+    detail = ("forage %s @ %s -> %d/%d gathered in %d pick round%s "
+              "(%s; last_action_ok=%s)"
+              % (plant, cell, have, want, rounds,
+                 "s" if rounds != 1 else "", adetail, la.get("Ok")))
+    if ok and (job.deliver or "carry") == "drop":
+        # drop = the bot's position on completion (Lane A extends the
+        # C# drop with an optional position; none given = at the feet)
+        dr = pol.cmd("drop", [], bot, timeout=60)
+        detail += " | dropped at the feet (cmd_ok=%s)" % dr.get("Ok")
+    return ok, detail, measured, \
+        {"cmd": "pick", "cell": list(cell),
+         "last_action": {k: la.get(k) for k in ("Name", "Ok", "Msg")},
+         "approach_attempts": attempts}, \
+        {"target": list(cell), "gathered": have, "wanted": want,
+         "rounds": rounds, "measured": measured}
+
+
+def _delta_dict(pre, post):
+    """{code: post-pre} over positive deltas (the measured drop)."""
+    out = {}
+    for k in set(pre) | set(post):
+        d = post.get(k, 0) - pre.get(k, 0)
+        if d > 0:
+            out[k] = d
+    return out
+
+
+def _delta_gain(pre, post, job):
+    """Items gained that count toward the job's claim: the claimed
+    material (classified) if the job names one, else everything."""
+    want = (job.material or "").lower()
+    gain = 0
+    for k, v in _delta_dict(pre, post).items():
+        mat = (classify(k)[1] or "").lower()
+        if want and mat != want and k.lower() != want:
+            continue
+        gain += v
+    return gain
+
+
+def _crucible(pol, bot, job, measured):
+    """One crucible pot-work step (2026-10-07, B2): Lane A's C# harness
+    commands (the 1.22 crucible; the cooking pot reuses the same base
+    later). Command contract: crucible-fire [color] [at x y z]
+    (places a `crucible-<color>-raw` block from the cargo into a
+    firepit - nearest from the bot, or the given cell - colors
+    fire/blue/red; the 1.22 engine has no size variants);
+    crucible-insert <item> [count] (smelt slots); crucible-fuel
+    <item|charcoal> [count] (fuel slots); crucible-take (removes the
+    smelted content, respecting the engine's tongs requirement);
+    crucible-pour <x y z> (pours the melt at a mold ground position,
+    returns what it produced). The bot must stand at the crucible -
+    the chain's goto walks there first. Evidence: the CommandResult
+    plus the measured inventory delta (take/pour)."""
+    which = job.type.split("_", 1)[1]
+    cmd = "crucible-" + which
+    args = []
+    if which == "fire":
+        # material = crucible-<color>-raw (the clayform recipe output)
+        parts = (job.material or "").split("-")
+        color = parts[1] if len(parts) >= 3 else "fire"
+        if color not in ("fire", "blue", "red"):
+            color = "fire"
+        args = [color]
+        if job.at:
+            args += ["at", str(job.at[0]), str(job.at[1]), str(job.at[2])]
+    elif which in ("insert", "fuel"):
+        args = [job.material or ""]
+        if job.quantity:
+            args.append(str(job.quantity))
+    elif which == "pour":
+        args = [str(v) for v in (job.at or [])]
+    pre = inventory_of(pol.state(bot))
+    r = pol.cmd(cmd, args, bot, timeout=120)
+    la = {}
+    if r.get("Ok") is not False:
+        t_a = time.time()
+        while time.time() - t_a < 60:
+            la = pol.state(bot).get("LastAction") or {}
+            if la.get("Name") == cmd and la.get("Ok") is not None:
+                break
+            time.sleep(2)
+    post = inventory_of(pol.state(bot))
+    for k, v in _delta_dict(pre, post).items():
+        measured[k] = measured.get(k, 0) + v
+    for k in set(pre) | set(post):
+        d = post.get(k, 0) - pre.get(k, 0)
+        if d < 0:
+            measured[k] = measured.get(k, 0) + d
+    ok = r.get("Ok") is True and la.get("Ok") is not False
+    data = r.get("Data") or {}
+    detail = ("%s %s -> cmd_ok=%s last_action_ok=%s measured=%s"
+              % (cmd, " ".join(args), r.get("Ok"), la.get("Ok"),
+                 measured))
+    if data:
+        detail += " data=%s" % data
+    return ok, detail, measured, \
+        {"cmd": cmd, "args": args, "ok": r.get("Ok"),
+         "last_action": {k: la.get(k) for k in ("Name", "Ok", "Msg")},
+         "data": data}, \
+        {"measured": measured, "data": data}
+
+
 def run_campaign(args, run, t0):
     """The operator campaign (--jobs, 2026-10-06): an explicit
     deterministic job list (give / chop / craft / mine / place), no
@@ -1663,9 +1906,11 @@ def run_campaign(args, run, t0):
     # 3. live pre-execution checks (the validator gate):
     #    place/build jobs with an explicit cell get a site fixture -
     #    the EXISTING place semantics (the site-filled oracle; a door's
-    #    entity height is a game-side matter)
+    #    entity height is a game-side matter); a goto that names a cell
+    #    (the crucible chain's walk to the firepit, 2026-10-07) gets
+    #    one the same way - the goto executor only reads fixture cells
     for j in jobs_raw:
-        if j.type in ("place", "build") and j.at and not j.target:
+        if j.type in ("place", "build", "goto") and j.at and not j.target:
             sid = "site-job-%s" % j.id
             wm.register_fixture(sid, "build-site", list(j.at), "empty")
             wm.observe_fixture(
@@ -1759,6 +2004,14 @@ def main():
                          "grammar parsing, no planner; the jobs are "
                          "validated against the live world, then run "
                          "in list order. Implies --no-planner.")
+    ap.add_argument("--chain", default="",
+                    help="a mission-plan template (r2/chains.py, e.g. "
+                         "crucible-copper): rendered to a --jobs list "
+                         "with --chain-params before validation")
+    ap.add_argument("--chain-params", default="",
+                    help="JSON object of template parameters for "
+                         "--chain (firepit_at, mold_at, color, ore, "
+                         "fuel, wait_s, ...)")
     ap.add_argument("--site", default="",
                     help="operator-declared build-site 'x,y,z' (the "
                          "driver registers it as the goal's site fixture, "
@@ -1768,6 +2021,20 @@ def main():
                          "(logged in the run JSON - a harness privilege, "
                          "not a world fact)")
     args = ap.parse_args()
+
+    # a mission-plan template renders to a --jobs list before anything
+    # else (the chain module is pure data - the campaign machinery is
+    # unchanged below it)
+    if args.chain:
+        from r2 import chains as r2chains
+        params = json.loads(args.chain_params) if args.chain_params else {}
+        try:
+            args.jobs = json.dumps(r2chains.render(args.chain, params))
+        except (KeyError, ValueError, TypeError) as e:
+            print("CHAIN %s: %s" % (args.chain, e))
+            sys.exit(2)
+        print("CHAIN %s: rendered %s jobs" % (args.chain,
+                                              len(json.loads(args.jobs))))
 
     run = {"started": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
            "model": args.llm_model,
@@ -2236,7 +2503,7 @@ def run_jobs(pol, bot, base, gs, job, run, wm):
         "execution": execution,   # the engine's verdict on the action
         "oracle": oracle,         # the fresh-world check of the result
         "wall_s": round(time.time() - t0, 1)})
-    if job.type in ("mine", "harvest", "chop"):
+    if job.type in ("mine", "harvest", "chop", "forage"):
         # a cell-targeted job (campaign) has no resource record; a
         # resource job's measured drop corrects the record's claim
         rec = wm.resources.get(job.source) if job.source else None
