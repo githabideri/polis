@@ -106,13 +106,20 @@ on the model-mux box.
    reflection), food-pressure interrupt, light RimWorld-inspired skills
    (L1 hard req / L2 job threshold / L3 scaling). Build order: policies +
    eat → forage-eat in the pilot → skills with the copper milestone.
-2. **First survival pilot** — fresh world `polis-pilot-1` is up (normal
-   clock, survival); r2 live-mission (forage + eat + small hut, 2–3 in-game
-   days), world auto-creation on the startup path, operator-only-on-
-   failure; death = permanent (respawn is a debugging deity power).
-3. **Copper via the melting pot** (campfire + charcoal; *not* the
-   bloomery — that is iron/steel) — the first endogenous smelting
-   milestone, built through the building system.
+2. **First survival pilot** — dev-phase run (2026-10-07) in a fresh
+   generated survival world with a flat/clear spawn (the barren
+   `polis-pilot-1` was superseded by the generated `polis-survival-*`
+   worlds on 2026-10-04/05): **bare start** (one approved initial food
+   supply; no equipment), Oikistes-instructed missions through R2,
+   bot respawn allowed while developing; the FINAL pilot enforces
+   **permadeath** — "fresh start" = a new world once all bots are
+   dead. Player runs in parallel in the normal player playstyle
+   (godmode for now); player-as-stone deity mode is an optional world
+   setting (concept under discussion — design doc to follow).
+3. **Copper via the crucible** (clay-formed vessel in the firepit,
+   charcoal; *not* the bloomery — that is iron/steel) — the first
+   endogenous smelting milestone. Same "pot on fire" pattern as the
+   food cooking pot: one capability family covers both.
 4. **The 13.13 ring decision** (standing-range-2 / scaffold / 3x3 cap) —
    unblocks bigger single-bot buildings.
 5. **Cross-mission memory** — persistent world model + episodic record +

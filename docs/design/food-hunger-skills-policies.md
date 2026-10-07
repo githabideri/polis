@@ -1,11 +1,11 @@
 # Design — food, hunger, policies & skills (survival pilot)
 
-Status: **partially implemented** (engine facts below verified by decompiling the
+Status: **mostly implemented** (engine facts below verified by decompiling the
 1.22.7 assemblies; the `hunger`/`eat`/`hungerpause` harness commands,
-the `EntityBehaviorPolisHunger` drain gate, and the `PolisPolicyEngine` +
-`polis-policies.json` rules layer are live in the pilot world as of
-2026-10-04; remaining: the forage skill + the food-pressure interrupt,
-then skill state/XP). Owner: the polis layer.
+the `EntityBehaviorPolisHunger` drain gate, the `PolisPolicyEngine` +
+`polis-policies.json` rules layer, the berry-pick action, and the forage
+episode + food-pressure interrupt are all live as of 2026-10-04;
+remaining: skill state/XP). Owner: the polis layer.
 Constraint that shapes everything: *whatever lands now must let a full
 system tie in later without big code rewriting* — so every pillar is
 data-driven with one evaluation seam.
@@ -236,7 +236,7 @@ flip denied the next `eat` within seconds, restore re-allowed it.
    `"full"` = engine behavior unmodified, so survival pilot worlds run
    the real drain. All three states live-verified (drain running / flat
    with file off / flat with bot paused; resumes on release).
-6. **PARTIAL 2026-10-04 (live, pilot world) — forage episode +
+6. **LIVE 2026-10-04 (pilot + generated worlds) — forage episode +
    food-pressure interrupt.** The interrupt lives in `PolisSystem.OnTick`
    (1 Hz, policy `pressure {trigger, rearm}` per owner profile): at
    saturation < `trigger × max` it preempts the current job at a safe
@@ -266,8 +266,12 @@ flip denied the next `eat` within seconds, restore re-allowed it.
      berries is therefore a **separate action** (sustained
      `OnBlockInteract` with the berry stacks routed to the bot's
      cargo, like `CompleteHarvestToBot` does for harvestable blocks).
-     Until it exists, wild forage can complete the scan + goto legs
-     but not the harvest leg.
+     **RESOLVED the same night (de87861):** `PolisPickBushAction`
+     shipped — sustained interact on the Ripe state, berry stacks to
+     cargo, Ripe→Mature→regrow. Live: 3–10 berries per bush; full
+     episode navigate→pick→eat to full saturation in the generated
+     survival world. Remaining on this leg: long-path navigation
+     robustness.
    - **The eat core is live-verified end to end:** `eat` (harness) →
      `PolisEatService.Eat` → policy gate → `ReceiveSaturation`: both
      starving bots went 0.0 → 840.0 saturation on 3x cooked redmeat
@@ -300,11 +304,11 @@ flip denied the next `eat` within seconds, restore re-allowed it.
    hot-reload flip test).
 2. Forage skill + food-pressure interrupt inside the first survival
    pilot mission (fresh world is up: normal clock, survival) —
-   **interrupt + eat core done 2026-10-04 (live, see §4.6); the wild
-   forage loop is blocked on the berry-pick action** (bushes are not
-   harvestable blocks — §4.6) and on long-path navigation robustness.
-   The container leg (`feed`) is implemented and awaits a
-   container-present test.
+   **done 2026-10-04 (live, see §4.6; the berry-pick action shipped
+   the same night, de87861): forage-eat is live end-to-end in the
+   generated survival world.** Remaining: long-path navigation
+   robustness, and the container leg (`feed` — implemented, awaits a
+   container-present test).
 3. Skill state + XP + L2 job gates — with the copper/melting-pot
    milestone (the first jobs that want a threshold).
 4. `wear`/`behavior` policy domains when the bot actually wears things.
