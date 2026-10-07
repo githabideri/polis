@@ -18,8 +18,6 @@ boundary; `is_complete_extent` stays False in R2.
 
 # ---------------------------------------------------------------- codes ----
 
-_PREFIX = "game:"
-
 # Exact block code (prefix-stripped) -> (kind, material, properties)
 EXACT_MAP = {
     "rock-granite": ("rock", "granite", {}),
@@ -42,6 +40,21 @@ EXACT_MAP = {
     "soil-high-normal": ("soil", "dirt", {}),
     "soil-compost-none": ("soil", "dirt", {}),
     "soil-compost-normal": ("soil", "dirt", {}),
+    # 2026-10-07: forestfloor (the 8 forest-ground variants) is a FULL
+    # CUBE: the pathfinder refuses goals inside it (a goto at a
+    # forestfloor cell settles on top, 2026-10-07 probe) and it supports
+    # a standing body. It must be solid, or the build approach's
+    # standable filter ("above walking layer: solid block below") finds
+    # no ledge at ground level on any forest site and the whole build
+    # wedges (2026-10-07, the site-B hut).
+    "forestfloor-0": ("ground", "forestfloor", {}),
+    "forestfloor-1": ("ground", "forestfloor", {}),
+    "forestfloor-2": ("ground", "forestfloor", {}),
+    "forestfloor-3": ("ground", "forestfloor", {}),
+    "forestfloor-4": ("ground", "forestfloor", {}),
+    "forestfloor-5": ("ground", "forestfloor", {}),
+    "forestfloor-6": ("ground", "forestfloor", {}),
+    "forestfloor-7": ("ground", "forestfloor", {}),
 }
 
 # Prefix rule (on the prefix-stripped code) -> (kind, material, props-fn)
@@ -53,8 +66,18 @@ PREFIX_RULES = [
 
 
 def _strip(code):
+    """Namespace-prefix stripping (game:rock-granite -> rock-granite).
+
+    VS item codes are `namespace:name`; the vanilla index is game:-
+    dominated, but mod items come in other namespaces (the door chain's
+    door-crude is survival:-namespaced, 2026-10-06) - strip whatever
+    the prefix is when a colon is present. Un-namespaced codes pass
+    through untouched.
+    """
     c = str(code or "")
-    return c[len(_PREFIX):] if c.startswith(_PREFIX) else c
+    if ":" in c:
+        return c.split(":", 1)[1]
+    return c
 
 
 def classify(code):

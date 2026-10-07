@@ -49,14 +49,16 @@ f = Failure("unsupported_goal", "verb fly", goal="fly x")
 check("unsupported_goal layer=goal", f.layer == "goal")
 
 # --- job catalog ----------------------------------------------------------
-check("catalog covers the v5 families + 12.1 + 13.7 sow + 09-28 build + 13.11 plan",
+check("catalog covers the v5 families + 12.1 + 13.7 sow + 09-28 build "
+      "+ 13.11 plan + 10-04 craft + 10-06 chop",
       set(JOB_CATALOG) == {"mine", "harvest", "place", "goto",
                            "give_tool", "pickup", "travel", "wait",
-                           "sow", "build", "build_plan"})
+                           "sow", "build", "build_plan", "craft", "chop"})
 from r2.jobs import PLANNER_JOB_TYPES
-check("build_plan is GOAL-SCOPED (not in the planner vocabulary yet)",
+check("build_plan + chop are GOAL-SCOPED (not in the planner vocabulary)",
       "build_plan" not in PLANNER_JOB_TYPES and
-      "build" in PLANNER_JOB_TYPES and len(PLANNER_JOB_TYPES) == 10)
+      "chop" not in PLANNER_JOB_TYPES and
+      "build" in PLANNER_JOB_TYPES and len(PLANNER_JOB_TYPES) == 11)
 g4 = Goal.from_dict({"verb": "build-plan", "object": "hut",
                     "at": "site-A"})
 check("build-plan goal (plan id as object)",
@@ -139,6 +141,40 @@ try:
     check("unknown origin rejected", False, "no exception")
 except ValueError:
     check("unknown origin rejected", True)
+
+# --- chop (2026-10-06 door campaign) ---------------------------------------
+chop = Job.from_dict({"id": "c1", "type": "chop",
+                      "at": [512016, 155, 512011], "n": 1,
+                      "expect": "log-grown-*", "origin": "deterministic"})
+check("chop parses (at/n/expect, operator fields)",
+      chop.at == [512016, 155, 512011] and chop.quantity == 1 and
+      chop.expect == "log-grown-*" and chop.origin == "deterministic")
+check("chop needs its cell (missing at)",
+      Job.from_dict({"id": "c2", "type": "chop"}).missing_refs() == ["at"])
+check("chop catalog row (world producer, no tool)",
+      JOB_CATALOG["chop"]["produces"] and
+      JOB_CATALOG["chop"]["source"] == "world" and not
+      JOB_CATALOG["chop"]["consumes"])
+for bad, why in (({"id": "c3", "type": "chop", "at": [1, 2]},
+                  "at needs 3 ints"),
+                 ({"id": "c4", "type": "chop", "at": [1, 2, 3],
+                   "expect": ["x"]}, "expect must be a string"),
+                 ({"id": "c5", "type": "chop", "n": 0}, "n must be >= 1")):
+    try:
+        Job.from_dict(bad)
+        check("chop rejects %s" % why, False, "no exception")
+    except ValueError:
+        check("chop rejects %s" % why, True)
+# cell-targeted mine: `at` replaces the resource id as its reference
+m1 = Job.from_dict({"id": "m1", "type": "mine", "at": [512018, 149, 512033],
+                    "n": 1, "material": "dirt"})
+check("cell mine: at is the reference (no source needed)",
+      m1.missing_refs() == [] and m1.at == [512018, 149, 512033])
+check("resource mine still needs a source",
+      Job.from_dict({"id": "m2", "type": "mine",
+                     "source": "res-x", "material": "granite"}).missing_refs() == []
+      and Job.from_dict({"id": "m3", "type": "mine",
+                         "material": "granite"}).missing_refs() == ["source"])
 
 print()
 print("jobs-test: %d passed, %d failed" % (PASS, FAIL))

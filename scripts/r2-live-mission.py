@@ -24,6 +24,18 @@ Run on the polis CT:
     --goal "place granite at site-A x1" \
     --out data/r2-run-<date>.json
 
+Operator campaign mode (2026-10-06, the crude-door chain): an explicit
+job list runs with no grammar parsing and no planner - the jobs are
+validated against the LIVE world first (chop cells, the shaped recipe
+pattern against the projected inventory), then execute in list order
+through the normal queue/executor/oracle machinery. `--goal` is the
+campaign description line (recorded in the run JSON):
+  python3 scripts/r2-live-mission.py \
+    --harness http://127.0.0.1:8585 --uid <playerUid> --no-planner \
+    --goal "operator campaign: install door-crude at (x,y,z)" \
+    --jobs '[{"type":"give_tool","material":"axe-felling-copper","n":1}, ...]' \
+    --out data/r2-run-<date>.json
+
 Sanitization: the run JSON records model names and game-internal facts
 only - no host names or addresses (the repo is publication-staged).
 """
@@ -65,6 +77,10 @@ GIVE_ITEM = {
     # item, which places the same block (the blocktype's own drop
     # declaration). The honest dirt-hut material (builds/hut-dirt.json).
     "dirt": "soil-low-none",
+    # 2026-10-07: the raw material name "axe" is not an item code; the
+    # engine's axe collectible is axe-felling-copper (the door recipe's
+    # tool-axe cell matches it by tag, not by code).
+    "axe": "axe-felling-copper",
 }
 
 #: material name -> the BLOCK code a place/build of it leaves in the
@@ -428,14 +444,32 @@ def execute_job(pol, bot, base, job, wm, run):
     if job.type == "give_tool":
         item = GIVE_ITEM.get(job.material, job.material)
         qty = job.quantity or 1
-        r = pol.cmd("give", [item, str(qty)], bot)
-        ok = bool(r.get("Ok"))
-        st = pol.state(bot)
-        inv = inventory_of(st)
-        got = inv.get(item, 0)
-        if ok:
-            ok = got >= qty
+        # 2026-10-07: the give can be queued before the freshly
+        # spawned agent is fully loaded; the game thread then drops
+        # it and the state never shows the item (run: "gave axe x1
+        # -> carried 0"). Re-issue the command up to 3 times before
+        # declaring failure.
+        got = 0
+        for attempt in range(3):
+            if attempt:
+                pol.cmd("give", [item, str(qty)], bot)
+            else:
+                r = pol.cmd("give", [item, str(qty)], bot)
+                ok = bool(r.get("Ok"))
+            for _ in range(10):
+                st = pol.state(bot)
+                inv = inventory_of(st)
+                # the state serializes codes with the namespace
+                # prefix ("game:axe-felling-copper") - match both
+                # forms
+                got = inv.get(item, 0) + inv.get("game:" + item, 0)
+                if got >= qty:
+                    break
+                time.sleep(1)
+            if got >= qty:
+                break
         measured = {item: got}
+        ok = got >= qty
         return ok, ("gave %s x%d -> carried %d" % (item, qty, got)), \
             measured, \
             {"cmd": "give", "item": item, "ok": r.get("Ok")}, \
@@ -561,6 +595,12 @@ def execute_job(pol, bot, base, job, wm, run):
                          "(engine placement is not exposed)" if not
                          seed_post < seed_have else None)}
 
+    # cell-targeted jobs (2026-10-06 campaign): a chop, or a mine that
+    # names its own cell instead of a world resource - one fixed cell,
+    # approach + engine verdict + measured drop
+    if job.type == "chop" or (job.type == "mine" and job.at):
+        return _cell_break(pol, bot, wm, job, run)
+
     # resource-targeted jobs: the target cell is the resource's
     # representative cell (measured world fact, not model output)
     rec = wm.resources.get(job.source) if job.type in (
@@ -592,9 +632,15 @@ def execute_job(pol, bot, base, job, wm, run):
         if not cells:
             cells = list(rec.mineable_cells) if rec.mineable_cells \
                 else list(rec.cells)
-        # walk order: nearest cell first (keeps the bot's travel short)
+        # walk order (2026-10-07): TOP-DOWN before nearest. The
+        # distance-only order sent the bot to a hollow's exposed FLOOR
+        # cells (air above them) and left it stranded 2+ below the rim
+        # (two hut-build aborts: 5 and 6 mined, no walk-out). Top-down
+        # mines the rim/surface first, so the bot's feet stay at most
+        # one step below the current surface: the way it came down is
+        # the way it climbs out.
         bp = tuple(pol.state(bot)["Bot"]["Pos"])
-        cells.sort(key=lambda c: abs(c[0] - bp[0]) + abs(c[2] - bp[2]))
+        cells.sort(key=lambda c: (-c[1], abs(c[0] - bp[0]) + abs(c[2] - bp[2])))
         # the mine path needs a tool (granite is tier 2) - EXCEPT
         # hand-minable material: no harness privilege where the world
         # gives none (the honest survival path)
@@ -654,7 +700,12 @@ def execute_job(pol, bot, base, job, wm, run):
         # so local density is what the re-targeting buys.
         tried = set()
         cells_tried = 0
-        max_cells_tried = need + 80
+        # (2026-10-07) 2:1 attempt budget: a 1:1 budget exhausted on
+        # buried/stale cells before the top-down re-scan found enough
+        # genuinely exposed ones (31 of 99 mined, job dead). Each try
+        # is cheap when it fails fast, and the re-scan is what finds
+        # the fresh surface as the bot digs.
+        max_cells_tried = need * 2 + 80
         scan_every = 3
         iters_since_scan = 0
         while mined < need and cells_tried < max_cells_tried:
@@ -664,8 +715,10 @@ def execute_job(pol, bot, base, job, wm, run):
                 bp2 = tuple(pol.state(bot)["Bot"]["Pos"])
                 fresh = _fresh_exposed(pol, bot, rec, wm, target_mat)
                 cells = [c for c in fresh if c not in tried]
-                cells.sort(key=lambda c: abs(c[0] - bp2[0]) +
-                           abs(c[2] - bp2[2]))
+                # top-down before nearest (2026-10-07): same rule as the
+                # initial sort - the rim before the pit floor
+                cells.sort(key=lambda c: (-c[1], abs(c[0] - bp2[0]) +
+                           abs(c[2] - bp2[2])))
             if not cells:
                 break
             cell = cells.pop(0)
@@ -1086,6 +1139,8 @@ def execute_job(pol, bot, base, job, wm, run):
         landed = 0
         total = 0
         parts = []
+        stuck = 0      # 2026-10-07: consecutive body-OK goto failures
+        rescues = 0    # hard-resets performed this run (bounded)
         for phase, cells in plan.phases(origin):
             for cell, mat in cells:
                 total += 1
@@ -1168,6 +1223,48 @@ def execute_job(pol, bot, base, job, wm, run):
                                     "for %s%s failed and the body is %s "
                                     "(- %s)" % (phase, cell, st, det),
                                     measured, {}, {"cells": None})
+                        # 2026-10-07 stuck rescue: three consecutive
+                        # body-OK goto failures means the pathfinder
+                        # wedged (a 1-wide roof walk; a stale scan
+                        # that routes the bot into its own placed
+                        # block). No further goto in this run can
+                        # succeed, so hard-reset the body: despawn +
+                        # respawn + re-give the shortfall (the
+                        # external-supply give is already sanctioned;
+                        # the pre-check makes over-giving harmless).
+                        if stuck >= 2 and rescues < 8:
+                            rescues += 1
+                            stuck = 0
+                            print("[build] rescue %d/8: bot wedged "
+                                  "(body %s) - despawn+respawn+re-give"
+                                  % (rescues, st), flush=True)
+                            pol.cmd("despawn", [], bot)
+                            time.sleep(3)
+                            r2 = v5.http_json(pol.base + "/polis/command",
+                                              {"cmd": "spawn", "args": [],
+                                               "context": {"playerUid":
+                                                           pol.uid}})
+                            nb = (r2.get("Data") or {}).get("id")
+                            if not nb:
+                                return (False, "rescue failed: spawn "
+                                        "returned no bot", measured, {},
+                                        {"cells": None})
+                            time.sleep(6)
+                            bot = nb
+                            inv_now = normalize_inv(
+                                inventory_of(pol.state(bot)))
+                            for m2, (q2, h2) in sorted(
+                                    {m3: (q3, inv_now.get(m3, 0))
+                                     for m3, q3 in plan.materials.items()
+                                     if inv_now.get(m3, 0) < q3}
+                                    .items()):
+                                pol.cmd("give", [GIVE_ITEM.get(m2, m2),
+                                                 str(q2 - h2)], bot)
+                                time.sleep(1)
+                            print("[build] rescue done: new bot %s"
+                                  % nb, flush=True)
+                            break  # re-approach the same cell fresh
+                        stuck += 1
                         continue
                     # DIRECT place (09-29): the harness command is
                     # async (returns "placing..."); the result is read
@@ -1206,6 +1303,13 @@ def execute_job(pol, bot, base, job, wm, run):
                         landed += 1
                         placed_here = True
                         parts.append("%s%s:landed" % (phase, cell))
+                        # 2026-10-07: settle before the next cell's
+                        # candidate scan - a scan issued immediately
+                        # after a place can read the pre-place chunk
+                        # snapshot and treat a just-placed block as
+                        # air (that is what fed the wedge above).
+                        time.sleep(3)
+                        stuck = 0
                         break
                     parts.append("%s%s:attempt(%s)"
                                  % (phase, cell, la.get("Msg", "?")))
@@ -1244,6 +1348,42 @@ def execute_job(pol, bot, base, job, wm, run):
                     {"site_filled": None})
         cell = fix.cell
         item = GIVE_ITEM.get(job.material, job.material)
+        # 2026-10-07: the engine's place reach is 4.5 blocks (a
+        # door-craft run failed with "out of range: 7.06 > 4.50" when
+        # the bot placed from where it had finished crafting). Walk
+        # to the nearest standable neighbour of the target first
+        # (3-D ring + standability, the build executor's rules): for
+        # a doorway the two AIR neighbours (outside/inside the
+        # opening) both work, solid neighbours (the wall flanking
+        # the door) are excluded, and above ground level a solid
+        # support below the feet is required.
+        L = cell[1]
+        reached = None
+        for level in (L, L - 1, L + 1):
+            cands = []
+            for dx, dz in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                c = (cell[0] + dx, level, cell[2] + dz)
+                bs = pol.cell_blocks(bot, c, pad=0) or []
+                if any(b.get("pos") == list(c) and is_solid(b.get("code"))
+                       for b in bs):
+                    continue
+                if level > base[1]:
+                    below = pol.cell_blocks(
+                        bot, (c[0], c[1] - 1, c[2]), pad=0) or []
+                    if not any(b.get("pos") == [c[0], c[1] - 1, c[2]]
+                               and is_solid(b.get("code")) for b in below):
+                        continue
+                cands.append(c)
+            for c in cands:
+                if goto_arrive(pol, bot, c):
+                    reached = c
+                    break
+            if reached:
+                break
+        if not reached:
+            return (False, "place %s: no standable neighbour of %s "
+                    "reachable" % (item, cell), measured, {},
+                    {"site_filled": None})
         res = v5.execute(pol, bot, "place_block", cell, base, "build",
                          buildblock=item)
         time.sleep(2)
@@ -1260,6 +1400,46 @@ def execute_job(pol, bot, base, job, wm, run):
              "exec_ok": res.get("ok")}, \
             {"site_filled": filled, "wm_condition": cond}
 
+    if job.type == "craft":
+        # 1.22.7 grid crafting (10-04 endogenous craft chain; the
+        # 2026-10-06 shaped door recipe): the ENGINE'S GridRecipe
+        # engine matches the bot's cargo and ConsumeInput consumes /
+        # produces - the orchestrator only issues the command and
+        # MEASURES the result as inventory deltas (ingredients
+        # consumed, output gained). The pattern itself is engine-
+        # side; what made the run safe was the pre-execution pattern
+        # check (plancheck.check_craft_pattern) over the live recipe
+        # table and the projected inventory.
+        item = job.material
+        runs = job.quantity or 1
+        pre = inventory_of(pol.state(bot))
+        r = pol.cmd("craft", [item], bot)
+        la = {}
+        t_a = time.time()
+        # a validation rejection never records a LastAction - no point
+        # polling (an accepted craft completes in well under the window)
+        while r.get("Ok") is not False and time.time() - t_a < 60:
+            la = pol.state(bot).get("LastAction") or {}
+            if la.get("Name") == "craft" and la.get("Ok") is not None:
+                break
+            time.sleep(2)
+        post = inventory_of(pol.state(bot))
+        for k in set(pre) | set(post):
+            d = post.get(k, 0) - pre.get(k, 0)
+            if d:
+                measured[k] = measured.get(k, 0) + d
+        ok = bool(r.get("Ok")) and la.get("Ok") is True
+        detail = ("craft %s x%d -> cmd_ok=%s last_action_ok=%s "
+                  "measured=%s"
+                  % (item, runs, r.get("Ok"), la.get("Ok"), measured))
+        return ok, detail, measured, \
+            {"cmd": "craft", "item": item, "runs": runs,
+             "ok": r.get("Ok"),
+             "last_action": {k: la.get(k) for k in ("Name", "Ok", "Msg")}}, \
+            {"produced": {k: v for k, v in measured.items() if v > 0},
+             "consumed": {k: v for k, v in measured.items() if v < 0},
+             "measured": measured}
+
     if job.type in ("goto", "travel"):
         fix = wm.fixtures.get(job.target)
         cell = tuple(fix.cell) if fix else base
@@ -1275,6 +1455,290 @@ def execute_job(pol, bot, base, job, wm, run):
             {})
 
 
+# --------------------------------------------------------------------------
+# Operator campaign mode (--jobs, 2026-10-06)
+# --------------------------------------------------------------------------
+
+class _CampaignGoal:
+    """The stand-in goal for a --jobs run: a human-readable line,
+    not a grammar-parsed goal (the operator's job list IS the plan).
+    GoalState needs a to_dict()/describe() surface - that is all."""
+
+    def __init__(self, line):
+        self.line = line
+
+    def to_dict(self):
+        return {"line": self.line, "origin": "operator", "campaign": True}
+
+    def describe(self):
+        return self.line
+
+
+def _cell_code(pol, bot, cell):
+    """The live block code at an exact cell (None when empty)."""
+    want = [int(c) for c in cell]
+    for b in (pol.cell_blocks(bot, tuple(cell), pad=0) or []):
+        if b.get("pos") == want:
+            return b.get("code")
+    return None
+
+
+def _live_recipes(pol, output, limit=50):
+    """The live /polis/recipes endpoint (10-04 craft chain: the shapeless
+    table; the 2026-10-06 shaped extension adds pattern/width/height and
+    per-ingredient tags/isTool). Output-substring filter, page-capped."""
+    r = pol.get("/polis/recipes?output=%s&limit=%d" % (output, limit))
+    rows = r.get("recipes")
+    if rows is None:
+        rows = (r.get("Data") or {}).get("recipes")
+    return rows or []
+
+
+def _campaign_jobs(args):
+    """Parse + schema-validate the --jobs list (the jobs.py catalog is
+    the validation machinery - chop included). Returns (jobs, None)
+    or (None, reason)."""
+    try:
+        raw = json.loads(args.jobs)
+    except ValueError as e:
+        return None, "jobs JSON unparseable: %s" % e
+    if not isinstance(raw, list) or not raw:
+        return None, "--jobs must be a non-empty JSON array of job objects"
+    jobs = []
+    for i, d in enumerate(raw):
+        if not isinstance(d, dict):
+            return None, "job %d: not a JSON object" % (i + 1)
+        d = dict(d)
+        if not d.get("id"):
+            d["id"] = "j%d" % (i + 1)
+        if not d.get("origin"):
+            # a give is an operator PRIVILEGE (harness, not a world
+            # fact); the rest of the list is deterministic work
+            d["origin"] = ("operator" if d.get("type") == "give_tool"
+                           else "deterministic")
+        if d.get("type") == "craft" and not d.get("source"):
+            # the campaign names the PRODUCED item; the validator matches
+            # the recipe by output (several variants may exist - the
+            # satisfiable one wins, mirroring the engine's first-match)
+            d["source"] = d.get("material")
+        try:
+            jobs.append(Job.from_dict(d))
+        except ValueError as e:
+            return None, "job %s: %s" % (d.get("id"), e)
+    return jobs, None
+
+
+def _cell_break(pol, bot, wm, job, run):
+    """Approach + break ONE fixed cell (a chop job, or a cell-targeted
+    mine from an operator campaign). Same contract as the mine branch:
+    the approach module walks the standable cells around the block
+    (stuck/goto retries, definitive engine verdict stops the walk);
+    the block-gone scan is the oracle; the drop is MEASURED as the
+    pre/post inventory delta, never assumed; the wedge guard runs after
+    the attempt (a wedged bot aborts with an honest diagnosis instead
+    of a silent stall)."""
+    cmd_name = "chop" if job.type == "chop" else "mine"
+    cell = [int(v) for v in job.at]
+    measured = {}
+    # staleness before the walk: the surveyed cell may already be empty
+    # (a re-run) - say so, do not walk there
+    code0 = _cell_code(pol, bot, cell)
+    if code0 is None or (code0 or "").lower() in ("", "game:air", "air"):
+        return (False, "%s %s: the live cell is empty (nothing to %s)"
+                % (cmd_name, cell, cmd_name), measured,
+                {"cmd": cmd_name, "ok": False,
+                 "reason": "cell empty at execution"},
+                {"block_gone": True, "measured": {}})
+    # the standable ring: the block's solid neighbourhood
+    solid = [b["pos"] for b in pol.cell_blocks(bot, tuple(cell), pad=2)
+             if (b.get("code") or "") != "game:air"]
+    from_pos = tuple(pol.state(bot)["Bot"]["Pos"])
+    pre = inventory_of(pol.state(bot))
+
+    def _goto(c):
+        return v5.goto_wait(pol, bot, c, timeout=25)
+
+    def _act():
+        # the CommandResult verdict is IMMEDIATE and DEFINITIVE (the
+        # mine branch's contract): a validation refusal (no path / out
+        # of range / target gone) never records a LastAction
+        r = pol.cmd(cmd_name, [str(cell[0]), str(cell[1]),
+                               str(cell[2]), "true"], bot)
+        if r.get("Ok") is False:
+            return {"ok": False,
+                    "last_action": {"Name": cmd_name, "Ok": False,
+                                    "Msg": r.get("Message") or ""}}
+        # accepted: poll the ORACLE (the block) and the record; the
+        # LastAction is a hint, the block-gone is the proof
+        t_a = time.time()
+        la2 = {}
+        while time.time() - t_a < 60:
+            time.sleep(2)
+            st2 = pol.state(bot)
+            la2 = st2.get("LastAction") or {}
+            if la2.get("Name") in (cmd_name, job.type) \
+                    and la2.get("Ok") is not None:
+                break
+            bs = pol.cell_blocks(bot, tuple(cell), pad=0) or []
+            if not any(b.get("pos") == list(cell) and
+                       (b.get("code") or "") != "game:air" for b in bs):
+                break  # the block is gone - the work is done
+        gone_now = not any(
+            (b.get("code") or "") != "game:air" and
+            b.get("pos") == list(cell)
+            for b in (pol.cell_blocks(bot, tuple(cell), pad=0) or []))
+        return {"ok": gone_now or la2.get("Ok") is True,
+                "last_action": la2}
+
+    aok, adetail, attempts, la = r2approach.approach(
+        _goto, _act, from_pos, cell, solid)
+    # the drop lands in the cargo ASYNCHRONOUSLY - poll for it (the
+    # mine branch's window), then measure the delta
+    post = {}
+    for _ in range(9):
+        time.sleep(2)
+        post = inventory_of(pol.state(bot))
+        if any(post.get(k, 0) > pre.get(k, 0)
+               for k in set(pre) | set(post)):
+            break
+    for k in set(pre) | set(post):
+        if post.get(k, 0) > pre.get(k, 0):
+            measured[k] = measured.get(k, 0) + \
+                (post.get(k, 0) - pre.get(k, 0))
+    blocks = pol.cell_blocks(bot, cell)
+    gone = bool(blocks) and not any(
+        (b.get("code") or "") != "game:air" and b.get("pos") == list(cell)
+        for b in blocks)
+    # the wedge guard (the mine branch's): a wedged bot aborts the job
+    # with an honest diagnosis instead of a 12-minute silent stall
+    rec_ok, rec_state, rec_detail = recheck_and_recover(
+        pol, bot, "after %s %s" % (cmd_name, cell))
+    if not rec_ok:
+        return (False,
+                "%s %s -> %s | ABORT: %s"
+                % (cmd_name, cell, adetail, rec_detail),
+                measured,
+                {"last_action": {k: la.get(k) for k in ("Name", "Ok", "Msg")},
+                 "approach_attempts": attempts},
+                {"block_gone": gone, "measured": measured,
+                 "wedge": rec_state})
+    ok = bool(aok) and gone
+    detail = ("%s %s -> %s | last_action_ok=%s block_gone=%s measured=%s"
+              % (cmd_name, cell, adetail, la.get("Ok"), gone, measured))
+    return ok, detail, measured, \
+        {"last_action": {k: la.get(k) for k in ("Name", "Ok", "Msg")},
+         "approach_attempts": attempts}, \
+        {"block_gone": gone, "measured": measured}
+
+
+def run_campaign(args, run, t0):
+    """The operator campaign (--jobs, 2026-10-06): an explicit
+    deterministic job list (give / chop / craft / mine / place), no
+    grammar parsing, no 27B. The jobs validate against the LIVE world
+    BEFORE any action (chop cells from a fresh scan; the shaped recipe
+    pattern against the projected inventory - the same planner-side
+    honesty a planned job gets, applied to operator-declared jobs),
+    then run in list order through the normal run_jobs/execute_job
+    machinery with the per-job origin recorded. The run JSON is the
+    same shape as a normal run: goal line, plan, steps with the
+    execution/oracle split, queue, world snapshot, outcome - plus a
+    final oracle summary of the per-job results."""
+    run["mode"] = "operator-campaign"
+    pol = v5.Polis(args.harness, args.uid)
+
+    # 1. schema (the jobs.py catalog - chop included; n/at/expect
+    #    are the operator field names)
+    jobs_raw, err = _campaign_jobs(args)
+    if err:
+        run.update({"outcome": "rejected", "reason": err})
+        return finish(args.out, run, t0)
+
+    # 2. world observation (fresh bot, boot scan)
+    bot, wm, st = boot(pol)
+    run["bot"] = bot
+    run["goal"] = {"line": args.goal, "origin": "operator",
+                   "campaign": True}
+    st = pol.state(bot)
+
+    # 3. live pre-execution checks (the validator gate):
+    #    place/build jobs with an explicit cell get a site fixture -
+    #    the EXISTING place semantics (the site-filled oracle; a door's
+    #    entity height is a game-side matter)
+    for j in jobs_raw:
+        if j.type in ("place", "build") and j.at and not j.target:
+            sid = "site-job-%s" % j.id
+            wm.register_fixture(sid, "build-site", list(j.at), "empty")
+            wm.observe_fixture(
+                sid, not pol.site_filled(bot, tuple(j.at)),
+                reason="fixture_setup:operator")
+            j.target = sid
+    #    cell jobs (chop, cell-mine): a fresh scan of every target
+    #    cell is the world index the chop check validates against
+    cells = {}
+    for j in jobs_raw:
+        if j.at:
+            cells[tuple(int(v) for v in j.at)] = _cell_code(pol, bot, j.at)
+    #    craft: the live recipe table (only when the list needs it)
+    recipes = None
+    if any(j.type == "craft" for j in jobs_raw):
+        seen, rows = set(), []
+        for j in jobs_raw:
+            if j.type == "craft" and j.material not in seen:
+                seen.add(j.material)
+                rows.extend(_live_recipes(pol, j.material))
+        recipes = rows
+
+    # 4. the deterministic validator over the live world (the ledger
+    #    simulates in execution order: the give's axe and the chops'
+    #    planned drops are what the craft's pattern check sees)
+    inv = normalize_inv(inventory_of(st))
+    index = {r.id: r for r in wm.resources.values()}
+    for fid, f in wm.fixtures.items():
+        index[fid] = {"id": fid, "kind": f.kind,
+                      "requirement": f.requirement}
+    plan_raw = [j.to_dict() for j in jobs_raw]
+    jobs, failure = validate_plan(
+        plan_raw, index, inv, goal=None, recipes=recipes, cells=cells,
+        campaign=True)
+    run["planner"] = {"mode": "operator-campaign", "goal": args.goal,
+                      "jobs": len(jobs_raw)}
+    run["plan"] = {"raw": args.jobs[:600], "latency_ms": 0,
+                   "jobs": [j.to_dict() for j in jobs] if jobs else None,
+                   "failure": failure.to_dict() if failure else None}
+    if failure is not None:
+        run.update({"outcome": "rejected",
+                    "reason": "%s (%s): %s"
+                    % (failure.code, failure.layer, failure.detail)})
+        return finish(args.out, run, t0)
+
+    # 5. the queue drives execution (the normal machinery)
+    base = tuple(st["Bot"]["Pos"])
+    gs = GoalState(_CampaignGoal(args.goal), jobs, "operator-campaign")
+    job = gs.start()
+    while job is not None and gs.status == "running":
+        run_jobs(pol, bot, base, gs, job, run, wm)
+        job = gs.next_job()
+
+    # 6. the same run metadata as a normal run + the final oracle
+    run["queue"] = gs.to_dict()
+    run["worldSnapshot"] = wm.to_dict()
+    run["outcome"] = gs.status
+    run["oracle"] = {
+        "status": gs.status,
+        "failure": gs.failure.to_dict() if gs.failure else None,
+        "jobs": [{"job": s.get("job"), "type": s.get("type"),
+                  "ok": s.get("ok"), "measured": s.get("measured"),
+                  "oracle": s.get("oracle")}
+                 for s in run["steps"]]}
+    print("CAMPAIGN %s: %s  (%d jobs, %ds)"
+          % (gs.status.upper(), args.goal, len(jobs),
+             int(time.time() - t0)))
+    if gs.failure:
+        print("  failure: %s - %s"
+              % (gs.failure.code, gs.failure.detail))
+    finish(args.out, run, t0)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--harness", required=True)
@@ -1287,6 +1751,14 @@ def main():
     ap.add_argument("--llm-model", default="")
     ap.add_argument("--goal", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--jobs", default="",
+                    help="operator campaign: an explicit deterministic "
+                         "job list (JSON array; job objects with "
+                         "type/at/n/expect/origin). With this flag the "
+                         "goal line is the campaign description - no "
+                         "grammar parsing, no planner; the jobs are "
+                         "validated against the live world, then run "
+                         "in list order. Implies --no-planner.")
     ap.add_argument("--site", default="",
                     help="operator-declared build-site 'x,y,z' (the "
                          "driver registers it as the goal's site fixture, "
@@ -1302,6 +1774,9 @@ def main():
            "goal_line": args.goal,
            "steps": []}
     t0 = time.time()
+    if args.jobs:
+        run_campaign(args, run, t0)
+        return
     pol = v5.Polis(args.harness, args.uid)
 
     # 1. goal intake (grammar + known site)
@@ -1451,7 +1926,18 @@ def main():
                         n_mine = (len(rec.mineable_cells)
                                   if rec.mineable_cells
                                   else len(rec.cells))
-                        take = min(shortfall, n_mine)
+                        # (2026-10-07) cap the per-cluster allocation at
+                        # 40 and spread the shortfall over several
+                        # clusters: the scan-time mineable count
+                        # overstates what the exposed surface actually
+                        # yields (one 99-cell job on the slope west of
+                        # the site mined 31 and died on its attempt
+                        # budget). With the cap the compiler emits one
+                        # mine job per cluster and the bot hops region
+                        # to region - the inventory carries across jobs
+                        # in one run, and each job's own wedge guard
+                        # still applies.
+                        take = min(shortfall, n_mine, 40)
                         if take <= 0:
                             continue
                         jobs.append({"id": "j%d" % (len(jobs) + 1),
@@ -1703,7 +2189,7 @@ def wait_not_foraging(pol, bot, timeout=300):
 
 def run_jobs(pol, bot, base, gs, job, run, wm):
     wm.new_tick(reason="pre_action", caused_by=job.id)
-    if job.type in ("mine", "harvest"):
+    if job.type in ("mine", "harvest") and job.source:
         wm.record_claim(job.source, job.id, bot)
     elif job.type in ("place", "build", "build_plan"):
         wm.record_claim(job.target, job.id, bot)
@@ -1750,8 +2236,10 @@ def run_jobs(pol, bot, base, gs, job, run, wm):
         "execution": execution,   # the engine's verdict on the action
         "oracle": oracle,         # the fresh-world check of the result
         "wall_s": round(time.time() - t0, 1)})
-    if job.type in ("mine", "harvest"):
-        rec = wm.resources.get(job.source)
+    if job.type in ("mine", "harvest", "chop"):
+        # a cell-targeted job (campaign) has no resource record; a
+        # resource job's measured drop corrects the record's claim
+        rec = wm.resources.get(job.source) if job.source else None
         if rec is not None and measured:
             for code, qty in measured.items():
                 rec.record_drop(classify(code)[1], wm.seq,
@@ -1760,12 +2248,24 @@ def run_jobs(pol, bot, base, gs, job, run, wm):
                 break
         for code, qty in measured.items():
             gs.record_measured(classify(code)[1], qty)
-        wm.release_claim(job.source)
+        if job.source:
+            wm.release_claim(job.source)
     if job.type in ("place", "build"):
         wm.release_claim(job.target)
         gs.consume(job.material, job.quantity or 1)
     if job.type == "build_plan":
         wm.release_claim(job.target)
+    if job.type == "craft" and ok and measured:
+        # the MEASURED output is the ledger number (the engine's
+        # outQty, not the plan's guess); the consumed ingredients are
+        # already negative deltas in `measured`
+        out = job.quantity or 1
+        mat = classify(job.material)[1]
+        for code, qty in measured.items():
+            if classify(code)[1] == mat:
+                out = qty
+                break
+        gs.record_measured(mat, out)
     if ok:
         gs.job_done(job, detail)
     else:

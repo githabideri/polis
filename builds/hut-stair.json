@@ -1,0 +1,47 @@
+{
+ "name": "hut-stair",
+ "footprint": [
+  3,
+  1
+ ],
+ "materials": {
+  "dirt": 3
+ },
+ "entry": [
+  2,
+  0,
+  1
+ ],
+ "provides": [
+  "roof access"
+ ],
+ "floorless": true,
+ "openings": [],
+ "note": "3-step roof stair for the site-B hut (west side): one block per level, tops at y+1..y+3 so a body climbs 147->148->149->150 onto the roof top. 2026-10-07.",
+ "blocks": [
+  {
+   "d": [
+    0,
+    1,
+    0
+   ],
+   "m": "dirt"
+  },
+  {
+   "d": [
+    1,
+    2,
+    0
+   ],
+   "m": "dirt"
+  },
+  {
+   "d": [
+    2,
+    3,
+    0
+   ],
+   "m": "dirt"
+  }
+ ]
+}

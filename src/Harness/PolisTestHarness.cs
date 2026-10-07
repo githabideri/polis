@@ -395,39 +395,61 @@ public class PolisTestHarness : IDisposable
                             var ings = new System.Collections.Generic.List<object>();
                             try
                             {
+                                var tagReg = sapi.CollectibleTagRegistry;
                                 foreach (var ing in r.ResolvedIngredients)
                                 {
                                     if (ing == null) continue;
-                                    string tagStr = null;
+                                    var tagNames = new System.Collections.Generic.List<string>();
                                     try
                                     {
-                                        var tagsProp = ing.Tags.GetType().GetProperties()
-                                            .FirstOrDefault(p => p.GetValue(ing.Tags) is System.Collections.IEnumerable);
-                                        var tv = tagsProp?.GetValue(ing.Tags) as System.Collections.IEnumerable;
-                                        if (tv != null)
-                                        {
-                                            var parts = new System.Collections.Generic.List<string>();
-                                            foreach (var t in tv) parts.Add(t?.ToString());
-                                            tagStr = string.Join(",", parts);
-                                        }
+                                        var conds = ing.Tags.conditions;
+                                        if (conds != null && tagReg != null)
+                                            foreach (var c in conds)
+                                                tagNames.AddRange(tagReg.SlowEnumerateTagNames(c.RequiredTags));
                                     }
                                     catch { }
                                     ings.Add(new
                                     {
+                                        id = ing.Id,
                                         code = ing.Code?.ToString(),
                                         qty = ing.Quantity,
-                                        tags = tagStr
+                                        tags = tagNames,
+                                        isTool = ing.IsTool
                                     });
                                 }
                             }
                             catch { }
+                            // shaped: the server frees the original pattern string after
+                            // recipe resolve, so reconstruct it from the resolved per-cell
+                            // array (row-major; rows of Width chars joined by commas;
+                            // '_' = empty cell)
+                            string pattern = null;
+                            if (!r.Shapeless)
+                            {
+                                if (!string.IsNullOrEmpty(r.IngredientPattern))
+                                    pattern = r.IngredientPattern;
+                                else if (r.ResolvedIngredients != null)
+                                {
+                                    int pw = Math.Max(1, r.Width);
+                                    var psb = new StringBuilder();
+                                    for (int pi = 0; pi < r.ResolvedIngredients.Length; pi++)
+                                    {
+                                        if (pi > 0 && pi % pw == 0) psb.Append(',');
+                                        var ping = r.ResolvedIngredients[pi];
+                                        psb.Append(ping != null && !string.IsNullOrEmpty(ping.Id) ? ping.Id : '_');
+                                    }
+                                    pattern = psb.ToString();
+                                }
+                            }
                             rows.Add(new
                             {
                                 name = r.Name?.Path,
                                 output = outCode,
                                 outQty = r.RecipeOutput.ResolvedItemStack?.StackSize,
                                 shapeless = r.Shapeless,
-                                pattern = r.Shapeless ? null : r.IngredientPattern,
+                                pattern = pattern,
+                                width = r.Width,
+                                height = r.Height,
                                 ingredients = ings
                             });
                         }

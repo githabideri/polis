@@ -397,7 +397,11 @@ class Oikistes:
     def run_mission(self, goal_line):
         """Order work through the R2 job system (the actuator).
         Structured verbs (mine/harvest/sow) go through the deterministic
-        compiler; anything else gets the 27B planner + validator."""
+        compiler; anything else gets the 27B planner + validator.
+        A goal that names its site as 'at x,y,z' passes the triple
+        through as the AUTHORITATIVE --site (register_site's operator
+        path) - a surveyed ledge, not the auto-found cell east of the
+        spawn (2026-10-07: the builder surveys before it builds)."""
         verb = goal_line.split()[0] if goal_line.split() else ""
         out = os.path.join(
             self.args.datadir,
@@ -407,6 +411,13 @@ class Oikistes:
                "--harness", self.args.harness,
                "--uid", self.args.uid,
                "--goal", goal_line, "--out", out]
+        toks = goal_line.split()
+        if "at" in toks:
+            i = toks.index("at")
+            if i + 1 < len(toks):
+                trip = toks[i + 1].split(",")
+                if len(trip) == 3 and all(p.isdigit() for p in trip):
+                    cmd += ["--site", toks[i + 1]]
         if verb in ("mine", "harvest", "sow", "build", "build-plan"):
             cmd.append("--no-planner")
         else:
@@ -414,11 +425,11 @@ class Oikistes:
                     "--llm-model", self.args.llm_model]
         try:
             p = subprocess.run(cmd, capture_output=True, text=True,
-                               timeout=300)
+                               timeout=1800)
             detail = (p.stdout or "").strip().splitlines()
             tail = detail[-2:] if detail else ["no output"]
         except subprocess.TimeoutExpired:
-            tail = ["mission timed out (300s)"]
+            tail = ["mission timed out (1800s)"]
         # the mission booted a fresh bot and swept mine - respawn the body
         self.bot = None
         self._save_bot()

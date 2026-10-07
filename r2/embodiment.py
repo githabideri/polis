@@ -27,15 +27,15 @@ no straddle: a body touching a block's edge is squeezed, not
 embedded; embedding is when the body's centre cells are solid).
 `body_cells()` with straddle widening exists as a utility for
 collision-adjacent reasoning. Solidity is a VOCABULARY judgement,
-not a physics query: kinds the settlement builds or walks on (rock,
-stone) are solid; air, soil, crops and unknowns are not (the scan's
-"no block" is air anyway).
+not a physics query: rock, stone, soil (1.22 full cube, 10-05) and
+forestfloor (full-cube ground, 10-07) are solid; air, crops and
+unknowns are not (the scan's "no block" is air anyway).
 """
 
 from r2.queries import classify
 
 #: kinds that solidly block a body
-SOLID_KINDS = ("rock", "stone", "soil")  # 2026-10-05: 1.22 soil is a full cube (class BlockSoil)
+SOLID_KINDS = ("rock", "stone", "soil", "ground")  # 2026-10-05: 1.22 soil is a full cube (class BlockSoil); 2026-10-07: forestfloor is too (full-cube ground)
 
 
 def _strip(code):

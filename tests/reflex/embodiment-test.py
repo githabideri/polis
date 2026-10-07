@@ -29,8 +29,8 @@ def check(name, cond, detail=""):
 check("granite is solid", is_solid("game:rock-granite"))
 check("stone is solid", is_solid("rock-stone"))
 check("unlisted rock-* is solid (defensive)", is_solid("rock-mystery"))
-check("soil is not solid (the ground under the feet)",
-      not is_solid("soil-medium-normal"))
+check("soil IS solid (1.22 full cube, 10-05 amendment; a standing body's feet never share it)",
+      is_solid("soil-medium-normal") and is_solid("soil-low-none"))
 check("air / no-block is not solid", not is_solid("air")
       and not is_solid(None) and not is_solid(""))
 check("crop is not solid (walk-through)",

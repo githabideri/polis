@@ -9,7 +9,8 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "..", ".."))
 
-from r2.plancheck import validate_plan
+from r2.plancheck import (validate_plan, check_craft_pattern,
+                          check_chop_target)
 
 PASS = 0
 FAIL = 0
@@ -235,6 +236,212 @@ jobs, f = validate_plan(
 check("build_plan at a different site than the goal rejected",
       jobs is None and f.code == "planner_invalid_reference",
       str(f and f.to_dict()))
+
+# --- operator campaigns (2026-10-06 door chain) ----------------------------
+# The shaped crude-door recipe as the live endpoint exposes it: a 2x3
+# pattern, the axe as a tool ingredient (present, never consumed), the
+# log family cell, the stick cell.
+DOOR = {
+    "name": "grid/door-crude", "output": "door-crude", "shapeless": False,
+    "pattern": "AS,PS,PS", "width": 2, "height": 3,
+    "ingredients": [
+        {"code": "axe", "qty": 1, "tags": "tool-axe", "isTool": True},
+        {"code": "log-placed", "qty": 1},
+        {"code": "stick", "qty": 1},
+    ],
+}
+# check_craft_pattern: full inventory -> ok, tool NOT subtracted.
+# (the campaign chops THREE branchy leaves: 2 logs + 3 sticks + the axe)
+ok, missing, subs = check_craft_pattern(
+    DOOR, {"axe-felling-copper": 1, "log-placed-oak-ud": 2, "stick": 3}, 1)
+check("shaped: full inventory passes (family + glob matching)",
+      ok and not missing, str(missing))
+check("shaped: tool cell present but not subtracted",
+      not any(k.startswith("axe") for k, _ in subs) and
+      ("log-placed-oak-ud", 2) in subs and ("stick", 3) in subs,
+      str(subs))
+# zero logs -> no assignment can fill the grid -> rejected
+ok, missing, _ = check_craft_pattern(
+    DOOR, {"axe-felling-copper": 1, "log-placed-oak-ud": 0, "stick": 2}, 1)
+check("shaped: zero logs -> rejected under every assignment",
+      not ok and any("log" in m for m in missing), str(missing))
+# no axe -> rejected (a craft without the tool is a refusal, not a wait)
+ok, missing, _ = check_craft_pattern(
+    DOOR, {"log-placed-oak-ud": 2, "stick": 2}, 1)
+check("shaped: axe missing -> rejected",
+      not ok and any("tool" in m for m in missing), str(missing))
+# 2 runs -> double the cells (4 logs, 4 sticks)
+ok, missing, _ = check_craft_pattern(
+    DOOR, {"axe-felling-copper": 1, "log-placed-oak-ud": 4, "stick": 4}, 2)
+check("shaped: n=2 doubles the cell requirement, still one axe",
+      ok, str(missing))
+# the OLD harness (no pattern exposed) stays rejected
+ok, missing, _ = check_craft_pattern(
+    {"name": "grid/door-crude", "output": "door-crude", "shapeless": False,
+     "ingredients": DOOR["ingredients"]},
+    {"axe-felling-copper": 1, "log-placed-oak-ud": 2, "stick": 2}, 1)
+check("shaped without an exposed pattern stays rejected (old harness)",
+      not ok, str(missing))
+
+# The LIVE endpoint shape (2026-10-07): one ingredient per grid cell,
+# row-major - a faithful projection of the engine's ResolvedIngredients.
+# The tool cell is code "*:*" + tag tool-axe (wildcard: the engine
+# matches the collectible's tag set; the validator matches the tool
+# noun against the item code's tokens).
+DOOR_PC = {
+    "name": "crude door", "output": "door-crude", "shapeless": False,
+    "pattern": "AS,PS,PS", "width": 2, "height": 3,
+    "ingredients": [
+        {"id": "A", "code": "*:*", "qty": 1,
+         "tags": ["tool-axe"], "isTool": True},
+        {"id": "S", "code": "stick", "qty": 1, "tags": [], "isTool": False},
+        {"id": "P", "code": "log-placed-*-ud", "qty": 1,
+         "tags": [], "isTool": False},
+        {"id": "S", "code": "stick", "qty": 1, "tags": [], "isTool": False},
+        {"id": "P", "code": "log-placed-*-ud", "qty": 1,
+         "tags": [], "isTool": False},
+        {"id": "S", "code": "stick", "qty": 1, "tags": [], "isTool": False},
+    ],
+}
+ok, missing, subs = check_craft_pattern(
+    DOOR_PC, {"axe-felling-copper": 1, "log-placed-oak-ud": 2, "stick": 3}, 1)
+check("shaped per-cell (live endpoint): full inventory passes",
+      ok and not missing, str(missing))
+check("shaped per-cell: tool present but not subtracted",
+      not any(k.startswith("axe") for k, _ in subs) and
+      ("log-placed-oak-ud", 2) in subs and ("stick", 3) in subs, str(subs))
+ok, missing, _ = check_craft_pattern(
+    DOOR_PC, {"log-placed-oak-ud": 2, "stick": 3}, 1)
+check("shaped per-cell: axe missing -> rejected",
+      not ok and any("tool" in m for m in missing), str(missing))
+# a cell/letter position mismatch means the mapping is not exposed
+DOOR_BAD = {"name": "crude door", "output": "door-crude", "shapeless": False,
+            "pattern": "AS,PS,PS", "width": 2, "height": 3,
+            "ingredients": [dict(x) for x in DOOR_PC["ingredients"]]}
+DOOR_BAD["ingredients"][1]["id"] = "P"
+ok, missing, _ = check_craft_pattern(
+    DOOR_BAD, {"axe-felling-copper": 1, "log-placed-oak-ud": 2, "stick": 3}, 1)
+check("shaped per-cell: cell/letter position mismatch rejected",
+      not ok, str(missing))
+
+# validate_plan end-to-end: the campaign's full ledger - the give's axe
+# and the chops' planned drops are what the craft's pattern check sees
+idx = {}
+INV = {}  # a fresh-world bot carries nothing yet
+jobs, f = validate_plan(
+    [{"id": "j1", "type": "give_tool", "material": "axe-felling-copper", "n": 1},
+     {"id": "j2", "type": "chop", "at": [512016, 155, 512011], "n": 1,
+      "material": "log-placed-oak-ud"},
+     {"id": "j3", "type": "chop", "at": [512016, 156, 512011], "n": 1,
+      "material": "log-placed-oak-ud"},
+     {"id": "j4", "type": "chop", "at": [512017, 157, 512011], "n": 1,
+      "material": "stick"},
+     {"id": "j5", "type": "chop", "at": [512018, 157, 512011], "n": 1,
+      "material": "stick"},
+     {"id": "j6", "type": "chop", "at": [512017, 158, 512011], "n": 1,
+      "material": "stick"},
+     {"id": "j7", "type": "craft", "source": "door-crude",
+      "material": "door-crude", "n": 1},
+     {"id": "j8", "type": "mine", "at": [512018, 149, 512033], "n": 1,
+      "material": "dirt"},
+     {"id": "j9", "type": "place", "material": "door-crude",
+      "target": "site-door", "n": 1}],
+    index={"site-door": {"id": "site-door", "kind": "build-site",
+                        "requirement": "empty"}},
+    inventory=INV, recipes=[DOOR],
+    cells={(512016, 155, 512011): "game:log-grown-oak-ud",
+           (512016, 156, 512011): "game:log-grown-oak-ud",
+           (512017, 157, 512011): "game:leavesbranchy-grown-oak",
+           (512018, 157, 512011): "game:leavesbranchy-grown-oak",
+           (512017, 158, 512011): "game:leavesbranchy-grown-birch",
+           (512018, 149, 512033): "game:soil-low-none"},
+    campaign=True)
+check("campaign: the full door chain validates (give->chops->craft->mine->place)",
+      jobs is not None and f is None, str(f and f.to_dict()))
+
+# the same list WITHOUT campaign=True: chop is outside the 27B vocabulary
+jobs, f = validate_plan(
+    [{"id": "j2", "type": "chop", "at": [512016, 155, 512011], "n": 1}],
+    index={}, inventory={}, recipes=None, cells=None, campaign=False)
+check("chop in a (non-campaign) plan -> vocabulary gate",
+      jobs is None and f.code == "planner_invalid_json", str(f and f.to_dict()))
+
+# a chop at an EMPTY cell: the world scan rejects it before execution
+jobs, f = validate_plan(
+    [{"id": "j2", "type": "chop", "at": [512016, 155, 512011], "n": 1,
+      "expect": "log-grown-*"}],
+    index={}, inventory={}, recipes=None,
+    cells={(512016, 155, 512011): "game:air"}, campaign=True)
+check("chop at an air cell rejected before execution",
+      jobs is None and f.code == "resource_not_found", str(f and f.to_dict()))
+
+# a chop whose LIVE block does not match the expected block family
+# (expect names the block that IS at the cell, not the drop it makes)
+jobs, f = validate_plan(
+    [{"id": "j2", "type": "chop", "at": [512016, 155, 512011], "n": 1,
+      "expect": "log-grown-*"}],
+    index={}, inventory={}, recipes=None,
+    cells={(512016, 155, 512011): "game:rock-granite"}, campaign=True)
+check("chop live-block family mismatch rejected (granite is not a log)",
+      jobs is None and f.code == "planner_invalid_reference",
+      str(f and f.to_dict()))
+
+# a grown log at the cell satisfies the log-grown family even though
+# the DROP (the material claim) is a placed log
+jobs, f = validate_plan(
+    [{"id": "j2", "type": "chop", "at": [512016, 155, 512011], "n": 1,
+      "expect": "log-grown-*", "material": "log-placed-oak-ud"}],
+    index={}, inventory={}, recipes=None,
+    cells={(512016, 155, 512011): "game:log-grown-oak-ud"}, campaign=True)
+check("chop: grown live block + placed-log drop claim validates",
+      jobs is not None, str(f and f.to_dict()))
+
+# a cell mine (campaign) budgets its declared material; without
+# campaign=True the same job has no resolvable reference
+jobs, f = validate_plan(
+    [{"id": "j8", "type": "mine", "at": [512018, 149, 512033], "n": 1,
+      "material": "dirt"}],
+    index={}, inventory={}, recipes=None,
+    cells={(512018, 149, 512033): "game:soil-low-none"}, campaign=True)
+check("cell mine (campaign): the cell IS the reference",
+      jobs is not None and f is None, str(f and f.to_dict()))
+jobs, f = validate_plan(
+    [{"id": "j8", "type": "mine", "at": [512018, 149, 512033], "n": 1,
+      "material": "dirt"}],
+    index={}, inventory={}, recipes=None, cells=None, campaign=False)
+check("cell mine (non-campaign plan) has no resolvable reference",
+      jobs is None, str(f and f.to_dict()))
+
+# a cell mine at an EMPTY cell is rejected before execution (4b)
+jobs, f = validate_plan(
+    [{"id": "j8", "type": "mine", "at": [512018, 149, 512033], "n": 1,
+      "material": "dirt"}],
+    index={}, inventory={}, recipes=None,
+    cells={(512018, 149, 512033): "game:air"}, campaign=True)
+check("cell mine at air rejected before execution",
+      jobs is None and f.code == "resource_not_found",
+      str(f and f.to_dict()))
+
+# the shaped craft with the inventory the bot ACTUALLY has at plan time
+# (nothing yet) is rejected - the ledger projection is what saves the
+# campaign plan; a campaign that skips the chops does not get the logs
+jobs, f = validate_plan(
+    [{"id": "j7", "type": "craft", "source": "door-crude",
+      "material": "door-crude", "n": 1}],
+    index={}, inventory={}, recipes=[DOOR], cells=None, campaign=True)
+check("craft without its planned drops rejected (no free logs)",
+      jobs is None and f.code == "resource_not_found",
+      str(f and f.to_dict()))
+
+# check_chop_target direct: expect = the live-block family
+check("chop target: exact code ok",
+      check_chop_target([1, 2, 3], "stick", "stick") is None)
+check("chop target: glob family ok",
+      check_chop_target([1, 2, 3], "log-grown-*", "log-grown-oak-ud") is None)
+check("chop target: family root ok",
+      check_chop_target([1, 2, 3], "log-grown", "log-grown-oak-ud") is None)
+check("chop target: mismatch fails",
+      check_chop_target([1, 2, 3], "log-grown-*", "rock-granite") is not None)
 
 print()
 print("plancheck-test: %d passed, %d failed" % (PASS, FAIL))

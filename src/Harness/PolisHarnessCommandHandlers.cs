@@ -284,6 +284,8 @@ public partial class PolisSystem
                     return ExecutePutIntoCommand(args, context);
                 case "mine":
                     return ExecuteMineCommand(args, context);
+                case "chop":
+                    return ExecuteMineCommand(args, context, "chop");
                 case "break":
                     return ExecuteBreakCommand(args, context);
                 case "harvest":
@@ -376,7 +378,7 @@ public partial class PolisSystem
                     return ExecuteViewpointScreenshotCommand(args, context);
                 default:
                     result.Ok = false;
-                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, break, harvest, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot";
+                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, chop, break, harvest, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot";
                     break;
             }
         }
@@ -1698,12 +1700,15 @@ public partial class PolisSystem
         };
     }
 
-    PolisTestHarness.CommandResult ExecuteMineCommand(string[] args, PolisTestHarness.CommandContext context)
+    // <verb>: "mine" (generic block break) or "chop" (the campaign's own
+    // verb - same break path, but recorded under the name "chop" so the
+    // harness's LastAction state and action sequence report it as a chop).
+    PolisTestHarness.CommandResult ExecuteMineCommand(string[] args, PolisTestHarness.CommandContext context, string verb = "mine")
     {
-        // Usage: mine <x> <y> <z> [autocollect]
+        // Usage: mine|chop <x> <y> <z> [autocollect]
         if (args.Length < 3)
         {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: mine <x> <y> <z> [true|false]" };
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"Usage: {verb} <x> <y> <z> [true|false]" };
         }
 
         if (!TryGetContextPlayer(context, out var contextPlayer, out var ctxError))
@@ -1770,13 +1775,13 @@ public partial class PolisSystem
         {
             if (!ok)
             {
-                bot.RecordActionResult("mine", false, $"goto failed: {msg}", sapi.World.ElapsedMilliseconds);
+                bot.RecordActionResult(verb, false, $"goto failed: {msg}", sapi.World.ElapsedMilliseconds);
             }
         }
 
         void OnMineResult(bool ok, string msg)
         {
-            bot.RecordActionResult("mine", ok, msg, sapi.World.ElapsedMilliseconds);
+            bot.RecordActionResult(verb, ok, msg, sapi.World.ElapsedMilliseconds);
         }
 
         var gotoAction = new PolisGotoAction(
@@ -1802,13 +1807,14 @@ public partial class PolisSystem
             onResult: OnMineResult
         );
 
-        StartActionSequence(bot, "mine", gotoAction, mineAction);
+        StartActionSequence(bot, verb, gotoAction, mineAction);
 
         float estTime = block.Resistance / 1.0f; // Rough estimate with default speed
+        string doing = verb == "chop" ? "chopping" : "mining";
         return new PolisTestHarness.CommandResult
         {
             Ok = true,
-            Message = $"Bot #{bot.Entity.EntityId} mining {block.Code} at ({pos.X}, {pos.Y}, {pos.Z}), est {estTime:F1}s" + (autoCollect ? " (autocollect)" : ""),
+            Message = $"Bot #{bot.Entity.EntityId} {doing} {block.Code} at ({pos.X}, {pos.Y}, {pos.Z}), est {estTime:F1}s" + (autoCollect ? " (autocollect)" : ""),
             Data = new { blockCode = block.Code.ToString(), pos = new[] { pos.X, pos.Y, pos.Z }, autoCollect, estimatedSeconds = estTime }
         };
     }

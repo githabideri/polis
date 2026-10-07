@@ -128,6 +128,14 @@ JOB_CATALOG = {
     # ingredients are consumed from the ledger by the validator.
     "craft":     {"produces": True,  "consumes": True,
                   "source": "world",    "needs": ("material", "source")},
+    # tree-chopping (2026-10-06 door campaign): the same mechanics as
+    # mine (approach resolution, engine verdict, measured drop) recorded
+    # under its own action name. GOAL-SCOPED like build_plan: operator
+    # campaigns declare chop jobs (a fixed `at` cell, an optional
+    # `expect` live-block family, a `material` drop claim); the 27B
+    # planner's vocabulary never gained the verb, so it cannot emit one.
+    "chop":      {"produces": True,  "consumes": False,
+                  "source": "world",    "needs": ("at",)},
     "give_tool": {"produces": True,  "consumes": False,
                   "source": "external", "needs": ("material",)},
     "pickup":    {"produces": False, "consumes": False,
@@ -141,7 +149,10 @@ JOB_CATALOG = {
 #: job types the planner may emit in a plan (section 12.1 amended
 #: catalog). build_plan is EXCLUDED: goal-scoped to the deterministic
 #: compiler until an A/B round teaches the 27B the vocabulary.
-PLANNER_JOB_TYPES = tuple(k for k in JOB_CATALOG if k != "build_plan")
+#: chop (2026-10-06) is EXCLUDED on the same precedent: the door
+#: campaign needs it, the 27B never learned it.
+PLANNER_JOB_TYPES = tuple(k for k in JOB_CATALOG
+                          if k not in ("build_plan", "chop"))
 
 #: provenance of a job's origin (13.1, frozen): the queue runs a mix of
 #: jobs made by different principals; the run JSON is the transparency
@@ -161,6 +172,15 @@ class Job:
     material: str | None = None    # normalized material code
     quantity: int | None = None    # positive int
     plan: str | None = None        # build_plan: the plan file name
+    at: list | None = None         # cell-targeted jobs (chop, operator
+                                   # cell-mine): [x, y, z] - the cell IS
+                                   # the reference (no res-* id)
+    expect: str | None = None      # chop: the expected family of the
+                                   # LIVE block code at `at` (pre-exec
+                                   # check; exact / glob / family root).
+                                   # The drop claim is `material`.
+                                   # (a grown log block drops a placed
+                                   # log - the two families differ)
     depends_on: list = field(default_factory=list)
     claims: list = field(default_factory=list)
     budget: int = 12               # max execution steps (the stall valve)
@@ -184,8 +204,23 @@ class Job:
             raise ValueError("job type %r not in the catalog %r"
                              % (jtype, sorted(JOB_CATALOG)))
         qty = d.get("quantity")
+        if qty is None and d.get("n") is not None:
+            qty = d.get("n")       # operator campaigns write `n` (the
+                                   # goal-grammar quantity name)
         if qty is not None and (not isinstance(qty, int) or qty < 1):
             raise ValueError("job %s: quantity must be a positive integer"
+                             % jid)
+        at = d.get("at")
+        if at is not None:
+            if (not isinstance(at, (list, tuple)) or len(at) != 3
+                    or not all(isinstance(v, int) and not
+                               isinstance(v, bool) for v in at)):
+                raise ValueError("job %s: at must be [x, y, z] ints"
+                                 % jid)
+            at = list(at)
+        expect = d.get("expect")
+        if expect is not None and not isinstance(expect, str):
+            raise ValueError("job %s: expect must be a string"
                              % jid)
         deps = d.get("depends_on") or []
         if not isinstance(deps, list) or not all(
@@ -198,7 +233,7 @@ class Job:
         return cls(id=jid, type=jtype,
                    source=d.get("source"), target=d.get("target"),
                    material=d.get("material"), quantity=qty,
-                   plan=d.get("plan"),
+                   plan=d.get("plan"), at=at, expect=expect,
                    depends_on=list(deps),
                    claims=list(d.get("claims") or []),
                    budget=int(d.get("budget") or 12),
@@ -206,9 +241,13 @@ class Job:
                    origin=origin)
 
     def missing_refs(self):
-        """Catalog-mandated reference fields this job leaves empty."""
-        return [f for f in JOB_CATALOG[self.type]["needs"]
-                if getattr(self, f) in (None, "")]
+        """Catalog-mandated reference fields this job leaves empty.
+        A cell-targeted mine carries its reference in `at` (the cell,
+        live-scanned by the validator) instead of a resource id."""
+        needs = list(JOB_CATALOG[self.type]["needs"])
+        if self.type == "mine" and "source" in needs and self.at:
+            needs.remove("source")
+        return [f for f in needs if getattr(self, f) in (None, "")]
 
     def ledger_deltas(self):
         """[(material, sign)] for the pre-execution ledger simulation.
