@@ -757,7 +757,7 @@ public class PolisTestHarness : IDisposable
 
                                             var blockCenter = new Vec3d(pos.X + 0.5, pos.Y + 0.5, pos.Z + 0.5);
                                             var dist = blockCenter.DistanceTo(center);
-                                            if (!zoneBounds != null && dist > radius) continue;
+                                            if (zoneBounds == null != null && dist > radius) continue;
 
                                             var behaviors = block.BlockBehaviors?
                                                 .Select(b => b?.GetType().Name)
@@ -816,7 +816,7 @@ public class PolisTestHarness : IDisposable
                                     if (entity is EntityPlayer) continue;
 
                                     var dist = entity.ServerPos.XYZ.DistanceTo(center);
-                                    if (!zoneBounds != null && dist > radius) continue;
+                                    if (zoneBounds == null != null && dist > radius) continue;
 
                                     if (zoneBounds != null)
                                     {
