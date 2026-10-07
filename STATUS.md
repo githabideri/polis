@@ -31,6 +31,7 @@ on the model-mux box.
 
 ## Open issues
 
+- **Client-side entity reaping (bots disappear from the render, 2026-10-07):** a bot that sits idle for a few minutes (no position updates while parked) drops out of the client's render — `/polis/bots` still lists it at the right position, the world/HUD/placed blocks render, but the screen shows empty grass where it stands. A fresh world load shows bots for the first minutes; a moving (mid-`goto`) bot renders; no client-log trace (VS logs neither entity spawns nor reaping). Suspect: the client's remote-entity reaper drops entities that stop updating. The "the deploy broke bot rendering" hypothesis was disproven the same day (the diff was server-only, `EntityPolisBot` untouched, client logs clean). Fix candidate: periodic position re-sync for idle bots (small C# pass, batched with the forage-eat fixes).
 - **5x5 ring dead-end (13.13):** single-bot face-placement cannot complete
   ring edges of 5+ at tier 2+ (runs 14–17 each died at a different wall
   cell; all rejections were correct). Options: harness standing-range 2,
