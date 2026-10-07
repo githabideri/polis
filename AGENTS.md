@@ -48,6 +48,19 @@
     (CRuppert/XSkillsModSet), the Vintage Story skill mod, referenced for
     the polis skill/food-policy design (2026-10-04). Read it as reference
     material; never build it into the mod, never commit it.
+11. **The C# toolchain is old (C# 7 era, .NET Framework-era Roslyn).**
+    Four build cycles of the 2026-10-07 run hit its edges:
+    a logical-not on a reference type (`!zoneBounds`) does not compile —
+    write `== null` / `!= null`; an interpolated-string hole containing a
+    `?:` ternary over string literals fails (a `??` with a string literal
+    is fine) — hoist the ternary into a local variable; `Cuboidi` is a
+    **class** (`Vintagestory.API.MathTools`), not a struct — nullable-
+    annotation patterns (`.Value` / `.HasValue`) do not exist, plain null
+    checks do; JSON is `JsonObject` (a `JToken` wrapper, `Vintagestory.
+    API.Datastructures`) — read values with `AsString()` / `AsInt()` /
+    `AsBool()` / `AsObject<T>()` / the `this[key]` indexer, never
+    `.Value<T>()`. When in doubt, read the decompiled API in the testbed
+    (`/tmp/vssurv-real/`) — the 1.22.7 shapes are not the 1.21 ones.
 
 ## Workflow
 - Commits go to `main` from the workstation copy; the testbed clone is a
@@ -55,7 +68,11 @@
   messages reference the issue/task id when one exists.
 - After changing mod code: `./build.sh --deploy`, restart `vsgame`, verify
   the mod loaded (journal / `/polis list`), then update `STATUS.md` with the
-  honest verification level.
+  honest verification level. **A failed build does not update the deployed
+  DLL** — the deploy step copies whatever sits in the build output, so
+  after a compile failure a restart silently runs the *previous* code.
+  Confirm the build actually succeeded (and the deployed DLL is newer
+  than the source) before restarting.
 - Test runs go through the harness (`TESTING.md`); raw in-game fiddling is
   for exploration, not evidence.
 - Commands are `POST /polis/command` with
