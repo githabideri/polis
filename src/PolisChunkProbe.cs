@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
@@ -57,6 +58,12 @@ public class PolisChunkProbe : IRenderer
     private static volatile bool armed;
     private static volatile bool redrawRequested;
     private static volatile bool kickRequested;
+    private static volatile bool repairRequested;
+    private static string repairReport;
+    // optional frustum test point (harness arms it; the client evaluates it
+    // against the LIVE frustum culler on the next frame)
+    private static volatile bool hasTestPoint;
+    private static double testX, testY, testZ, testR; // written before hasTestPoint is set
     private ICoreClientAPI capi;
 
     // Reflection handles into the engine's internal chunk state.
@@ -143,8 +150,98 @@ public class PolisChunkProbe : IRenderer
 
     public static void Arm()
     {
+        Arm(null, null, null, 0);
+    }
+
+    public static void Arm(double? x, double? y, double? z, double r)
+    {
         lock (resultLock) { lastResult = null; }
+        if (x != null && y != null && z != null)
+        {
+            testX = x.Value; testY = y.Value; testZ = z.Value; testR = r;
+            hasTestPoint = true;
+        }
+        else
+        {
+            hasTestPoint = false;
+        }
         armed = true;
+    }
+
+    // server-sourced positions (id -> [x, y, z]) applied by DoRepair.
+    // NOTE: the base Entity class aliases ServerPos to Pos, so the client
+    // mirror's own "server" copy is the corrupted object itself - the only
+    // valid source is the server-side entity objects (harness sapi world).
+    private static System.Collections.Generic.Dictionary<long, double[]> repairMap;
+
+    /// <summary>Request a NaN-position repair on the next render frame,
+    /// using server-side positions for the given entity ids.</summary>
+    public static void RequestRepair(System.Collections.Generic.Dictionary<long, double[]> serverPositions)
+    {
+        repairMap = serverPositions;
+        lock (resultLock) { lastResult = null; }
+        repairRequested = true;
+        armed = true; // collect runs too, so the report lands in the result
+    }
+
+    private static void DoRepair(ClientMain g)
+    {
+        var sb = new StringBuilder();
+        int fixedCount = 0;
+        var erField = g.GetType().GetField("EntityRenderers", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        var erDict = erField?.GetValue(g) as System.Collections.IDictionary;
+        if (erDict == null)
+        {
+            repairReport = "no EntityRenderers field";
+            return;
+        }
+        foreach (System.Collections.DictionaryEntry kv in erDict)
+        {
+            try
+            {
+                if (!(kv.Key is long)) continue;
+                object erVal = kv.Value;
+                if (erVal == null) continue;
+                object ent = erVal.GetType().GetField("entity")?.GetValue(erVal);
+                if (ent == null) continue;
+                object posObj = ent.GetType().GetProperty("Pos", BindingFlags.Public | BindingFlags.Instance)?.GetValue(ent);
+                if (posObj == null) continue;
+                var posType = posObj.GetType();
+                var posFields = posType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                bool anyNan = false;
+                foreach (var f in posFields)
+                {
+                    var v = f.GetValue(posObj);
+                    if (v is double dv && double.IsNaN(dv)) anyNan = true;
+                    if (v is float fv && float.IsNaN(fv)) anyNan = true;
+                }
+                if (!anyNan) continue;
+                long eid = (long)kv.Key;
+                if (repairMap == null || !repairMap.ContainsKey(eid)) continue;
+                double[] sp = repairMap[eid];
+                if (sp == null || sp.Length < 3) continue;
+                // set x/y/z via the public properties (they write the
+                // protected fields) and zero the motion just in case
+                posObj.GetType().GetProperty("X").SetValue(posObj, sp[0]);
+                posObj.GetType().GetProperty("Y").SetValue(posObj, sp[1]);
+                posObj.GetType().GetProperty("Z").SetValue(posObj, sp[2]);
+                var mot = posObj.GetType().GetProperty("Motion")?.GetValue(posObj);
+                if (mot != null)
+                {
+                    var mt = mot.GetType();
+                    mt.GetProperty("X")?.SetValue(mot, 0d);
+                    mt.GetProperty("Y")?.SetValue(mot, 0d);
+                    mt.GetProperty("Z")?.SetValue(mot, 0d);
+                }
+                fixedCount++;
+                sb.Append(" " + kv.Key);
+            }
+            catch
+            {
+                // per-entity safety; continue with the rest
+            }
+        }
+        repairReport = fixedCount == 0 ? "no NaN positions found" : ("fixed " + fixedCount + ":" + sb.ToString().Trim());
     }
 
     public static void RequestRedrawAll() { redrawRequested = true; }
@@ -190,6 +287,21 @@ public class PolisChunkProbe : IRenderer
             catch (Exception ex)
             {
                 logger?.Warning(LogPrefix + " kick failed: " + ex.Message);
+            }
+        }
+
+        if (repairRequested)
+        {
+            repairRequested = false;
+            try
+            {
+                DoRepair(game);
+                logger?.Notification(LogPrefix + " " + repairReport);
+            }
+            catch (Exception ex)
+            {
+                repairReport = "repair failed: " + ex.Message;
+                logger?.Warning(LogPrefix + repairReport);
             }
         }
 
@@ -241,6 +353,66 @@ public class PolisChunkProbe : IRenderer
     {
         var wm = game.WorldMap;
         var pos = game.EntityPlayer?.Pos;
+
+        // GL-readback vs CPU camera-matrix divergence. ClientMain copies the
+        // GL-context matrices into PerspectiveProjectionMat/PerspectiveViewMat
+        // each frame and builds the frustum culler FROM THOSE, while the
+        // actual camera matrix lives CPU-side on MainCamera. If the GL context
+        // has degraded, the readback drifts from the camera truth -> the
+        // frustum planes go wrong in a VIEW-DIRECTION-DEPENDENT way -> the
+        // per-entity SphereInFrustum gate rejects entities (the player is at
+        // the frustum origin, so it always survives: renderedEntities never
+        // drops below 1). This is the cine-vs-VNC asymmetry: a cine sweep
+        // rotates through yaw/pitch directions, some of which still fall
+        // inside the broken frustum; the user's fixed noVNC view direction
+        // does not.
+        int matNan = 0;
+        double viewMaxDiff = -1;
+        double projMaxDiff = -1;
+        bool camMatOk = false;
+        double[] vmArr = null;
+        double[] cmArr = null;
+        try
+        {
+            var pm = game.PerspectiveProjectionMat;
+            var vm = game.PerspectiveViewMat;
+            vmArr = (double[])vm?.Clone();
+            for (int i = 0; i < 16; i++)
+            {
+                if (pm != null && double.IsNaN(pm[i])) matNan++;
+                if (vm != null && double.IsNaN(vm[i])) matNan++;
+            }
+            // the camera's own matrix, CPU-side (contains the raw world
+            // position in the translation part; the GL view matrix is a
+            // rebased/derived form, so an ABSOLUTE diff is a systematic
+            // offset - what matters is DRIFT of the readback over time and
+            // NaN/garbage elements)
+            var camObj = (object)game.MainCamera;
+            var cmf = camObj.GetType().GetField("CameraMatrixOrigin", BindingFlags.Public | BindingFlags.Instance);
+            if (cmf?.GetValue(camObj) is double[] cm && cm.Length == 16 && vm != null)
+            {
+                camMatOk = true;
+                cmArr = (double[])cm.Clone();
+                for (int i = 0; i < 16; i++)
+                {
+                    double d = Math.Abs(cm[i] - vm[i]);
+                    if (double.IsNaN(d)) { matNan++; continue; }
+                    if (d > viewMaxDiff) viewMaxDiff = d;
+                }
+            }
+            // projection matrix only depends on FoV/aspect: [10] should be
+            // the perspective z term (~ -1); anything wild means the GL
+            // context is not holding state correctly
+            if (pm != null)
+            {
+                double s11 = pm[10];
+                if (double.IsNaN(s11) || Math.Abs(s11) > 10 || s11 == 0) projMaxDiff = s11;
+            }
+        }
+        catch (Exception ex)
+        {
+            matNan = -1;
+        }
 
         // Client-side entity scene: what the CLIENT thinks exists (vs the
         // server's list from /polis/bots). If the server has bots the
@@ -395,12 +567,135 @@ public class PolisChunkProbe : IRenderer
             chunksReceived = RuntimeStats.chunksReceived,
             chunksUnloaded = RuntimeStats.chunksUnloaded
         };
+    // The render loop iterates game.EntityRenderers (internal dict on
+    // ClientMain). RemoveEntityRenderer (client-side, fired by
+    // SystemUnloadChunks / ClientSystemEntities on chunk unload) disposes the
+    // renderer, removes the dict entry and nulls Properties.Client.Renderer.
+    // If the remove side fires and the add side (fresh spawn/load) does not
+    // re-fire for an existing entity, the entity exists in the world data
+    // but is never drawn again - in-place, until re-instantiation. This
+    // counter is the missing piece: it should track renderedEntities in a
+    // healthy state and collapse to ~1 when entities drop out.
+    int erCount = -1;
+    var erIds = new List<long>();
+    try
+    {
+        var erProp = game.GetType().GetField("EntityRenderers", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        var er = erProp?.GetValue(game) as System.Collections.IDictionary; // GetField->FieldInfo.GetValue(object)
+        if (er != null)
+        {
+            erCount = er.Count;
+            foreach (System.Collections.DictionaryEntry kv in er)
+            {
+                if (kv.Key is long l) erIds.Add(l);
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        erCount = -1;
+    }
+
+        // PER-GATE TABLE: for every entity in the renderer dict, evaluate
+        // exactly the three gates the render loop applies (line 33 of
+        // SystemRenderEntities): frustum sphere test at the entity's OWN
+        // position, dimension match, and WorldMap.IsChunkRendered(entity.Pos)
+        // (the EntityPos overload - a different lookup path than my
+        // int-coordinate chunk check). In the dead state the bots are still
+        // in the dict, so one of these gates is failing for them; this table
+        // says which one, with the exact values the gate sees.
+        var gates = new List<object>();
+        try
+        {
+            var erField = game.GetType().GetField("EntityRenderers", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            var erDict = erField?.GetValue(game) as System.Collections.IDictionary;
+            if (erDict != null)
+            {
+                foreach (System.Collections.DictionaryEntry kv in erDict)
+                {
+                    try
+                    {
+                        if (!(kv.Key is long)) continue;
+                        object erVal = kv.Value;
+                        if (erVal == null) continue;
+                        object ent = erVal.GetType().GetField("entity")?.GetValue(erVal);
+                        if (ent == null) continue;
+                        object posObj = ent.GetType().GetProperty("Pos", BindingFlags.Public | BindingFlags.Instance)?.GetValue(ent);
+                        if (posObj == null) continue;
+                        var pt = posObj.GetType();
+                        object GetVal(Type t, string name)
+                        {
+                            var p = t.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+                            if (p != null) return p.GetValue(t.IsInstanceOfType(posObj) ? posObj : null);
+                            var fld = t.GetField(name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic);
+                            if (fld != null) return fld.GetValue(posObj);
+                            return null;
+                        }
+                        double px = (double)GetVal(pt, "X");
+                        double pyi = (double)GetVal(pt, "InternalY");
+                        double pz = (double)GetVal(pt, "Z");
+                        int dim = (int)GetVal(pt, "Dimension");
+                        object radObj = ent.GetType().GetProperty("FrustumSphereRadius", BindingFlags.Public | BindingFlags.Instance)?.GetValue(ent)
+                            ?? ent.GetType().GetField("FrustumSphereRadius", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(ent);
+                        float radius = radObj != null ? Convert.ToSingle(radObj) : 2f;
+                        bool inF = game.frustumCuller.SphereInFrustum((float)px, (float)pyi, (float)pz, radius);
+                        bool chunkOk = game.WorldMap.IsChunkRendered((Vintagestory.API.Common.Entities.EntityPos)posObj);
+                        var pp = game.EntityPlayer?.Pos;
+                        bool near = pp != null && Math.Abs(px - (double)pp.X) < 64 && Math.Abs(pz - (double)pp.Z) < 64;
+                        gates.Add(new
+                        {
+                            id = (long)kv.Key,
+                            xInt = (int)px,
+                            yInt = (int)pyi,
+                            zInt = (int)pz,
+                            dim,
+                            inF,
+                            chunkOk,
+                            near,
+                            nan = double.IsNaN(px) || double.IsNaN(pyi) || double.IsNaN(pz)
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        gates.Add(new { id = kv.Key, error = ex.GetType().Name + ": " + ex.Message });
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            gates.Add(new { error = ex.Message });
+        }
+
+        // live frustum-culler verdict for a requested point (the per-entity
+        // gate uses exactly this test)
+        object frustumTest = null;
+        if (hasTestPoint)
+        {
+            hasTestPoint = false;
+            try
+            {
+                bool inF = game.frustumCuller.SphereInFrustum((float)testX, (float)testY, (float)testZ, (float)testR);
+                frustumTest = new { x = testX, y = testY, z = testZ, r = testR, inside = inF };
+            }
+            catch (Exception ex)
+            {
+                frustumTest = new { x = testX, y = testY, z = testZ, r = testR, error = ex.Message };
+            }
+        }
 
         return new
         {
             ok = true,
             gameCaptured,
             playerPos = pos != null ? new { x = (double)pos.X, y = (double)pos.Y, z = (double)pos.Z } : null,
+            glReadback = new { camMatOk, matNan, viewMaxDiff, projMaxDiff, vmArr, cmArr },
+            entityRenderers = new { count = erCount, ids = erIds },
+            gates,
+            gateNanCount = CountNanGates(gates),
+            nanTriage = CountNanGates(gates) > 0 ? NanTriage(game) : null,
+            repair = repairReport,
+            frustumTest,
             clientTotal,
             clientNear,
             nearCodes,
@@ -448,4 +743,106 @@ public class PolisChunkProbe : IRenderer
         if (m != null && m.Invoke(o, null) is bool) return (bool)m.Invoke(o, null);
         return false;
     }
+    private static int CountNanGates(List<object> gates)
+    {
+        int n = 0;
+        foreach (var g2 in gates)
+        {
+            try
+            {
+                var p = g2.GetType().GetProperty("nan");
+                if (p != null && (bool)p.GetValue(g2)) n++;
+            }
+            catch
+            {
+                // error-shaped entries have no nan field
+            }
+        }
+        return n;
+    }
+
+    // NaN triage: for entities whose client Pos is NaN, dump the raw
+    // state that tells us HOW the NaN gets (re)written: the position
+    // fields, the Motion vector (NaN motion integrated per tick would
+    // re-contaminate even after a pos repair), and the packet tick
+    // counters (if tick is frozen, position packets are NOT arriving and
+    // something else wrote the NaN; if tick advances while x stays NaN,
+    // the packet payload itself is the problem).
+    private static List<object> NanTriage(ClientMain g)
+    {
+        var outList = new List<object>();
+        try
+        {
+            var erField = g.GetType().GetField("EntityRenderers", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            var erDict = erField?.GetValue(g) as System.Collections.IDictionary;
+            if (erDict == null) return outList;
+            foreach (System.Collections.DictionaryEntry kv in erDict)
+            {
+                if (!(kv.Key is long)) continue;
+                object erVal = kv.Value;
+                if (erVal == null) continue;
+                object ent = erVal.GetType().GetField("entity")?.GetValue(erVal);
+                if (ent == null) continue;
+                object posObj = ent.GetType().GetProperty("Pos", BindingFlags.Public | BindingFlags.Instance)?.GetValue(ent);
+                if (posObj == null) continue;
+                var pt = posObj.GetType();
+                object D(Type t, object o, string name)
+                {
+                    var p = t.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+                    if (p != null) return p.GetValue(o);
+                    var f = t.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    return f?.GetValue(o);
+                }
+                double vx = (double)D(pt, posObj, "X");
+                double vy = (double)D(pt, posObj, "Y");
+                double vz = (double)D(pt, posObj, "Z");
+                if (!double.IsNaN(vx) && !double.IsNaN(vy) && !double.IsNaN(vz)) continue;
+                object motion = D(pt, posObj, "Motion");
+                double mx = 0, my = 0, mz = 0;
+                bool motionNan = false;
+                if (motion != null)
+                {
+                    try { mx = (double)D(motion.GetType(), motion, "X"); my = (double)D(motion.GetType(), motion, "Y"); mz = (double)D(motion.GetType(), motion, "Z"); motionNan = double.IsNaN(mx) || double.IsNaN(my) || double.IsNaN(mz); } catch { }
+                }
+                int tick = -1, tickDiff = -1;
+                try
+                {
+                    object attrs = ent.GetType().GetProperty("Attributes", BindingFlags.Public | BindingFlags.Instance)?.GetValue(ent);
+                    if (attrs != null)
+                    {
+                        var gt = attrs.GetType().GetMethod("GetInt");
+                        tick = gt != null ? (int)gt.Invoke(attrs, new object[] { "tick" }) : -1;
+                        tickDiff = gt != null ? (int)gt.Invoke(attrs, new object[] { "tickDiff" }) : -1;
+                    }
+                }
+                catch
+                {
+                    // attributes not readable
+                }
+                outList.Add(new
+                {
+                    id = (long)kv.Key,
+                    x = double.IsNaN(vx) ? (double?)null : vx,
+                    y = double.IsNaN(vy) ? (double?)null : vy,
+                    z = double.IsNaN(vz) ? (double?)null : vz,
+                    motion = new
+                    {
+                        mx = double.IsNaN(mx) ? (double?)null : mx,
+                        my = double.IsNaN(my) ? (double?)null : my,
+                        mz = double.IsNaN(mz) ? (double?)null : mz,
+                        motionNan
+                    },
+                    tick,
+                    tickDiff
+                });
+                if (outList.Count >= 8) break;
+            }
+        }
+        catch
+        {
+            // triage is best-effort
+        }
+        return outList;
+    }
+
 }

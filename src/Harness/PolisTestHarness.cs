@@ -631,7 +631,7 @@ public class PolisTestHarness : IDisposable
             }
             else if (path == "/polis/chunkprobe" && request.HttpMethod == "GET")
             {
-                tcs.SetResult(DoChunkProbe());
+                tcs.SetResult(DoChunkProbe(request));
             }
             else if (path == "/polis/chunkredraw" && request.HttpMethod == "POST")
             {
@@ -655,6 +655,79 @@ public class PolisTestHarness : IDisposable
                 {
                     PolisChunkProbe.RequestKickPlayerChunks();
                     tcs.SetResult(new { ok = true, note = "priority MarkChunkDirty on the player's 3x3 chunks scheduled for the next render frame" });
+                }
+            }
+            else if (path == "/polis/entityfix" && request.HttpMethod == "POST")
+            {
+                if (!IsLoopbackRequest(request))
+                {
+                    tcs.SetResult(new { ok = false, error = "Remote access not allowed" });
+                }
+                else if (!PolisChunkProbe.GameCaptured)
+                {
+                    tcs.SetResult(new { ok = false, error = "ClientMain not captured yet" });
+                }
+                else
+                {
+                    double rx = 512097, ry = 123, rz = 511962;
+                    if (double.TryParse(QueryValue(request, "x"), out var fx)) rx = fx;
+                    if (double.TryParse(QueryValue(request, "y"), out var fy)) ry = fy;
+                    if (double.TryParse(QueryValue(request, "z"), out var fz)) rz = fz;
+                    sapi.Event.EnqueueMainThreadTask(() =>
+                    {
+                        try
+                        {
+                            var map = new System.Collections.Generic.Dictionary<long, double[]>();
+                            try
+                            {
+                                sapi.World.GetEntitiesAround(new Vintagestory.API.MathTools.Vec3d(rx, ry, rz), 0f, 256f, e =>
+                                {
+                                    if (e != null && e.Pos != null)
+                                    {
+                                        map[e.EntityId] = new double[] { e.Pos.X, e.Pos.Y, e.Pos.Z };
+                                    }
+                                    return true;
+                                });
+                            }
+                            catch (Exception ex2)
+                            {
+                                tcs.SetResult(new { ok = false, error = "entity scan failed: " + ex2.Message });
+                                return;
+                            }
+                            PolisChunkProbe.RequestRepair(map);
+                            var sw = System.Diagnostics.Stopwatch.StartNew();
+                            while (sw.ElapsedMilliseconds < 3000)
+                            {
+                                var r = PolisChunkProbe.PollResult();
+                                if (r != null)
+                                {
+                                    var rt = r.GetType();
+                                    var rep = rt.GetProperty("repair")?.GetValue(r) as string;
+                                    var nanCount = rt.GetProperty("gateNanCount")?.GetValue(r);
+                                    var statsObj = rt.GetProperty("stats")?.GetValue(r);
+                                    var rendered = statsObj?.GetType().GetProperty("renderedEntities")?.GetValue(statsObj);
+                                    tcs.SetResult(new
+                                    {
+                                        ok = true,
+                                        report = rep,
+                                        serverEntitiesScanned = map.Count,
+                                        nanRemaining = nanCount,
+                                        renderedEntities = rendered
+                                    });
+                                    break;
+                                }
+                                System.Threading.Thread.Sleep(50);
+                            }
+                            if (!tcs.Task.IsCompleted)
+                            {
+                                tcs.SetResult(new { ok = false, error = "repair did not complete in 3s" });
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            tcs.SetResult(new { ok = false, error = ex.Message });
+                        }
+                    }, "polis-entityfix");
                 }
             }
             else if (path == "/polis/targets" && request.HttpMethod == "GET")
@@ -1977,19 +2050,27 @@ public class PolisTestHarness : IDisposable
 
     /// <summary>Chunk probe: arm the Done-stage client reader, then poll its
     /// static result (same process in singleplayer). Returns the player's
-    /// 3x3 chunk internal state + dirty-queue depths + engine RuntimeStats.</summary>
-    object DoChunkProbe()
+    /// 3x3 chunk internal state + dirty-queue depths + engine RuntimeStats.
+    /// Optional x/y/z/r: also run the live frustum culler's SphereInFrustum
+    /// on that point (the exact test each entity passes to be drawn).</summary>
+    object DoChunkProbe(HttpListenerRequest request)
     {
         if (!PolisChunkProbe.GameCaptured)
         {
             return new { ok = false, error = "ClientMain not captured yet (no render frames running?)" };
         }
-        PolisChunkProbe.Arm();
+        double? x = null, y = null, z = null;
+        double r = 1.0;
+        if (double.TryParse(QueryValue(request, "x"), out var dx)) x = dx;
+        if (double.TryParse(QueryValue(request, "y"), out var dy)) y = dy;
+        if (double.TryParse(QueryValue(request, "z"), out var dz)) z = dz;
+        if (double.TryParse(QueryValue(request, "r"), out var dr)) r = dr;
+        PolisChunkProbe.Arm(x, y, z, r);
         var sw = System.Diagnostics.Stopwatch.StartNew();
         while (sw.ElapsedMilliseconds < 3000)
         {
-            var r = PolisChunkProbe.PollResult();
-            if (r != null) return r;
+            var res = PolisChunkProbe.PollResult();
+            if (res != null) return res;
             System.Threading.Thread.Sleep(50);
         }
         return new { ok = false, error = "probe did not complete in 3s (render loop not running?)" };
