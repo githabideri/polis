@@ -1012,15 +1012,78 @@ public partial class PolisSystem
         return new PolisTestHarness.CommandResult { Ok = true, Message = $"Selected bot #{id}" };
     }
 
+    /// <summary>
+    /// 2026-10-10 fix: the old version ignored its argument entirely and
+    /// killed the CONTEXT bot (the caller's own body). In a live Oikistes
+    /// session the agent ordered "despawn all but two"; every call answered
+    /// "Despawned bot #<a different id>", and the 27B model compensated by
+    /// repeatedly SPAWNING new laborers - the roster never shrank (it even
+    /// killed its own body first). Now: an explicit entity id is required
+    /// and matched exactly - the engine exposes no world-wide entity
+    /// enumeration, so a wide sweep is taken around the registry's last
+    /// known position of the requested bot (falling back to the caller's
+    /// position); unknown or non-bot ids fail with a precise message so
+    /// the model can report instead of compensating.
+    /// Args: [entityId].
+    /// </summary>
     PolisTestHarness.CommandResult ExecuteDespawnCommand(string[] args, PolisTestHarness.CommandContext context)
     {
-        if (!TryGetHarnessBot(context, out var bot, out var err))
+        if (args.Length == 0)
         {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "despawn: usage: despawn <entityId> (bot ids from the roster/state)" };
+        }
+        if (!long.TryParse(args[0], out var id))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "despawn: '" + args[0] + "' is not an entity id" };
         }
 
-        bot.Entity.Die(EnumDespawnReason.Removed);
-        return new PolisTestHarness.CommandResult { Ok = true, Message = $"Despawned bot #{bot.Entity.EntityId}" };
+        // sweep center: the requested bot's last known position, else the
+        // caller's, else the player's - bots live in the settlement, so a
+        // 256m disc around any of these covers the field
+        Vec3d center = new Vec3d();
+        bool haveCenter = false;
+        if (globalData != null && globalData.Bots.TryGetValue(id, out var rec)
+            && Math.Abs(rec.LastKnownPos.X) + Math.Abs(rec.LastKnownPos.Y) + Math.Abs(rec.LastKnownPos.Z) > 0.001)
+        {
+            center = rec.LastKnownPos;
+            haveCenter = true;
+        }
+        if (!haveCenter && TryGetHarnessBot(context, out var cbot, out _))
+        {
+            var bp = cbot.Entity.ServerPos;
+            center = new Vec3d(bp.X, bp.Y, bp.Z);
+            haveCenter = true;
+        }
+        if (!haveCenter && context != null && !string.IsNullOrEmpty(context.PlayerUid))
+        {
+            var p = sapi.World?.PlayerByUid(context.PlayerUid);
+            if (p != null && p.Entity != null)
+            {
+                var pp = p.Entity.ServerPos;
+                center = new Vec3d(pp.X, pp.Y, pp.Z);
+                haveCenter = true;
+            }
+        }
+        if (!haveCenter)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "despawn: no reference position for a sweep (no bot registry entry, no caller, no player)" };
+        }
+
+        var victim = sapi.World != null
+            ? sapi.World.GetEntitiesAround(center, 256f, 256f, e => true).FirstOrDefault(e => e != null && e.EntityId == id)
+            : null;
+        if (victim == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "despawn: no entity with id " + id + " in the world (256m sweep from " + (int)center.X + "," + (int)center.Y + "," + (int)center.Z + ")" };
+        }
+        var vcode = victim.Code != null ? victim.Code.ToString() : "an entity without a code";
+        if (vcode != "polis:polisbot")
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "despawn: entity " + id + " is not a polis bot (it is " + vcode + ")" };
+        }
+
+        victim.Die(EnumDespawnReason.Removed);
+        return new PolisTestHarness.CommandResult { Ok = true, Message = "Despawned bot #" + id };
     }
 
     /// <summary>
