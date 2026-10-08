@@ -104,6 +104,38 @@ class Polis:
                       timeout=15)
         return r
 
+    def players(self):
+        """Online players: [{uid, name, pos:[x,y,z], yaw, pitch, ...}] -
+        the harness' /polis/players. The operator's body is the one
+        whose uid matches our --uid."""
+        r = self.get("/polis/players")
+        return r.get("players") or []
+
+    def zones(self):
+        """Named zones from the mod registry: [{name, x1,y1,z1,x2,y2,z2}].
+        /polis/zones wraps the zone-list command; the anonymous Data
+        object keeps lowercase field names, the POCO wrapper does not -
+        be tolerant of both."""
+        r = self.get("/polis/zones")
+        d = r.get("Data") or r.get("data") or {}
+        raw = d.get("zones") or d.get("Zones") or []
+        out = []
+        for z in raw:
+            b = z.get("bounds") or z.get("Bounds") or {}
+            out.append({"name": z.get("name") or z.get("Name"),
+                        "x1": b.get("x1") or b.get("X1"),
+                        "y1": b.get("y1") or b.get("Y1"),
+                        "z1": b.get("z1") or b.get("Z1"),
+                        "x2": b.get("x2") or b.get("X2"),
+                        "y2": b.get("y2") or b.get("Y2"),
+                        "z2": b.get("z2") or b.get("Z2")})
+        return out
+
+    def bots_list(self):
+        """The harness bot registry: [{id, code, pos, lastAction, ...}]."""
+        r = self.get("/polis/bots")
+        return ((r.get("Data") or r.get("data") or {}).get("bots") or [])
+
     def events(self, n=12):
         r = http_json(self.base + "/polis/events?limit=%d" % n,
                       timeout=10)
@@ -169,6 +201,34 @@ class LLM:
 # ----------------------------------------------------------------------
 # the query tool's helpers (module level: pure, testable)
 # ----------------------------------------------------------------------
+
+def _extract_action_json(text):
+    """The 35B-class brains sometimes emit the tool object AFTER a line
+    of prose ('Done. I have marked ... {"action":...}'). The chat loop
+    used to treat such a reply as a final answer, so the tool call was
+    lost and the raw JSON leaked into the transcript (2026-10-07: the
+    'base' exchange). Find the first balanced object that carries an
+    'action' key; None when the text holds no such object."""
+    i = text.find('{"action"')
+    if i < 0:
+        return None
+    depth = 0
+    for j in range(i, len(text)):
+        c = text[j]
+        if c == '{':
+            depth += 1
+        elif c == '}':
+            depth -= 1
+            if depth == 0:
+                try:
+                    obj = json.loads(text[i:j + 1])
+                except ValueError:
+                    return None
+                if isinstance(obj, dict) and "action" in obj:
+                    return obj
+                return None
+    return None
+
 
 def _query_args(parts):
     """Parse the query tool's argument tokens. Two shapes:
@@ -265,19 +325,50 @@ class Oikistes:
         self.born = time.time()
         self.state_path = os.path.join(args.datadir, "oikistes-state.json")
         self.transcript_path = os.path.join(args.datadir, "oikistes-log.jsonl")
+        # the world name as the service is told it (env POLIS_WORLD, set
+        # in the unit). If it changes under a running agent, the rolling
+        # memory of the old world (zone names, bot ids, positions) is
+        # poison - a new world starts with a clean memory.
+        self.world = os.environ.get("POLIS_WORLD") or ""
         self.bot = self._load_bot()
+        if self.world:
+            self._check_world_change()
 
     # -- persistent state (survives restarts) --------------------------
-    def _load_bot(self):
+    def _load_state(self):
         try:
-            d = json.load(open(self.state_path))
-            return d.get("bot")
+            return json.load(open(self.state_path))
         except Exception:
-            return None
+            return {}
+
+    def _save_state(self):
+        os.makedirs(self.args.datadir, exist_ok=True)
+        json.dump({"bot": self.bot, "world": self.world},
+                  open(self.state_path, "w"))
+
+    def _load_bot(self):
+        return self._load_state().get("bot")
 
     def _save_bot(self):
-        os.makedirs(self.args.datadir, exist_ok=True)
-        json.dump({"bot": self.bot}, open(self.state_path, "w"))
+        self._save_state()
+
+    def _check_world_change(self):
+        """The env world name differs from the one the rolling memory
+        was written under (and one was written): clear the transcript
+        and forget the bot id (ids do not survive a world change)."""
+        st = self._load_state()
+        if st.get("world") and st.get("world") != self.world:
+            try:
+                open(self.transcript_path, "w").close()
+            except Exception:
+                pass
+            self.bot = None
+            self.log("system",
+                     "world changed %s -> %s: memory reset" %
+                     (st.get("world"), self.world))
+        st["world"] = self.world
+        st["bot"] = self.bot
+        self._save_state()
 
     # -- the in-game body ----------------------------------------------
     def body(self):
@@ -308,6 +399,66 @@ class Oikistes:
             return "guarded"
 
     # -- compact world digest for the system prompt --------------------
+    def _world_lines(self, pos):
+        """The surroundings lines shared by the digest and the state
+        tool (2026-10-10, the Oikistes post-mortem): the operator's
+        player body, the named zones, the bot roster. The agent used to
+        be blind to all three - it could not see the player standing
+        next to it, it forgot the zones (so it claimed to define 'base'
+        again or to find 'none'), and it could not say where its
+        partners stood."""
+        lines = []
+        try:
+            plist = self.polis.players()
+            mine = [p for p in plist
+                    if (p.get("uid") or "") == self.args.uid]
+            others = [p for p in plist
+                      if (p.get("uid") or "") != self.args.uid]
+            if mine:
+                p0 = mine[0]
+                pp = [int(v) for v in (p0.get("pos") or [0, 0, 0])]
+                bx = int(pos[0]) if len(pos) > 0 else 0
+                bz = int(pos[2]) if len(pos) > 2 else 0
+                dist = int(((pp[0] - bx) ** 2 + (pp[2] - bz) ** 2) ** 0.5)
+                lines.append("player=%s at (%s,%s,%s), %d blocks from me"
+                             % (p0.get("name") or "?", pp[0], pp[1],
+                                pp[2], dist))
+            else:
+                lines.append("player=not online")
+            if others:
+                lines.append("other players: " + ", ".join(
+                    "%s at (%s)" % (p.get("name") or "?",
+                                   ",".join(str(int(v)) for v in
+                                             (p.get("pos") or [])))
+                    for p in others[:4]))
+        except Exception:
+            lines.append("player=? (harness unreachable)")
+        try:
+            zs = self.polis.zones()
+            if zs:
+                lines.append("zones: " + ", ".join(
+                    "%s (x %s..%s, z %s..%s)" % (z["name"], z["x1"],
+                                                z["x2"], z["z1"],
+                                                z["z2"])
+                    for z in zs[:8]))
+            else:
+                lines.append("zones: none defined")
+        except Exception:
+            pass
+        try:
+            bs = self.polis.bots_list()
+            if bs:
+                lines.append("bots (%d): " % len(bs) + ", ".join(
+                    "%s@%s,%s" % (b.get("id"),
+                                 int((b.get("pos") or [0, 0, 0])[0]),
+                                 int((b.get("pos") or [0, 0, 0])[2]))
+                    for b in bs[:8]))
+            else:
+                lines.append("bots: none")
+        except Exception:
+            pass
+        return lines
+
     def world_digest(self):
         bot = self.body()
         try:
@@ -349,7 +500,7 @@ class Oikistes:
                                for k, v in top) or "empty ground"
         except Exception:
             pass
-        return ("bot=%d pos=(%s,%s,%s) holding=[%s] last_action=%s%s "
+        base = ("bot=%d pos=(%s,%s,%s) holding=[%s] last_action=%s%s "
                 "around=[%s] recent=[%s]"
                 % (bot,
                    pos[0] if len(pos) > 0 else "?",
@@ -360,6 +511,7 @@ class Oikistes:
                    (" (%s)" % la.get("Msg")) if la.get("Msg") else "",
                    around,
                    "; ".join(evs) or "-"))
+        return base + "\n" + "\n".join(self._world_lines(pos))
 
     # -- the tool surface ----------------------------------------------
     # Each tool returns a COMPACT observation string (<~400 chars).
@@ -443,7 +595,7 @@ class Oikistes:
                     out += " embodiment=%s (%s)" % (est, edet)
                 except Exception as e:
                     out += " embodiment=? (%s)" % e
-                return out
+                return out + "\n" + "\n".join(self._world_lines(pos))
             if tool == "scan":
                 x = int(a.get("x", 0)); y = int(a.get("y", 2))
                 z = int(a.get("z", 0)); rad = int(a.get("r", 8) or 8)
@@ -687,7 +839,23 @@ class Oikistes:
             "(e.g. foraging berries, smelting in a crucible - the "
             "campaign chains are operator-ordered, not goal verbs), "
             "say plainly that the job system has no goal verb for that "
-            "yet, and offer the closest thing you can order. After each "
+            "yet, and offer the closest thing you can order. "
+            "WORLD BLOCK: the current-world section lists your body, the "
+            "operator's PLAYER (by name, with its position and the "
+            "distance from you), any other players, the NAMED ZONES as "
+            "the registry holds them (never define a zone that is already "
+            "listed, and never claim to have defined one without the zone "
+            "list in front of you), and the BOT ROSTER (id at x,z). "
+            "IF THE OPERATOR GIVES YOU A LOCATION OR COORDINATES, use the "
+            "query tool in coordinate form against THAT location - do not "
+            "scan your own position and call their spot empty. YOUR OWN "
+            "MOVEMENT IS GOTO: a pathfind order that can fail when the "
+            "way is blocked - report the harness message VERBATIM, do not "
+            "paraphrase it, and never claim to have teleported yourself "
+            "(only the player can be teleported; the teleport command "
+            "takes the player's name or uid as its first argument). When "
+            "a tool returns an error, repeat the exact message in your "
+            "report - paraphrasing it loses the diagnosis. After each "
             "action you see its "
             "result; once you are done acting you MUST answer in "
             "plain text with a short report. You are the Oikistes: "
@@ -770,21 +938,31 @@ class Oikistes:
                             "action, a short report of what happened.")
                 out = self.models[self.active].chat(
                     [{"role": "user", "content": msg}])
-                if not last and out.startswith("{"):
-                    try:
-                        act = json.loads(out)
-                    except ValueError:
-                        act = {"action": "state", "args": {},
-                               "say": "malformed action"}
-                    tool = str(act.get("action") or "")
-                    args = act.get("args") or {}
-                    obs = self.do_tool(tool, args, autonomy)
-                    actions.append({"tool": tool, "args": args,
-                                    "observation": obs[:400]})
-                    if act.get("say"):
-                        reply = str(act["say"])
-                    digest = self.world_digest()   # fresh each step
-                    continue
+                if not last:
+                    act = None
+                    pre = ""
+                    if out.startswith("{"):
+                        try:
+                            act = json.loads(out)
+                        except ValueError:
+                            act = {"action": "state", "args": {},
+                                   "say": "malformed action"}
+                    else:
+                        # the 35B emits the action object after a line of
+                        # prose - execute it instead of leaking it into
+                        # the transcript (the 'base' exchange, 2026-10-07)
+                        act = _extract_action_json(out)
+                        if act is not None:
+                            pre = out[:out.find('{"action"')].strip(" .,:-")
+                    if act is not None:
+                        tool = str(act.get("action") or "")
+                        args = act.get("args") or {}
+                        obs = self.do_tool(tool, args, autonomy)
+                        actions.append({"tool": tool, "args": args,
+                                        "observation": obs[:400]})
+                        reply = str(act.get("say") or pre or "")
+                        digest = self.world_digest()   # fresh each step
+                        continue
                 reply = out
                 break
             if not reply:
@@ -801,6 +979,7 @@ class Oikistes:
                 "models": {k: v.model for k, v in self.models.items()},
                 "autonomy": self.autonomy(),
                 "bot": self.bot,
+                "world": self.world,
                 "uptime_s": int(time.time() - self.born),
                 "memory_turns": self.MEMORY_TURNS,
                 "transcript_lines": len(self.transcript(10 ** 6))}

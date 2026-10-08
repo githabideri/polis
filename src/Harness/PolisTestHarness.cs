@@ -1516,6 +1516,18 @@ public class PolisTestHarness : IDisposable
                         try
                         {
                             var cmdResult = executeCommandFunc(cmdReq.Cmd, cmdReq.Args ?? Array.Empty<string>(), cmdReq.Context);
+                            // Request log (2026-10-10): one journal line per
+                            // command. The Oikistes post-mortem showed this is
+                            // the only ground truth for the agent's tool
+                            // traffic - the model paraphrases harness errors in
+                            // its replies, so without this line every tool
+                            // failure is a black box.
+                            try
+                            {
+                                var argLog = string.Join(",", cmdReq.Args ?? Array.Empty<string>());
+                                sapi.Logger.Notification($"{LogPrefix} cmd '{cmdReq.Cmd}' args=[{argLog}] ok={cmdResult.Ok} {cmdResult.Message}");
+                            }
+                            catch { /* logging is advisory */ }
                             // Actor-tagged command event (2026-09-27): every
                             // command lands in the event stream / history so
                             // the web-ui action feed shows who did what.

@@ -4632,11 +4632,14 @@ public partial class PolisSystem
 
     PolisTestHarness.CommandResult ExecuteTeleportCommand(string[] args, PolisTestHarness.CommandContext context)
     {
-        // Usage: teleport <playerUid> <x> <y> <z> [yaw] [pitch]
-        // Teleports a player to the specified position with optional view direction
+        // Usage: teleport <playerUid or playerName> <x> <y> <z> [yaw] [pitch]
+        // Teleports a player to the specified position with optional view
+        // direction. A NAME as well as a uid is accepted: the agent brains
+        // only ever know the display name, and a human types the name
+        // (2026-10-10: 'the system doesn't recognize dingsdangser').
         if (args.Length < 4)
         {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: teleport <playerUid> <x> <y> <z> [yaw] [pitch]" };
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: teleport <playerUid or playerName> <x> <y> <z> [yaw] [pitch]" };
         }
 
         var playerUid = args[0];
@@ -4669,11 +4672,23 @@ public partial class PolisSystem
             }
         }
 
-        // Find the player
+        // Find the player: uid first, then name (case-insensitive)
         var player = sapi.World.PlayerByUid(playerUid) as IServerPlayer;
         if (player == null)
         {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = $"Player not found: {playerUid}" };
+            foreach (var p in sapi.World.AllOnlinePlayers)
+            {
+                if (p != null &&
+                    string.Equals(p.PlayerName, playerUid, StringComparison.OrdinalIgnoreCase))
+                {
+                    player = p;
+                    break;
+                }
+            }
+        }
+        if (player == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"Player not found: {playerUid} (expected a player uid or name)" };
         }
 
         var entity = player.Entity;
