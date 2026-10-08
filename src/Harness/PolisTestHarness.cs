@@ -629,6 +629,34 @@ public class PolisTestHarness : IDisposable
                     }, "polis-harness-look");
                 }
             }
+            else if (path == "/polis/chunkprobe" && request.HttpMethod == "GET")
+            {
+                tcs.SetResult(DoChunkProbe());
+            }
+            else if (path == "/polis/chunkredraw" && request.HttpMethod == "POST")
+            {
+                if (!IsLoopbackRequest(request))
+                {
+                    tcs.SetResult(new { ok = false, error = "Remote access not allowed" });
+                }
+                else
+                {
+                    PolisChunkProbe.RequestRedrawAll();
+                    tcs.SetResult(new { ok = true, note = "RedrawAllBlocks() scheduled for the next render frame (re-queues every loaded chunk for tesselation)" });
+                }
+            }
+            else if (path == "/polis/chunkkick" && request.HttpMethod == "POST")
+            {
+                if (!IsLoopbackRequest(request))
+                {
+                    tcs.SetResult(new { ok = false, error = "Remote access not allowed" });
+                }
+                else
+                {
+                    PolisChunkProbe.RequestKickPlayerChunks();
+                    tcs.SetResult(new { ok = true, note = "priority MarkChunkDirty on the player's 3x3 chunks scheduled for the next render frame" });
+                }
+            }
             else if (path == "/polis/targets" && request.HttpMethod == "GET")
             {
                 var uid = QueryValue(request, "playerUid") ?? QueryValue(request, "uid");
@@ -1945,6 +1973,26 @@ public class PolisTestHarness : IDisposable
     {
         var address = request?.RemoteEndPoint?.Address;
         return address != null && IPAddress.IsLoopback(address);
+    }
+
+    /// <summary>Chunk probe: arm the Done-stage client reader, then poll its
+    /// static result (same process in singleplayer). Returns the player's
+    /// 3x3 chunk internal state + dirty-queue depths + engine RuntimeStats.</summary>
+    object DoChunkProbe()
+    {
+        if (!PolisChunkProbe.GameCaptured)
+        {
+            return new { ok = false, error = "ClientMain not captured yet (no render frames running?)" };
+        }
+        PolisChunkProbe.Arm();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (sw.ElapsedMilliseconds < 3000)
+        {
+            var r = PolisChunkProbe.PollResult();
+            if (r != null) return r;
+            System.Threading.Thread.Sleep(50);
+        }
+        return new { ok = false, error = "probe did not complete in 3s (render loop not running?)" };
     }
 
     // HttpListener's QueryString uses form-urlencoded decoding, which turns '+'

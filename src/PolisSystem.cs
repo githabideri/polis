@@ -1343,6 +1343,7 @@ public partial class PolisSystem : ModSystem
     GuiDialogBotManager botManagerDialog;
     bool clientDebugEnabled;
     PolisScreenCaptureRenderer screenshotRenderer;
+    PolisChunkProbe chunkProbe;
 
     public override void StartClientSide(ICoreClientAPI api)
     {
@@ -1368,6 +1369,13 @@ public partial class PolisSystem : ModSystem
         // Register screenshot capture renderer
         screenshotRenderer = new PolisScreenCaptureRenderer();
         screenshotRenderer.Register(api);
+
+        // Chunk / entity-rendering probe (Done-stage reader of the
+        // per-chunk drawn-counter + engine queues; harness endpoints
+        // /polis/chunkprobe|chunkredraw|chunkkick).
+        chunkProbe = new PolisChunkProbe();
+        chunkProbe.Register(api);
+        PolisChunkProbe.SetLogger(api.Logger);
 
         // Bounded watcher that closes the survival mod's
         // character-selection dialog if it opened at join (see

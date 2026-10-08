@@ -46,6 +46,10 @@ internal static class PolisCinematicCamera
 
     public static bool IsActive => active;
 
+    /// <summary>True once the probe has a ClientMain (for the harness to
+    /// know whether /polis/chunkprobe can possibly work).</summary>
+    public static bool GameCaptured => PolisChunkProbe.GameCaptured;
+
     public static void SetLogger(ILogger l)
     {
         logger = l;
@@ -77,6 +81,13 @@ internal static class PolisCinematicCamera
     // our pinned direction.
     internal static void OnBeforeRenderFrame3D_Prefix(Vintagestory.Client.NoObf.PlayerCamera __instance)
     {
+        // One-shot: hand the ClientMain to the chunk probe (every render
+        // frame reaches this prefix, armed or not).
+        if (__instance != null && !PolisChunkProbe.GameCaptured)
+        {
+            PolisChunkProbe.CaptureGame(GameField?.GetValue(__instance) as ClientMain);
+        }
+
         if (!active || __instance == null)
         {
             return;
