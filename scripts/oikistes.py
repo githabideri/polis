@@ -104,6 +104,18 @@ class Polis:
                       timeout=15)
         return r
 
+    def cell_blocks(self, bot, pos, pad=2):
+        """The blocks of a (2*pad+1)^3 box centred on a cell - the
+        scan command. The state tool's embodiment check uses it to tell
+        a body that stands in air from one that is embedded or trapped.
+        (The state tool referenced this method before it existed - the
+        check silently died; 2026-10-10.)"""
+        x, y, z = pos
+        r = self.cmd("scan", [str(x - pad), str(y - pad), str(z - pad),
+                              str(x + pad), str(y + pad), str(z + pad)],
+                     bot)
+        return (r.get("Data") or {}).get("blocks") or []
+
     def players(self):
         """Online players: [{uid, name, pos:[x,y,z], yaw, pitch, ...}] -
         the harness' /polis/players. The operator's body is the one
