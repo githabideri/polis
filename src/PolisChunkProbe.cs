@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using Vintagestory.API.Client;
+using Vintagestory.API.Common;
 using Vintagestory.Client;
 using Vintagestory.Client.NoObf;
 
@@ -56,6 +57,7 @@ public class PolisChunkProbe : IRenderer
     private static volatile bool armed;
     private static volatile bool redrawRequested;
     private static volatile bool kickRequested;
+    private ICoreClientAPI capi;
 
     // Reflection handles into the engine's internal chunk state.
     private static FieldInfo fiQuantityDrawn;
@@ -124,8 +126,17 @@ public class PolisChunkProbe : IRenderer
 
     public void Register(ICoreClientAPI capi)
     {
+        this.capi = capi;
         capi.Event.RegisterRenderer(this, EnumRenderStage.Done, "polis-chunk-probe");
         capi.Logger.Notification(LogPrefix + " renderer registered");
+    }
+
+    public void Dispose()
+    {
+        if (capi != null)
+        {
+            capi.Event.UnregisterRenderer(this, EnumRenderStage.Done);
+        }
     }
 
     // --- harness-facing controls (any thread) --------------------------
@@ -231,6 +242,95 @@ public class PolisChunkProbe : IRenderer
         var wm = game.WorldMap;
         var pos = game.EntityPlayer?.Pos;
 
+        // Client-side entity scene: what the CLIENT thinks exists (vs the
+        // server's list from /polis/bots). If the server has bots the
+        // client never instantiated, this count stays at 1 (the player).
+        int clientTotal = -1, clientNear = 0;
+        var nearCodes = new List<string>();
+        try
+        {
+            // Preferred: the public API accessor (IClientWorldAccessor.
+            // LoadedEntities). Fallback: reflect the concrete world's
+            // "Entities" member (name varies between engine versions).
+            object list = null;
+            var la = (object)capi?.World;
+            if (la != null)
+            {
+                var p = la.GetType().GetProperty("LoadedEntities", BindingFlags.Public | BindingFlags.Instance);
+                if (p != null) list = p.GetValue(la);
+            }
+            if (list == null)
+            {
+                var wobj = (object)game.World;
+                MemberInfo member = null;
+                var pp = wobj.GetType().GetProperty("Entities", BindingFlags.Public | BindingFlags.Instance);
+                if (pp != null) member = pp;
+                else
+                {
+                    var ff = wobj.GetType().GetField("Entities", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (ff != null) member = ff;
+                }
+                if (member != null)
+                {
+                    list = member is PropertyInfo ? ((PropertyInfo)member).GetValue(wobj) : ((FieldInfo)member).GetValue(wobj);
+                }
+            }
+            if (list is System.Collections.IList il)
+            {
+                clientTotal = il.Count;
+                if (pos != null)
+                {
+                    foreach (var o in il)
+                    {
+                        if (o == null) continue;
+                        var pt = o.GetType().GetProperty("Pos");
+                        if (pt == null) continue;
+                        var pobj = pt.GetValue(o);
+                        if (pobj == null) continue;
+                        var px = pobj.GetType().GetProperty("X")?.GetValue(pobj) as double?
+                            ?? (pobj.GetType().GetField("X")?.GetValue(pobj) is double d ? d : (double?)null);
+                        var pz = pobj.GetType().GetProperty("Z")?.GetValue(pobj) as double?
+                            ?? (pobj.GetType().GetField("Z")?.GetValue(pobj) is double d2 ? d2 : (double?)null);
+                        if (px == null || pz == null) continue;
+                        double dx = px.Value - pos.X;
+                        double dz = pz.Value - pos.Z;
+                        if (dx * dx + dz * dz < 64 * 64)
+                        {
+                            clientNear++;
+                            if (nearCodes.Count < 20)
+                            {
+                                var code = o.GetType().GetProperty("Code")?.GetValue(o);
+                                nearCodes.Add(code != null ? code.ToString() : "?");
+                            }
+                        }
+                    }
+                }
+            }
+            else if (clientTotal == -1)
+            {
+                // one-shot diagnostic: what are we actually looking at?
+                var w = (object)game;
+                var le = w.GetType().GetProperty("LoadedEntities", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                string leinfo = "LoadedEntities: n/a";
+                if (le != null)
+                {
+                    var lv = le.GetValue(w);
+                    leinfo = "LoadedEntities: " + (lv == null ? "null" : lv.GetType().Name);
+                }
+                var names = new List<string>();
+                foreach (var pm in w.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                {
+                    names.Add(pm.Name);
+                }
+                nearCodes.Add("diag:" + leinfo + ";allProps=[" + string.Join(",", names) + "]");
+            }
+        }
+        catch (Exception ex)
+        {
+            clientTotal = -2; // read failed
+            nearCodes.Add("error:" + ex.Message);
+        }
+
         var chunks = new List<object>();
         if (pos != null)
         {
@@ -301,6 +401,9 @@ public class PolisChunkProbe : IRenderer
             ok = true,
             gameCaptured,
             playerPos = pos != null ? new { x = (double)pos.X, y = (double)pos.Y, z = (double)pos.Z } : null,
+            clientTotal,
+            clientNear,
+            nearCodes,
             probeWallMs = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond,
             queues,
             stats,
