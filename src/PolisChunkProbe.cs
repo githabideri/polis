@@ -8,42 +8,15 @@ using Vintagestory.API.Common;
 using Vintagestory.Client;
 using Vintagestory.Client.NoObf;
 
-// Chunk / entity-rendering probe (2026-10-08).
+// Chunk and entity diagnostics for terrain rendering while entities disappear.
+// Reads chunk queues, render gates, NaN positions, and interpolation telemetry.
+// In VS 1.22.7 low-FPS interpolation can write NaN into otherwise healthy client
+// entities; see Compat/1.22.7/PolisInterpolationStability.cs. A failed chunk
+// gate is therefore not by itself evidence of a broken chunk pipeline.
 //
-// Diagnostic for the "bots disappear after hours of runtime" failure
-// (the entity pass goes silent while terrain keeps drawing; a full
-// chunk unload + reload - or a process restart - restores it).
-//
-// The decompiled engine shows the per-frame entity gate:
-//   SystemRenderEntities.OnBeforeRender draws an entity only if
-//   WorldMap.IsChunkRendered(entity.Pos) is true, and
-//   ClientWorldMap.IsChunkRendered == (chunk.quantityDrawn > 0).
-// quantityDrawn is a per-ClientChunk-instance counter that is only ever
-// incremented (on tesselation); a NEW chunk instance (installed when the
-// server pushes updated chunk data - the overload path) starts at 0 and
-// only becomes drawable once the tesselation pipeline processes it.
-//
-// So "terrain drawn but entity invisible" implies the chunk instance that
-// is CURRENT in the world map has quantityDrawn == 0 (or is missing),
-// i.e. the tesselation pipeline has stopped (re)marking current instances.
-// This probe reads that state live, from the client main thread, without
-// touching the GL context:
-//
-//   - the current instance's internal flags for the player's 3x3 chunks
-//     (quantityDrawn / loadedFromServer / enquedForRedraw / ...),
-//   - the dirty-chunk queue depths on ClientMain,
-//   - the engine's own RuntimeStats (awaiting tesselation/pooling,
-//     renderedEntities, triangle budget).
-//
-// It also exposes two recovery primitives for live testing:
-//   - RedrawAll: ClientMain.RedrawAllBlocks() (the engine's own
-//     /debug-redraw path: re-queue every loaded chunk for tesselation)
-//   - Kick: priority SetChunkDirty on the player's surrounding chunks
-//
-// Threading: the arm/result flags are statics shared between the
-// harness HTTP thread (arms) and the client render thread (a Done-stage
-// IRenderer executes the read and writes the result). Singleplayer runs
-// both in one process, which is the only deployment the harness targets.
+// Harness requests are consumed on the client render thread (Done stage).
+// Server position repair uses snapshots captured separately on the server
+// thread; the client's Pos and ServerPos alias the same object.
 public class PolisChunkProbe : IRenderer
 {
     private const string LogPrefix = "[polis-chunk-probe]";
@@ -171,7 +144,7 @@ public class PolisChunkProbe : IRenderer
     // server-sourced positions (id -> [x, y, z]) applied by DoRepair.
     // NOTE: the base Entity class aliases ServerPos to Pos, so the client
     // mirror's own "server" copy is the corrupted object itself - the only
-    // valid source is the server-side entity objects (harness sapi world).
+    // authoritative source is the server-side entity objects (harness sapi world).
     private static System.Collections.Generic.Dictionary<long, double[]> repairMap;
 
     /// <summary>Request a NaN-position repair on the next render frame,
@@ -693,6 +666,7 @@ public class PolisChunkProbe : IRenderer
             entityRenderers = new { count = erCount, ids = erIds },
             gates,
             gateNanCount = CountNanGates(gates),
+            interpolation = PolisInterpolationAudit.Snapshot(),
             nanTriage = CountNanGates(gates) > 0 ? NanTriage(game) : null,
             repair = repairReport,
             frustumTest,
@@ -761,13 +735,9 @@ public class PolisChunkProbe : IRenderer
         return n;
     }
 
-    // NaN triage: for entities whose client Pos is NaN, dump the raw
-    // state that tells us HOW the NaN gets (re)written: the position
-    // fields, the Motion vector (NaN motion integrated per tick would
-    // re-contaminate even after a pos repair), and the packet tick
-    // counters (if tick is frozen, position packets are NOT arriving and
-    // something else wrote the NaN; if tick advances while x stays NaN,
-    // the packet payload itself is the problem).
+    // Read packet tick metadata directly: Entity.Attributes is a field, and
+    // GetInt has a default-value argument. Reflection errors must not masquerade
+    // as missing packets. The interpolation audit identifies the position writer.
     private static List<object> NanTriage(ClientMain g)
     {
         var outList = new List<object>();
@@ -804,21 +774,9 @@ public class PolisChunkProbe : IRenderer
                 {
                     try { mx = (double)D(motion.GetType(), motion, "X"); my = (double)D(motion.GetType(), motion, "Y"); mz = (double)D(motion.GetType(), motion, "Z"); motionNan = double.IsNaN(mx) || double.IsNaN(my) || double.IsNaN(mz); } catch { }
                 }
-                int tick = -1, tickDiff = -1;
-                try
-                {
-                    object attrs = ent.GetType().GetProperty("Attributes", BindingFlags.Public | BindingFlags.Instance)?.GetValue(ent);
-                    if (attrs != null)
-                    {
-                        var gt = attrs.GetType().GetMethod("GetInt");
-                        tick = gt != null ? (int)gt.Invoke(attrs, new object[] { "tick" }) : -1;
-                        tickDiff = gt != null ? (int)gt.Invoke(attrs, new object[] { "tickDiff" }) : -1;
-                    }
-                }
-                catch
-                {
-                    // attributes not readable
-                }
+                var typedEntity = ent as Vintagestory.API.Common.Entities.Entity;
+                int tick = typedEntity == null ? -1 : typedEntity.Attributes.GetInt("tick", -1);
+                int tickDiff = typedEntity == null ? -1 : typedEntity.Attributes.GetInt("tickDiff", -1);
                 outList.Add(new
                 {
                     id = (long)kv.Key,

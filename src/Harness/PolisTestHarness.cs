@@ -657,6 +657,31 @@ public class PolisTestHarness : IDisposable
                     tcs.SetResult(new { ok = true, note = "priority MarkChunkDirty on the player's 3x3 chunks scheduled for the next render frame" });
                 }
             }
+            else if (path == "/polis/entityhealth" && request.HttpMethod == "GET")
+            {
+                sapi.Event.EnqueueMainThreadTask(() =>
+                {
+                    try
+                    {
+                        var entities = sapi.World.LoadedEntities.Values.Select(e => new
+                        {
+                            id = e.EntityId,
+                            code = e.Code == null ? null : e.Code.ToString(),
+                            x = double.IsFinite(e.Pos.X) ? (double?)e.Pos.X : null,
+                            y = double.IsFinite(e.Pos.Y) ? (double?)e.Pos.Y : null,
+                            z = double.IsFinite(e.Pos.Z) ? (double?)e.Pos.Z : null,
+                            dimension = e.Pos.Dimension,
+                            finite = double.IsFinite(e.Pos.X) && double.IsFinite(e.Pos.Y) && double.IsFinite(e.Pos.Z)
+                        }).ToArray();
+                        tcs.SetResult(new { ok = true, count = entities.Length,
+                            nonFinite = entities.Count(e => !e.finite), entities });
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.SetResult(new { ok = false, error = ex.Message });
+                    }
+                }, "polis-entityhealth");
+            }
             else if (path == "/polis/entityfix" && request.HttpMethod == "POST")
             {
                 if (!IsLoopbackRequest(request))
@@ -680,7 +705,7 @@ public class PolisTestHarness : IDisposable
                             var map = new System.Collections.Generic.Dictionary<long, double[]>();
                             try
                             {
-                                sapi.World.GetEntitiesAround(new Vintagestory.API.MathTools.Vec3d(rx, ry, rz), 0f, 256f, e =>
+                                sapi.World.GetEntitiesAround(new Vintagestory.API.MathTools.Vec3d(rx, ry, rz), 256f, 256f, e =>
                                 {
                                     if (e != null && e.Pos != null)
                                     {
