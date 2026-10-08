@@ -564,6 +564,15 @@ class Oikistes:
             elif tool == "command":
                 a = {"cmd": a.split()[0],
                      "args": a.split()[1:]} if a.strip() else {}
+            elif tool == "scan":
+                # the 35B passes scan a single string 'x y z' - normalize
+                # it (an unnormalised string became x=0,y=2,z=0: a scan of
+                # the world origin that 'found' nothing, 2026-10-10)
+                parts = a.split()
+                a = {"x": int(parts[0]),
+                     "y": int(parts[1]) if len(parts) > 1 else 2,
+                     "z": int(parts[2]) if len(parts) > 2 else 0} \
+                    if parts else {}
             elif tool == "query":
                 a = _query_args(a.split())
             elif tool == "zone":
