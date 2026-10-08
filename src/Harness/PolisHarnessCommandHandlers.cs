@@ -4672,16 +4672,19 @@ public partial class PolisSystem
             }
         }
 
-        // Find the player: uid first, then name (case-insensitive)
+        // Find the player: uid first, then name (case-insensitive).
+        // AllOnlinePlayers is IEnumerable<IPlayer> - filter to server
+        // players (the players route does the same OfType).
         var player = sapi.World.PlayerByUid(playerUid) as IServerPlayer;
         if (player == null)
         {
             foreach (var p in sapi.World.AllOnlinePlayers)
             {
-                if (p != null &&
-                    string.Equals(p.PlayerName, playerUid, StringComparison.OrdinalIgnoreCase))
+                var sp = p as IServerPlayer;
+                if (sp != null &&
+                    string.Equals(sp.PlayerName, playerUid, StringComparison.OrdinalIgnoreCase))
                 {
-                    player = p;
+                    player = sp;
                     break;
                 }
             }
