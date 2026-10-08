@@ -13,7 +13,7 @@ Time-of-day is first-class: `polisctl time <hour|preset>` drives the clock to a
 target hour and freezes it there (deterministic lighting for screenshots). The
 default target is the first online player; override with --uid.
 """
-import sys, os, json, time, argparse, base64, math
+import sys, os, json, time, types, argparse, base64, math
 import urllib.request
 
 BASE = os.environ.get("POLIS_HARNESS", "http://127.0.0.1:8585")
@@ -237,6 +237,26 @@ def cmd_gamemode(a):
     _say(_post("gamemode", args))
 
 
+def cmd_repin(a):
+    """Re-assert the pilot pins after a game restart (godmode/sanity/creative
+    and the clock do not persist across restarts): godmode all bots + player,
+    sanity pinned, player creative, noon. Optional `x y z` teleports the
+    player (after a restart it returns to world spawn). The standard
+    follow-up to a cold-stack reset (xvnc + vsgame restart) when the
+    client entity pass has died (bots invisible, see chunkprobe)."""
+    uid = get_uid(a)
+    _say(_post("godmode", ["on"]))
+    if uid:
+        cmd_sanity(types.SimpleNamespace(rest=["100", uid]))
+        cmd_gamemode(types.SimpleNamespace(player=uid, mode="creative"))
+    cmd_time(types.SimpleNamespace(target="noon", uid=None))
+    if a.rest:
+        if len(a.rest) != 3:
+            print("repin: teleport target needs exactly x y z"); sys.exit(2)
+        cmd_teleport(types.SimpleNamespace(x=a.rest[0], y=a.rest[1], z=a.rest[2],
+                                           yaw=None, pitch=None, uid=None))
+
+
 # ---- screenshots -----------------------------------------------------------
 def _capture(a):
     u = get_uid(a)
@@ -414,6 +434,11 @@ def main():
     p.add_argument("player")
     p.add_argument("mode", nargs="?")
     p.set_defaults(fn=cmd_gamemode)
+
+    p = sub.add_parser("repin", help="re-assert pilot pins after a restart: godmode all + player, sanity, creative, noon [x y z to teleport the player]")
+    p.add_argument("rest", nargs="*", help="optional x y z to teleport the player to")
+    p.add_argument("--uid", help="player uid (default: first online player)")
+    p.set_defaults(fn=cmd_repin)
 
     p = sub.add_parser("shotat", help="photo a target from a vantage: computes yaw/pitch from geometry")
     p.add_argument("name"); p.add_argument("vx"); p.add_argument("vy"); p.add_argument("vz")
