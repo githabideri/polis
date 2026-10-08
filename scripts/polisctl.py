@@ -294,6 +294,42 @@ def cmd_shotat(a):
     print("%s  (aim yaw=%.3f pitch=%.3f)" % (out, yaw, pitch))
 
 
+def cmd_pano(a):
+    """Panorama sweep: n evenly-spaced yaw shots around the player's current
+    (or teleported) position, same-height pitch. Saves <dir>/<name>_p<i>.png
+    and prints each path. --sheet renders a contact sheet if PIL is present.
+    Use to scan for entities/structures in all directions from one spot."""
+    u = get_uid(a)
+    if a.x is not None:
+        _post("teleport", [u, a.x, a.y, a.z, 0, 0], u)
+        time.sleep(2)
+    paths = []
+    for i in range(a.n):
+        yaw = 2.0 * math.pi * i / a.n
+        d = _get("/polis/cine-screenshot?playerUid=%s&yaw=%s&pitch=%s&frames=4"
+                 % (u, yaw, a.pitch))
+        if not d.get("ok"):
+            print("capture %d failed: %s" % (i, d)); sys.exit(1)
+        raw = base64.b64decode(d.get("base64") or d.get("base64Png"))
+        os.makedirs(a.dir, exist_ok=True)
+        p = os.path.join(a.dir, "%s_p%d.png" % (a.name, i))
+        open(p, "wb").write(raw)
+        paths.append(p)
+        print(p)
+    if a.sheet:
+        try:
+            from PIL import Image
+            ims = [Image.open(p).resize((480, 270)) for p in paths]
+            cols = 2
+            sheet = Image.new("RGB", (480 * cols, 270 * ((len(ims) + cols - 1) // cols)))
+            for n_, im in enumerate(ims):
+                sheet.paste(im, ((n_ % cols) * 480, (n_ // cols) * 270))
+            sheet.save(os.path.join(a.dir, a.name + "_sheet.png"))
+            print(os.path.join(a.dir, a.name + "_sheet.png"))
+        except ImportError:
+            print("# sheet skipped (PIL not installed on this machine)")
+
+
 def cmd_players(a):
     d = _get("/polis/players")
     pl = d.get("Data", {}).get("players") or d.get("players") or []
@@ -385,6 +421,17 @@ def main():
     p.add_argument("--dir", default="/tmp")
     p.add_argument("--respawn", action="store_true")
     p.set_defaults(fn=cmd_shotat)
+
+    p = sub.add_parser("pano", help="360° sweep: n yaw shots around the player -> <dir>/<name>_p<i>.png (+_sheet.png with --sheet)")
+    p.add_argument("name")
+    p.add_argument("x", nargs="?", help="teleport the player here first (else shoot in place)")
+    p.add_argument("y", nargs="?")
+    p.add_argument("z", nargs="?")
+    p.add_argument("--n", type=int, default=8, help="number of shots (default 8)")
+    p.add_argument("--pitch", type=float, default=0.0, help="radians, cine convention (0 = level)")
+    p.add_argument("--dir", default="/tmp")
+    p.add_argument("--sheet", action="store_true", help="also write a contact sheet (needs PIL)")
+    p.set_defaults(fn=cmd_pano)
 
     p = sub.add_parser("cmd", help="raw passthrough: cmd <name> <arg> …")
     p.add_argument("name"); p.add_argument("args", nargs="*")
