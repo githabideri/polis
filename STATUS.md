@@ -39,18 +39,25 @@ on the model-mux box.
   cell; all rejections were correct). Options: harness standing-range 2,
   scaffold blocks, or cap single-bot rings at 3x3 (the proven,
   visually-verified building).
-- **Roof-layer stand search (2026-10-10, a0c7b3d era):** the endogenous
-  hut-flat run placed all 29 wall cells but died at the roof: the
-  standable-candidate search only tries feet levels L-1..L+1 of the
-  target, so a roof 3-4 blocks above the floor has no candidate a
-  ground-level bot (climb 1, not 3) can occupy. The bot ended the run
-  "goto stuck" on the wall it had just built. Fix direction: a position
-  is standable if the target cell is within the bot's placement reach
-  of it (including upward reach from inside the structure, entered
-  through the door) — reach-aware stand search, not just feet-level
-  adjacency. The hut-flat walls stand at the base zone today as the
-  reference case (44/54 present, the missing cells are exactly the
-  roof layer + the by-design hollow interior).
+- **Roof-layer stand search — fixed (2026-10-10, c1b188f):** the
+  stand-candidate search is now reach-aware: any stand cell within 2
+  horizontal of the target with the target up to 3 above the feet
+  (head room checked), ground-level positions preferred (the walk-in
+  through the door) over wall-tops. The hut-flat run confirmed it.
+  The hut-flat box itself (a FILLED 5x5 - "just a box full of dirt
+  blocks", user-words) was cleaned out of the world (setblock air,
+  48 perimeter + 13 interior cells); its successor is the `cottage`
+  plan: walls two high + a full 5x5 roof layer, 55 dirt, every cell
+  reachable from the ground inside (no wall-top climbs). The gable
+  ridge stays a second phase until a stair job exists.
+- **Missions run in the background (2026-10-10):** the old blocking
+  mission held the agent, the chat lock and - through a 5-deep listen
+  backlog - the user's web UI for the entire run (90-minute
+  "Oikistes unreachable" windows; the web UI's asyncio proxy was
+  never the blocker). Now: Popen + worker thread; dispatch returns at
+  once, the digest and a no-goal `mission` call report running or the
+  verdict, the 90-min cap and roster hygiene live in the worker. The
+  brain choice persists across restarts (OIK_BRAIN=alt = the 27B).
 - **Movement physics (top priority, since 1.21):** client prediction writes
   `Pos.Motion` directly, fighting the server's `interpolateposition`;
   smoothness unassessed.

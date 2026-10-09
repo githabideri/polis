@@ -332,8 +332,9 @@ class Oikistes:
         self.models = {"primary": LLM(args.llm, args.llm_model)}
         if args.alt_llm and args.alt_model:
             self.models["alt"] = LLM(args.alt_llm, args.alt_model)
-        self.active = "primary"
+        self.active = os.environ.get("OIK_BRAIN") or "primary"
         self.lock = threading.Lock()
+        self.mission = None
         self.born = time.time()
         self.state_path = os.path.join(args.datadir, "oikistes-state.json")
         self.transcript_path = os.path.join(args.datadir, "oikistes-log.jsonl")
@@ -555,7 +556,21 @@ class Oikistes:
                    (" (%s)" % la.get("Msg")) if la.get("Msg") else "",
                    around,
                    "; ".join(evs) or "-"))
-        return base + "\n" + "\n".join(self._world_lines(pos))
+        out = base
+        m = self.mission
+        if m is not None:
+            if m.get("done"):
+                out += ("\nlast mission %s: outcome=%s | %s" % (
+                    m["id"], m.get("outcome"),
+                    (m.get("summary") or "")[:200]))
+            else:
+                out += ("\nbackground mission %s ('%s') running "
+                        "%.0f min - the settlement is free; 'mission' "
+                        "with no goal reports status" % (
+                            m["id"], m.get("goal"),
+                            (time.time() - m.get("started", time.time()))
+                            / 60.0))
+        return out + "\n" + "\n".join(self._world_lines(pos))
 
     # -- the tool surface ----------------------------------------------
     # Each tool returns a COMPACT observation string (<~400 chars).
@@ -698,6 +713,8 @@ class Oikistes:
                 return ("gave %s x%s: %s" % (a["item"], a.get("qty", 1),
                                              r.get("Message")))
             if tool == "mission":
+                if not a.get("goal"):
+                    return self._mission_status()
                 return self.run_mission(str(a["goal"]))
             if tool == "query":
                 return self._query(a)
@@ -870,47 +887,88 @@ class Oikistes:
         if pre_roster:
             cmd += ["--keep-bots",
                     ",".join(str(i) for i in sorted(pre_roster))]
+        # 2026-10-10 (second pass): the mission runs in the BACKGROUND.
+        # The old blocking subprocess.run held the agent (and the chat
+        # lock, and the user's UI - 90-minute 'unreachable' windows)
+        # for the whole run. Now: Popen + a worker thread; this call
+        # returns in milliseconds and the settlement stays conversable.
+        # The 90-minute cap is enforced by the worker (wait(5400)).
+        m_id = os.path.basename(out)[:-len(".json")]
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL)
+        self.mission = {"id": m_id, "goal": goal_line, "out": out,
+                        "started": time.time(), "done": False,
+                        "outcome": None, "summary": None,
+                        "pid": proc.pid, "pre_roster": pre_roster}
+        threading.Thread(target=self._mission_worker,
+                         args=(proc,), daemon=True).start()
+        self.log("system", "mission %s dispatched (pid %d): %s"
+                 % (m_id, proc.pid, goal_line))
+        return ("mission %s DISPATCHED (worker pid %d) - it runs in "
+                "the BACKGROUND, the settlement is not blocked. "
+                "Check it later with the 'mission' tool (no goal = "
+                "status); it reports running or the final verdict."
+                % (m_id, proc.pid))
+
+    def _mission_worker(self, proc):
+        """Background mission lifecycle: wait (capped at 90 min),
+        world hygiene (despawn non-roster bots - the body is in the
+        pre-roster so it survives; it is an identity, never
+        respawned here), read the verdict from the run JSON (the
+        persistence of record), record it. The next digest and the
+        'mission' tool report it."""
+        m = self.mission
+        if m is None:
+            return
         try:
-            # 2026-10-10: 1800 s killed a 139-mine + 103-build chain
-            # mid-flight (the mission died, its worker leaked). 5400 s.
-            p = subprocess.run(cmd, capture_output=True, text=True,
-                               timeout=5400)
-            detail = (p.stdout or "").strip().splitlines()
-            tail = detail[-2:] if detail else ["no output"]
+            proc.wait(timeout=5400)
         except subprocess.TimeoutExpired:
-            tail = ["mission timed out (5400s)"]
-        # 2026-10-10: world hygiene - the mission boots its own worker
-        # (and used to leak one per run; the 18-bot pile-up). When the
-        # run is over, despawn every bot that was NOT in the pre-mission
-        # roster; my body is in that roster, so it survives. The
-        # worker's unspent surplus dies with it - that is the price of
-        # a clean world, and the next run re-mines if it needs more.
+            proc.kill()
+            m["outcome"] = "timeout(5400s)"
+        if m["outcome"] != "timeout(5400s)":
+            try:
+                post = [b.get("id") for b in self.polis.bots_list()]
+                for i in post:
+                    if i is not None and i not in m["pre_roster"] and \
+                            i != self.bot:
+                        self.polis.cmd("despawn", [str(i)],
+                                       actor="oikistes-mission-cleanup")
+            except Exception:
+                pass
         try:
-            post = [b.get("id") for b in self.polis.bots_list()]
-            for i in post:
-                if i is not None and i not in pre_roster and i != self.bot:
-                    self.polis.cmd("despawn", [str(i)],
-                                   actor="oikistes-mission-cleanup")
-        except Exception:
-            pass
-        # 2026-10-10: the body is an identity - it is NOT respawned
-        # here. The old null-after-mission ("the mission swept the
-        # world") is what turned every mission into a new-recruit
-        # event; if the mission's sweep kills the body, body() catches
-        # it on the next call and spends the one-respawn budget.
-        # read the verdict from the run JSON (the persistence of record)
-        try:
-            d = json.load(open(out))
+            d = json.load(open(m["out"]))
             steps = " -> ".join("%s(%s %s)" % (
                 s["job"], s["type"],
                 "ok" if s["ok"] else "failed") for s in d.get("steps", []))
-            return ("mission '%s' -> %s in %ss | %s | %s"
-                    % (goal_line, d.get("outcome"),
-                       d.get("wall_s"),
-                       steps or "no steps",
-                       d.get("reason") or ""))
+            m["outcome"] = d.get("outcome")
+            m["summary"] = ("'%s' -> %s in %ss | %s | %s"
+                            % (m["goal"], d.get("outcome"),
+                               d.get("wall_s"),
+                               steps or "no steps",
+                               d.get("reason") or ""))
         except Exception:
-            return "mission '%s' -> %s" % (goal_line, " | ".join(tail)[:300])
+            if m["outcome"] != "timeout(5400s)":
+                m["outcome"] = "ended (no run JSON)"
+            m["summary"] = "mission '%s' -> %s" % (
+                m["goal"], m["outcome"])
+        m["done"] = True
+        m["done_at"] = time.time()
+        self.log("system", "mission %s finished: %s" % (
+            m["id"], m["summary"]))
+
+    def _mission_status(self):
+        m = self.mission
+        if m is None:
+            return ("no mission has been dispatched since this "
+                    "service started")
+        if not m["done"]:
+            return ("mission %s RUNNING (%.0f min in, 90-min cap): "
+                    "goal '%s' - the settlement is free meanwhile; "
+                    "check again later"
+                    % (m["id"], (time.time() - m["started"]) / 60.0,
+                       m["goal"]))
+        return ("mission %s FINISHED: outcome=%s | %s" % (
+            m["id"], m["outcome"], m["summary"] or ""))
 
     # -- the conversation loop ------------------------------------------
     def system_prompt(self, autonomy, digest, memory):
@@ -931,7 +989,10 @@ class Oikistes:
             "inventory; scan=<x,y,z> block census; screenshot=save a "
             "view; events=recent actor-tagged activity; autonomy=read "
             "the preset; give=<item,qty> hand an item to your body; "
-            "mission=<goal line> order a job through the job system "
+            "mission=<goal line> dispatch a BACKGROUND job through "
+            "the job system (returns at once; the settlement is not "
+            "blocked) - or mission with NO goal to report the "
+            "running/finished status; "
             "(goals like 'mine granite x1', 'harvest rye x1', 'sow rye "
             "x1 at site-A', 'build granite x4 at site-A', 'place "
             "granite at site-A x1 supply external', 'build-plan "
@@ -1024,7 +1085,15 @@ class Oikistes:
             "small crew change; when work ends, shrink back toward 1-2 "
             "and report the final headcount. A growing roster across "
             "turns is a bug. "
-            "5 BUILD FROM WHAT EXISTS - soil/dirt is the common, "
+            "5 MISSIONS RUN IN THE BACKGROUND - a 'mission' call "
+            "dispatches and returns at once (the settlement stays "
+            "conversable the whole run, 90-min cap). Tell the user what "
+            "you dispatched; when they ask (or you need the result), "
+            "call 'mission' WITH NO goal - it reports running or the "
+            "final verdict. Never dispatch the same goal twice while "
+            "one is running - re-mining piles surplus blocks into the "
+            "world. "
+            "6 BUILD FROM WHAT EXISTS - soil/dirt is the common, "
             "hand-minable material (in this game version 'dirt' is the "
             "soil-* block family); granite (rock-granite) needs a "
             "mining step first. If a building's material is not on "
@@ -1272,6 +1341,7 @@ def main():
     args = ap.parse_args()
     os.makedirs(args.datadir, exist_ok=True)
     oik = Oikistes(args)
+    ThreadingHTTPServer.request_queue_size = 64
     srv = ThreadingHTTPServer((args.host, args.port), make_handler(oik))
     print("Oikistes serving on %s:%d (model %s)"
           % (args.host, args.port, args.llm_model), flush=True)

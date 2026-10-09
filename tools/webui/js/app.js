@@ -791,6 +791,14 @@ async function oikSend() {
             body: JSON.stringify({ message: t, actor: 'user' }),
         });
         pending.remove();
+        if (!res.ok) {
+            if (res.status === 429) {
+                oikLog(`Oikistes is busy (a chat/mission is in flight) - try again in a moment.`, 'error');
+                return;
+            }
+            oikLog(`Oikistes error (HTTP ${res.status})`, 'error');
+            return;
+        }
         const d = await res.json();
         for (const a of (d.actions || [])) {
             const denied = String(a.observation || '').startsWith('DENIED');
