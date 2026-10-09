@@ -16,7 +16,7 @@ before end of 2026.
 | 1.22.7 code port | **locally verified** | net10.0, hermetic csproj (`Polis.dll`), builds with 0 errors |
 | Core loop (load → spawn → goto → verify) | **live verified** | the fire-and-verify discipline holds; short and long (100-block) gotos arrive; smoke mission PASS |
 | Possession (player mounts a bot) | **live verified** | mount-based; the NaN seat crash is closed (the guard also zeroes NaN *motion* — see gotchas) |
-| Oikistes agent (the 27B brain) | **live verified** | 2026-10-10 robustness pass: the body is an IDENTITY (persists across missions; one auto-respawn per boot, then it stays dead until the operator rebinds via `POST /oikistes/bot`; it never adopts another bot) and the `crew` tool is the only sanctioned way to size the worker roster (hard cap 8) — the old null-after-mission body contract is what grew an 18-bot swarm in one evening. The boot world scan now re-scans until the block count stabilizes (a fixed 2 s sleep scanned before the server had loaded the box's chunks and counted 4 of 103 soil on a plateau holding 1600+ — the same zero-based-terrain class as the world-pillar false alarm) |
+| Oikistes agent (the 27B brain) | **live verified** | 2026-10-10 robustness pass: the body is an IDENTITY (persists across missions; one auto-respawn per boot, then it stays dead until the operator rebinds via `POST /oikistes/bot`; it never adopts another bot) and the `crew` tool is the only sanctioned way to size the worker roster (hard cap 8) — the old null-after-mission body contract is what grew an 18-bot swarm in one evening. The boot world scan now re-scans until the block count stabilizes (a fixed 2 s sleep scanned before the server had loaded the box's chunks and counted 4 of 103 soil on a plateau holding 1600+ — the same zero-based-terrain class as the world-pillar false alarm). Missions are HYGIENIC (2026-10-10, a0c7b3d): the boot sweep no longer kills the body or the operator's crew (it takes the pre-mission roster as its keep list) and the worker the mission spawns is despawned when the run ends — the world returns to exactly the pre-mission roster after every mission (the worker's unspent surplus dies with it; the next run re-mines if it needs more) |
 | Block / inventory / workstation actions | **live verified** | mine, harvest, pickup, place, equip, the workstation set (grind, press, clayform, knap, seal, forge, anvil); placement is verified by oracle, never by the `ok` flag |
 | Temporal-stability control (1.22 "sanity") | **live verified** | the `sanity` harness command: per-player meter query (watched attribute `temporalStability`, the blue gear), set + pin (re-asserted every second, godmode-style), and `storms` / `rifts` world-config switches (persisted AND live-cleared + broadcast). Needed to settle the world under daylock: a frozen clock keeps an active temporal storm open forever and spawned rifts never expire (2026-10-07: the meter sat at 0 and the screen carried the glitch overlay; settled with `sanity storms off; sanity rifts off; sanity 1`) |
 | Jev decision loop (v5) | **measured** | three-tier cascade: Laya 421M noul pre-veto → Decider-2B readout → 27B doubt-arbiter; reflex model as of the FT-2 round: `qwen35-decider-2b-ft2`; reports in `docs/reports/` |
@@ -39,6 +39,18 @@ on the model-mux box.
   cell; all rejections were correct). Options: harness standing-range 2,
   scaffold blocks, or cap single-bot rings at 3x3 (the proven,
   visually-verified building).
+- **Roof-layer stand search (2026-10-10, a0c7b3d era):** the endogenous
+  hut-flat run placed all 29 wall cells but died at the roof: the
+  standable-candidate search only tries feet levels L-1..L+1 of the
+  target, so a roof 3-4 blocks above the floor has no candidate a
+  ground-level bot (climb 1, not 3) can occupy. The bot ended the run
+  "goto stuck" on the wall it had just built. Fix direction: a position
+  is standable if the target cell is within the bot's placement reach
+  of it (including upward reach from inside the structure, entered
+  through the door) — reach-aware stand search, not just feet-level
+  adjacency. The hut-flat walls stand at the base zone today as the
+  reference case (44/54 present, the missing cells are exactly the
+  roof layer + the by-design hollow interior).
 - **Movement physics (top priority, since 1.21):** client prediction writes
   `Pos.Motion` directly, fighting the server's `interpolateposition`;
   smoothness unassessed.
