@@ -128,9 +128,13 @@ def parse_goal_line(line):
     return goal
 
 
-def boot(pol, radius=14):
-    """Fresh bot + first world observation. Returns (bot, wm, state)."""
-    pol.sweep_bots(keep=None)
+def boot(pol, radius=14, keep=None):
+    """Fresh bot + first world observation. Returns (bot, wm, state,
+    scan_summary). `keep`: bot ids the sweep must NOT kill (2026-10-10:
+    the sweep used to kill the Oikistes body and the operator's whole
+    crew on every mission - the body-as-identity contract needs them
+    to survive the mission's world reset)."""
+    pol.sweep_bots(keep=keep)
     time.sleep(2)
     r = v5.http_json(pol.base + "/polis/command",
                      {"cmd": "spawn", "args": [],
@@ -155,15 +159,28 @@ def boot(pol, radius=14):
     # budget runs out; the last scan is what the world model gets.
     prev = None
     scan = None
+    passes = 0
+    n = 0
     for _ in range(14):          # ~42 s worst case at 3 s intervals
+        passes += 1
         scan = pol.cmd("scan", box, bot)
         n = len((scan.get("Data") or {}).get("blocks", []) or [])
-        if n == prev:
+        if n == prev and passes > 1:
             break
         prev = n
         time.sleep(3)
     wm.observe_scan(scan, reason="planner_scan")
-    return bot, wm, st
+    # record what the boot scan actually saw (2026-10-10): the
+    # mine-prep rejection 'scanned clusters cover 4 of 103' was a
+    # chunk-timing artifact that was invisible in the run JSON;
+    # the summary goes into the record so the next one is readable.
+    from collections import Counter as _C
+    _codes = _C((b.get("code") or "?") for b in
+                (scan.get("Data") or {}).get("blocks", []) or [])
+    scan_summary = {"box": [int(v) for v in box], "passes": passes,
+                    "blocks": n, "top": dict(_codes.most_common(6)),
+                    "bot_pos": [x0, y0, z0]}
+    return bot, wm, st, scan_summary
 
 
 def inventory_of(state):
@@ -389,6 +406,29 @@ def climb_out_possible(pol, bot):
     return False, "all %d neighbours >=2 blocks up (deep hollow)" % best
 
 
+def _rescue_wedged_bot(pol, bot, haul):
+    """Hard-reset a wedged worker: despawn, respawn, re-give the
+    measured haul. Returns the new bot id, or None. 2026-10-10: the
+    mine loop ABORTED on the first wedge (a 2-deep hollow - the VS
+    agent climbs 1, not 2) and the goal died with the bot's haul; the
+    build path already had this pattern for its place-loop wedges, so
+    the mine path shares it now."""
+    pol.cmd("despawn", [str(bot)], bot)
+    time.sleep(3)
+    r = v5.http_json(pol.base + "/polis/command",
+                    {"cmd": "spawn", "args": [],
+                     "context": {"playerUid": pol.uid}})
+    nb = (r.get("Data") or {}).get("id")
+    if not nb:
+        return None
+    time.sleep(6)
+    for item, q in sorted((kv for kv in haul.items() if kv[1] > 0),
+                          key=lambda kv: kv[0]):
+        pol.cmd("give", [item, str(q)], nb)
+        time.sleep(1)
+    return nb
+
+
 def _fresh_exposed(pol, bot, rec, wm, mat, radius=20):
     """Cells of material `mat` that are CURRENTLY exposed (air directly
     above), from a fresh scan of the region around the build site AND the
@@ -448,7 +488,7 @@ def _fresh_exposed(pol, bot, rec, wm, mat, radius=20):
         return []
 
 
-def execute_job(pol, bot, base, job, wm, run):
+def execute_job(pol, bot, base, job, wm, run, botref=None):
     """One job's actuation + oracle. Returns (ok, detail, measured,
     execution, oracle). The split is the 13.2 invariant: the ENGINE'S
     verdict on the action (execution) and the FRESH-WORLD check of the
@@ -682,6 +722,7 @@ def execute_job(pol, bot, base, job, wm, run):
         cmd_name = {"mine": "mine", "harvest": "harvestcrop"}.get(job.type)
         mined, parts = 0, []
         last_la, last_attempts = {}, []
+        wedged_rescues = 0  # budget: 4 hard-resets per mine job
 
         def _in_site(c):
             # a hole in the footprint is a hole in the floor - never
@@ -699,7 +740,16 @@ def execute_job(pol, bot, base, job, wm, run):
             a = [c[0], c[1] + 1, c[2]]
             ab = pol.cell_blocks(bot, tuple(a), pad=0) or []
             for b in ab:
-                if b.get("pos") == a and (b.get("code") or "") != "game:air":
+                if b.get("pos") == a:
+                    code = b.get("code") or ""
+                    # 2026-10-10: grass and water are NON-blocking in
+                    # the engine (the "*-free" codes; the bot stands in
+                    # them and mines straight through). Counting them
+                    # solid marked nearly every soil cell on the
+                    # grassy plateau as "buried" (14/139 mined).
+                    if code == "game:air" or code.endswith("-free") \
+                            or "water" in code:
+                        continue
                     return False
             return True
 
@@ -875,6 +925,22 @@ def execute_job(pol, bot, base, job, wm, run):
             rec_ok, rec_state, rec_detail = recheck_and_recover(
                 pol, bot, "after %d mined" % mined)
             if not rec_ok:
+                # 2026-10-10: rescue before aborting - the bot in a
+                # 2-deep hollow is unclimbable, but the haul is safe
+                # in the inventory: hard-reset the body, keep digging.
+                if wedged_rescues < 4:
+                    nb = _rescue_wedged_bot(pol, bot, measured)
+                    if nb:
+                        wedged_rescues += 1
+                        print("[mine] rescue %d/4: bot wedged (%s) "
+                              "- respawn+re-give the haul, continue"
+                              % (wedged_rescues, rec_state),
+                              flush=True)
+                        bot = nb
+                        if botref:
+                            botref[0] = nb
+                        max_y_seen = int(pol.state(bot)["Bot"]["Pos"][1])
+                        continue
                 return (False,
                         detail + (" | ABORT: %s (after %d mined)"
                                   % (rec_detail, mined)),
@@ -889,6 +955,19 @@ def execute_job(pol, bot, base, job, wm, run):
                 # not 2). A 1-block-up neighbour means open ground.
                 up_ok, up_detail = climb_out_possible(pol, bot)
                 if not up_ok:
+                    if wedged_rescues < 4:
+                        nb = _rescue_wedged_bot(pol, bot, measured)
+                        if nb:
+                            wedged_rescues += 1
+                            print("[mine] rescue %d/4: bot in deep "
+                                  "hollow - respawn+re-give, continue"
+                              % (wedged_rescues,), flush=True)
+                            bot = nb
+                            if botref:
+                                botref[0] = nb
+                            max_y_seen = int(
+                                pol.state(bot)["Bot"]["Pos"][1])
+                            continue
                     return (False,
                             detail + (" | ABORT: bot in a deep hollow "
                                       "(feet y%d, max y%d; %s) after %d "
@@ -1254,7 +1333,12 @@ def execute_job(pol, bot, base, job, wm, run):
                             print("[build] rescue %d/8: bot wedged "
                                   "(body %s) - despawn+respawn+re-give"
                                   % (rescues, st), flush=True)
-                            pol.cmd("despawn", [], bot)
+                            # 2026-10-10: the empty-args despawn was a
+                            # NO-OP since the 4ffc4a0 contract - the
+                            # 'rescue' never actually removed the wedged
+                            # body (it just stacked replacements on top;
+                            # part of the 18-bot pile-up). Explicit id.
+                            pol.cmd("despawn", [str(bot)], bot)
                             time.sleep(3)
                             r2 = v5.http_json(pol.base + "/polis/command",
                                               {"cmd": "spawn", "args": [],
@@ -1267,6 +1351,8 @@ def execute_job(pol, bot, base, job, wm, run):
                                         {"cells": None})
                             time.sleep(6)
                             bot = nb
+                            if botref:
+                                botref[0] = nb
                             inv_now = normalize_inv(
                                 inventory_of(pol.state(bot)))
                             for m2, (q2, h2) in sorted(
@@ -1912,8 +1998,9 @@ def run_campaign(args, run, t0):
         return finish(args.out, run, t0)
 
     # 2. world observation (fresh bot, boot scan)
-    bot, wm, st = boot(pol)
+    bot, wm, st, boot_scan = boot(pol)
     run["bot"] = bot
+    run["boot_scan"] = boot_scan
     run["goal"] = {"line": args.goal, "origin": "operator",
                    "campaign": True}
     st = pol.state(bot)
@@ -1975,8 +2062,10 @@ def run_campaign(args, run, t0):
     base = tuple(st["Bot"]["Pos"])
     gs = GoalState(_CampaignGoal(args.goal), jobs, "operator-campaign")
     job = gs.start()
+    botref = [bot]
     while job is not None and gs.status == "running":
-        run_jobs(pol, bot, base, gs, job, run, wm)
+        run_jobs(pol, bot, base, gs, job, run, wm, botref=botref)
+        bot = botref[0]
         job = gs.next_job()
 
     # 6. the same run metadata as a normal run + the final oracle
@@ -2031,6 +2120,9 @@ def main():
                     help="operator-declared build-site 'x,y,z' (the "
                          "driver registers it as the goal's site fixture, "
                          "logged in the run JSON)")
+    ap.add_argument("--keep-bots", default="",
+                    help="comma-separated bot ids the boot sweep must "
+                         "not kill (the agent's body + the crew)")
     ap.add_argument("--pregive", action="append", default=[],
                     help="external setup before the goal: '<item> <qty>' "
                          "(logged in the run JSON - a harness privilege, "
@@ -2071,8 +2163,11 @@ def main():
     run["goal"] = goal.to_dict()
 
     # 2. world observation
-    bot, wm, st = boot(pol)
+    keep_bots = [int(x) for x in args.keep_bots.split(",")
+                if x.strip().isdigit()]
+    bot, wm, st, boot_scan = boot(pol, keep=keep_bots or None)
     run["bot"] = bot
+    run["boot_scan"] = boot_scan
     for spec in args.pregive:
         item, qty = spec.split()
         r = pol.cmd("give", [item, qty], bot)
@@ -2190,12 +2285,33 @@ def main():
                     # ~35% extra; the build_plan uses only what the plan
                     # needs, the surplus stays in the backpack.
                     shortfall = int(round(need_q * 1.35)) - have_q
-                    cands = [index[k] for k in index
-                             if k.startswith("res-")
-                             and index[k].material == m]
+                    # 2026-10-10: allocate from the FULL world model, not
+                    # the planner prompt's index. The index is the 64
+                    # NEAREST clusters - a size limit for the LLM prompt.
+                    # In a dense survival plateau those 64 are 1-3-cell
+                    # fragments (grass, sparse soil), and the one real
+                    # dirt cluster (2534 cells here) sorts past them by
+                    # centroid distance; the allocator then 'covered 4 of
+                    # 103' while the dirt sat 2 m away. The deterministic
+                    # path feeds no LLM; it may use the whole model.
+                    cands = [r for r in
+                             wm.find_unclaimed(
+                                 wm.find_resources(fresh=False))
+                             if r.material == m]
                     cands.sort(key=lambda r: abs(
                         (r.centroid or [0, 0, 0])[0] - bp5[0]) + abs(
                         (r.centroid or [0, 0, 0])[2] - bp5[2]))
+                    # per-cluster allocation cap: 40 when the shortfall
+                    # can be spread (the 2026-10-07 over-mine lesson),
+                    # but when there are few clusters the cap must grow
+                    # or a single-cluster world can never cover the
+                    # shortfall (2026-10-10: one 2529-cell plateau).
+                    # Sized from the OVERSAMPLED shortfall (not the raw
+                    # need-have): the 1.35x safety margin must fit inside
+                    # the cap or the allocation can never reach zero.
+                    per_cluster_cap = max(40,
+                                          shortfall // max(1,
+                                                           len(cands)))
                     for rec in cands:
                         if shortfall <= 0:
                             break
@@ -2219,7 +2335,7 @@ def main():
                         # to region - the inventory carries across jobs
                         # in one run, and each job's own wedge guard
                         # still applies.
-                        take = min(shortfall, n_mine, 40)
+                        take = min(shortfall, n_mine, per_cluster_cap)
                         if take <= 0:
                             continue
                         jobs.append({"id": "j%d" % (len(jobs) + 1),
@@ -2231,6 +2347,31 @@ def main():
                                                     if jobs else [])})
                         shortfall -= take
                     if shortfall > 0:
+                        # 2026-10-10 diagnostic: the rejection number
+                        # came from a black box (boot scan saw 3778
+                        # blocks but the allocator covered 4) - record
+                        # exactly what the candidate index held when
+                        # it ran.
+                        run["alloc_debug"] = {
+                            "wm_resources": [
+                                {"id": r.id, "material": r.material,
+                                 "code": r.code,
+                                 "cells": len(r.cells),
+                                 "mineable": (len(r.mineable_cells)
+                                              if r.mineable_cells else None),
+                                 "observed": r.observed_quantity,
+                                 "centroid": r.centroid}
+                                for r in wm.find_resources(
+                                    fresh=False)],
+                            "index_cands": [
+                                {"id": k, "material": r.material,
+                                 "cells": len(r.cells),
+                                 "mineable": (len(r.mineable_cells)
+                                              if r.mineable_cells
+                                              else None)}
+                                for k, r in index.items()
+                                if k.startswith("res-")],
+                        }
                         run.update({"outcome": "rejected",
                                     "reason": "resource_not_found: %s: "
                                               "scanned clusters cover "
@@ -2430,8 +2571,10 @@ def main():
                "operator supply - deterministic, pre-planning (12.10a)")
         gs.record_measured(op.material, op.quantity or 1)
     job = gs.start()
+    botref = [bot]
     while job is not None and gs.status == "running":
-        run_jobs(pol, bot, base, gs, job, run, wm)
+        run_jobs(pol, bot, base, gs, job, run, wm, botref=botref)
+        bot = botref[0]
         job = gs.next_job()
 
     run["queue"] = gs.to_dict()
@@ -2469,16 +2612,19 @@ def wait_not_foraging(pol, bot, timeout=300):
         time.sleep(2)
     return False
 
-def run_jobs(pol, bot, base, gs, job, run, wm):
+def run_jobs(pol, bot, base, gs, job, run, wm, botref=None):
     wm.new_tick(reason="pre_action", caused_by=job.id)
     if job.type in ("mine", "harvest") and job.source:
         wm.record_claim(job.source, job.id, bot)
     elif job.type in ("place", "build", "build_plan"):
         wm.record_claim(job.target, job.id, bot)
     t0 = time.time()
+    if botref is not None:
+        bot = botref[0]
     try:
         (ok, detail, measured,
-         execution, oracle) = execute_job(pol, bot, base, job, wm, run)
+         execution, oracle) = execute_job(pol, bot, base, job, wm, run,
+                                           botref=botref)
         # The food-pressure interrupt: if the job was preempted (or
         # refused mid-forage), the meal runs out first and the SAME
         # job is re-run - up to two times. The plan is untouched.
@@ -2502,8 +2648,11 @@ def run_jobs(pol, bot, base, gs, job, run, wm):
             print("  [r2] forage episode done - re-running job %s "
                   "(attempt %d)" % (job.id, attempts))
             wm.new_tick(reason="pre_action_retry", caused_by=job.id)
+            if botref is not None:
+                bot = botref[0]
             (ok, detail, measured,
-             execution, oracle) = execute_job(pol, bot, base, job, wm, run)
+             execution, oracle) = execute_job(pol, bot, base, job, wm, run,
+                                              botref=botref)
     except Exception as e:
         import traceback
         open("/tmp/r2-job-traceback.txt", "w").write(

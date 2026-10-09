@@ -429,7 +429,15 @@ def cmd_select(client: HarnessClient, args, fmt: OutputFormatter) -> int:
 def cmd_despawn(client: HarnessClient, args, fmt: OutputFormatter) -> int:
     """Despawn the selected bot."""
     context = build_context(args, client)
-    result = send_command(client, "despawn", [], context, fmt)
+    # 2026-10-10: the harness despawn command requires the entity id as
+    # an explicit argument (a bare call errors instead of killing the
+    # context bot); the CLI passes the selected bot's id.
+    bot_id = (context or {}).get("botId")
+    if bot_id is None:
+        print("error: no bot selected (set POLIS_BOT_ID or pass --bot)",
+              file=sys.stderr)
+        return EXIT_COMMAND_FAILED
+    result = send_command(client, "despawn", [str(bot_id)], context, fmt)
     print(fmt.format(result, "Bot despawned"))
     return EXIT_SUCCESS if result.get("Ok") else EXIT_COMMAND_FAILED
 

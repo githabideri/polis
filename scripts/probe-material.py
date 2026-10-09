@@ -226,7 +226,8 @@ def main():
         out["placed_cell"] = list(place_cell)
         out["placed_scans_as"] = placed_as
         print("PLACED:", new_item, "->", placed_as)
-        cmd("despawn", [], str(bot))
+        # 2026-10-10: despawn takes the id as an explicit argument (4ffc4a0)
+        cmd("despawn", [str(bot)], str(bot))
     out["verdict"] = ("natural granite: %r mines to %r; place accepts %r -> "
                       "%r" % (code, new_item, new_item,
                                out.get("placed_scans_as")))

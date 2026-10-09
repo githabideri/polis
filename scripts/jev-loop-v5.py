@@ -127,15 +127,25 @@ class Polis:
         """Despawn all other bots. Persisted idle bots accumulate across
         runs (StoreWithChunk) and a large batch of them was measured to
         wedge the action/traverser system (goto freeze, 2026-09-22) - keep
- the world clean between passes."""
+ the world clean between passes. `keep` may be a single id or a
+        collection of ids (2026-10-10)."""
         d = self.get("/polis/bots")
         raw = d.get("Data") or d
         items = raw.get("bots") if isinstance(raw, dict) else raw
+        keep_set = keep if isinstance(keep, (set, list, tuple)) else None
         for b in (items or []):
             i = b.get("id") if isinstance(b, dict) else None
-            if i is None or i == keep:
+            if i is None or (keep_set is not None and i in keep_set) \
+                    or i == keep:
                 continue
-            self.cmd("despawn", [], i)
+            # 2026-10-10: despawn requires the entity id as an explicit
+            # argument (the 4ffc4a0 fix made a bare call error out
+            # instead of killing the caller's own body) - the old
+            # empty-args call silently no-op'd and every mission leaked
+            # its worker (an 18-bot pile-up on one evening). The context
+            # bot is still passed so the handler's 256 m sweep anchors
+            # on a known-good position.
+            self.cmd("despawn", [str(i)], i)
     def cell_blocks(self, bot, cell, pad=1):
         x, y, z = cell
         r = self.cmd("scan", [str(x - pad), "2", str(z - pad),
@@ -951,7 +961,9 @@ def run_once(a, pol, fault_phases):
     pol.sweep_bots(keep=None)
     time.sleep(2)
     if a.bot != "auto":
-        pol.cmd("despawn", [], int(a.bot))
+        # 2026-10-10: despawn takes the id as an explicit argument
+        # (4ffc4a0) - the old empty-args call was a no-op.
+        pol.cmd("despawn", [str(a.bot)], int(a.bot))
         time.sleep(1)
     r = http_json(a.harness + "/polis/command",
                   {"cmd": "spawn", "args": [], "context": {"playerUid": a.uid}})

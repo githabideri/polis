@@ -862,13 +862,37 @@ class Oikistes:
         else:
             cmd += ["--llm", self.args.llm,
                     "--llm-model", self.args.llm_model]
+        # 2026-10-10: the mission's boot sweep must not kill the
+        # settlement - it passes the whole pre-mission roster (my body
+        # + the crew) as the keep list. The mission's own worker is
+        # cleaned up below when the run ends.
+        pre_roster = set(b.get("id") for b in self.polis.bots_list())
+        if pre_roster:
+            cmd += ["--keep-bots",
+                    ",".join(str(i) for i in sorted(pre_roster))]
         try:
+            # 2026-10-10: 1800 s killed a 139-mine + 103-build chain
+            # mid-flight (the mission died, its worker leaked). 5400 s.
             p = subprocess.run(cmd, capture_output=True, text=True,
-                               timeout=1800)
+                               timeout=5400)
             detail = (p.stdout or "").strip().splitlines()
             tail = detail[-2:] if detail else ["no output"]
         except subprocess.TimeoutExpired:
-            tail = ["mission timed out (1800s)"]
+            tail = ["mission timed out (5400s)"]
+        # 2026-10-10: world hygiene - the mission boots its own worker
+        # (and used to leak one per run; the 18-bot pile-up). When the
+        # run is over, despawn every bot that was NOT in the pre-mission
+        # roster; my body is in that roster, so it survives. The
+        # worker's unspent surplus dies with it - that is the price of
+        # a clean world, and the next run re-mines if it needs more.
+        try:
+            post = [b.get("id") for b in self.polis.bots_list()]
+            for i in post:
+                if i is not None and i not in pre_roster and i != self.bot:
+                    self.polis.cmd("despawn", [str(i)],
+                                   actor="oikistes-mission-cleanup")
+        except Exception:
+            pass
         # 2026-10-10: the body is an identity - it is NOT respawned
         # here. The old null-after-mission ("the mission swept the
         # world") is what turned every mission into a new-recruit
@@ -910,7 +934,13 @@ class Oikistes:
             "mission=<goal line> order a job through the job system "
             "(goals like 'mine granite x1', 'harvest rye x1', 'sow rye "
             "x1 at site-A', 'build granite x4 at site-A', 'place "
-            "granite at site-A x1 supply external'); "
+            "granite at site-A x1 supply external', 'build-plan "
+            "hut-dirt at base'); a STRUCTURE (hut, box, fence) is built "
+            "with 'build-plan <plan-name> at <site>' - never 'build "
+            "<plan-name>', which treats the plan name as a material. "
+            "Without 'supply external' the plan is self-sufficient: the "
+            "job system prepends the missing hand-minable materials as "
+            "mine jobs of its own. "
             "query={target:<zonename | x z [radius]>} [mode=blocks|entities|all] "
             "[code=<substr>] what is in a named zone or around a point "
             "(the target key takes the zone name or two coordinates, "
