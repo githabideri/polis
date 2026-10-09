@@ -343,6 +343,9 @@ class Oikistes:
         # poison - a new world starts with a clean memory.
         self.world = os.environ.get("POLIS_WORLD") or ""
         self.bot = self._load_bot()
+        # the body's auto-respawn budget: one per service boot. A body
+        # that keeps dying is a bug to report, not a loop to retry.
+        self._respawns_left = 1
         if self.world:
             self._check_world_change()
 
@@ -375,6 +378,7 @@ class Oikistes:
             except Exception:
                 pass
             self.bot = None
+            self._respawns_left = 1
             self.log("system",
                      "world changed %s -> %s: memory reset" %
                      (st.get("world"), self.world))
@@ -383,10 +387,19 @@ class Oikistes:
         self._save_state()
 
     # -- the in-game body ----------------------------------------------
+    # 2026-10-10: the body is an IDENTITY, not a presence. The old
+    # contract ("respawned after every mission") made body() spawn a
+    # fresh bot whenever the stored id was not in the roster, and
+    # run_mission() forced that by nulling the id after each mission -
+    # so every mission (and every silently-adopted dead id) added a
+    # worker to the world; one evening that grew to 18. Now: the body
+    # persists across missions; if it dies it auto-respawns ONCE per
+    # service boot (logged); after the budget it stays dead and asks
+    # the operator to rebind (POST /oikistes/bot). It never adopts an
+    # existing bot.
     def body(self):
-        """The agent's body: a persistent harness bot. R2 mission boots
-        sweep the world, so the body is RESPAWNED after every mission -
-        it is a presence, not an identity (identity is the transcript)."""
+        """The agent's persistent body. Returns the live body id, or
+        None when the body is dead and the respawn budget is spent."""
         if self.bot is not None:
             try:
                 bots = http_json(self.polis.base + "/polis/bots",
@@ -396,11 +409,21 @@ class Oikistes:
                 if self.bot in ids:
                     return self.bot
             except Exception:
-                pass
-        r = self.polis.cmd("spawn", actor="oikistes")
-        self.bot = (r.get("Data") or {}).get("id")
-        self._save_bot()
-        return self.bot
+                return self.bot   # harness unreachable: assume alive
+        # the body is gone (or unbound): spend the respawn budget
+        if self._respawns_left > 0:
+            self._respawns_left -= 1
+            r = self.polis.cmd("spawn", actor="oikistes-body")
+            new = (r.get("Data") or {}).get("id")
+            if new is not None:
+                self.bot = new
+                self._save_bot()
+                self.log("system",
+                         "body respawned as %d (%d respawn(s) left "
+                         "this boot)" % (new, self._respawns_left))
+                return self.bot
+        # dead and out of budget: stay dead, the digest says so
+        return None
 
     # -- autonomy (mod-owned, read-only for the agent) -----------------
     def autonomy(self):
@@ -473,6 +496,10 @@ class Oikistes:
 
     def world_digest(self):
         bot = self.body()
+        if bot is None:
+            return ("YOUR BODY IS DEAD (auto-respawn budget spent). "
+                    "You cannot act until the operator rebinds you "
+                    "(POST /oikistes/bot) - say so honestly.")
         try:
             st = self.polis.state(bot)
         except Exception as e:
@@ -499,10 +526,15 @@ class Oikistes:
             pass
         around = "-"
         try:
-            s = int(pos[0]); t2 = int(pos[2])
+            s = int(pos[0]); t2 = int(pos[2]); py = int(pos[1])
+            # the window is RELATIVE TO THE GROUND THE BODY STANDS ON:
+            # the old hard-coded y2..6 window (flat-world bedrock slab)
+            # reads nothing on a plateau at y120+ - the same
+            # zero-based-terrain assumption that made the world pillar
+            # "disappear" (2026-10-10).
             sr = self.polis.cmd(
-                "scan", [str(s - 8), "2", str(t2 - 8),
-                         str(s + 8), "6", str(t2 + 8)], bot)
+                "scan", [str(s - 8), str(py - 2), str(t2 - 8),
+                         str(s + 8), str(py + 4), str(t2 + 8)], bot)
             cnt = {}
             for bl in (sr.get("Data") or {}).get("blocks", []):
                 c = bl.get("code") or "?"
@@ -531,7 +563,7 @@ class Oikistes:
 
     KNOWN = frozenset(
         ("state", "scan", "screenshot", "events", "autonomy",
-         "mission", "give", "command", "query", "zone"))
+         "mission", "give", "command", "query", "zone", "crew"))
 
     def check_tool(self, tool, autonomy):
         if tool not in self.KNOWN:
@@ -579,6 +611,16 @@ class Oikistes:
                 parts = a.split()
                 a = {"sub": parts[0].lower(), "args": parts[1:]} \
                     if parts else {}
+            elif tool == "crew":
+                # crew=<n>: the worker roster (my body excluded) is
+                # brought to exactly n - the ONE way to size the crew;
+                # raw spawn/despawn are retired (they are how the 18-bot
+                # swarm grew, 2026-10-10).
+                parts = a.split()
+                try:
+                    a = {"n": int(parts[0])}
+                except (IndexError, ValueError):
+                    a = {"n": None}
             else:
                 a = {}
         if not self.check_tool(tool, autonomy):
@@ -661,6 +703,8 @@ class Oikistes:
                 return self._query(a)
             if tool == "zone":
                 return self._zone(a, autonomy)
+            if tool == "crew":
+                return self._crew(a.get("n"))
             if tool == "command":
                 r = self.polis.cmd(str(a["cmd"]),
                                    [str(x) for x in a.get("args", [])],
@@ -671,6 +715,41 @@ class Oikistes:
         except Exception as e:
             return "tool %s failed: %r" % (tool, e)
         return "unknown tool %r" % tool
+
+    def _crew(self, n):
+        """crew=<n>: bring the worker roster (MY BODY EXCLUDED) to
+        exactly n: recruit if short, retire the NEWEST (highest ids)
+        if over, hard cap 8, the body is never touched. The one
+        sanctioned way to size the crew (2026-10-10: raw spawn/
+        despawn - one per message - grew an 18-bot swarm)."""
+        if n is None:
+            return "crew: give a target headcount, e.g. {'n': 2}"
+        MAX_CREW = 8
+        if not (0 <= n <= MAX_CREW):
+            return "crew: target must be 0..%d (got %s)" % (MAX_CREW, n)
+        bots = self.polis.bots_list()
+        me = self.bot
+        ids = sorted(b.get("id") for b in bots if b.get("id") != me)
+        if n > len(ids):
+            new = []
+            for _ in range(n - len(ids)):
+                r = self.polis.cmd("spawn", actor="oikistes-crew")
+                nid = (r.get("Data") or {}).get("id")
+                if nid is not None:
+                    new.append(nid)
+            ids = sorted(ids + new)
+            verb = "recruited %s" % new if new else "recruit failed"
+        elif n < len(ids):
+            to_retire = ids[len(ids) - n:]   # newest go first
+            for i in to_retire:
+                self.polis.cmd("despawn", [str(i)],
+                               actor="oikistes-crew")
+            ids = sorted(ids[:len(ids) - len(to_retire)])
+            verb = "retired %s" % to_retire
+        else:
+            verb = "unchanged"
+        return ("%s: crew now %d worker(s) %s (plus me, %s)" %
+                (verb, len(ids), ids, me))
 
     def _query(self, a):
         """query <zonename | x z [radius]> [mode=blocks|entities|all]
@@ -790,9 +869,11 @@ class Oikistes:
             tail = detail[-2:] if detail else ["no output"]
         except subprocess.TimeoutExpired:
             tail = ["mission timed out (1800s)"]
-        # the mission booted a fresh bot and swept mine - respawn the body
-        self.bot = None
-        self._save_bot()
+        # 2026-10-10: the body is an identity - it is NOT respawned
+        # here. The old null-after-mission ("the mission swept the
+        # world") is what turned every mission into a new-recruit
+        # event; if the mission's sweep kills the body, body() catches
+        # it on the next call and spends the one-respawn budget.
         # read the verdict from the run JSON (the persistence of record)
         try:
             d = json.load(open(out))
@@ -810,7 +891,7 @@ class Oikistes:
     # -- the conversation loop ------------------------------------------
     def system_prompt(self, autonomy, digest, memory):
         tools = ("state, scan, screenshot, events, autonomy, give, "
-                 "mission, query, zone, command")
+                 "mission, query, zone, crew, command")
         return (
             "You are the OIKISTES, the settlement's builder manager, a "
             "builder bot with a body in a block world. Your partners are "
@@ -904,12 +985,15 @@ class Oikistes:
             "identical arguments. A reply that names a different id or "
             "count than you requested is a bug report, not a nudge to "
             "improvise. "
-            "4 CREW - the roster in the digest is your crew. Recruit "
-            "(spawn) only when a task needs more hands than you have "
-            "NOW, at most one or two per task, and only after reading "
-            "the roster; never recruit in reaction to a message alone. "
-            "When a task ends, reduce the surplus with despawn and "
-            "report the final headcount. "
+            "4 CREW - size the crew with the crew TOOL, never with raw "
+            "spawn/despawn (that is how an 18-bot swarm grew, 2026-10-10). "
+            "{'tool':'crew','args':{'n':2}} sets the worker roster (your "
+            "body excluded) to exactly 2: it recruits if short, retires "
+            "the newest if over (hard cap 8). Read the digest first - "
+            "it lists the roster. One message = one mission = at most a "
+            "small crew change; when work ends, shrink back toward 1-2 "
+            "and report the final headcount. A growing roster across "
+            "turns is a bug. "
             "5 BUILD FROM WHAT EXISTS - soil/dirt is the common, "
             "hand-minable material (in this game version 'dirt' is the "
             "soil-* block family); granite (rock-granite) needs a "
@@ -1104,6 +1188,24 @@ def make_handler(oik):
                     self._send(200, {"ok": True})
                 except Exception as e:
                     self._send(500, {"error": repr(e)})
+            elif u.path == "/oikistes/bot":
+                # operator rebind: point the agent's body at a named
+                # bot id (after a death the agent could not respawn,
+                # or to adopt a specific laborer as the body).
+                try:
+                    b = int(body.get("bot"))
+                    bots = oik.polis.bots_list()
+                    ids = [x.get("id") for x in bots]
+                    if b not in ids:
+                        self._send(400, {"error": "bot %d not in "
+                                                 "roster %s" % (b, ids)})
+                        return
+                    oik.bot = b
+                    oik._save_bot()
+                    oik.log("system", "operator rebind: body = %d" % b)
+                    self._send(200, {"ok": True, "bot": b})
+                except Exception as e:
+                    self._send(400, {"error": repr(e)})
             elif u.path == "/oikistes/model":
                 brain = str(body.get("brain") or body.get("id") or "")
                 st = oik.set_brain(brain)

@@ -144,9 +144,24 @@ def boot(pol, radius=14):
     # bot-relative box (2026-10-05): the flat world lived at y2-6; the
     # Standard terrain of a survival world lives at y140+ - a hard-coded
     # low box scans the void (or the hillside) there.
-    scan = pol.cmd("scan", [str(x0 - radius), str(y0 - 4), str(z0 - radius),
-                            str(x0 + radius), str(y0 + 8), str(z0 + radius)],
-                   bot)
+    box = [str(x0 - radius), str(y0 - 4), str(z0 - radius),
+           str(x0 + radius), str(y0 + 8), str(z0 + radius)]
+    # 2026-10-10: wait for the box's CHUNKS before trusting the scan.
+    # The old fixed 2 s sleep fired the scan while the server was still
+    # loading the box's chunks (a 1.5 FPS world) - a 29x13x29 box then
+    # "saw" the few blocks of whatever chunk had made it (the dirt-hut
+    # mission counted 4 of 103 soil on a plateau holding 1600+). Re-scan
+    # until the block count holds steady across two passes, or the
+    # budget runs out; the last scan is what the world model gets.
+    prev = None
+    scan = None
+    for _ in range(14):          # ~42 s worst case at 3 s intervals
+        scan = pol.cmd("scan", box, bot)
+        n = len((scan.get("Data") or {}).get("blocks", []) or [])
+        if n == prev:
+            break
+        prev = n
+        time.sleep(3)
     wm.observe_scan(scan, reason="planner_scan")
     return bot, wm, st
 
