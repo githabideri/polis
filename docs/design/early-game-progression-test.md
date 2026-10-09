@@ -1,156 +1,129 @@
 # Early-Game Progression Test
 
-Date: 2026-10-10 (design; implementation pending)
-Status: proposal — stage table + oracle list, no code yet.
+Date: 2026-10-07 started; 2026-10-10 revised to the job-centric
+proposal (user-approved the same day).
+Status: build in progress. **Done: probe + J1 (2026-10-10)** — the knap job is
+contract-verified (19-check pure suite) and live-verified end-to-end (the bot
+chipped two surfaces into a knife blade and an axe head and crafted both
+tools, 54 s, measured deltas). Engine facts measured along the way: the
+knapping surface is CONSUMED on completion (one surface item per chip; the
+executor re-places it before each chip), the completion marker is the block
+go-ing to air (`CompleteKnapToBot`), and the output lands directly in the
+bot's inventory. Open for the no-give P1 endogenous run: the surface item
+has no recipe (creative/decorative) — its world source is still to be
+settled (the flint side is solved: `looseflints` RightClickPickup).
+Next: J2+J3 (clayform + kiln).
 
-## What this is
+## The unit: one job = one world transformation, three proofs
 
-A staged, gate-driven test that runs the exact capability chain the game
-demands of a bare-spawn survivor, **endogenously** (no harness gives of
-tools/materials except the one sanctioned initial food supply), and
-verifies every stage by **world state**, not by action logs. It serves
-three masters at once:
+Every job in the system carries the same contract (the crucible chain
+and the craft job already follow it; this document extends it to the
+rest):
 
-1. **Executor capability test** — every job type the chain needs
-   (mine, chop, craft, knap, fire, smelt, sow, build) is exercised on
-   real terrain, fail-fast with honest attribution.
-2. **Agent benchmark** — the same ladder ordered by the settlement
-   agent (the 27B) under `free` autonomy measures what the model can
-   plan from a goal like "survive and settle"; failures split cleanly
-   into *model* (wrong goal/verb order) vs *infrastructure* (job
-   failed) because each stage's gate is deterministic.
-3. **Pilot content** — the survival pilot's "first 7 days" IS this
-   ladder; a fully passing run on a fresh world is the pilot's
-   definition of done.
+- **preflight** — inputs checkable before the act (inputs in cargo,
+  surface/form present, or a deterministic sub-step places it)
+- **one actuation** — one harness command
+- **measured oracle** — inventory delta / block scan / container
+  state. Never the command's `ok=True` (documented to lie: phantom
+  ok on `place`)
+- **evidence line** — compact, lands in the run JSON
 
-## The chain the game actually requires (sources)
+Three proofs per job, same oracle:
 
-The official wiki's first-day guide fixes the canonical order
-([Survival Guide - Your first day](https://wiki.vintagestory.at/Survival_Guide_-_Your_first_day)):
+1. **Contract** (fast, isolated): fixture site + labeled-external
+   supply (give/setblock, marked as scaffolding in the evidence) →
+   job → assert oracle → run JSON. Pattern:
+   `tests/contract/crucible-chain-test.py`, `forage-test.py`.
+2. **Endogenous** (the real path): a mission chaining supply jobs
+   (mine/forage) → this job; wall time measured; same oracle.
+3. **Ladder** (regression): the job appears in a stage file; the
+   runner's per-stage evidence is the proof.
 
-1. Mark the spawn (waypoint) — "It's a good idea to set a marker for
-   this spawn point when a player first appears in the world."
-2. **Stone Age first**: "Find Flint or loose knappable stones … an
-   axe and a knife are highly recommended as first tools"; stone head
-   + stick in the crafting grid = the finished tool.
-3. **Portable containers**: "collect 10 of them [reeds] to craft a
-   hand basket … Each hand basket adds 3 inventory slots."
-4. **Food**: wild crops (harvest young, keep the seeds), mushrooms
-   (handbook check for poison), berry bushes ("harvested without
-   tools … cuttings … replanted anywhere"), cattail roots (knife;
-   eating the root kills the plant), animals (meat must be "cooked in
-   a fire pit before eating").
-5. **Clay early**: "a required resource to progress through the ages";
-   early clay = "cheap stationary storage options and your first
-   means to preserve food"; items "must be fired in a Pit kiln".
-6. **Light/cooking**: firepit = dry grass + 4 firewood + firestarter;
-   "rain will extinguish any uncovered fires … build a simple roof
-   over any firepits"; a torch in the off-hand raises satiety drain.
-7. **Combat**: spears (knapped head + stick), clubs, improvised
-   grass/firewood armor, crude shield.
-8. **Shelter before sunset** — "temporal monsters will start to
-   spawn"; early materials: dry-grass bed, hay/cob, "soil … packed
-   dirt, rammed earth, or daub".
-9. **Stationary storage** (clay-based) to finish day one.
+## What already exists (individually verified)
 
-A day-by-day player walkthrough (Bisect Hosting,
-[Day 1](https://www.bisecthosting.com/blog/vintage-story-beginners-guide-day-1-tools-food))
-confirms the order with concrete recipes and adds the survival rule:
-"a two-block-high wall surrounding your character should suffice" and
-"Don't Move! … don't move from your small campsite when night falls."
+| r2 job | harness command | oracle | evidence |
+|--------|----------------|--------|----------|
+| mine / chop / harvest / sow / pickup / place | mine, chop, harvest, harvestcrop, pick, place | inventory delta / block scan | run JSONs |
+| build / build_plan | place-loop + stand search (reach-aware, c1b188f) | per-cell world scan + door-open | run JSON (cottage 30/55, 2026-10-10) |
+| craft (grid) | craft <output> | inventory delta, engine GridRecipe, live-recipe precheck | run JSONs |
+| forage | forage (mod-side interrupt) + eat | satiety (vitals sampler) | forage-test.py, pilot CSV |
+| crucible-fire/insert/fuel/take/pour + wait | crucible-* | inventory delta (take/pour) | crucible-chain-test.py (live 10-07) |
 
-Community tips worth encoding (r/VintageStory,
-[tips](https://www.reddit.com/r/VintageStory/comments/1602n7b/any_tips_before_i_start_playing/)):
-"Start crops early if you can, as soon as you have at least medium
-fertility soil … a simple pit trap around your farm solves a lot."
+Harness command surface already built (C#): `knap <x y z> <recipe>
+[speed]`, `clayform <x y z> <recipe> [speed]`, `craft <output>`,
+grind, press, butcher, seal, forge-heat, anvil-smith/state,
+crucible-*, forage, vitals, zone/query.
 
-The age transition is gated and quantified (wiki,
-[Copper](https://wiki.vintagestory.at/Copper)): copper is "the first
-metal available to players", smelting point 1084 °C, "Requires
-Container: Yes … Output: Ingot mold", and "players will need to obtain
-40 copper nuggets in total to properly enter the Copper Age".
+## The new jobs (dependency order)
 
-## The ladder
+| # | job | wraps | oracle (world state) | unlocks |
+|---|-----|-------|---------------------|---------|
+| J1 | `knap` | `knap <pos> <recipe>`; sub-step places a knapping surface if absent; flint/loose-stone in cargo | delta: knife-blade-flint / axehead-flint / arrowhead-flint | P1 stone tools (keystone) | **done 2026-10-10** (contract + live; see Status) |
+| J2 | `clayform` | `clayform <pos> <recipe>`; sub-step places the form block; clay-\<color\> in cargo | delta: `*-raw` item | pots, molds, anvil |
+| J3 | `kiln` | crucible-chain skeleton re-pointed at a firepit kiln (place raw → fuel → wait → take) | delta: fired item (cooking-pot, storage, mold) | P4 cooking, P6 storage |
+| J4 | `smelt-copper` | crucible-copper chain + C# crucible-progress read (anvil-state pattern) so the wait ends on engine pace, not a tuned timer | delta: nuggets; 40 = the wiki's age-gate number | P8 the age transition |
+| J5 | `tend` | poll farmland stage (query) → wait real clock → harvestcrop | delta: harvested grain | P7 crops |
 
-Each stage: entry condition (oracle), action chain, **exit oracle
-(world-state check)**, and the capability it certifies. Oracles use
-the existing patterns: fresh scans (12.6), the vitals sampler,
-container-list, the zone registry.
+## The ladder: data, not code
 
-| # | Stage | Chain (jobs) | Exit oracle (world state) | Certifies |
-|---|-------|-------------|---------------------------|-----------|
-| P0 | Orientation | register zone `base` at spawn | zone registered; body inside it | zone system |
-| P1 | Stone tools | find flint (query), `knap` surface + head, craft knife & axe on sticks | inventory: flint knife + axe (equipped) | **knap job (new)**, craft |
-| P2 | Capacity | chop reeds, craft 2× hand basket | backpack slot count +6 | chop, craft |
-| P3 | Forage-eat | forage berries/mushrooms, eat | vitals: satiety ≥ threshold over N ticks, zero starvations | forage controller |
-| P4 | Fire & cooking | chop tree → firewood → firepit (crucible-fire), hunt/kill, `insert` + fuel, cook, `take` | inventory: cooked meat; firepit block lit | crucible chain |
-| P5 | Shelter | build hut-flat (walls + roof) at base; firepit under roof | 54/54 present (or plan-defined %), door open, firepit cell has cover above | build executor + reach-aware stand search |
-| P6 | Clay & storage | find clay (scan), clayform, kiln-fire, stationary storage + cooking pot in `storage1` | container-list: registered pot/storage; fired item in inventory | **clayform + kiln (new)** |
-| P7 | Crops | wild crop → seeds; till farmland (soil fertility), sow rye, grow (real clock or `ripen` flagged as test-aid), harvest | harvest measured; food stored in P6 storage | farmland chain, storage |
-| P8 | Copper (age) | find copper ore, smelt in crucible (1084 °C), 40 nuggets, cast ingots in mold | inventory: copper ingots ≥ plan; (age gate if the mod exposes one) | metallurgy chain, crucible at high temp |
+A `progression <stages-file>` mission type (the 13.11 pattern: a new
+ladder is a new file). A stage is `{name, jobs:[...], exit_oracle,
+evidence_shot}`. The runner, per stage:
 
-P4's "hunt/kill" can be replaced by forage-only (berries + cattail
-roots) for the minimal ladder; hunting stays a variant (the bot's
-combat path is untested ground).
+preflight oracle → jobs → exit oracle (WORLD STATE: "cottage 55/55 +
+door open", "40 copper nuggets") → fail-fast with attribution (which
+job, which oracle, verbatim harness message) → one cinematic gate
+photo.
 
-## Two levels of the same ladder
+- **Level 1** — `--no-planner`, deterministic: the regression suite.
+  Re-runnable on a fresh world; per-stage wall time + the satiety
+  curve (vitals CSV) are the measurements.
+- **Level 2** — the same stage files, ordered by the agent from a
+  goal ("settle here"). A failure at a stage oracle splits cleanly
+  into *model* (wrong order/verb) vs *infrastructure* (job failed its
+  oracle).
 
-- **Level 1 (infrastructure):** the chain runs as a deterministic
-  campaign (`--no-planner`), one stage per mission or one long
-  campaign with per-stage gates. Failure = a job/oracle defect. This
-  is the regression suite.
-- **Level 2 (agent):** the agent receives the whole goal in one
-  sentence ("settle here and be able to survive winters") and must
-  compile, order and monitor the stages itself, using `state`/`query`
-  to check gates between missions. Failure splits: the stage gate
-  says which step broke, the transcript says whether the *model*
-  miscompiled the goal (infrastructure vs model attribution).
+## The stages (from the sources, 2026-10-10)
 
-## What exists vs what is missing
+Sources: official wiki *Survival Guide - Your first day* (canonical
+order: mark spawn → knapping knife+axe → reed baskets → forage (wild
+crops/seeds, mushrooms, berries, cattail) → clay early → firepit
+(rain kills uncovered fires) → shelter before sunset → stationary
+storage); Bisect Hosting day-1 (2-block dirt perimeter, "don't move
+at night"); wiki Copper page (first metal, 1084 °C lore, requires
+container, **40 nuggets = age gate**, tin bronze 88–92 %).
 
-Already in the job system: mine, harvest (incl. `ripen` test-aid),
-sow, place, build/build_plan (with the reach-aware stand search,
-2026-10-10), craft, chop, pickup, forage (mod-side interrupt + job),
-crucible-fire/insert/fuel/take/pour, container-register/list, zone
-registry, the query tool, the vitals sampler (1 Hz) and the
-cinematic camera for gate photos.
+| stage | exit oracle | jobs |
+|-------|-------------|------|
+| P0 orientation | zone `base` registered, body inside it | zone |
+| P1 stone tools | knife + axe in inventory (equipped) | mine flint, **knap**, craft (blade+stick) |
+| P2 capacity | backpack slots +6 (2 hand baskets) | chop reeds, craft |
+| P3 forage-eat | satiety ≥ threshold over N ticks, zero starvations | forage (existing, pilot-observed) |
+| P4 fire & cooking | firepit lit; cooked meat in inventory | chop → firewood, firepit, hunt/forage, crucible/insert/fuel/take |
+| P5 shelter | cottage 55/55 + door open (or plan-defined %) | mine dirt, build_plan (existing) |
+| P6 clay & storage | registered storage + cooking pot in zone storage1 | mine clay, **clayform**, **kiln**, container-register |
+| P7 crops | harvested grain stored | wild crop → seeds, till, sow, **tend**, harvest |
+| P8 copper (age) | 40 nuggets / ingots in inventory | mine copper, **smelt-copper**, pour at mold |
 
-New for the ladder (implementation order = dependency order):
+## Build order (approved 2026-10-10)
 
-1. **knap** — place a knapping surface (flint), target it with a
-   second stone, knock out the orange boxes, take the head. The
-   1.22 knapping UI needs a harness command pair (surface + strike)
-   or a guided action sequence.
-2. **clayform + kiln-fire** — shape a clayform, place it, fire in a
-   pit kiln (a second crucible-family container with a fuel/heat
-   loop and a "ready" oracle).
-3. **copper smelt at temperature** — the crucible chain exists; the
-   1084 °C smelt point means the fuel/heat management needs a
-   temperature oracle (not just "done").
-4. **farmland tending** — till + sow exist; growth needs the real
-   clock (or a flagged `ripen` aid, logged as such) and the harvest
-   oracle.
-5. **age-gate oracle** — if the mod exposes the age as a config/skill
-   state, read it; if not, the 40-nugget/ingot inventory check IS the
-   gate (documented as inventory-based, not engine-based).
-
-## Measurement
-
-- Per stage: wall time at the running FPS, attempts, rescues,
-  measured quantities (the run JSON already carries all of it).
-- The vitals CSV gives the satiety curve through the whole ladder —
-  the food system's stress test in one plot (this is the pilot's
-  primary reliability signal).
-- Gate photos: one cinematic shot per stage, named
-  `prog-P<n>-<stage>.png`, for the report.
-- Attribution vocabulary stays the 13.2/12.6 split: engine verdict
-  (execution) vs fresh-world check (oracle); a stage fails at its
-  gate, never by drift.
+1. **Probe** 1.22.7's live recipe tables (knapping outputs, clayform
+   recipes, kiln behavior, crucible progress state) — read-only;
+   parameters are live-world facts, never frozen (crucible-chain
+   precedent). **Done 2026-10-10** (knapping table, clayform table,
+   grid assembly, firepit block codes, ungraded ore; the knappingsurface
+   endogenous source is the one gap).
+2. J1 knap + contract test. **Done 2026-10-10** (knap-test.py; live run
+   `flint-tools` chain: 2× knap → knife + axe in 54 s).
+3. J2+J3 clayform + kiln (first cooked meal in a bot-made pot).
+4. The ladder runner + first stages file (P3 and P5 first — two
+   already-proven stages test the runner before new jobs depend on it).
+5. J4 copper (with the C# progress read).
+6. J5 tend + P7 (last — the slow-clock stage).
 
 ## What this is NOT
 
-- Not a player-experience test (no input latency, no UI comfort).
-- Not a performance benchmark (FPS is a constant of the host, not a
-  variable of the test).
-- Not the deity/mana layer (that gates *player* powers, not the
-  stone-age chain; it lands later and reads this ladder's evidence).
+Not a player-experience test (no input latency, no UI comfort). Not a
+performance benchmark (FPS is a host constant). Not the deity/mana
+layer (that gates player powers, not the stone-age chain; it reads
+this ladder's evidence later).

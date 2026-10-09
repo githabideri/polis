@@ -1608,6 +1608,140 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
         secs = max(2, job.quantity or 2)
         time.sleep(secs)
         return True, "waited %ds" % secs, measured, {}, {"waited": secs}
+    # knap (2026-10-10, J1 of the early-game ladder): chip stone items
+    # on the knappingsurface block. The engine's KnappingRecipe table
+    # resolves each `recipes` entry by output code or name; Lane A's
+    # C# command validates range, the surface block and the cargo
+    # material. Two engine facts (live-measured 2026-10-09):
+    #   * the surface is CONSUMED: CompleteKnapToBot clears the block
+    #     on completion - one surface block per chip, so each chip
+    #     re-places the surface from cargo first;
+    #   * the completion marker is the block going to AIR (the
+    #     LastAction the action records at start is Ok=True - it
+    #     cannot be the wait condition). The MEASURED inventory delta
+    #     of the outputs is the oracle - never the command's ok.
+    if job.type == "knap":
+        mat = job.material or "flint"
+        recipes = job.recipes or []
+        if not job.at:
+            return (False, "knap job has no surface cell (at)",
+                    measured, {}, {})
+        sx, sy, sz = [int(v) for v in job.at]
+        cell = (sx, sy, sz)
+
+        def _code_at(c):
+            return (_cell_code(pol, bot, c) or "").replace("game:",
+                                                           "", 1)
+
+        # preflight: the chipping material in cargo (one per recipe -
+        # one stone per surface) + a surface item per chip to place
+        pre = inventory_of(pol.state(bot))
+
+        def _inv_get(inv, c):
+            return inv.get(c, 0) + inv.get("game:" + c, 0)
+
+        runs = job.quantity or 1
+        nchips = len(recipes) * runs
+        need_mat = nchips
+        need_surf = nchips
+        if _inv_get(pre, mat) < need_mat or \
+                _inv_get(pre, "knappingsurface") < need_surf:
+            return (False,
+                    "knap: need %d %s and %d knappingsurface "
+                    "(one stone + one surface per chip), have %d / %d"
+                    % (need_mat, mat, need_surf,
+                       _inv_get(pre, mat),
+                       _inv_get(pre, "knappingsurface")),
+                    measured,
+                    {"cell": cell},
+                    {"material_have": _inv_get(pre, mat),
+                     "surface_have": _inv_get(pre, "knappingsurface")})
+
+        # the chips: per recipe x run - ensure surface, stand
+        # adjacent, chip, wait for the block to go to air
+        last = {}
+        cmd_ok = True
+        chip_msgs = []
+        for _run in range(runs):
+            for rname in recipes:
+                if _code_at(cell) != "knappingsurface":
+                    res = v5.execute(pol, bot, "place_block", cell,
+                                     base, "build",
+                                     buildblock="knappingsurface")
+                    time.sleep(2)
+                    if _code_at(cell) != "knappingsurface":
+                        return (False,
+                                "surface placement did not land at %s "
+                                "(code=%s, exec=%s)"
+                                % (cell, _code_at(cell),
+                                   res.get("ok")),
+                                measured,
+                                {"cell": list(cell)},
+                                {"surface_present": False})
+                arrived = False
+                for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    g = v5.goto_wait(pol, bot,
+                                     (sx + dx, sy, sz + dz))
+                    if g.get("ok"):
+                        arrived = True
+                        break
+                if not arrived:
+                    return (False, "knap: could not reach a cell "
+                                   "adjacent to %s" % (cell,),
+                            measured,
+                            {"cell": list(cell)},
+                            {"surface_present": True,
+                             "arrived": False})
+                r = pol.cmd("knap", [str(sx), str(sy), str(sz), rname],
+                            bot)
+                if r.get("Ok") is False:
+                    cmd_ok = False
+                    chip_msgs.append("%s: %s" % (rname,
+                                                 r.get("Msg", "")))
+                    continue
+                # wait for the engine's completion marker: the
+                # surface block goes to air (CompleteKnapToBot)
+                t_a = time.time()
+                code_now = _code_at(cell)
+                while code_now == "knappingsurface" and \
+                        time.time() - t_a < 180:
+                    time.sleep(3)
+                    code_now = _code_at(cell)
+                    last = pol.state(bot).get("LastAction") or {}
+                if code_now == "knappingsurface":
+                    cmd_ok = False
+                    chip_msgs.append("%s: still on the surface "
+                                      "after 180s (last_action=%s)"
+                                      % (rname, last.get("Msg")))
+                elif code_now not in ("", None):
+                    chip_msgs.append("%s: surface became %s "
+                                      "(not air)" % (rname, code_now))
+                else:
+                    chip_msgs.append("%s: chipped (block cleared)"
+                                      % rname)
+        post = inventory_of(pol.state(bot))
+        for k in set(pre) | set(post):
+            d = post.get(k, 0) - pre.get(k, 0)
+            if d:
+                measured[k] = measured.get(k, 0) + d
+        produced = {}
+        for rname in recipes:
+            produced[rname] = max(0, _inv_get(post, rname) -
+                                  _inv_get(pre, rname))
+        consumed = _inv_get(pre, mat) - _inv_get(post, mat)
+        ok = cmd_ok and all(v >= runs for v in produced.values())
+        detail = ("knap %s (x%d) on %s -> %s; produced=%s "
+                  "consumed=%d"
+                  % (recipes, runs, cell,
+                     " | ".join(chip_msgs), produced, consumed))
+        return ok, detail, measured, \
+            {"cell": list(cell),
+             "recipes": recipes, "runs": runs,
+             "chips": chip_msgs,
+             "last_action": {k: last.get(k)
+                             for k in ("Name", "Ok", "Msg")}}, \
+            {"produced": produced, "consumed": consumed,
+             "measured": measured}
     # forage (2026-10-07, B1): the forageable-plant gather
     if job.type == "forage":
         return _forage(pol, bot, wm, job, run)
@@ -2026,6 +2160,13 @@ def _crucible(pol, bot, job, measured):
         {"measured": measured, "data": data}
 
 
+def _parse_keep(args):
+    """--keep-bots (comma-separated ids) -> [int, ...]."""
+    return [int(x) for x in
+            (getattr(args, "keep_bots", "") or "").split(",")
+            if x.strip().isdigit()]
+
+
 def run_campaign(args, run, t0):
     """The operator campaign (--jobs, 2026-10-06): an explicit
     deterministic job list (give / chop / craft / mine / place), no
@@ -2048,8 +2189,13 @@ def run_campaign(args, run, t0):
         run.update({"outcome": "rejected", "reason": err})
         return finish(args.out, run, t0)
 
-    # 2. world observation (fresh bot, boot scan)
-    bot, wm, st, boot_scan = boot(pol)
+    # 2. world observation (fresh bot, boot scan). The keep list is
+    # the agent's body + crew: run_campaign used to drop it (2026-10-10 -
+    # every operator campaign killed the Oikistes body and the crew on
+    # boot), so it is threaded here exactly as the planner path does.
+    keep = _parse_keep(args)
+    bot, wm, st, boot_scan = boot(pol, keep=keep or None)
+    run["keep_bots"] = keep
     run["bot"] = bot
     run["boot_scan"] = boot_scan
     run["goal"] = {"line": args.goal, "origin": "operator",
@@ -2214,8 +2360,7 @@ def main():
     run["goal"] = goal.to_dict()
 
     # 2. world observation
-    keep_bots = [int(x) for x in args.keep_bots.split(",")
-                if x.strip().isdigit()]
+    keep_bots = _parse_keep(args)
     bot, wm, st, boot_scan = boot(pol, keep=keep_bots or None)
     run["bot"] = bot
     run["boot_scan"] = boot_scan

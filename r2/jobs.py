@@ -136,6 +136,17 @@ JOB_CATALOG = {
     # planner's vocabulary never gained the verb, so it cannot emit one.
     "chop":      {"produces": True,  "consumes": False,
                   "source": "world",    "needs": ("at",)},
+    # knap (2026-10-10, J1 of the early-game ladder): chip stone items
+    # on the knappingsurface block (the engine's KnappingRecipe table;
+    # the C# command validates range, surface and the cargo material).
+    # `at` is the surface cell, `material` the chipping material in
+    # cargo, `recipes` the output item codes (the oracle is the
+    # measured delta of exactly these). GOAL-SCOPED exactly like chop:
+    # catalog + ledger + executor, but NOT in the 27B planner
+    # vocabulary.
+    "knap":      {"produces": True,  "consumes": True,
+                  "source": "world",    "needs": ("at", "material",
+                                                  "recipes")},
     # forage (2026-10-07 survival run): gather the fruit of a forageable
     # plant (the 1.22 fruiting bush, `fruitingbush-<state>-<type>`): the
     # executor walks to an ADJACENT cell and issues the harness `pick`
@@ -225,6 +236,12 @@ class Job:
     deliver: str | None = None     # forage: "carry" (default) | "drop"
                                    # (drop everything at the bot's feet
                                    # on completion)
+    recipes: list | None = None    # knap: the OUTPUT item codes to chip
+                                   # in this pass (the engine's
+                                   # KnappingRecipe table resolves each
+                                   # by output code or name); REQUIRED
+                                   # for knap (the oracle is the
+                                   # measured delta of exactly these)
     depends_on: list = field(default_factory=list)
     claims: list = field(default_factory=list)
     budget: int = 12               # max execution steps (the stall valve)
@@ -273,6 +290,16 @@ class Job:
         if deliver is not None and deliver not in ("carry", "drop"):
             raise ValueError("job %s: deliver must be 'carry' or 'drop'"
                              % jid)
+        recipes = d.get("recipes")
+        if recipes is not None:
+            if (not isinstance(recipes, list) or not recipes
+                    or not all(isinstance(x, str) and x for x in recipes)):
+                raise ValueError("job %s: recipes must be a non-empty "
+                                 "list of output item codes" % jid)
+            recipes = list(recipes)
+        if jtype == "knap" and not recipes:
+            raise ValueError("job %s: knap requires 'recipes' (the "
+                             "output item codes to chip)" % jid)
         deps = d.get("depends_on") or []
         if not isinstance(deps, list) or not all(
                 isinstance(x, str) for x in deps):
@@ -285,7 +312,7 @@ class Job:
                    source=d.get("source"), target=d.get("target"),
                    material=d.get("material"), quantity=qty,
                    plan=d.get("plan"), at=at, expect=expect,
-                   plant=plant, deliver=deliver,
+                   plant=plant, deliver=deliver, recipes=recipes,
                    depends_on=list(deps),
                    claims=list(d.get("claims") or []),
                    budget=int(d.get("budget") or 12),
@@ -317,6 +344,15 @@ class Job:
         # validator (a single-material delta pair would cancel itself).
         if self.type == "craft":
             return [(self.material, +qty)] if cat["produces"] else []
+        # knap: each recipe in the pass consumes one material item and
+        # yields its output (the validator checks the same pair; the
+        # live measured delta is the oracle).
+        if self.type == "knap":
+            out = []
+            for r in (self.recipes or []):
+                out.append((r, +qty))
+            out.append((self.material, -(len(self.recipes or [1]) * qty)))
+            return out
         out = []
         if cat["produces"]:
             out.append((self.material, +qty))

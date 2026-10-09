@@ -131,3 +131,70 @@ def render(name, params=None):
         raise KeyError("unknown chain %r (available: %s)"
                        % (name, ", ".join(sorted(CHAINS))))
     return fn(**(params or {}))
+
+@chain("flint-tools")
+def flint_tools(material="flint", surface_at=None,
+                knife="knife-generic-flint", axe="axe-flint",
+                knife_source="recipes/grid/tool/knife.json",
+                axe_source="recipes/grid/tool/axe.json",
+                give=()):
+    """The P1 stone-tools chain (2026-10-10, J1 of the early-game
+    ladder): place the knapping surface -> chip blade + axehead ->
+    grid-assemble the knife and the axe.
+
+    Parameters (live-world facts, supplied at invocation - never
+    frozen here):
+
+    material:     the chipping material item the bot carries
+                  (default "flint" - the world's looseflints block
+                  drops it; chert/granite/... via stone-<type>)
+    surface_at:   [x, y, z] the cell the knapping surface block is
+                  placed at (REQUIRED - the chip cannot float). The
+                  knap job places it from cargo if the cell is not
+                  a surface yet.
+    knife / axe:  the grid-assembly output codes (1.22.7:
+                  "knife-generic-flint" = knifeblade-flint + stick,
+                  1x2 shaped; "axe-flint" = axehead-flint + stick)
+    knife_source / axe_source: the live recipe table names
+                  (the /polis/recipes asset paths; the validator
+                  also matches by unique output)
+    give:         [(item, qty), ...] external setup the campaign
+                  prepends (a harness privilege, labeled
+                  scaffolding in the evidence). DEFAULTS to the
+                  contract-test scaffolding: the chipping material,
+                  one surface item PER CHIP (the engine consumes the
+                  knapping surface block on completion - live-
+                  measured 2026-10-09), and two sticks. An
+                  endogenous P1 run replaces these with
+                  pick/chop jobs.
+    """
+    if surface_at is None:
+        raise ValueError(
+            "flint-tools: surface_at (the knapping surface cell) is "
+            "required - the chip cannot float")
+    if not give:
+        give = [(material, 2), ("knappingsurface", 2), ("stick", 2)]
+    jobs = []
+    n = 0
+
+    def nid():
+        nonlocal n
+        n += 1
+        return "f%d" % n
+
+    for i, (item, qty) in enumerate(give):
+        jobs.append({"id": "g%d" % i, "type": "give_tool",
+                     "material": item, "n": int(qty),
+                     "origin": "operator"})
+    jobs.append({"id": nid(), "type": "knap",
+                 "at": [int(v) for v in surface_at],
+                 "material": material,
+                 "recipes": ["knifeblade-flint", "axehead-flint"],
+                 "n": 1, "origin": "deterministic"})
+    jobs.append({"id": nid(), "type": "craft",
+                 "material": knife, "source": knife_source,
+                 "n": 1, "origin": "deterministic"})
+    jobs.append({"id": nid(), "type": "craft",
+                 "material": axe, "source": axe_source,
+                 "n": 1, "origin": "deterministic"})
+    return jobs

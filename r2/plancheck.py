@@ -400,8 +400,8 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
         # forage (2026-10-07) and the crucible family (2026-10-07)
         # are campaign-scoped on the same precedent.
         if j.type in ("forage", "crucible_fire", "crucible_insert",
-                      "crucible_fuel", "crucible_take", "crucible_pour") \
-                and not campaign:
+                      "crucible_fuel", "crucible_take", "crucible_pour",
+                      "knap") and not campaign:
             return None, Failure(
                 "planner_invalid_json",
                 "%s is outside the planner vocabulary "
@@ -563,6 +563,27 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
                         job_id=j.id)
                 avail[code] = avail.get(code, 0) - qty
             avail[j.material] = avail.get(j.material, 0) + (j.quantity or 1)
+            continue
+        # knap (2026-10-10, J1): one material item per recipe, one
+        # output each. The outputs are KNOWN item codes (the engine's
+        # KnappingRecipe table, live-probed from the assets - the job
+        # requires them), so they budget the ledger directly: no
+        # measured-drop uncertainty like a mine has.
+        if j.type == "knap":
+            runs = j.quantity or 1
+            nrec = len(j.recipes or [])
+            need = nrec * runs
+            if avail.get(j.material, 0) < need:
+                return None, Failure(
+                    "resource_not_found",
+                    "knap %s: needs %dx %s for %d run%s, have %d"
+                    % (j.id, need, j.material, runs,
+                       "s" if runs != 1 else "",
+                       avail.get(j.material, 0)),
+                    job_id=j.id)
+            avail[j.material] = avail.get(j.material, 0) - need
+            for r in (j.recipes or []):
+                avail[r] = avail.get(r, 0) + runs
             continue
         if cat["consumes"]:
             need = j.quantity or 1
