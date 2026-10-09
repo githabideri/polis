@@ -564,11 +564,15 @@ public partial class PolisSystem
             source = "spawn_command"
         });
 
+        // 2026-10-10: the spawn reply now carries the resulting headcount
+        // - the 27B brain recruited ~18 laborers in one session because a
+        // bare "Spawned bot #N" reply gave it no feedback on how big the
+        // crew was getting. The number is the throttle signal.
         return new PolisTestHarness.CommandResult
         {
             Ok = true,
-            Message = $"Spawned bot #{entity.EntityId} ({resolvedCode}{profLabel})",
-            Data = new { id = entity.EntityId, code = resolvedCode, pos = new[] { x, y, z }, profession = professionName }
+            Message = $"Spawned bot #{entity.EntityId} ({resolvedCode}{profLabel}) - roster now {globalData.Bots.Count} bots",
+            Data = new { id = entity.EntityId, code = resolvedCode, pos = new[] { x, y, z }, profession = professionName, roster = globalData.Bots.Count }
         };
     }
 
