@@ -1299,10 +1299,61 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
                               flush=True)
                         break
                 if not cands:
-                    return (False, "structural: no standable candidate "
-                            "for %s%s (levels %d/%d/%d all unusable) - "
-                            "the plan geometry or a neighbouring structure "
-                            "leaves no ledge" % (phase, cell, L - 1, L, L + 1),
+                    # 2026-10-10 reach-aware stand search (the roof fix):
+                    # the 4-neighbour rings at L-1/L/L+1 only find ledge
+                    # positions at the target's own level - a roof 3-4
+                    # blocks above the floor had NO candidate a
+                    # ground-level bot (climb 1, not 3) can occupy, so
+                    # the run died "goto stuck" on its own wall (the
+                    # hut-flat 44/54). A stand position is any cell
+                    # from which the target is within placement reach:
+                    # horizontal <= 2, target up to 3 above the feet
+                    # (the VS reach window is larger; this is the
+                    # conservative corner that covers overhead roof
+                    # placement from inside or from a low rim). Head
+                    # room is checked too - the bot's head cell must
+                    # be open or it is standing in a filled cell.
+                    reach = []
+                    for sx in range(cell[0] - 2, cell[0] + 3):
+                        for sz in range(cell[2] - 2, cell[2] + 3):
+                            for sy in range(L - 3, L + 2):
+                                c = [sx, sy, sz]
+                                if c == list(cell):
+                                    continue
+                                if not _standable(c):
+                                    continue
+                                above = [sx, sy + 1, sz]
+                                bs3 = pol.cell_blocks(bot, tuple(above),
+                                                      pad=0) or []
+                                if any(b.get("pos") == list(above)
+                                       and is_solid(b.get("code"))
+                                       for b in bs3):
+                                    continue
+                                reach.append(c)
+                    # ground-level positions first (walk-in through the
+                    # door, not a climb onto the wall), then nearer
+                    # targets, then closer to where the bot already is
+                    reach.sort(key=lambda c: (L - c[1],
+                                              abs(c[0] - cell[0]) +
+                                              abs(c[2] - cell[2]),
+                                              abs(c[0] - int(bp0[0])) +
+                                              abs(c[2] - int(bp0[2]))))
+                    if reach:
+                        print("[build] %s %s: no ledge at levels %d/%d/"
+                              "%d -> reach-aware stand %s (target %d "
+                              "above feet)"
+                              % (phase, cell, L - 1, L, L + 1,
+                                 reach[0], L - reach[0][1]),
+                              flush=True)
+                        cands = reach
+                if not cands:
+                    return (False,
+                            "structural: no standable candidate for "
+                            "%s%s (levels %d/%d/%d and the reach "
+                            "window -2..+2 x 1 below..3 above are all "
+                            "unusable) - the plan geometry or a "
+                            "neighbouring structure leaves no ledge"
+                            % (phase, cell, L - 1, L, L + 1),
                             measured, {}, {"cells": None})
                 placed_here = False
                 for cand in cands:
