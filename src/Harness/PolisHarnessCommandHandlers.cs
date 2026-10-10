@@ -264,6 +264,24 @@ public partial class PolisSystem
                     return ExecuteActivateCommand(args, context);
                 case "ignite":
                     return ExecuteIgniteCommand(args, context);
+                case "firestarter":
+                    return ExecuteFirestarterCommand(args, context);
+                case "inventory":
+                    return ExecuteInventoryCommand(args, context);
+                case "spawncell":
+                    return ExecuteSpawnCellCommand(args, context);
+                case "items":
+                    return ExecuteItemsCommand(args, context);
+                case "be":
+                    return ExecuteBeProbeCommand(args, context);
+                case "kiln":
+                    return ExecuteKilnCommand(args, context);
+                case "kiln2":
+                    return ExecuteKiln2Command(args, context);
+                case "giveplayer":
+                    return ExecuteGivePlayerCommand(args, context);
+                case "useitem":
+                    return ExecuteUseItemCommand(args, context);
                 case "interact":
                     return ExecuteInteractCommand(args, context);
                 case "teststate":
@@ -364,6 +382,8 @@ public partial class PolisSystem
                     return ExecuteContainerContentsCommand(args, context);
                 case "container-set":
                     return ExecuteContainerSetCommand(args, context);
+                case "container-take":
+                    return ExecuteContainerTakeCommand(args, context);
                 case "zone-define":
                     return ExecuteZoneDefineCommand(args, context);
                 case "zone-remove":
@@ -398,7 +418,7 @@ public partial class PolisSystem
                     return ExecuteViewpointScreenshotCommand(args, context);
                 default:
                     result.Ok = false;
-                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, interact, teststate, bots, takefrom, putinto, mine, chop, break, harvest, pick, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, zone-define, zone-remove, zone-list, zone-check, zone-rename, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot, vitals, crucible-fire, crucible-insert, crucible-fuel, crucible-take, crucible-pour";
+                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, firestarter, interact, inventory, spawncell, items, be, kiln, kiln2, giveplayer, useitem, teststate, bots, takefrom, putinto, mine, chop, break, harvest, pick, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, container-set, container-take, zone-define, zone-remove, zone-list, zone-check, zone-rename, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot, vitals, crucible-fire, crucible-insert, crucible-fuel, crucible-take, crucible-pour";
                     break;
             }
         }
@@ -1746,6 +1766,1118 @@ public partial class PolisSystem
             Ok = true,
             Message = $"Bot #{bot.Entity.EntityId} igniting block at {targetPos}"
         };
+    }
+
+    // firestarter <x> <y> <z> [radius]: a firestarter aimed at a cell. The
+    // 1.22 PIT KILN (a 1-deep hole holding clayformed items, dry grass,
+    // sticks and fuel - the way raw pottery gets fired) is fire ON ITEMS, not
+    // on a block, so the block-only ignite cannot start it. This sweeps the
+    // cell (plus radius) for item entities and ignites each one the way a
+    // firestarter use would; if no item catches it falls through to the
+    // normal block-ignite path (firepit-construct).
+    PolisTestHarness.CommandResult ExecuteFirestarterCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 3)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: firestarter <x> <y> <z> [radius]" };
+        }
+        if (!double.TryParse(args[0], out var fx) || !double.TryParse(args[1], out var fy) || !double.TryParse(args[2], out var fz))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+        float radius = 0.5f;
+        if (args.Length > 3 && float.TryParse(args[3], out var r)) radius = r;
+
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+
+        var center = new Vec3d(fx + 0.5, fy + 0.5, fz + 0.5);
+        int ignited = 0;
+        var names = new System.Text.StringBuilder();
+        var seen = new System.Collections.Generic.HashSet<long>();
+        try
+        {
+            foreach (var e in sapi.World.LoadedEntities.Values)
+            {
+                if (e == null) continue;
+                if (!seen.Add(e.EntityId)) continue;
+                if (!(e is EntityItem) && !e.GetType().Name.Contains("ItemEntity")) continue;
+                var sp = e.ServerPos;
+                if (Math.Abs(sp.X - center.X) > radius + 1f) continue;
+                if (Math.Abs(sp.Y - center.Y) > radius + 1.5f) continue;
+                if (Math.Abs(sp.Z - center.Z) > radius + 1f) continue;
+                var m = e.GetType().GetMethod("Ignite");
+                if (m == null)
+                    m = e.GetType().GetMethod("Ignite", new[] { typeof(float), typeof(bool) });
+                if (m == null) continue;
+                try
+                {
+                    if (m.GetParameters().Length == 2) m.Invoke(e, new object[] { 30.0f, true });
+                    else m.Invoke(e, null);
+                    ignited++;
+                    if (names.Length < 120)
+                        names.Append((e.Code != null ? e.Code.ToString() : "?") + " ");
+                }
+                catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "firestarter sweep failed: " + ex.Message };
+        }
+
+        if (ignited > 0)
+        {
+            bot.RecordActionResult("firestarter", true, "ignited " + ignited + " item(s): " + names.ToString(), sapi.World.ElapsedMilliseconds);
+            return new PolisTestHarness.CommandResult { Ok = true, Message = "Ignited " + ignited + " item(s) at " + (int)fx + "," + (int)fy + "," + (int)fz + ": " + names.ToString().Trim() };
+        }
+
+        // no item entities caught - fall through to the block ignite path
+        var fall = ExecuteIgniteCommand(new[] { args[0], args[1], args[2] }, context);
+        fall.Message = "no ignitable items in cell; block-ignite fallback: " + fall.Message;
+        return fall;
+    }
+
+    // inventory: dump the selected bot's cargo (slot 0 = right hand,
+    // slot 1 = left hand, then backpack slots). The plain observability
+    // oracle for what a job left in the bot's hands - no equivalent
+    // exists in the vanilla game.
+    PolisTestHarness.CommandResult ExecuteInventoryCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+        var cargo = PolisInventoryHelpers.BotCargo(bot.Entity);
+        if (cargo == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "bot " + bot.Entity.EntityId + " has no cargo inventory" };
+        }
+        var rows = new System.Collections.Generic.List<object>();
+        for (int i = 0; i < cargo.Count; i++)
+        {
+            var s = cargo[i];
+            if (s == null) continue;
+            string code = null;
+            int qty = 0;
+            try
+            {
+                var ist = s.Itemstack;
+                if (ist != null && ist.Collectible != null)
+                {
+                    code = ist.Collectible.Code.ToString();
+                    qty = ist.StackSize;
+                }
+            }
+            catch { }
+            if (code == null) continue;
+            rows.Add(new { slot = i, code, qty });
+        }
+        var msg = "bot " + bot.Entity.EntityId + ": " + (rows.Count == 0 ? "cargo empty" : string.Join(", ", rows.Select(r => r.ToString())));
+        return new PolisTestHarness.CommandResult { Ok = true, Message = rows.Count + " item(s)", Data = new { bot = bot.Entity.EntityId, items = rows } };
+    }
+
+    // spawncell <itemCode> <qty> <x> <y> <z>: place qty of an item as a world
+    // item entity at the cell's center - the agent for sneak+place of things
+    // that are NOT blocks (dry grass, sticks, unformed pottery in a pit
+    // kiln). Test-placing primitive; the endogenous chain drops from the
+    // bot's hands instead.
+    PolisTestHarness.CommandResult ExecuteSpawnCellCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 5)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: spawncell <itemCode> <qty> <x> <y> <z>" };
+        }
+        int qty = 1;
+        if (!int.TryParse(args[1], out qty) || qty < 1) qty = 1;
+        if (!double.TryParse(args[2], out var fx) || !double.TryParse(args[3], out var fy) || !double.TryParse(args[4], out var fz))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+        if (!TryResolveStack(args[0], qty, out var stack, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+        int max = Math.Max(1, stack.Collectible.MaxStackSize);
+        int remaining = qty;
+        int n = 0;
+        int i = 0;
+        while (remaining > 0)
+        {
+            int q = Math.Min(remaining, max);
+            var s = stack;
+            s.StackSize = q;
+            var pos = new Vec3d(fx + 0.5 + (i % 2) * 0.2, fy + 0.6 + (i / 2) * 0.1, fz + 0.5 + (i % 3) * 0.15);
+            sapi.World.SpawnItemEntity(s, pos);
+            remaining -= q;
+            n += q;
+            i++;
+        }
+        return new PolisTestHarness.CommandResult { Ok = true, Message = "Placed " + n + "x " + args[0] + " at " + (int)fx + "," + (int)fy + "," + (int)fz };
+    }
+
+    // items <x> <y> <z> <radius>: list the world item entities in a disc
+    // around a point (code, qty, position). The observability primitive for
+    // dropped items - scans only see blocks, and pickup only reaches 3m.
+    PolisTestHarness.CommandResult ExecuteItemsCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 4)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: items <x> <y> <z> <radius>" };
+        }
+        if (!double.TryParse(args[0], out var fx) || !double.TryParse(args[1], out var fy) || !double.TryParse(args[2], out var fz))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+        float radius = 3f;
+        if (float.TryParse(args[3], out var r)) radius = r;
+        var rows = new System.Collections.Generic.List<object>();
+        try
+        {
+            foreach (var e in sapi.World.LoadedEntities.Values)
+            {
+                if (e == null) continue;
+                if (!(e is EntityItem) && !e.GetType().Name.Contains("ItemEntity")) continue;
+                var sp = e.ServerPos;
+                double dx = sp.X - (fx + 0.5);
+                double dy = sp.Y - (fy + 0.5);
+                double dz = sp.Z - (fz + 0.5);
+                if (dx * dx + dy * dy + dz * dz > (double)(radius + 0.5) * (radius + 0.5)) continue;
+                string code = null;
+                int qty = 0;
+                try
+                {
+                    var ist = (e as EntityItem)?.Itemstack;
+                    if (ist != null && ist.Collectible != null)
+                    {
+                        code = ist.Collectible.Code.ToString();
+                        qty = ist.StackSize;
+                    }
+                }
+                catch { }
+                rows.Add(new { id = e.EntityId, code, qty, x = (int)sp.X, y = (int)sp.Y, z = (int)sp.Z });
+            }
+        }
+        catch (Exception ex)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "items sweep failed: " + ex.Message };
+        }
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = rows.Count + " item entit" + (rows.Count == 1 ? "y" : "ies") + " in ",
+            Data = rows
+        };
+    }
+
+    // giveplayer <itemCode> <qty> [slot]: put an item into the context
+    // player's own cargo (slot 0 = right hand) and point the selection at
+    // it - the way to make the PLAYER the tool-wielder for a block use
+    // (firestarter on a pit kiln: the game only arms the pit from a player
+    // item use, never from a bot action).
+    PolisTestHarness.CommandResult ExecuteGivePlayerCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 2)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: giveplayer <itemCode> <qty> [slot]" };
+        }
+        if (!TryGetContextPlayer(context, out var player, out var perr))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = perr };
+        }
+        int qty = 1;
+        if (!int.TryParse(args[1], out qty) || qty < 1) qty = 1;
+        int slot = 0;
+        if (args.Length > 2 && int.TryParse(args[2], out var s)) slot = s;
+        if (!TryResolveStack(args[0], qty, out var stack, out var serr))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = serr };
+        }
+        var ent = player.Entity;
+        var handSlot = ent?.RightHandItemSlot;
+        if (handSlot == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "player right-hand slot unavailable" };
+        }
+        handSlot.Itemstack = stack;
+        // point the selection at the new item so a block use picks it up
+        try
+        {
+            ent.WatchedAttributes.SetInt("invselslot", slot);
+        }
+        catch { }
+        return new PolisTestHarness.CommandResult { Ok = true, Message = "Player " + player.PlayerName + " now holds " + qty + "x " + args[0] + " in slot " + slot + " (selection pointed at it)" };
+    }
+
+    // useitem <x> <y> <z> [face]: the context player right-clicks the target block
+    // with the item in their active hand. Unlike `activate` (block-side
+    // OnBlockInteractStart via a bot), this invokes the ITEM's own interact
+    // handlers - the path the vanilla firestarter uses to arm a pit kiln.
+    PolisTestHarness.CommandResult ExecuteUseItemCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 3)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: useitem <x> <y> <z> (player must hold the item and be in range)" };
+        }
+        if (!TryGetContextPlayer(context, out var player, out var perr))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = perr };
+        }
+        if (!double.TryParse(args[0], out var fx) || !double.TryParse(args[1], out var fy) || !double.TryParse(args[2], out var fz))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+        var pos = new Vec3d(fx, fy, fz).AsBlockPos;
+
+        BlockFacing face = BlockFacing.NORTH;
+        if (args.Length > 3)
+        {
+            // BlockFacing is a class in 1.22 - match by name
+            var fn = args[3].ToLower();
+            if (fn == "up") face = BlockFacing.UP;
+            else if (fn == "down") face = BlockFacing.DOWN;
+            else if (fn == "north") face = BlockFacing.NORTH;
+            else if (fn == "south") face = BlockFacing.SOUTH;
+            else if (fn == "east") face = BlockFacing.EAST;
+            else if (fn == "west") face = BlockFacing.WEST;
+        }
+        var handSlot = player.Entity.ActiveHandItemSlot ?? player.Entity.RightHandItemSlot;
+        var stack = handSlot?.Itemstack;
+        if (stack == null || stack.Collectible == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Player's active hand is empty - giveplayer <item> first" };
+        }
+
+        var block = sapi.World.BlockAccessor.GetBlock(pos);
+        if (block == null || block.Id == 0)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "No block at target " + pos };
+        }
+        var selection = ResolveSelection(player, pos, face);
+        selection.Block = block;
+
+        var item = stack.Collectible;
+        var result = new PolisTestHarness.CommandResult { Ok = true, Message = "" };
+        try
+        {
+            // 1.22 item interact = held-use state machine:
+            // OnHeldInteractStart(slot, agent, blockSel, entitySel, sneak,
+            //                     out EnumHandHandling) then
+            // OnHeldInteractStop(t, slot, agent, blockSel, entitySel).
+            // The pit-kiln arming lives in the firestarter's interact
+            // start; a quick tap = start + immediate stop.
+            var itemType = item.GetType();
+            var start = itemType.GetMethods().FirstOrDefault(mm => mm.Name == "OnHeldInteractStart" && mm.GetParameters().Length == 6);
+            if (start == null)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "no 6-arg OnHeldInteractStart on " + itemType.Name };
+            }
+            var handlingParam = start.GetParameters()[5];
+            var handlingType = handlingParam.ParameterType.IsByRef ? handlingParam.ParameterType.GetElementType() : handlingParam.ParameterType;
+            var handlingVal = System.Activator.CreateInstance(handlingType);
+            object[] startArgs = { handSlot, player.Entity, selection, null, false, handlingVal };
+            start.Invoke(item, startArgs);
+            var handlingAfter = startArgs[5];
+            result.Message = "useitem " + item.Code + " on " + pos + " | handling=" + handlingAfter;
+            var stop = itemType.GetMethods().FirstOrDefault(mm => mm.Name == "OnHeldInteractStop" && mm.GetParameters().Length == 5);
+            if (stop != null)
+            {
+                stop.Invoke(item, new object[] { 0.0f, handSlot, player.Entity, selection, null });
+                result.Message += " | stop done";
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Ok = false;
+            var inner = ex.InnerException ?? ex;
+            result.Message = "useitem threw: " + inner.Message + " | stack: " + inner.StackTrace;
+        }
+        var after = handSlot?.Itemstack;
+        result.Message += " | hand now: " + (after != null && after.Collectible != null ? after.StackSize + "x " + after.Collectible.Code : "empty");
+        return result;
+    }
+
+    // deep state probe: the wiring fields that decide whether a block
+    // entity can actually tick (Api/World/Behaviors/Block + the kiln's
+    // build-stage state). Used to read half-initialized BEs after an
+    // Initialize crash.
+    object DeepDump(object be)
+    {
+        var t = be.GetType();
+        var outp = new System.Collections.Generic.Dictionary<string, object>();
+        string ReadObj(System.Type tt, string name, out bool isNull)
+        {
+            isNull = true;
+            for (var cur = tt; cur != null && cur != typeof(object); cur = cur.BaseType)
+            {
+                var f = cur.GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                if (f != null)
+                {
+                    object v = null;
+                    try { v = f.GetValue(be); } catch { }
+                    if (v != null) { isNull = false; return v.GetType().Name; }
+                    return null;
+                }
+                var p = cur.GetProperty(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                if (p != null && p.CanRead)
+                {
+                    object v = null;
+                    try { v = p.GetValue(be); } catch { }
+                    if (v != null) { isNull = false; return v.GetType().Name; }
+                    return null;
+                }
+            }
+            return null;
+        }
+        bool _n;
+        outp["api"] = ReadObj(t, "Api", out _n);
+        outp["apiNull"] = _n;
+        object apiObj = null;
+        try
+        {
+            var f = FindFieldDeep(t, "Api");
+            if (f != null) apiObj = f.GetValue(be);
+        }
+        catch { }
+        if (apiObj != null)
+        {
+            try { outp["apiSide"] = apiObj.GetType().GetProperty("Side").GetValue(apiObj); } catch { }
+            bool worldNull;
+            outp["apiWorld"] = ReadObj(apiObj.GetType(), "World", out worldNull);
+            outp["apiWorldNull"] = worldNull;
+        }
+        bool bNull;
+        outp["block"] = ReadObj(t, "Block", out bNull);
+        outp["pos"] = ReadObj(t, "Pos", out bNull);
+        try
+        {
+            var bf = FindFieldDeep(t, "Behaviors");
+            if (bf != null)
+            {
+                var list = bf.GetValue(be) as System.Collections.IEnumerable;
+                var names = new System.Collections.Generic.List<string>();
+                if (list != null) foreach (var b in list) names.Add(b.GetType().Name);
+                outp["behaviors"] = names;
+            }
+        }
+        catch { }
+        foreach (var fld in new[] { "currentBuildStage", "Lit", "mesh", "shape", "StorageProps", "buildStages" })
+        {
+            var ff = FindFieldDeep(t, fld);
+            if (ff == null) continue;
+            object v = null;
+            try { v = ff.GetValue(be); } catch (Exception ex) { outp[fld] = "ERR " + ex.InnerException?.Message; continue; }
+            if (v == null) { outp[fld] = "null"; continue; }
+            if (v is Array arr) outp[fld] = arr.Length + " (" + arr.GetType().GetElementType().Name + ")";
+            else if (v is System.Collections.ICollection c) outp[fld] = c.Count;
+            else outp[fld] = v.ToString();
+        }
+        return outp;
+    }
+
+    // kiln2: the 1.22 pit-kiln pipeline driver. 1.22 fired clay in a
+    // game:pitkiln block (invisible, sits at the bottom of a 1x1x1 hole):
+    //   create: convert the floor cell to the pitkiln block, keep the
+    //           fireable item, run OnCreated (consumes the first build
+    //           stage from the player's hotbar)
+    //   feed:   walk the remaining build stages, auto-equipping the
+    //           player's hotbar with each stage's material and driving
+    //           OnPlayerInteractStart (the vanilla feed interaction)
+    //   ignite: CanIgnite check, then TryIgnite(player) (what the
+    //           firestarter's 4s channel ultimately calls)
+    //   ff:     fast-forward the burn (BurningUntilTotalHours = now)
+    //   state:  stage progress + inventory + burn state
+    // All calls are the game's own methods - nothing re-implemented.
+    PolisTestHarness.CommandResult ExecuteKiln2Command(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 4)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: kiln2 <create|feed|ignite|ff|state> <x> <y> <z> [itemCode qty]" };
+        }
+        var sub = args[0];
+        if (!double.TryParse(args[1], out var fx) || !double.TryParse(args[2], out var fy) || !double.TryParse(args[3], out var fz))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+        var pos = new Vec3d(fx, fy, fz).AsBlockPos;
+        if (!TryGetContextPlayer(context, out var player, out var perr))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = perr };
+        }
+        var beType = EnsureKilnBeType();
+        if (beType == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "BlockEntityPitKiln type not loaded" };
+        }
+
+        // create ----------------------------------------------------------
+        if (sub == "create")
+        {
+            // capture any existing BE inventory (the auto-spawned one)
+            var oldInv = new System.Collections.Generic.List<object>();
+            object oldBe = sapi.World.BlockAccessor.GetBlockEntity(pos);
+            if (oldBe != null)
+            {
+                var inv = GetBeInventory(oldBe);
+                if (inv != null)
+                {
+                    int ic = (int)GetBeCount(inv);
+                    for (int si = 0; si < ic; si++)
+                    {
+                        var s = IndexSlot(inv, si);
+                        if (s != null)
+                        {
+                            object st = null;
+                            try { st = s.GetType().GetProperty("Itemstack").GetValue(s); } catch { }
+                            if (st != null)
+                            {
+                                bool empty = true;
+                                try { empty = (bool)st.GetType().GetProperty("IsEmpty").GetValue(st); } catch { }
+                                if (!empty) oldInv.Add(st);
+                            }
+                        }
+                    }
+                }
+            }
+            // the vanilla conversion: SetBlock to the pitkiln block
+            var pitBlock = sapi.World.GetBlock(new AssetLocation("game:pitkiln"));
+            if (pitBlock == null)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "game:pitkiln block not found in this world" };
+            }
+            sapi.World.BlockAccessor.SetBlock(pitBlock.Id, pos);
+            var newBe = sapi.World.BlockAccessor.GetBlockEntity(pos);
+            if (newBe == null || newBe.GetType() != beType)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "pitkiln block set, but no BlockEntityPitKiln was created (check server log)" };
+            }
+            // restore the fireable item into slot 0
+            if (oldInv.Count > 0)
+            {
+                var inv = GetBeInventory(newBe);
+                var slot0 = IndexSlot(inv, 0);
+                if (slot0 != null)
+                {
+                    var ps = slot0.GetType().GetProperty("Itemstack");
+                    ps.SetValue(slot0, oldInv[0]);
+                }
+            }
+            else if (args.Length >= 6)
+            {
+                if (!TryResolveStack(args[4], int.TryParse(args[5], out var q2) ? q2 : 1, out var stk, out var serr2))
+                {
+                    return new PolisTestHarness.CommandResult { Ok = false, Message = "item resolve: " + serr2 };
+                }
+                var slot0b = IndexSlot(GetBeInventory(newBe), 0);
+                if (slot0b != null) slot0b.GetType().GetProperty("Itemstack").SetValue(slot0b, stk);
+            }
+            try { InvokeVoid(newBe, "DetermineBuildStages"); } catch { }
+            // OnCreated: consumes the first build stage from the hotbar -
+            // equip the hotbar with exactly that material first
+            var stages = GetBuildStages(newBe);
+            if (stages != null && stages.Length > 0)
+            {
+                var firstMat = FirstStageMaterial(stages[0]);
+                if (firstMat != null)
+                {
+                    EquipPlayerHotbar(player, firstMat);
+                }
+                try
+                {
+                    var m = beType.GetMethod("OnCreated");
+                    if (m != null) m.Invoke(newBe, new[] { (object)player });
+                }
+                catch (Exception ex)
+                {
+                    return new PolisTestHarness.CommandResult { Ok = false, Message = "OnCreated threw: " + (ex.InnerException?.Message ?? ex.Message), Data = KilnState(newBe) };
+                }
+            }
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = "kiln created at " + pos + " (block=game:pitkiln, onCreated done)",
+                Data = KilnState(newBe)
+            };
+        }
+
+        var be = sapi.World.BlockAccessor.GetBlockEntity(pos);
+        if (be == null || be.GetType() != beType)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "no BlockEntityPitKiln at " + pos + " (run create first)" };
+        }
+
+        // feed ------------------------------------------------------------
+        if (sub == "feed")
+        {
+            int done = 0;
+            var errors = new System.Collections.Generic.List<string>();
+            for (int guard = 0; guard < 64; guard++)
+            {
+                int cur = (int)GetBeField(be, "currentBuildStage");
+                var stages = GetBuildStages(be);
+                if (stages == null || cur >= stages.Length)
+                {
+                    break;
+                }
+                var mat = FirstStageMaterial(stages[cur]);
+                if (mat == null)
+                {
+                    errors.Add("stage " + cur + " has no readable material");
+                    break;
+                }
+                EquipPlayerHotbar(player, mat);
+                var sel = ResolveSelection(player, pos, BlockFacing.UP);
+                try
+                {
+                    var m = beType.GetMethod("OnPlayerInteractStart");
+                    m.Invoke(be, new object[] { player, sel });
+                }
+                catch (Exception ex)
+                {
+                    errors.Add("stage " + cur + " OnPlayerInteractStart threw: " + (ex.InnerException?.Message ?? ex.Message));
+                    break;
+                }
+                done++;
+            }
+            var st = KilnState(be);
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = errors.Count == 0,
+                Message = "fed " + done + " stage(s)" + (errors.Count > 0 ? "; " + string.Join("; ", errors) : "") + ", state: " + KilnStateLine(be),
+                Data = st
+            };
+        }
+
+        // ignite ----------------------------------------------------------
+        if (sub == "ignite")
+        {
+            object canIgnite = null;
+            try { canIgnite = beType.GetProperty("CanIgnite").GetValue(be); }
+            catch (Exception ex) { return new PolisTestHarness.CommandResult { Ok = false, Message = "CanIgnite threw: " + ex.InnerException?.Message, Data = KilnState(be) }; }
+            if (!(canIgnite is bool) || !(bool)canIgnite)
+            {
+                return new PolisTestHarness.CommandResult
+                {
+                    Ok = false,
+                    Message = "kiln cannot ignite yet (CanIgnite=false) - complete the build stages first (feed); state: " + KilnStateLine(be),
+                    Data = KilnState(be)
+                };
+            }
+            try
+            {
+                var m = beType.GetMethods().FirstOrDefault(mm => mm.Name == "TryIgnite" && mm.GetParameters().Length == 1
+                    && mm.GetParameters()[0].ParameterType.ToString().Contains("IPlayer"));
+                if (m == null) throw new Exception("no TryIgnite(IPlayer) overload");
+                m.Invoke(be, new[] { (object)player });
+            }
+            catch (Exception ex)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "TryIgnite threw: " + (ex.InnerException?.Message ?? ex.Message), Data = KilnState(be) };
+            }
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = "kiln ignited at " + pos + "; state: " + KilnStateLine(be),
+                Data = KilnState(be)
+            };
+        }
+
+        // ff --------------------------------------------------------------
+        if (sub == "ff")
+        {
+            var f = FindFieldDeep(beType, "BurningUntilTotalHours");
+            if (f == null) f = FindFieldDeep(beType, "BurnTimeHours");
+            if (f == null)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "BurningUntilTotalHours field not found" };
+            }
+            double now = sapi.World.Calendar.TotalHours;
+            f.SetValue(be, f.FieldType == typeof(float) ? (object)((float)now) : now);
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = "burn fast-forwarded at " + pos + " (fires within the next few seconds)",
+                Data = KilnState(be)
+            };
+        }
+
+        // state -----------------------------------------------------------
+        if (sub == "state")
+        {
+            return new PolisTestHarness.CommandResult { Ok = true, Message = "kiln at " + pos, Data = KilnState(be) };
+        }
+
+        return new PolisTestHarness.CommandResult { Ok = false, Message = "unknown kiln2 subcommand: " + sub };
+    }
+
+    System.Type KilnBeType = null;
+
+    System.Type EnsureKilnBeType()
+    {
+        if (KilnBeType != null) return KilnBeType;
+        foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+        {
+            try
+            {
+                KilnBeType = a.GetType("Vintagestory.GameContent.BlockEntityPitKiln", false);
+                if (KilnBeType != null) break;
+            }
+            catch { }
+        }
+        return KilnBeType;
+    }
+
+    object GetBeInventory(object be)
+    {
+        try
+        {
+            var t = be.GetType();
+            for (var cur = t; cur != null && cur != typeof(object); cur = cur.BaseType)
+            {
+                var p = cur.GetProperty("Inventory");
+                if (p != null && p.CanRead) return p.GetValue(be);
+            }
+            return FindFieldDeep(t, "Inventory")?.GetValue(be);
+        }
+        catch { return null; }
+    }
+
+    int GetBeCount(object inv)
+    {
+        try { return (int)inv.GetType().GetProperty("Count").GetValue(inv); } catch { return 0; }
+    }
+
+    object IndexSlot(object inv, int i)
+    {
+        try
+        {
+            var indexer = inv.GetType().GetProperties().FirstOrDefault(pp => pp.GetIndexParameters().Length == 1);
+            return indexer?.GetValue(inv, new object[] { i });
+        }
+        catch { return null; }
+    }
+
+    object GetBeField(object be, string name)
+    {
+        var f = FindFieldDeep(be.GetType(), name);
+        try { return f?.GetValue(be); } catch { return null; }
+    }
+
+    void InvokeVoid(object be, string name)
+    {
+        var m = be.GetType().GetMethods().FirstOrDefault(mm => mm.Name == name && mm.GetParameters().Length == 0);
+        if (m != null) m.Invoke(be, null);
+    }
+
+    object[] GetBuildStages(object be)
+    {
+        var v = GetBeField(be, "buildStages");
+        var a = v as Array;
+        if (a == null) return null;
+        var res = new object[a.Length];
+        for (int i = 0; i < a.Length; i++) res[i] = a.GetValue(i);
+        return res;
+    }
+
+    object FirstStageMaterial(object stage)
+    {
+        try
+        {
+            var matsField = FindFieldDeep(stage.GetType(), "Materials");
+            if (matsField == null) return null;
+            var mats = matsField.GetValue(stage) as Array;
+            if (mats == null || mats.Length == 0) return null;
+            var itemField = FindFieldDeep(mats.GetType().GetElementType(), "ItemStack");
+            if (itemField == null) return null;
+            return itemField.GetValue(mats.GetValue(0));
+        }
+        catch { return null; }
+    }
+
+    void EquipPlayerHotbar(object player, object itemStack)
+    {
+        // player is IServerPlayer; its Entity's right-hand slot takes the stack
+        var ent = player.GetType().GetProperty("Entity").GetValue(player);
+        var hand = ent.GetType().GetProperty("RightHandItemSlot")?.GetValue(ent);
+        if (hand != null)
+        {
+            hand.GetType().GetProperty("Itemstack").SetValue(hand, itemStack);
+        }
+        try
+        {
+            ent.GetType().GetProperty("WatchedAttributes").GetValue(ent)
+                .GetType().GetMethod("SetInt", new[] { typeof(string), typeof(int) })
+                .Invoke(ent.GetType().GetProperty("WatchedAttributes").GetValue(ent), new object[] { "invselslot", 0 });
+        }
+        catch { }
+    }
+
+    string KilnStateLine(object be)
+    {
+        var d = KilnState(be);
+        var vals = new System.Collections.Generic.List<string>();
+        foreach (var kv in d) vals.Add(kv.Key + "=" + kv.Value);
+        return string.Join(" | ", vals);
+    }
+
+    System.Collections.Generic.Dictionary<string, object> KilnState(object be)
+    {
+        var d = new System.Collections.Generic.Dictionary<string, object>();
+        d["pos"] = (GetBeField(be, "Pos") ?? "?").ToString();
+        d["lit"] = GetBeField(be, "Lit");
+        d["burningUntil"] = GetBeField(be, "BurningUntilTotalHours");
+        d["burnTimeHours"] = GetBeField(be, "BurnTimeHours");
+        var stages = GetBuildStages(be);
+        int cur = (int)(GetBeField(be, "currentBuildStage") ?? 0);
+        d["stage"] = cur + "/" + (stages == null ? "?" : stages.Length);
+        d["progress"] = stages == null || stages.Length == 0 ? "unknown" : Math.Round(100.0 * cur / stages.Length, 0) + "%";
+        d["complete"] = stages != null && cur >= stages.Length;
+        var inv = GetBeInventory(be);
+        if (inv != null)
+        {
+            var rows = new System.Collections.Generic.List<object>();
+            int ic = GetBeCount(inv);
+            for (int si = 0; si < ic; si++)
+            {
+                var s = IndexSlot(inv, si);
+                if (s == null) continue;
+                object stk = null;
+                try { stk = s.GetType().GetProperty("Itemstack").GetValue(s); } catch { }
+                if (stk == null) continue;
+                bool empty = true;
+                try { empty = (bool)stk.GetType().GetProperty("IsEmpty").GetValue(stk); } catch { }
+                if (empty) continue;
+                object col = null;
+                try { col = stk.GetType().GetProperty("Collectible").GetValue(stk); } catch { }
+                string code = col != null ? col.GetType().GetProperty("Code").GetValue(col)?.ToString() : "?";
+                int qty = 0;
+                try { qty = (int)stk.GetType().GetProperty("StackSize").GetValue(stk); } catch { }
+                rows.Add(si + ":" + code + "x" + qty);
+            }
+            d["inventory"] = rows;
+        }
+        return d;
+    }
+
+    // walk the type hierarchy looking for a field by name (BEs keep their
+    // core fields on the BlockEntity base, not on the concrete class).
+    System.Reflection.FieldInfo FindFieldDeep(System.Type t, string name)
+    {
+        for (var cur = t; cur != null && cur != typeof(object); cur = cur.BaseType)
+        {
+            var f = cur.GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            if (f != null) return f;
+        }
+        return null;
+    }
+
+    // kiln <x> <y> <z> [itemCode qty]: arm and ignite a PIT KILN at the cell
+    // (the floor of a 1-deep hole). The 1.22 way raw clay items are fired:
+    // the game normally arms the pit when a player uses a firestarter on it,
+    // which attaches a BlockEntityPitKiln to the floor block; this does the
+    // same thing directly - instantiates the BE, loads optional items into
+    // its inventory, registers it on the world, and calls its own
+    // TryIgnite(). Re-running on an already-armed pit just reports state.
+    PolisTestHarness.CommandResult ExecuteKilnCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 3)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: kiln <x> <y> <z> [itemCode qty ...]" };
+        }
+        if (!double.TryParse(args[0], out var fx) || !double.TryParse(args[1], out var fy) || !double.TryParse(args[2], out var fz))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+        var pos = new Vec3d(fx, fy, fz).AsBlockPos;
+        var tail = args.Skip(3).Where(a => a != "--fresh").ToArray();
+
+        // already armed?
+        var existing = sapi.World.BlockAccessor.GetBlockEntity(pos);
+        if (existing != null)
+        {
+            if (!args.Contains("--fresh"))
+            {
+                return new PolisTestHarness.CommandResult
+                {
+                    Ok = true,
+                    Message = "kiln already present at " + pos + ": " + existing.GetType().Name + " - state in Data (pass --fresh to re-arm)",
+                    Data = BeDump(existing)
+                };
+            }
+            try { sapi.World.BlockAccessor.RemoveBlockEntity(pos); }
+            catch (Exception ex) { return new PolisTestHarness.CommandResult { Ok = false, Message = "removing old kiln BE failed: " + ex.Message }; }
+            existing = null;
+        }
+
+        var beType = System.AppDomain.CurrentDomain.GetAssemblies()
+            .Select(a => { try { return a.GetType("Vintagestory.GameContent.BlockEntityPitKiln", false); } catch { return null; } })
+            .FirstOrDefault(t => t != null);
+        if (beType == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "BlockEntityPitKiln type not found in loaded assemblies" };
+        }
+
+        object be = null;
+        try
+        {
+            be = Activator.CreateInstance(beType);
+        }
+        catch (Exception ex)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "could not instantiate pit kiln BE: " + ex.InnerException?.Message };
+        }
+
+        // wire the base fields directly (Initialize(ICoreAPI) NREs in this
+        // mod's server context - the fields are enough for the BE to tick):
+        // Api, Block, Pos on the BlockEntity base.
+        var floorBlock = sapi.World.BlockAccessor.GetBlock(pos);
+        try
+        {
+            var apiField = FindFieldDeep(beType, "Api");
+            if (apiField != null) apiField.SetValue(be, sapi);
+            var posField = FindFieldDeep(beType, "Pos");
+            if (posField != null) posField.SetValue(be, pos);
+            var blockProp = beType.GetProperty("Block") ?? (beType.BaseType != null ? beType.BaseType.GetProperty("Block") : null);
+            if (blockProp != null) blockProp.SetValue(be, floorBlock);
+            else
+            {
+                var blockField = FindFieldDeep(beType, "Block");
+                if (blockField != null) blockField.SetValue(be, floorBlock);
+            }
+        }
+        catch (Exception ex) { return new PolisTestHarness.CommandResult { Ok = false, Message = "field wiring failed: " + ex.Message + " | stack: " + ex.StackTrace }; }
+
+        // load optional items into the BE inventory (raw clay to be fired)
+        var invProp = beType.BaseType?.GetProperty("Inventory") ?? beType.GetProperty("Inventory");
+        var setMethod = (beType.BaseType ?? beType).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .Concat(((beType.BaseType ?? beType).GetInterfaces()).SelectMany(ii => ii.GetMethods()))
+            .FirstOrDefault(mm => mm.Name == "SetItemstack" && mm.GetParameters().Length == 2);
+        if (invProp != null && invProp.GetValue(be) != null && setMethod != null)
+        {
+            int i = 0;
+            int slotIdx = 0;
+            while (i + 1 < tail.Length)
+            {
+                var code = tail[i];
+                int qty = 1;
+                if (int.TryParse(tail[i + 1], out var q) && q > 0) qty = q;
+                i += 2;
+                if (!TryResolveStack(code, qty, out var stack, out var serr))
+                {
+                    return new PolisTestHarness.CommandResult { Ok = false, Message = "item load failed: " + serr };
+                }
+                try
+                {
+                    setMethod.Invoke(invProp.GetValue(be), new object[] { stack, slotIdx });
+                    slotIdx++;
+                }
+                catch (Exception ex)
+                {
+                    return new PolisTestHarness.CommandResult { Ok = false, Message = "SetItemstack(" + code + ") threw: " + ex.InnerException?.Message };
+                }
+            }
+        }
+
+        // register on the world
+        try
+        {
+            sapi.World.BlockAccessor.SpawnBlockEntity((BlockEntity)be);
+        }
+        catch (Exception ex)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "SpawnBlockEntity failed: " + ex.InnerException?.Message + " (" + ex.Message + ")" };
+        }
+
+        // ignite (parameterless overload)
+        object state = null;
+        try
+        {
+            var ign = beType.GetMethods().FirstOrDefault(mm => mm.Name == "TryIgnite" && mm.GetParameters().Length == 0);
+            if (ign == null)
+            {
+                return new PolisTestHarness.CommandResult { Ok = true, Message = "kiln armed at " + pos + " (registered; no parameterless TryIgnite found)", Data = BeDump(be) };
+            }
+            state = ign.Invoke(be, null);
+        }
+        catch (Exception ex)
+        {
+            var inner = ex.InnerException ?? ex;
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "TryIgnite threw: " + inner.Message + " | stack: " + inner.StackTrace, Data = BeDump(be) };
+        }
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = "pit kiln armed at " + pos + "; TryIgnite -> " + (state == null ? "void" : state.ToString()),
+            Data = BeDump(be)
+        };
+    }
+
+    // be <x> <y> <z> [method...]: probe the block entity at a cell. With no
+    // extra args: report its type, public methods and simple fields. With a
+    // method name: call it (no-arg methods only) and report the result.
+    // The inspection surface for entities the harness cannot name - e.g. the
+    // pit kiln BE that the game attaches when a pit is armed.
+    PolisTestHarness.CommandResult ExecuteBeProbeCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // be --type <name>: dump a loaded type's surface (ctors, fields, props,
+        // methods) by name - used to read block entity classes that no live
+        // instance of yet exists (e.g. the pit kiln BE before it is armed).
+        if (args.Length >= 2 && args[0] == "--type")
+        {
+            System.Type found = null;
+            foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    found = a.GetType(args[1], false) ?? a.GetTypes().FirstOrDefault(tt => tt.Name == args[1]);
+                }
+                catch { }
+                if (found != null) break;
+            }
+            if (found == null)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "type not found in any loaded assembly: " + args[1] };
+            }
+            var ctors = new System.Collections.Generic.List<string>();
+            foreach (var c in found.GetConstructors())
+                ctors.Add("(" + string.Join(", ", c.GetParameters().Select(p => p.ParameterType.Name + " " + p.Name)) + ")");
+            var f2 = new System.Collections.Generic.List<string>();
+            foreach (var f in found.GetFields())
+                f2.Add(f.FieldType.Name + " " + f.Name + (f.IsPublic ? "" : " (nonpublic)"));
+            var p2 = new System.Collections.Generic.List<string>();
+            foreach (var p in found.GetProperties())
+                p2.Add(p.PropertyType.Name + " " + p.Name);
+            var m2 = new System.Collections.Generic.List<string>();
+            foreach (var m in found.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+            {
+                if (m.IsSpecialName) continue;
+                m2.Add(m.Name + "(" + string.Join(", ", m.GetParameters().Select(p => p.ParameterType.Name)) + ")");
+            }
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = "type " + found.FullName + " (" + m2.Count + " methods)",
+                Data = new { type = found.FullName, ctors = ctors, fields = f2, props = p2, methods = m2 }
+            };
+        }
+        if (args.Length < 3)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: be <x> <y> <z> [method] | be --type <typeName>" };
+        }
+        if (!double.TryParse(args[0], out var fx) || !double.TryParse(args[1], out var fy) || !double.TryParse(args[2], out var fz))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+        var pos = new Vec3d(fx, fy, fz).AsBlockPos;
+        object be = null;
+        var candidates = new System.Collections.Generic.List<object>
+        {
+            sapi.World.BlockAccessor,
+            sapi.World
+        };
+        try
+        {
+            foreach (var acc in candidates)
+            {
+                if (acc == null) continue;
+                var m = acc.GetType().GetInterfaces().Concat(new[] { acc.GetType() })
+                    .SelectMany(ii => ii.GetMethods())
+                    .FirstOrDefault(mm => mm.Name == "GetBlockEntity" && mm.GetParameters().Length == 1);
+                if (m == null) continue;
+                be = m.Invoke(acc, new[] { pos });
+                if (be != null)
+                {
+                    if (args.Contains("--deep"))
+                    {
+                        return new PolisTestHarness.CommandResult
+                        {
+                            Ok = true,
+                            Message = "block entity via " + acc.GetType().Name + ": " + be.GetType().Name + " at " + pos,
+                            Data = new { be = BeDump(be), deep = DeepDump(be) }
+                        };
+                    }
+                    return new PolisTestHarness.CommandResult
+                    {
+                        Ok = true,
+                        Message = "block entity via " + acc.GetType().Name + ": " + be.GetType().Name + " at " + pos,
+                        Data = BeDump(be)
+                    };
+                }
+            }
+            return new PolisTestHarness.CommandResult { Ok = true, Message = "no block entity at " + pos + " (probed " + string.Join(", ", candidates.Where(c => c != null).Select(c => c.GetType().Name)) + ")" };
+        }
+        catch (Exception ex)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "GetBlockEntity failed: " + ex.Message };
+        }
+    }
+
+    // shared reflection dump for block entities (type + methods + simple
+    // fields/props); used by the be probe and its method-call mode.
+    object BeDump(object be)
+    {
+        var t = be.GetType();
+        var methods = new System.Collections.Generic.List<string>();
+        foreach (var m in t.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+        {
+            if (m.IsSpecialName) continue;
+            methods.Add(m.Name + "(" + string.Join(", ", m.GetParameters().Select(p => p.ParameterType.Name)) + ")");
+        }
+        var fields = new System.Collections.Generic.List<string>();
+        foreach (var f in t.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+        {
+            if (f.FieldType.IsValueType || f.FieldType == typeof(string))
+            {
+                object v = null;
+                try { v = f.GetValue(be); } catch { }
+                fields.Add(f.Name + "=" + (v == null ? "null" : v.ToString()));
+            }
+        }
+        var props = new System.Collections.Generic.List<string>();
+        foreach (var p in t.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+        {
+            if (p.PropertyType.IsValueType || p.PropertyType == typeof(string))
+            {
+                object v = null;
+                try { if (p.CanRead) v = p.GetValue(be); } catch { }
+                props.Add(p.Name + "=" + (v == null ? "null" : v.ToString()));
+            }
+        }
+        var invItems = new System.Collections.Generic.List<string>();
+        try
+        {
+            var invP = t.GetProperty("Inventory") ?? t.BaseType?.GetProperty("Inventory");
+            var inv = invP != null ? invP.GetValue(be) : null;
+            if (inv != null)
+            {
+                var countP = inv.GetType().GetProperty("Count");
+                int ic = countP != null ? (int)countP.GetValue(inv) : 0;
+                for (int si = 0; si < ic && si < 16; si++)
+                {
+                    object slot = null;
+                    try
+                    {
+                        var indexer = inv.GetType().GetProperties().FirstOrDefault(pp => pp.GetIndexParameters().Length == 1);
+                        if (indexer != null) slot = indexer.GetValue(inv, new object[] { si });
+                    }
+                    catch { }
+                    if (slot == null) continue;
+                    var istP = slot.GetType().GetProperty("Itemstack");
+                    var ist = istP != null ? istP.GetValue(slot) : null;
+                    var colP = ist != null ? ist.GetType().GetProperty("Collectible") : null;
+                    var col = colP != null ? colP.GetValue(ist) : null;
+                    if (col == null) continue;
+                    var codeP = col.GetType().GetProperty("Code");
+                    var code = codeP != null ? codeP.GetValue(col) : null;
+                    var qtyP = ist.GetType().GetProperty("StackSize");
+                    invItems.Add((code == null ? "?" : code.ToString()) + " x" + (qtyP != null ? qtyP.GetValue(ist) : "?"));
+                }
+            }
+        }
+        catch { }
+        return new { type = t.FullName, methods = methods, fields = fields, props = props, inventory = invItems };
     }
 
     PolisTestHarness.CommandResult ExecuteInteractCommand(string[] args, PolisTestHarness.CommandContext context)
@@ -3180,6 +4312,98 @@ public partial class PolisSystem
             Message = $"Set slot {slot} at {x},{y},{z} to {qty}x {itemCode}"
         };
     }
+    // container-take <x> <y> <z> <slot> [count]: move a block container's
+    // slot into the selected bot's cargo. The firepit's output slot
+    // (1.22: completed items shift to the output slot and stay there
+    // until removed) and the crucible's smelted output have no
+    // player-less removal path without this.
+    PolisTestHarness.CommandResult ExecuteContainerTakeCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: container-take <x> <y> <z> <slot> [count]
+        if (args.Length < 4)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: container-take <x> <y> <z> <slot> [count]" };
+        }
+
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+
+        if (!int.TryParse(args[0], out int x) ||
+            !int.TryParse(args[1], out int y) ||
+            !int.TryParse(args[2], out int z))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+
+        if (!int.TryParse(args[3], out int slot))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid slot number" };
+        }
+
+        int count = args.Length > 4 && int.TryParse(args[4], out int c) ? c : 0;
+
+        BlockPos pos = new BlockPos(x, y, z);
+        var blockEntity = sapi.World.BlockAccessor.GetBlockEntity(pos);
+        var container = blockEntity as IBlockEntityContainer;
+        if (container == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"No container at {x},{y},{z}" };
+        }
+        if (slot < 0 || slot >= container.Inventory.Count)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"Slot {slot} out of range (0-{container.Inventory.Count - 1})" };
+        }
+
+        var srcSlot = container.Inventory[slot];
+        if (srcSlot == null || srcSlot.Itemstack == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"Slot {slot} is empty" };
+        }
+
+        var agent = bot.Entity as EntityAgent;
+        var stack = srcSlot.Itemstack;
+        if (count > 0 && count < stack.StackSize)
+        {
+            stack = stack.Clone();
+            stack.StackSize = count;
+            srcSlot.Itemstack = srcSlot.Itemstack.Clone();
+            srcSlot.Itemstack.StackSize -= count;
+        }
+        else
+        {
+            srcSlot.Itemstack = null;
+        }
+        srcSlot.MarkDirty();
+        if (blockEntity is BlockEntity be)
+            be.MarkDirty(true);
+
+        int pickedUp = 0;
+        bool ok = PolisInventoryHelpers.TryInsertIntoBotInventory(agent, stack, out pickedUp, out string why, null);
+        if (!ok || pickedUp < stack.StackSize)
+        {
+            int overflow = stack.StackSize - pickedUp;
+            if (overflow > 0)
+            {
+                var dropStack = stack.Clone();
+                dropStack.StackSize = overflow;
+                sapi.World.SpawnItemEntity(dropStack, new Vec3d(x + 0.5, y + 1.2, z + 0.5));
+            }
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = ok,
+                Message = $"Took {pickedUp}x {stack.Collectible?.Code} to bot ({overflow} dropped - cargo full)"
+            };
+        }
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"Took {pickedUp}x {stack.Collectible?.Code} from slot {slot} at {x},{y},{z} to bot #" + bot.Entity.EntityId
+        };
+    }
+
 
     PolisTestHarness.CommandResult ExecuteHarvestCommand(string[] args, PolisTestHarness.CommandContext context)
     {
