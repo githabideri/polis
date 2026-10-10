@@ -578,7 +578,8 @@ class Oikistes:
 
     KNOWN = frozenset(
         ("state", "scan", "screenshot", "events", "autonomy",
-         "mission", "give", "command", "query", "zone", "crew"))
+         "mission", "pots", "give", "command", "query", "zone",
+         "crew"))
 
     def check_tool(self, tool, autonomy):
         if tool not in self.KNOWN:
@@ -588,7 +589,8 @@ class Oikistes:
         if autonomy == "strict":
             return tool in READONLY
         if autonomy == "guarded":
-            return tool in READONLY or tool in ("mission", "give", "zone")
+            return tool in READONLY or tool in (
+                "mission", "pots", "give", "zone")
         return True  # free
 
     # zone subcommands that READ (everything else writes the zone
@@ -626,6 +628,10 @@ class Oikistes:
                 parts = a.split()
                 a = {"sub": parts[0].lower(), "args": parts[1:]} \
                     if parts else {}
+            elif tool == "pots":
+                parts = a.split()
+                a = {"form_at": parts[0], "hole_at": parts[1],
+                     "firepit_at": parts[2]} if len(parts) >= 3 else {}
             elif tool == "crew":
                 # crew=<n>: the worker roster (my body excluded) is
                 # brought to exactly n - the ONE way to size the crew;
@@ -716,6 +722,8 @@ class Oikistes:
                 if not a.get("goal"):
                     return self._mission_status()
                 return self.run_mission(str(a["goal"]))
+            if tool == "pots":
+                return self.run_pots(a)
             if tool == "query":
                 return self._query(a)
             if tool == "zone":
@@ -956,6 +964,84 @@ class Oikistes:
         self.log("system", "mission %s finished: %s" % (
             m["id"], m["summary"]))
 
+    def run_pots(self, a):
+        """The pot-work food chain (the early-game ladder J2-J5) as
+        ONE background mission: clay -> clayform table (raw item) ->
+        pit-kiln fire (fired item) -> firepit cook (the engine's own
+        DoSmelt) -> the bot eats. The R2 chain template (r2/chains.py
+        'pots') renders the job list; the run JSON is the record.
+        All three site cells are required - the brain knows them from
+        its zones/digest (the hole and the firepit live at the base);
+        the fired color follows the 1.22 rename (red ->
+        earthyorange)."""
+        def trip(v):
+            if v is None:
+                return None
+            if isinstance(v, (list, tuple)):
+                v = [str(x) for x in v]
+            else:
+                v = str(v).replace(" ", ",").split(",")
+            v = [p for p in v if p.strip()]
+            if len(v) != 3:
+                return None
+            return [int(float(x)) for x in v]
+        form = trip(a.get("form_at"))
+        hole = trip(a.get("hole_at"))
+        fire = trip(a.get("firepit_at"))
+        if form is None or hole is None or fire is None:
+            return ("pots needs all three site cells: "
+                    "form_at (the air cell for the clayform table), "
+                    "hole_at (the floor of a 1-deep hole - the pit "
+                    "kiln), firepit_at (the firepit cell) - as "
+                    "[x,y,z] triples. You know them from the base "
+                    "zone (query it first if unsure).")
+        if self.mission is not None and not self.mission.get("done"):
+            return ("a mission (%s) is still running - the pots "
+                    "chain would fight it for the same workstations; "
+                    "check it with the 'mission' tool first"
+                    % self.mission["id"])
+        params = {"form_at": form, "hole_at": hole,
+                  "firepit_at": fire}
+        for k in ("clay", "clay_n", "meat", "meat_n", "fuel",
+                  "fuel_n", "form_recipe", "fired"):
+            if a.get(k) is not None:
+                params[k] = a[k]
+        out = os.path.join(
+            self.args.datadir,
+            "oik-pots-%d.json" % int(time.time()))
+        cmd = [sys.executable,
+               os.path.join(HERE, "r2-live-mission.py"),
+               "--harness", self.args.harness,
+               "--uid", self.args.uid,
+               "--chain", "pots",
+               "--chain-params", json.dumps(params),
+               "--goal", "pots chain (clay to cooked meat to eat)",
+               "--out", out]
+        pre_roster = set(b.get("id")
+                         for b in self.polis.bots_list())
+        if pre_roster:
+            cmd += ["--keep-bots",
+                    ",".join(str(i) for i in sorted(pre_roster))]
+        m_id = os.path.basename(out)[:-len(".json")]
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL)
+        self.mission = {"id": m_id, "goal": "pots chain",
+                        "out": out, "started": time.time(),
+                        "done": False, "outcome": None,
+                        "summary": None, "pid": proc.pid,
+                        "pre_roster": pre_roster}
+        threading.Thread(target=self._mission_worker,
+                         args=(proc,), daemon=True).start()
+        self.log("system",
+                 "pots mission %s dispatched (pid %d): %s"
+                 % (m_id, proc.pid, json.dumps(params)))
+        return ("pots chain DISPATCHED (worker pid %d): clay -> "
+                "crucible (clayform) -> fired (pit kiln) -> cooked "
+                "meat (firepit) -> the bot eats. It runs in the "
+                "BACKGROUND; check it later with the 'mission' tool "
+                "(no goal). Sites: table %s, kiln hole %s, firepit %s"
+                % (proc.pid, form, hole, fire))
+
     def _mission_status(self):
         m = self.mission
         if m is None:
@@ -993,6 +1079,17 @@ class Oikistes:
             "the job system (returns at once; the settlement is not "
             "blocked) - or mission with NO goal to report the "
             "running/finished status; "
+            "pots={form_at:[x,y,z], hole_at:[x,y,z], "
+            "firepit_at:[x,y,z]} dispatch the POT-WORK FOOD CHAIN as "
+            "one background mission (clay -> clayform table -> the "
+            "raw crucible -> pit-kiln firing -> the fired crucible "
+            "-> firepit cooking -> cooked meat -> the bot eats; it "
+            "gives the bot its own clay and meat as the only external "
+            "input). All three cells are REQUIRED: the air cell the "
+            "clayform table is placed in, the floor of a 1-deep hole "
+            "(the pit kiln), the firepit cell - they live at the "
+            "base, so query the base zone first if you do not have "
+            "them; "
             "(goals like 'mine granite x1', 'harvest rye x1', 'sow rye "
             "x1 at site-A', 'build granite x4 at site-A', 'place "
             "granite at site-A x1 supply external', 'build-plan "
@@ -1034,8 +1131,8 @@ class Oikistes:
             "door), a roof over - a place to shelter from weather and "
             "the night. Suggest only work you can actually order from "
             "this vocabulary; if the user wants something outside it "
-            "(e.g. foraging berries, smelting in a crucible - the "
-            "campaign chains are operator-ordered, not goal verbs), "
+            "(e.g. foraging berries - the pot-work chain, by "
+            "contrast, has its own 'pots' tool), "
             "say plainly that the job system has no goal verb for that "
             "yet, and offer the closest thing you can order. "
             "WORLD BLOCK: the current-world section lists your body, the "
