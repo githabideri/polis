@@ -406,6 +406,8 @@ public partial class PolisSystem
                     return ExecuteCrucibleFuelCommand(args, context);
                 case "firepit-fuel":
                     return ExecuteFirepitFuelCommand(args, context);
+                case "firepit-put":
+                    return ExecuteFirepitPutCommand(args, context);
                 case "firepit-light":
                     return ExecuteFirepitLightCommand(args, context);
                 case "crucible-take":
