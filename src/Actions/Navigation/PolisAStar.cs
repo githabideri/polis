@@ -84,10 +84,29 @@ public class PolisAStar
 
             foreach (var neighbor in FindValidNeighborNodes(currentNode))
             {
-                if (!visitedNodes.Contains(neighbor) && IsTraversable(neighbor, end))
+                if (visitedNodes.Contains(neighbor)) continue;
+                // Ground-find the candidate first: the horizontal cardinals
+                // are born at the parent's Y, so the neighbor's real stand
+                // level is only known once IsTraversable has run.
+                if (!IsTraversable(neighbor, end)) continue;
+
+                // F9 (2026-10-10): slope preference. Cost = 1 (the base
+                // step) + 0.5 * |dy| between the current and neighbour
+                // stand levels: flat = 1, one block up or down = 1.5.
+                // The search then prefers gentle gradients over zig-zag
+                // staircases of equal length - the staircase execution
+                // (one-block-up waypoints + the loose near-test) was the
+                // measured 15 s oscillation on the 2026-10-10 hillside
+                // run. GCost is set in the constructor (parent + 1) and
+                // not touched by Init, so we adjust it here and re-Init
+                // to fold the new GCost into the f-cost.
+                float slopeDelta = Math.Abs(neighbor.BlockPos.Y - currentNode.BlockPos.Y);
+                if (slopeDelta > 0f)
                 {
-                    reachableNodes.Add(neighbor);
+                    neighbor.GCost = currentNode.GCost + 1f + 0.5f * slopeDelta;
+                    neighbor.Init(end, neighbor.NeedsInteraction);
                 }
+                reachableNodes.Add(neighbor);
             }
         }
 
@@ -154,6 +173,18 @@ public class PolisAStar
     {
         // Target is always reachable
         if (target.Equals(node.BlockPos)) return true;
+
+        // F9 (2026-10-10): pocket rejection. A stand cell whose column
+        // surface is a local minimum the bot cannot climb out of (all
+        // four horizontal neighbours 2+ blocks above it) is a trap:
+        // a 2-block step is uncrossable (physics step-up 1.01), so a
+        // bot that falls in is stuck - measured at (512094,121,512038)
+        // on 2026-10-10, where the core A* dropped the bot into the
+        // pocket and the bounded-repath ladder fired 5 times. Reject
+        // it up front so the search goes around. The target cell is
+        // never rejected (the check above runs first); the existing
+        // TryFindGround / TryStepUp logic is untouched below.
+        if (IsPocket(node)) return false;
 
         var blockAtNode = blockAccessor.GetBlock(node.BlockPos);
         var blockAbove = blockAccessor.GetBlock(node.BlockPos.UpCopy());
@@ -227,6 +258,42 @@ public class PolisAStar
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// F9 (2026-10-10): pocket trap. The node's own column surface
+    /// (feet level of its top-of-solid, the stand level) is a local
+    /// minimum when every one of the four horizontal neighbours' columns
+    /// stands at least 2 blocks above it. Note the neighbour scans are
+    /// anchored at own + 2, NOT the node's Y: ColumnSurfaceY only scans
+    /// DOWNWARD, so anchoring at the node's Y would find the valley
+    /// floor under a raised neighbour and miss the wall entirely.
+    /// </summary>
+    bool IsPocket(PolisPathNode node)
+    {
+        int x = node.BlockPos.X;
+        int y = node.BlockPos.Y;
+        int z = node.BlockPos.Z;
+
+        int own = ColumnSurfaceY(x, z, y);
+
+        // If the node's own column surface is ABOVE the node's Y (the
+        // node is inside a wall), it is not a stand cell at all and the
+        // regular traversability checks below decide it.
+        if (own > y) return false;
+
+        var dirs = new[]
+        {
+            new BlockPos(x + 1, 0, z),
+            new BlockPos(x - 1, 0, z),
+            new BlockPos(x, 0, z + 1),
+            new BlockPos(x, 0, z - 1)
+        };
+        foreach (var d in dirs)
+        {
+            if (ColumnSurfaceY(d.X, d.Z, own + 2) < own + 2) return false;
+        }
+        return true;
     }
 
     /// <summary>

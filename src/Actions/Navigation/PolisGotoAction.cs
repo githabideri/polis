@@ -62,6 +62,12 @@ class PolisGotoAction : EntityActionBase
     bool approached;
     float approachTimer;
 
+    // F8 (2026-10-10): no-progress watchdog. 3-D distance to the target,
+    // lowest so far (persists across repaths) and the running time since
+    // it last improved by more than 10 %.
+    double bestDist = double.MaxValue;
+    float noProgressTimer;
+
     // Custom pathfinding state
     PolisAStar polisAStar;
     DoorInteractionHandler doorHandler;
@@ -120,6 +126,8 @@ class PolisGotoAction : EntityActionBase
         bigBudgetTried = false;
         approached = false;
         approachTimer = 0f;
+        bestDist = double.MaxValue;
+        noProgressTimer = 0f;
 
         EnsureTraversers();
         InitializeCustomPathfinding();
@@ -295,7 +303,20 @@ class PolisGotoAction : EntityActionBase
         if (waypoints != null && waypoints.Count > 0)
         {
             vas.wppathTraverser.OnFoundPath = onFoundPath;
-            // FollowRoute takes a list of waypoints and walks through them
+            // FollowRoute takes a list of waypoints and walks through them.
+            // F5 (2026-10-10) - REVERTED to the 0.7 tolerance after live
+            // measurement. 0.2 (the vsvillage value) and 0.35 both fixed
+            // the hillside waypoint-run-ahead oscillation, but both
+            // re-broke the one-block-below R2 case: with a strict
+            // near-test the action completes through F2's OnDone, whose
+            // within-1.5 snap reports a false "done" on a non-standable
+            // target (the silent short-arrival, repro 2026-10-10 14:10,
+            // re-measured on the 0.2 and 0.35 builds the same day).
+            // The 0.7 value (d^2 = 0.49 vs the vertical term 0.5 for a
+            // bot a full block below) leaves the final waypoint un-
+            // reached in that case, so the bounded-repath ladder reports
+            // the honest failure. The hillside run-ahead is addressed by
+            // F9 (slope preference / pocket rejection) instead.
             (vas.wppathTraverser as WaypointsTraverser)?.FollowRoute(waypoints, WalkSpeed, 0.7f, OnDone, OnStuck);
             setAnimation();
             return true;
@@ -356,6 +377,10 @@ class PolisGotoAction : EntityActionBase
     void onFoundPath()
     {
         setAnimation();
+        // F7 (2026-10-10): validate the path BEFORE the bot follows it.
+        // Runs unconditionally (not gated on debug) for the core-A*
+        // phases; the debug logging below stays as it was.
+        if (navPhase <= 1 && CheckPhantomPath()) return;
         if (debugEnabled)
         {
             if (PolisSystem.TryExtractPathFromTraverser(vas?.wppathTraverser, out var blocks, out var rawCount, out var source))
@@ -423,9 +448,54 @@ class PolisGotoAction : EntityActionBase
             return;
         }
         phaseElapsed += dt;
+
+        // F8 (2026-10-10): no-progress watchdog (action level). The
+        // traverser's 1 s stuck counter only catches "not moving at
+        // all"; the 17:40 hillside failure was SLOW non-converging
+        // motion (12 s of wedge-push, walk vector ~0.1, the bot barely
+        // advancing) that it never caught. On the 1 s heartbeat, if the
+        // 3-D distance to the target has not improved by more than 10 %
+        // of the best so far for 20 s, force the same bounded-repath
+        // path as OnStuck (shared stuckTries / MAX_STUCK_REPATHS budget
+        // - no new unbounded loop).
+        if (vas.Entity != null)
+        {
+            var p = vas.Entity.Pos.XYZ;
+            double wdx = hereTarget.X - p.X;
+            double wdy = hereTarget.Y - p.Y;
+            double wdz = hereTarget.Z - p.Z;
+            double wdist = Math.Sqrt(wdx * wdx + wdy * wdy + wdz * wdz);
+            if (wdist < bestDist * 0.9)
+            {
+                bestDist = wdist;
+                noProgressTimer = 0f;
+            }
+            else
+            {
+                noProgressTimer += 1f; // heartbeat cadence
+                if (noProgressTimer >= 20f)
+                {
+                    float waited = noProgressTimer;
+                    noProgressTimer = 0f;
+                    debugLog?.Invoke($"[goto] no-progress watchdog: best={bestDist:F1} for {waited:F0} s, no >10% improvement - forcing repath");
+                    OnStuck();
+                    return;
+                }
+            }
+        }
+
         if (phaseElapsed < PHASE_TIMEOUT) return;
-        phaseElapsed = 0f;
         debugLog?.Invoke($"[goto] phase {navPhase} timed out, degrading");
+        DegradePhase();
+    }
+
+    /// <summary>
+    /// Advance to the next bounded ladder phase (timeout and F7's
+    /// phantom-path rejection share this path).
+    /// </summary>
+    void DegradePhase()
+    {
+        phaseElapsed = 0f;
         stop();
         ResetTraversers();
         navPhase++;
@@ -445,6 +515,34 @@ class PolisGotoAction : EntityActionBase
             ReportResult(false, "stuck: all navigation modes timed out");
             Finish();
         }
+    }
+
+    /// <summary>
+    /// F7 (2026-10-10): phantom core-A* route check. The core A*'s step
+    /// probe climbs 2 blocks on full blocks (decompiled; see the
+    /// 2026-10-10 nav diagnosis), so a route with a consecutive +2 (or
+    /// higher) climb between waypoints is a PHANTOM route: the 17:40
+    /// hillside run followed exactly one and the bot fell 3.4 blocks
+    /// off the ridge into a pocket. Climbs are not walkable; falls of 2-5
+    /// blocks ARE (MaxFallHeight) and stay allowed. A +2 climb stops the
+    /// traverser and degrades straight to the next ladder phase instead
+    /// of following the path. Returns true if the path was rejected.
+    /// </summary>
+    bool CheckPhantomPath()
+    {
+        if (!PolisSystem.TryExtractPathFromTraverser(vas?.wppathTraverser, out var blocks, out var rawCount, out var source))
+            return false; // no path data exposed - nothing to validate
+        for (int i = 1; i < blocks.Count; i++)
+        {
+            int dy = blocks[i].Y - blocks[i - 1].Y;
+            if (dy >= 2)
+            {
+                debugLog?.Invoke($"[goto] phantom core-A* path: +{dy} step ({blocks[i - 1].X},{blocks[i - 1].Y},{blocks[i - 1].Z})->({blocks[i].X},{blocks[i].Y},{blocks[i].Z}) source={source} - skipping to next phase");
+                DegradePhase();
+                return true;
+            }
+        }
+        return false;
     }
 
     void OnNoPath()

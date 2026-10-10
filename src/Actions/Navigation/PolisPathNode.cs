@@ -32,7 +32,12 @@ public class PolisPathNode : IEquatable<PolisPathNode>, IComparable<PolisPathNod
     {
         BlockPos = blockPos.Copy();
         GCost = 0;
-        Cost = blockPos.DistanceSqTo(target.X, target.Y, target.Z);
+        // F6 (2026-10-10): admissible LINEAR heuristic (vsvillage's
+        // VillagerPathNode: sqrt(DistanceSqTo)). The squared value was
+        // non-admissible: f = g + h was dominated by h at distance, so
+        // the frontier stopped widening and the search oscillated
+        // around obstacles on multi-step terrain (measured 2026-10-10).
+        Cost = DistanceTo(target);
         NeedsInteraction = needsInteraction;
     }
 
@@ -48,8 +53,21 @@ public class PolisPathNode : IEquatable<PolisPathNode>, IComparable<PolisPathNod
     /// </summary>
     public void Init(BlockPos target, bool needsInteraction)
     {
-        Cost = GCost + BlockPos.DistanceSqTo(target.X, target.Y, target.Z);
+        // F6 (2026-10-10): admissible linear heuristic, matching the
+        // start-node constructor (see F6 comment there). GCost is
+        // untouched: F9's slope penalty is applied at neighbor creation
+        // and must survive re-Init (TryStepUp / TryFindGround).
+        Cost = GCost + DistanceTo(target);
         NeedsInteraction = needsInteraction;
+    }
+
+    /// <summary>
+    /// F6 (2026-10-10): Euclidean distance to the target in blocks
+    /// (admissible for the 1-per-step g-cost).
+    /// </summary>
+    public float DistanceTo(BlockPos target)
+    {
+        return (float)Math.Sqrt(BlockPos.DistanceSqTo(target.X, target.Y, target.Z));
     }
 
     /// <summary>
