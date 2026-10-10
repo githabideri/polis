@@ -147,6 +147,13 @@ JOB_CATALOG = {
     "knap":      {"produces": True,  "consumes": True,
                   "source": "world",    "needs": ("at", "material",
                                                   "recipes")},
+    # ripen (2026-10-10, P3): test lever for the forage chain - force
+    # a fruiting bush's block-entity growth state to Ripe (natural
+    # ripening takes in-game months), so a pick can be exercised. One
+    # cell, no proximity required (direct block reference; the C#
+    # handler rejects non-bush cells with the live code).
+    "ripen":     {"produces": False, "consumes": False,
+                  "source": "world",   "needs": ("at",)},
     # forage (2026-10-07 survival run): gather the fruit of a forageable
     # plant (the 1.22 fruiting bush, `fruitingbush-<state>-<type>`): the
     # executor walks to an ADJACENT cell and issues the harness `pick`

@@ -1756,6 +1756,23 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
     if job.type in ("clayform", "kiln_fire", "firepit_fuel", "cook",
                     "eat"):
         return _pots_stage(pol, bot, job, measured)
+    # ripen (2026-10-10, P3): the growth-clock test lever - force the
+    # bush to Ripe so a pick can be exercised (natural ripening takes
+    # in-game months). Direct block reference: no walking, no
+    # proximity (unlike pick). The C# handler rejects non-bush cells
+    # with the live code, so a stale cell fails clean.
+    if job.type == "ripen":
+        cell = [int(v) for v in job.at]
+        cargs = [str(v) for v in cell]
+        r = pol.cmd("ripen", cargs, bot, timeout=30)
+        ok = r.get("Ok") is True
+        return (ok,
+                "ripen %s: %s" % (" ".join(cargs),
+                                  r.get("Message") or ""),
+                measured,
+                {"cmd": "ripen", "args": cargs, "ok": ok,
+                 "msg": r.get("Message")},
+                {"ripened": ok})
     return (False, "unhandled job type %s" % job.type, measured, {},
             {})
 
@@ -2028,6 +2045,23 @@ def _forage(pol, bot, wm, job, run):
     solid = [b["pos"] for b in (pol.cell_blocks(bot, tuple(cell), pad=2) or [])
              if (b.get("code") or "") != "game:air"]
     from_pos = tuple(pol.state(bot)["Bot"]["Pos"])
+    if not solid and from_pos:
+        # the scan is bot-local and bounded: from the spawn the target
+        # may be out of scan range, so the ring comes back empty and
+        # the approach module has the target cell as its ONLY
+        # candidate (2026-10-10: a forage failed 46 blocks out - one
+        # short goto, no ring to fall back on). Walk toward the target
+        # first (timeout scaled to the distance - a 50-block walk is
+        # 30-60 s, the flat 25 s cut it off), then re-scan the ring
+        # from close range.
+        d = ((from_pos[0] - cell[0]) ** 2
+             + (from_pos[2] - cell[2]) ** 2) ** 0.5
+        if d > 10:
+            v5.goto_wait(pol, bot, cell, timeout=max(40, int(2 * d)))
+            solid = [b["pos"] for b in
+                     (pol.cell_blocks(bot, tuple(cell), pad=2) or [])
+                     if (b.get("code") or "") != "game:air"]
+            from_pos = tuple(pol.state(bot)["Bot"]["Pos"])
     pre0 = inventory_of(pol.state(bot))
 
     def _settle(baseline):
@@ -2093,12 +2127,17 @@ def _delta_dict(pre, post):
 
 def _delta_gain(pre, post, job):
     """Items gained that count toward the job's claim: the claimed
-    material (classified) if the job names one, else everything."""
-    want = (job.material or "").lower()
+    material (classified) if the job names one, else everything. Codes
+    are compared with the `game:` namespace prefix stripped - the
+    ledger claims are written bare, the live inventory codes carry the
+    prefix (2026-10-10: a forage that gathered 5 berries reported 0
+    because of the prefix)."""
+    want = (job.material or "").split(":")[-1].lower()
     gain = 0
     for k, v in _delta_dict(pre, post).items():
-        mat = (classify(k)[1] or "").lower()
-        if want and mat != want and k.lower() != want:
+        kc = k.split(":")[-1].lower()
+        mat = (classify(k)[1] or "").split(":")[-1].lower()
+        if want and mat != want and kc != want:
             continue
         gain += v
     return gain
@@ -2256,8 +2295,24 @@ def _pots_stage(pol, bot, job, measured):
                     measured, {"cmd": "clayform", "ok": False,
                                "reason": "no clay"}, {})
         near = _goto(cell)
-        # the placement check treats tufts as blocking: clear first
-        pol.cmd("setblock", ["game:air"] + _cell(cell), bot, timeout=30)
+        # The form cell must hold the clayform table (game:clayform -
+        # its BlockEntityClayForm receives the shaped item; a bare
+        # cell falls back to the uncolored base code). First run:
+        # clear the cell (tufts block the table's placement check),
+        # then place the table. Later runs: the table is already
+        # there - leave it. (2026-10-10: the old unconditional
+        # 'setblock air' destroyed the table whenever the bot was in
+        # range at that moment, so the chain only passed on runs
+        # where the goto happened to be slow - and then lost the
+        # shaped output into the void.)
+        sc = pol.cmd("scan", [str(cell[0]), str(cell[1]), str(cell[2]),
+                              str(cell[0]), str(cell[1]), str(cell[2])],
+                    bot, timeout=30).get("Data") or {}
+        codes = [b.get("code") for b in sc.get("blocks", []) or []]
+        if "game:clayform" not in [c or "" for c in codes]:
+            pol.cmd("setblock", ["game:air"] + _cell(cell), bot, timeout=30)
+            pol.cmd("setblock", ["game:clayform"] + _cell(cell), bot,
+                    timeout=30)
         r = pol.cmd("clayform", _cell(cell) + [recipe, "8"], bot,
                     timeout=180)
         stored = {}
@@ -2280,7 +2335,8 @@ def _pots_stage(pol, bot, job, measured):
                 measured,
                 {"cmd": "clayform",
                  "args": _cell(cell) + [recipe, "8"],
-                 "ok": r.get("Ok"), "near": near},
+                 "ok": r.get("Ok"), "msg": r.get("Message"),
+                 "near": near},
                 {"stored": stored, "bot_has": have_out,
                  "expected": recipe})
 
@@ -2444,11 +2500,18 @@ def _pots_stage(pol, bot, job, measured):
         return (ok,
                 "cook %s: %sx%s into input slot via bot (firepit %s) -> output=%s bot_has=%d"
                 % (" ".join(_cell(cell)), raw, n,
-                   "burning" if (fp.get("Data") or {}).get("burning") else "cold"),
+                   "burning" if (fp.get("Data") or {}).get("burning")
+                   else "cold",
+                   out, have_out),
                 measured,
                 {"cmd": "firepit-put", "ok": True,
                  "output": out, "near": near},
                 {"bot_has": have_out, "expected": cooked})
+        # NOTE: the old version of this return passed 4 values to a
+        # 6-placeholder format string ("output=%s bot_has=%d" had no
+        # arguments) and crashed the mission AFTER the cook had
+        # actually completed - the engine cooked and the take had run;
+        # only the bookkeeping string died (2026-10-10, three runs).
 
     if which == "eat":
         item = job.material or ""
