@@ -276,8 +276,6 @@ public partial class PolisSystem
                     return ExecuteBeProbeCommand(args, context);
                 case "kiln":
                     return ExecuteKilnCommand(args, context);
-                case "kiln2":
-                    return ExecuteKiln2Command(args, context);
                 case "giveplayer":
                     return ExecuteGivePlayerCommand(args, context);
                 case "useitem":
@@ -418,7 +416,7 @@ public partial class PolisSystem
                     return ExecuteViewpointScreenshotCommand(args, context);
                 default:
                     result.Ok = false;
-                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, firestarter, interact, inventory, spawncell, items, be, kiln, kiln2, giveplayer, useitem, teststate, bots, takefrom, putinto, mine, chop, break, harvest, pick, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, container-set, container-take, zone-define, zone-remove, zone-list, zone-check, zone-rename, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot, vitals, crucible-fire, crucible-insert, crucible-fuel, crucible-take, crucible-pour";
+                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, firestarter, interact, inventory, spawncell, items, be, kiln, giveplayer, useitem, teststate, bots, takefrom, putinto, mine, chop, break, harvest, pick, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, container-set, container-take, zone-define, zone-remove, zone-list, zone-check, zone-rename, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot, vitals, crucible-fire, crucible-insert, crucible-fuel, crucible-take, crucible-pour";
                     break;
             }
         }
@@ -2190,11 +2188,11 @@ public partial class PolisSystem
     //   ff:     fast-forward the burn (BurningUntilTotalHours = now)
     //   state:  stage progress + inventory + burn state
     // All calls are the game's own methods - nothing re-implemented.
-    PolisTestHarness.CommandResult ExecuteKiln2Command(string[] args, PolisTestHarness.CommandContext context)
+    PolisTestHarness.CommandResult ExecuteKilnCommand(string[] args, PolisTestHarness.CommandContext context)
     {
         if (args.Length < 4)
         {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: kiln2 <create|feed|ignite|ff|state> <x> <y> <z> [itemCode qty]" };
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: kiln <create|feed|ignite|ff|state> <x> <y> <z> [itemCode qty]" };
         }
         var sub = args[0];
         if (!double.TryParse(args[1], out var fx) || !double.TryParse(args[2], out var fy) || !double.TryParse(args[3], out var fz))
@@ -2573,146 +2571,6 @@ public partial class PolisSystem
         return null;
     }
 
-    // kiln <x> <y> <z> [itemCode qty]: arm and ignite a PIT KILN at the cell
-    // (the floor of a 1-deep hole). The 1.22 way raw clay items are fired:
-    // the game normally arms the pit when a player uses a firestarter on it,
-    // which attaches a BlockEntityPitKiln to the floor block; this does the
-    // same thing directly - instantiates the BE, loads optional items into
-    // its inventory, registers it on the world, and calls its own
-    // TryIgnite(). Re-running on an already-armed pit just reports state.
-    PolisTestHarness.CommandResult ExecuteKilnCommand(string[] args, PolisTestHarness.CommandContext context)
-    {
-        if (args.Length < 3)
-        {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: kiln <x> <y> <z> [itemCode qty ...]" };
-        }
-        if (!double.TryParse(args[0], out var fx) || !double.TryParse(args[1], out var fy) || !double.TryParse(args[2], out var fz))
-        {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
-        }
-        var pos = new Vec3d(fx, fy, fz).AsBlockPos;
-        var tail = args.Skip(3).Where(a => a != "--fresh").ToArray();
-
-        // already armed?
-        var existing = sapi.World.BlockAccessor.GetBlockEntity(pos);
-        if (existing != null)
-        {
-            if (!args.Contains("--fresh"))
-            {
-                return new PolisTestHarness.CommandResult
-                {
-                    Ok = true,
-                    Message = "kiln already present at " + pos + ": " + existing.GetType().Name + " - state in Data (pass --fresh to re-arm)",
-                    Data = BeDump(existing)
-                };
-            }
-            try { sapi.World.BlockAccessor.RemoveBlockEntity(pos); }
-            catch (Exception ex) { return new PolisTestHarness.CommandResult { Ok = false, Message = "removing old kiln BE failed: " + ex.Message }; }
-            existing = null;
-        }
-
-        var beType = System.AppDomain.CurrentDomain.GetAssemblies()
-            .Select(a => { try { return a.GetType("Vintagestory.GameContent.BlockEntityPitKiln", false); } catch { return null; } })
-            .FirstOrDefault(t => t != null);
-        if (beType == null)
-        {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = "BlockEntityPitKiln type not found in loaded assemblies" };
-        }
-
-        object be = null;
-        try
-        {
-            be = Activator.CreateInstance(beType);
-        }
-        catch (Exception ex)
-        {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = "could not instantiate pit kiln BE: " + ex.InnerException?.Message };
-        }
-
-        // wire the base fields directly (Initialize(ICoreAPI) NREs in this
-        // mod's server context - the fields are enough for the BE to tick):
-        // Api, Block, Pos on the BlockEntity base.
-        var floorBlock = sapi.World.BlockAccessor.GetBlock(pos);
-        try
-        {
-            var apiField = FindFieldDeep(beType, "Api");
-            if (apiField != null) apiField.SetValue(be, sapi);
-            var posField = FindFieldDeep(beType, "Pos");
-            if (posField != null) posField.SetValue(be, pos);
-            var blockProp = beType.GetProperty("Block") ?? (beType.BaseType != null ? beType.BaseType.GetProperty("Block") : null);
-            if (blockProp != null) blockProp.SetValue(be, floorBlock);
-            else
-            {
-                var blockField = FindFieldDeep(beType, "Block");
-                if (blockField != null) blockField.SetValue(be, floorBlock);
-            }
-        }
-        catch (Exception ex) { return new PolisTestHarness.CommandResult { Ok = false, Message = "field wiring failed: " + ex.Message + " | stack: " + ex.StackTrace }; }
-
-        // load optional items into the BE inventory (raw clay to be fired)
-        var invProp = beType.BaseType?.GetProperty("Inventory") ?? beType.GetProperty("Inventory");
-        var setMethod = (beType.BaseType ?? beType).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
-            .Concat(((beType.BaseType ?? beType).GetInterfaces()).SelectMany(ii => ii.GetMethods()))
-            .FirstOrDefault(mm => mm.Name == "SetItemstack" && mm.GetParameters().Length == 2);
-        if (invProp != null && invProp.GetValue(be) != null && setMethod != null)
-        {
-            int i = 0;
-            int slotIdx = 0;
-            while (i + 1 < tail.Length)
-            {
-                var code = tail[i];
-                int qty = 1;
-                if (int.TryParse(tail[i + 1], out var q) && q > 0) qty = q;
-                i += 2;
-                if (!TryResolveStack(code, qty, out var stack, out var serr))
-                {
-                    return new PolisTestHarness.CommandResult { Ok = false, Message = "item load failed: " + serr };
-                }
-                try
-                {
-                    setMethod.Invoke(invProp.GetValue(be), new object[] { stack, slotIdx });
-                    slotIdx++;
-                }
-                catch (Exception ex)
-                {
-                    return new PolisTestHarness.CommandResult { Ok = false, Message = "SetItemstack(" + code + ") threw: " + ex.InnerException?.Message };
-                }
-            }
-        }
-
-        // register on the world
-        try
-        {
-            sapi.World.BlockAccessor.SpawnBlockEntity((BlockEntity)be);
-        }
-        catch (Exception ex)
-        {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = "SpawnBlockEntity failed: " + ex.InnerException?.Message + " (" + ex.Message + ")" };
-        }
-
-        // ignite (parameterless overload)
-        object state = null;
-        try
-        {
-            var ign = beType.GetMethods().FirstOrDefault(mm => mm.Name == "TryIgnite" && mm.GetParameters().Length == 0);
-            if (ign == null)
-            {
-                return new PolisTestHarness.CommandResult { Ok = true, Message = "kiln armed at " + pos + " (registered; no parameterless TryIgnite found)", Data = BeDump(be) };
-            }
-            state = ign.Invoke(be, null);
-        }
-        catch (Exception ex)
-        {
-            var inner = ex.InnerException ?? ex;
-            return new PolisTestHarness.CommandResult { Ok = false, Message = "TryIgnite threw: " + inner.Message + " | stack: " + inner.StackTrace, Data = BeDump(be) };
-        }
-        return new PolisTestHarness.CommandResult
-        {
-            Ok = true,
-            Message = "pit kiln armed at " + pos + "; TryIgnite -> " + (state == null ? "void" : state.ToString()),
-            Data = BeDump(be)
-        };
-    }
 
     // be <x> <y> <z> [method...]: probe the block entity at a cell. With no
     // extra args: report its type, public methods and simple fields. With a
