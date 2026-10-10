@@ -53,6 +53,15 @@ class PolisGotoAction : EntityActionBase
     bool fallbackTried;
     bool loggedPathIntrospection;
 
+    // Nav stuck-fix (2026-10-10): F1 bounded repath, F2 height-aware
+    // arrival, F4 one 4x A* budget retry.
+    int stuckTries;
+    bool repathPending;
+    float repathTimer;
+    bool bigBudgetTried;
+    bool approached;
+    float approachTimer;
+
     // Custom pathfinding state
     PolisAStar polisAStar;
     DoorInteractionHandler doorHandler;
@@ -105,6 +114,12 @@ class PolisGotoAction : EntityActionBase
 
         hereTarget = Target.Clone();
         astarTries = 4;
+        stuckTries = 0;
+        repathPending = false;
+        repathTimer = 0f;
+        bigBudgetTried = false;
+        approached = false;
+        approachTimer = 0f;
 
         EnsureTraversers();
         InitializeCustomPathfinding();
@@ -199,6 +214,12 @@ class PolisGotoAction : EntityActionBase
             {
                 return;
             }
+            // F3 (2026-10-10): if the straight line to the target crosses
+            // a step taller than the physics step height (a 2-block climb),
+            // no route exists — the core A* can only return a phantom
+            // route that stalls and "stucks". Fail immediately instead of
+            // burning the ladder.
+            if (CheckUncrossable(target)) return;
             // Fall through to VS pathfinder if PolisAStar fails
             debugLog?.Invoke("[goto] PolisAStar failed, trying VS pathfinder");
         }
@@ -228,6 +249,17 @@ class PolisGotoAction : EntityActionBase
         debugLog?.Invoke($"[goto] PolisAStar finding path from {startPos} to {endPos}");
 
         currentPath = polisAStar.FindPath(startPos, endPos);
+
+        // F4 (2026-10-10): first no-path at the 5000-iteration budget:
+        // one retry with a 4x budget (20000) before falling through to
+        // the core A* — long walkarounds currently die on the search
+        // cap (squared heuristic, no g-cost improvement).
+        if ((currentPath == null || currentPath.Count < 2) && !bigBudgetTried)
+        {
+            bigBudgetTried = true;
+            debugLog?.Invoke("[goto] PolisAStar no path at 5000 - one 4x retry (20000)");
+            currentPath = polisAStar.FindPath(startPos, endPos, 20000);
+        }
 
         if (currentPath == null || currentPath.Count < 2)
         {
@@ -269,6 +301,29 @@ class PolisGotoAction : EntityActionBase
             return true;
         }
 
+        return false;
+    }
+
+    /// <summary>
+    /// F3 (2026-10-10): if the straight line bot→target has a step
+    /// taller than the physics step height (1.01 — a 2-block climb is
+    /// impossible), the target is uncrossable: fail immediately with a
+    /// distinct result instead of the 45 s ladder. Returns true if the
+    /// action was failed.
+    /// </summary>
+    bool CheckUncrossable(Vec3d target)
+    {
+        if (!UsePolisAStar || !Astar || polisAStar == null) return false;
+        var start = polisAStar.GetStartPos(vas.Entity.Pos.XYZ);
+        if (polisAStar.FindUncrossableStep(start, target.AsBlockPos, 1.01f, out var step, out int stepBlocks))
+        {
+            string at = PolisSystem.FormatPos(new Vec3d(step.X, step.Y, step.Z));
+            debugLog?.Invoke($"[goto] uncrossable: {stepBlocks}-block step at {at} - failing before the ladder");
+            ExecutionHasFailed = true;
+            ReportResult(false, $"uncrossable: {stepBlocks}-block step at {at}");
+            Finish();
+            return true;
+        }
         return false;
     }
 
@@ -342,6 +397,31 @@ class PolisGotoAction : EntityActionBase
             hbAccum = 0f;
             debugLog?.Invoke($"[goto] action-tick heartbeat: phase={navPhase} elapsed={phaseElapsed:F1} target={PolisSystem.FormatPos(hereTarget)} nav={DescribeNavState()}");
         }
+        if (repathPending)
+        {
+            repathTimer -= dt;
+            if (repathTimer <= 0f)
+            {
+                repathPending = false;
+                // Re-issue from our A*; navTo resets the traversers
+                // first, so a wedged traverser (a known 1.22 trap) does
+                // not carry over into the new attempt.
+                navPhase = 0;
+                navTo(hereTarget);
+            }
+            return;
+        }
+        if (approachTimer > 0f)
+        {
+            approachTimer -= dt;
+            if (approachTimer <= 0f)
+            {
+                debugLog?.Invoke("[goto] one-step approach bound reached, settling");
+                vas.linepathTraverser?.Stop();
+                OnDone();
+            }
+            return;
+        }
         phaseElapsed += dt;
         if (phaseElapsed < PHASE_TIMEOUT) return;
         phaseElapsed = 0f;
@@ -392,11 +472,38 @@ class PolisGotoAction : EntityActionBase
         Finish();
     }
 
+    // F1 (2026-10-10): bounded repath. 1.22 live matrix: the traverser's
+    // stuck counter fires after ~1 s on a phantom core-A* route (2-block
+    // step), on the knife-edge arrival flake, and on transient wedges
+    // (door re-closing, a wedged route state). The old code killed the
+    // goto instantly, wasting every one of them; a repath that resets
+    // the traversers recovers them. Three tries, then an honest fail.
+    const int MAX_STUCK_REPATHS = 3;
+
     void OnStuck()
     {
-        debugLog?.Invoke("[goto] stuck pos=" + PolisSystem.FormatPos(vas?.Entity?.ServerPos?.XYZ));
+        string pos = PolisSystem.FormatPos(vas?.Entity?.Pos?.XYZ);
+        debugLog?.Invoke("[goto] stuck pos=" + pos);
+        if (approachTimer > 0f)
+        {
+            // Stuck during the F2 one-step approach: the step-up failed.
+            // Settle and evaluate the arrival honestly.
+            approachTimer = 0f;
+            vas.linepathTraverser?.Stop();
+            OnDone();
+            return;
+        }
+        if (stuckTries < MAX_STUCK_REPATHS)
+        {
+            stuckTries++;
+            repathPending = true;
+            repathTimer = 1.0f;
+            debugLog?.Invoke($"[goto] stuck #{stuckTries}/{MAX_STUCK_REPATHS} - repathing after 1 s (traverser reset)");
+            stop();
+            return;
+        }
         ExecutionHasFailed = true;
-        ReportResult(false, "stuck");
+        ReportResult(false, $"stuck after {stuckTries} repaths (last {pos})");
         Finish();
     }
 
@@ -405,14 +512,50 @@ class PolisGotoAction : EntityActionBase
         vas.Entity.AnimManager.StopAnimation(AnimCode);
         vas.Entity.Controls.StopAllMovement();
         // Stop momentum immediately to prevent overshoot/sliding
-        vas.Entity.ServerPos.Motion.Set(0, 0, 0);
         vas.Entity.Pos.Motion.Set(0, 0, 0);
+
+        var epos = vas.Entity.Pos.XYZ;
+        double dx = hereTarget.X - epos.X;
+        double dy = hereTarget.Y - epos.Y;
+        double dz = hereTarget.Z - epos.Z;
+        double hdist = Math.Sqrt(dx * dx + dz * dz);
+        double dist = Math.Sqrt(hdist * hdist + dy * dy);
+
+        // F2 (2026-10-10): height-aware arrival. The traverser reports
+        // "done" when the bot is at the right X/Z but a full block below
+        // (or above) the target — the 3-D distance check alone reads
+        // that as "done" and the follow-up work action dies out of range
+        // (and the core near-test is knife-edge at exactly dy=1, missing
+        // by 0.01). One bounded straight-line approach at the target
+        // lets physics step-up do the last block; afterwards dy < 0.4
+        // means done, anything else is reported honestly.
+        if (!approached && hdist <= 3.0 && Math.Abs(dy) >= 0.75)
+        {
+            debugLog?.Invoke($"[goto] dy={dy:F2} hdist={hdist:F2} - one-step approach at target (5 s bound)");
+            approached = true;
+            approachTimer = 5.0f;
+            vas.linepathTraverser?.Stop();
+            vas.linepathTraverser = new StraightLineTraverser(vas.Entity);
+            vas.linepathTraverser.NavigateTo(hereTarget, WalkSpeed, OnDone, OnStuck, null, 0, EnumAICreatureType.Humanoid);
+            setAnimation();
+            return;
+        }
+
+        if (approachTimer > 0f) approachTimer = 0f;
+
+        if (approached && Math.Abs(dy) >= 0.4)
+        {
+            debugLog?.Invoke($"[goto] approach could not close dy={dy:F2}");
+            ExecutionHasFailed = true;
+            ReportResult(false, "one step short of " + PolisSystem.FormatPos(hereTarget));
+            Finish();
+            return;
+        }
 
         // Honest arrival (2026-10-04 pilot): a wedged traverser can fire
         // OnDone on a 1-node "direct" path while the bot is still blocks
         // away; snapping would be a teleport dressed as a walk. Only snap
         // when the traverser actually got the bot there.
-        double dist = vas.Entity.ServerPos.XYZ.DistanceTo(hereTarget);
         if (dist > 1.5)
         {
             debugLog?.Invoke($"[goto] done but {dist:F1} blocks from target (wedged route?) — not snapping");

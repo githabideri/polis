@@ -355,6 +355,69 @@ public class PolisAStar
     }
 
     /// <summary>
+    /// F3 (2026-10-10): profile the straight line from `from` to `to`
+    /// over block columns (unit X/Z steps, diagonal included) and report
+    /// the first column whose surface sits more than `maxStep` above the
+    /// previous column's. maxStep is the physics step-up height (1.01):
+    /// a 2-block climb is not walkable, so no route can cross it. The
+    /// caller uses this to distinguish "uncrossable" from a plain
+    /// no-path and fail fast instead of burning the navigation ladder.
+    /// Returns false when the line is crossable (or degenerate);
+    /// otherwise true with `at` = the cell the step lands in (feet
+    /// level) and `stepBlocks` = the step's height in blocks.
+    /// Reusable by the build-plan stand search later.
+    /// </summary>
+    public bool FindUncrossableStep(BlockPos from, BlockPos to, float maxStep, out BlockPos at, out int stepBlocks)
+    {
+        at = null;
+        stepBlocks = 0;
+        if (from == null || to == null) return false;
+        if (from.X == to.X && from.Z == to.Z) return false;
+
+        blockAccessor.Begin();
+
+        int dx = to.X > from.X ? 1 : (to.X < from.X ? -1 : 0);
+        int dz = to.Z > from.Z ? 1 : (to.Z < from.Z ? -1 : 0);
+        int x = from.X;
+        int z = from.Z;
+        int prev = ColumnSurfaceY(x, z, from.Y);
+
+        int maxSteps = Math.Abs(to.X - from.X) + Math.Abs(to.Z - from.Z) + 1;
+        for (int step = 0; step < maxSteps; step++)
+        {
+            int surface = ColumnSurfaceY(x, z, prev);
+            if (surface - prev > maxStep)
+            {
+                at = new BlockPos(x, surface, z);
+                stepBlocks = surface - prev;
+                return true;
+            }
+            prev = surface;
+            if (x == to.X && z == to.Z) return false;
+            if (dx != 0) x += dx;
+            if (dz != 0) z += dz;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Feet level of the walkable surface in the (x, z) column, scanned
+    /// down from `referenceY`: the top of the first block with a solid
+    /// top (where feet rest). If no solid is found in the scan window,
+    /// the reference level is returned (no elevation change).
+    /// </summary>
+    int ColumnSurfaceY(int x, int z, int referenceY)
+    {
+        for (int down = 0; down <= MaxFallHeight + 2; down++)
+        {
+            int y = referenceY - down;
+            if (y < 0) break;
+            if (CanStep(blockAccessor.GetBlock(new BlockPos(x, y, z)))) return y + 1;
+        }
+        return referenceY;
+    }
+
+    /// <summary>
     /// Convert path nodes to waypoints for traversal.
     /// </summary>
     public static List<Vec3d> ToWaypoints(List<PolisPathNode> path)
