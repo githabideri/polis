@@ -324,6 +324,12 @@ public partial class PolisSystem
                     return ExecuteButcherCommand(args, context);
                 case "clayform":
                     return ExecuteClayFormCommand(args, context);
+                case "till":
+                    return ExecuteTillCommand(args, context);
+                case "farmland":
+                    return ExecuteFarmlandCommand(args, context);
+                case "sow":
+                    return ExecuteSowCommand(args, context);
                 case "knap":
                     return ExecuteKnapCommand(args, context);
                 case "craft":
