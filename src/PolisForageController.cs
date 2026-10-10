@@ -151,6 +151,36 @@ public partial class PolisSystem
             forageNextRetryMs.Remove(toRemove[i]);
         }
 
+        // Deferred (safe-point) starts get a watchdog of their own:
+        // a side-effect job that never finishes (a wedge) must not
+        // starve the bot while its episode waits for the safe point
+        // (2026-10-10: the pilot's starve-to-0 shape). After 120 s the
+        // wait is treated like the immediate-preempt path.
+        foreach (var kv in foragePendingStart.ToList())
+        {
+            var (pendEp, pendReason, pendSince) = kv.Value;
+            if (NowMs() - pendSince < 120_000) continue;
+            foragePendingStart.Remove(kv.Key);
+            if (!bots.TryGetValue(kv.Key, out var pb2bot) || pb2bot?.Entity == null || !pb2bot.Entity.Alive)
+                continue;
+            if (forageEpisodes.ContainsKey(pb2bot.Entity.EntityId)) continue;
+            if (pb2bot.Entity is EntityPolisBot susp2 && susp2.HungerSuspended) continue;
+            float max2 = PolisEatService.MaxSaturationOf(pb2bot.Entity);
+            float sat2 = PolisEatService.SaturationOf(pb2bot.Entity);
+            if (max2 <= 0f || sat2 >= pendEp.Trigger * max2)
+            {
+                LogForage($"bot#{pb2bot.Entity.EntityId}: safe-point wait ended - saturation recovered ({sat2:F0}/{max2:F0}), no episode");
+                continue;
+            }
+            string jn2 = pb2bot.LastActionName ?? "job";
+            pb2bot.Activity.CancelAll();
+            pb2bot.RecordActionResult(jn2, false, "preempted:food_pressure (safe-point timeout)", sapi.World.ElapsedMilliseconds);
+            pb2bot.JobRunning = false;
+            LogForage($"bot#{pb2bot.Entity.EntityId}: safe-point wait timed out ({(NowMs() - pendSince) / 1000}s in '{jn2}') - forcing forage start");
+            forageEpisodes[pb2bot.Entity.EntityId] = pendEp;
+            BeginPhase(pb2bot, pendEp);
+        }
+
         forageTriggerAccum += dt;
         if (forageTriggerAccum >= 1f)
         {
@@ -298,7 +328,7 @@ public partial class PolisSystem
         {
             // Safe point: the side-effect job runs to its finish; the
             // episode starts when JobRunning clears (BeginEpisodeWhenIdle).
-            foragePendingStart[bot.Entity.EntityId] = (ep, "finish");
+            foragePendingStart[bot.Entity.EntityId] = (ep, "finish", NowMs());
             LogForage($"bot#{bot.Entity.EntityId}: forage deferred — job {curType} runs to its safe point");
             return;
         }
@@ -314,7 +344,7 @@ public partial class PolisSystem
     }
 
     // deferred (safe-point) starts: botId -> (episode, reason)
-    readonly Dictionary<long, (ForageEpisode, string)> foragePendingStart = new();
+    readonly Dictionary<long, (ForageEpisode, string, long)> foragePendingStart = new();
 
     void BeginEpisodeWhenIdle(BotState bot, string reason)
     {
