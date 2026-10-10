@@ -231,7 +231,12 @@ def pots(clay="clay-red", clay_n=4, form_recipe="crucible-red-raw",
                         one live session; the fired output lands in
                         the storage at that cell)
     firepit_at:         [x, y, z] - the firepit cell (fuel slot 0,
-                        input slot 1, output slot 2)
+                        input slot 1, output slot 2). The bot fuels it
+                        endogenously (firepit-fuel; a fresh, unarmed
+                        firepit gets the deterministic firestarter
+                        re-arm first) and puts the meat in the input
+                        slot itself (firepit-put) - no operator slot
+                        writes, no direct-ignite shortcut (2026-10-10)
     meat / meat_n:      the raw food to cook (default redmeat-raw)
     fuel / fuel_n:      the firepit's fuel (default charcoal)
     give:               additional (item, qty) external setup
@@ -242,7 +247,7 @@ def pots(clay="clay-red", clay_n=4, form_recipe="crucible-red-raw",
             raise ValueError(
                 "pots: %s is required ([x, y, z])" % name)
     if not give:
-        give = [(clay, clay_n), (meat, meat_n)]
+        give = [(clay, clay_n), (meat, meat_n), (fuel, fuel_n)]
     if fired is None:
         parts = form_recipe.split("-")
         fired = (parts[0] + "-earthyorange-fired"
@@ -274,11 +279,15 @@ def pots(clay="clay-red", clay_n=4, form_recipe="crucible-red-raw",
                  "material": fired,
                  "recipes": [form_recipe],
                  "n": 1, "origin": "deterministic"})
+    jobs.append({"id": nid(), "type": "firepit_fuel",
+                 "at": [int(v) for v in firepit_at],
+                 "material": fuel, "n": int(fuel_n),
+                 "origin": "deterministic"})
     jobs.append({"id": nid(), "type": "cook",
                  "at": [int(v) for v in firepit_at],
                  "material": cooked,
                  "recipes": [meat],
-                 "expect": fuel, "n": int(fuel_n),
+                 "n": int(meat_n),
                  "origin": "deterministic"})
     jobs.append({"id": nid(), "type": "eat",
                  "material": cooked, "n": int(meat_n),

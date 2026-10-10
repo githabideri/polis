@@ -211,6 +211,15 @@ JOB_CATALOG = {
     "cook":      {"produces": True,  "consumes": False,
                  "source": "world",  "needs": ("at", "material",
                                                "recipes")},
+    # firepit_fuel (2026-10-10 endogenous pass): the bot fuels the
+    # firepit itself (the C# firepit-fuel action: cargo -> fuel slot)
+    # and, if the pit is fresh (canIgniteFuel false at spawn), re-arms
+    # it deterministically (firepit-light mirrors the engine's own
+    # firestarter completion path - no 25% roll). Ledger: the fuel is
+    # consumed, nothing produced (like crucible_fuel). GOAL-SCOPED:
+    # campaign chains only, never the 27B vocabulary.
+    "firepit_fuel": {"produces": False, "consumes": True,
+                    "source": "world",  "needs": ("material",)},
     # eat: the shared policy-gated eat core (PolisEatService); the
     # oracle is the reported before/after saturation + units eaten.
     "eat":       {"produces": False, "consumes": True,
@@ -235,8 +244,8 @@ PLANNER_JOB_TYPES = tuple(
     k for k in JOB_CATALOG
     if k not in ("build_plan", "chop", "forage", "crucible_fire",
                  "crucible_insert", "crucible_fuel", "crucible_take",
-                 "crucible_pour", "clayform", "kiln_fire", "cook",
-                 "eat"))
+                 "crucible_pour", "clayform", "kiln_fire",
+                 "firepit_fuel", "cook", "eat"))
 
 #: provenance of a job's origin (13.1, frozen): the queue runs a mix of
 #: jobs made by different principals; the run JSON is the transparency

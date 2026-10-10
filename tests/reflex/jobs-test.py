@@ -50,22 +50,26 @@ check("unsupported_goal layer=goal", f.layer == "goal")
 
 # --- job catalog ----------------------------------------------------------
 check("catalog covers the v5 families + 12.1 + 13.7 sow + 09-28 build "
-      "+ 13.11 plan + 10-04 craft + 10-06 chop + 10-07 forage & crucible",
+      "+ 13.11 plan + 10-04 craft + 10-06 chop + 10-07 forage & crucible "
+      "+ 10-10 ladder (knap, clayform, kiln_fire, firepit_fuel, cook, eat)",
       set(JOB_CATALOG) == {"mine", "harvest", "place", "goto",
                            "give_tool", "pickup", "travel", "wait",
-                           "sow", "build", "build_plan", "craft", "chop",
-                           "forage",
+                           "sow", "build", "build_plan", "craft",
+                           "chop", "knap", "forage",
                            "crucible_fire", "crucible_insert",
                            "crucible_fuel", "crucible_take",
-                           "crucible_pour"})
+                           "crucible_pour",
+                           "clayform", "kiln_fire", "firepit_fuel",
+                           "cook", "eat"})
 from r2.jobs import PLANNER_JOB_TYPES
 check("goal-scoped jobs stay out of the planner vocabulary "
-      "(build_plan, chop, forage, crucible*)",
+      "(build_plan, chop, forage, crucible*, ladder stages)",
       all(t not in PLANNER_JOB_TYPES for t in
           ("build_plan", "chop", "forage", "crucible_fire",
            "crucible_insert", "crucible_fuel", "crucible_take",
-           "crucible_pour")) and
-      "build" in PLANNER_JOB_TYPES and len(PLANNER_JOB_TYPES) == 11)
+           "crucible_pour", "clayform", "kiln_fire", "firepit_fuel",
+           "cook", "eat")) and
+      "build" in PLANNER_JOB_TYPES and len(PLANNER_JOB_TYPES) == 12)
 g4 = Goal.from_dict({"verb": "build-plan", "object": "hut",
                     "at": "site-A"})
 check("build-plan goal (plan id as object)",

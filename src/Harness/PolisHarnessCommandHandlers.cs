@@ -398,6 +398,10 @@ public partial class PolisSystem
                     return ExecuteCrucibleInsertCommand(args, context);
                 case "crucible-fuel":
                     return ExecuteCrucibleFuelCommand(args, context);
+                case "firepit-fuel":
+                    return ExecuteFirepitFuelCommand(args, context);
+                case "firepit-light":
+                    return ExecuteFirepitLightCommand(args, context);
                 case "crucible-take":
                     return ExecuteCrucibleTakeCommand(args, context);
                 case "crucible-pour":
@@ -7695,10 +7699,11 @@ public partial class PolisSystem
             return new PolisTestHarness.CommandResult { Ok = false, Message = $"firepit fuel slot holds {firepit.fuelSlot.Itemstack.Collectible?.Code}; clear it first" };
         }
 
-        if (!firepit.IsBurning)
-        {
-            firepit.canIgniteFuel = true;
-        }
+        // 2026-10-10: the unconditional canIgniteFuel re-arm was removed
+        // from here (the firepit investigation: arming is the
+        // firestarter's job, not fueling's - use firepit-light). A
+        // firepit that is already armed auto-ignites from this fuel
+        // write on its next tick; a fresh one stays unlit.
         firepit.MarkDirty(true, owner);
 
         bot.RecordActionResult("crucible-fuel", true, $"+{count}x {itemCode} to firepit {pos}", sapi.World.ElapsedMilliseconds);

@@ -401,7 +401,7 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
         # are campaign-scoped on the same precedent.
         if j.type in ("forage", "crucible_fire", "crucible_insert",
                       "crucible_fuel", "crucible_take", "crucible_pour",
-                      "knap") and not campaign:
+                      "knap", "firepit_fuel") and not campaign:
             return None, Failure(
                 "planner_invalid_json",
                 "%s is outside the planner vocabulary "

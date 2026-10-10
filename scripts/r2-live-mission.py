@@ -2337,6 +2337,51 @@ def _pots_stage(pol, bot, job, measured):
                 {"stored": stored, "bot_has": have_out,
                  "expected": fired})
 
+    if which == "firepit_fuel":
+        if not cell:
+            return (False, "firepit_fuel: no at cell (the firepit)", measured,
+                    {"cmd": "firepit_fuel", "ok": False, "reason": "no at"}, {})
+        fuel = job.material or "charcoal"
+        n = job.quantity or 1
+        near = _goto(cell)
+        r = pol.cmd("firepit-fuel", _cell(cell) + [fuel, str(n)], bot,
+                    timeout=60)
+        if r.get("Ok") is not True:
+            return (False, "firepit_fuel %s: %s"
+                    % (" ".join(_cell(cell)), r.get("Message")), measured,
+                    {"cmd": "firepit-fuel", "ok": False, "near": near}, {})
+        d = r.get("Data") or {}
+        if not d.get("canIgniteFuel"):
+            # fresh (unarmed) firepit: the deterministic firestarter
+            # re-arm (engine's own completion path, no 25% roll)
+            lr = pol.cmd("firepit-light", _cell(cell), bot, timeout=60)
+            if lr.get("Ok") is not True:
+                return (False, "firepit_fuel %s: re-arm failed: %s"
+                        % (" ".join(_cell(cell)), lr.get("Message")),
+                        measured,
+                        {"cmd": "firepit-light", "ok": False,
+                         "near": near}, {})
+            d = lr.get("Data") or {}
+        # an armed firepit with fuel auto-ignites on the engine's next
+        # burn tick (~100 ms); give it 20 s and then read the BE
+        burning = False
+        for _ in range(10):
+            b = pol.cmd("be", _cell(cell), bot, timeout=30)
+            dd = b.get("Data") or {}
+            v = dd.get("IsBurning", dd.get("isBurning"))
+            burning = (v is True) or (str(v).strip().lower()
+                                      in ("true", "1"))
+            if burning:
+                break
+            time.sleep(2)
+        return (burning,
+                "firepit_fuel %s: fueled %sx%s, %s" %
+                (" ".join(_cell(cell)), fuel, n,
+                 "burning" if burning else "NOT burning after re-arm"),
+                measured,
+                {"cmd": "firepit-fuel", "ok": True, "near": near},
+                {"burning": burning, "armed": bool(d.get("canIgniteFuel"))})
+
     if which == "cook":
         if not cell:
             return (False, "cook: no at cell (the firepit)", measured,
@@ -2344,17 +2389,22 @@ def _pots_stage(pol, bot, job, measured):
                      "reason": "no at"}, {})
         cooked = job.material or ""
         raw = (job.recipes or [cooked])[0]
-        fuel = job.expect or "charcoal"
         n = job.quantity or 1
         pre = _inv()
         near = _goto(cell)
-        # fuel + raw food into the firepit slots (0 fuel, 1 input)
-        pol.cmd("container-set",
-                _cell(cell) + ["0", fuel, str(n)], bot, timeout=30)
-        pol.cmd("container-set",
-                _cell(cell) + ["1", raw, str(n)], bot, timeout=30)
-        r = pol.cmd("be", _cell(cell) + ["igniteFuel"], bot,
-                    timeout=60)
+        # bot-driven (2026-10-10 endogenous pass): the meat goes into
+        # the input slot (1) through the bot's own firepit-put action
+        # (the 1.22 firepit GUI is slot writes only). The fuel was
+        # handled by the firepit_fuel stage, which left the pit
+        # burning - no operator slot writes, no direct-ignite call.
+        fp = pol.cmd("firepit-put",
+                     _cell(cell) + ["1", raw, str(n)], bot, timeout=60)
+        if fp.get("Ok") is not True:
+            return (False,
+                    "cook %s: firepit-put failed: %s"
+                    % (" ".join(_cell(cell)), fp.get("Message")),
+                    measured,
+                    {"cmd": "firepit-put", "ok": False, "near": near}, {})
         out = {}
         for _ in range(60):
             d = pol.cmd("container-contents", _cell(cell), bot,
@@ -2371,14 +2421,14 @@ def _pots_stage(pol, bot, job, measured):
                     + post.get(cooked, 0))
         for k, v in _delta_dict(pre, post).items():
             measured[k] = measured.get(k, 0) + v
-        ok = r.get("Ok") is not False and have_out > 0
+        ok = have_out > 0
         return (ok,
-                "cook %s %sx%s fuel=%s -> output=%s bot_has=%d"
-                % (" ".join(_cell(cell)), raw, n, fuel, out,
-                   have_out),
+                "cook %s: %sx%s into input slot via bot (firepit %s) -> output=%s bot_has=%d"
+                % (" ".join(_cell(cell)), raw, n,
+                   "burning" if (fp.get("Data") or {}).get("burning") else "cold"),
                 measured,
-                {"cmd": "be:igniteFuel",
-                 "ok": r.get("Ok"), "output": out, "near": near},
+                {"cmd": "firepit-put", "ok": True,
+                 "output": out, "near": near},
                 {"bot_has": have_out, "expected": cooked})
 
     if which == "eat":
