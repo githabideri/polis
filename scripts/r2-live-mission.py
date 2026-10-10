@@ -3075,6 +3075,45 @@ def main():
             run["plan"] = {"raw": raw, "latency_ms": 0,
                            "jobs": [j.to_dict() for j in jobs] if jobs else None,
                            "failure": failure.to_dict() if failure else None}
+        elif goal.verb == "forage":
+            # cell-targeted forage (2026-10-11): one forage job at the
+            # goal's bush cell (the P3 ladder chain minus the ripen
+            # test lever). The plant family glob matches the live block
+            # code; the material names the expected berry (the ledger's
+            # gain check). The executor re-scans the cell's ring before
+            # picking and rejects an empty cell at the preflight.
+            n = goal.n or 1
+            at = getattr(goal, "at", None)
+            try:
+                at_cells = [int(v) for v in
+                            str(at).replace(" ", ",").split(",")]
+                assert len(at_cells) == 3
+            except (ValueError, AssertionError):
+                run.update({"outcome": "rejected",
+                            "reason": "deterministic: forage goal needs "
+                                      "'at <bush cell x,y,z>' (query the "
+                                      "world for a fruitingbush-* first)"})
+                return finish(args.out, run, t0)
+            fam = goal.object if str(goal.object).startswith(
+                "fruitingbush") else "fruitingbush-*"
+            berry = goal.object if str(goal.object).startswith(
+                "fruit-") else "fruit-" + goal.object
+            raw = json.dumps({"id": "j1", "type": "forage",
+                              "quantity": n, "at": at_cells,
+                              "plant": fam, "material": berry,
+                              "origin": "deterministic"})
+            bpf = st["Bot"]["Pos"]
+            prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
+                                                 center=(bpf[0], 0,
+                                                         bpf[2]))
+            run["planner"] = {"mode": "deterministic",
+                              "chosen": {"at": at_cells, "plant": fam,
+                                         "berry": berry, "qty": n},
+                              "candidates": sorted(index)}
+            jobs, failure = validate_plan(raw, index, inv, goal=goal)
+            run["plan"] = {"raw": raw, "latency_ms": 0,
+                           "jobs": [j.to_dict() for j in jobs] if jobs else None,
+                           "failure": failure.to_dict() if failure else None}
         else:
             import math as _math
             bp = st["Bot"]["Pos"]

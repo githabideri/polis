@@ -49,6 +49,12 @@ RULES
    drop codes for unmeasured resources). If the INVENTORY already
    holds a seeds-* item of X, a single sow job suffices; otherwise
    the plan is [harvest <crop X>, sow <crop X>].
+   "forage X xN at S" picks N of berry/bush X (e.g. 'whitecurrant')
+   from a fruiting bush: ONE forage job on the matching fruitingbush-*
+   resource at site S (the bush cell; a '-free' suffix is snow cover,
+   not a different plant). The executor walks to the bush and re-scans
+   from close range; a bush that is not yet ripe is reported, not
+   picked. A forage without 'at' takes the nearest matching instance.
    "build X xN at S" places N blocks of material X as a ring platform
    around site S - a SINGLE composite build job (one job, N blocks).
    The material comes from the INVENTORY or an earlier give_tool job

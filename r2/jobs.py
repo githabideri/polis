@@ -23,7 +23,7 @@ from dataclasses import dataclass, field, asdict
 # --------------------------------------------------------------------------
 
 GOAL_VERBS = ("mine", "harvest", "place", "goto", "sow", "plant",
-              "build", "construct", "build-plan", "craft")
+              "forage", "build", "construct", "build-plan", "craft")
 
 #: operator synonyms that normalize onto another grammar verb
 GOAL_VERB_ALIASES = {"plant": "sow", "construct": "build"}

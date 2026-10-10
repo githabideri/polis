@@ -338,10 +338,11 @@ class Oikistes:
         self.born = time.time()
         self.state_path = os.path.join(args.datadir, "oikistes-state.json")
         self.transcript_path = os.path.join(args.datadir, "oikistes-log.jsonl")
-        # the world name as the service is told it (env POLIS_WORLD, set
-        # in the unit). If it changes under a running agent, the rolling
-        # memory of the old world (zone names, bot ids, positions) is
-        # poison - a new world starts with a clean memory.
+        # The world name: the env POLIS_WORLD (set in the unit drop-in)
+        # is the SEED from service boot; the game is the authority -
+        # _live_world_check() adopts the live name from /polis/status
+        # each chat turn, and a world change clears the rolling memory
+        # (zone names, bot ids, positions are poison across worlds).
         self.world = os.environ.get("POLIS_WORLD") or ""
         self.bot = self._load_bot()
         # the body's auto-respawn budget: one per service boot. A body
@@ -369,11 +370,18 @@ class Oikistes:
         self._save_state()
 
     def _check_world_change(self):
-        """The env world name differs from the one the rolling memory
-        was written under (and one was written): clear the transcript
-        and forget the bot id (ids do not survive a world change)."""
+        self._adopt_world(self.world)
+
+    def _adopt_world(self, world):
+        """Adopt a world name (the env seed at boot, or the live name
+        from /polis/status - the game is the authority). If it differs
+        from the one the rolling memory was written under (and one was
+        written): clear the transcript and forget the bot id - zone
+        names and ids do not survive a world change."""
+        if not world or world == self.world:
+            return
         st = self._load_state()
-        if st.get("world") and st.get("world") != self.world:
+        if st.get("world") and st.get("world") != world:
             try:
                 open(self.transcript_path, "w").close()
             except Exception:
@@ -382,8 +390,9 @@ class Oikistes:
             self._respawns_left = 1
             self.log("system",
                      "world changed %s -> %s: memory reset" %
-                     (st.get("world"), self.world))
-        st["world"] = self.world
+                     (st.get("world"), world))
+        self.world = world
+        st["world"] = world
         st["bot"] = self.bot
         self._save_state()
 
@@ -433,6 +442,20 @@ class Oikistes:
             return ((r.get("Data") or {}).get("preset") or "guarded")
         except Exception:
             return "guarded"
+
+    def _live_world_check(self):
+        """Each turn: ask the game which world it has loaded. The env
+        POLIS_WORLD is only the seed from service boot - if the
+        operator pointed the game at another world, adopt it (the
+        rolling memory of the old world is poison). An unreachable
+        harness (the restart window) keeps the last known world."""
+        try:
+            r = self.polis.get("/polis/status")
+        except Exception:
+            return
+        live = ((r.get("server") or {}).get("worldName") or "")
+        if live:
+            self._adopt_world(live)
 
     # -- compact world digest for the system prompt --------------------
     def _world_lines(self, pos):
@@ -882,7 +905,8 @@ class Oikistes:
                 trip = toks[i + 1].split(",")
                 if len(trip) == 3 and all(p.isdigit() for p in trip):
                     cmd += ["--site", toks[i + 1]]
-        if verb in ("mine", "harvest", "sow", "build", "build-plan"):
+        if verb in ("mine", "harvest", "sow", "forage", "build",
+                    "build-plan"):
             cmd.append("--no-planner")
         else:
             cmd += ["--llm", self.args.llm,
@@ -968,7 +992,8 @@ class Oikistes:
         """The pot-work food chain (the early-game ladder J2-J5) as
         ONE background mission: clay -> clayform table (raw item) ->
         pit-kiln fire (fired item) -> firepit cook (the engine's own
-        DoSmelt) -> the bot eats. The R2 chain template (r2/chains.py
+        DoSmelt) -> the bot eats (one meat per fire load - the 1.22
+        firepit quirk, STATUS). The R2 chain template (r2/chains.py
         'pots') renders the job list; the run JSON is the record.
         All three site cells are required - the brain knows them from
         its zones/digest (the hole and the firepit live at the base);
@@ -1006,6 +1031,12 @@ class Oikistes:
                   "fuel_n", "form_recipe", "fired"):
             if a.get(k) is not None:
                 params[k] = a[k]
+        # One meat per fire load: the 1.22 firepit reliably cooks only
+        # the first of two meats in one load and drops the raw second
+        # (2026-10-10, the STATUS engine-quirk item). The ladder
+        # fixture keeps meat_n=2 as the validation instrument; the
+        # settlement chain orders the reliably-completable one.
+        params.setdefault("meat_n", 1)
         out = os.path.join(
             self.args.datadir,
             "oik-pots-%d.json" % int(time.time()))
@@ -1085,13 +1116,17 @@ class Oikistes:
             "raw crucible -> pit-kiln firing -> the fired crucible "
             "-> firepit cooking -> cooked meat -> the bot eats; it "
             "gives the bot its own clay and meat as the only external "
-            "input). All three cells are REQUIRED: the air cell the "
+            "input; it cooks ONE meat per fire load - the 1.22 "
+            "firepit reliably drops a second meat in the same load "
+            "(engine quirk, not a mission bug); "
+            "All three cells are REQUIRED: the air cell the "
             "clayform table is placed in, the floor of a 1-deep hole "
             "(the pit kiln), the firepit cell - they live at the "
             "base, so query the base zone first if you do not have "
             "them; "
             "(goals like 'mine granite x1', 'harvest rye x1', 'sow rye "
-            "x1 at site-A', 'build granite x4 at site-A', 'place "
+            "x1 at site-A', 'forage whitecurrant x2 at <x,y,z>', "
+            "'build granite x4 at site-A', 'place "
             "granite at site-A x1 supply external', 'build-plan "
             "hut-dirt at base'); a STRUCTURE (hut, box, fence) is built "
             "with 'build-plan <plan-name> at <site>' - never 'build "
@@ -1130,11 +1165,14 @@ class Oikistes:
             "one. A hut means: a floor, walls with ONE opening (the "
             "door), a roof over - a place to shelter from weather and "
             "the night. Suggest only work you can actually order from "
-            "this vocabulary; if the user wants something outside it "
-            "(e.g. foraging berries - the pot-work chain, by "
-            "contrast, has its own 'pots' tool), "
-            "say plainly that the job system has no goal verb for that "
-            "yet, and offer the closest thing you can order. "
+            "this vocabulary. Foraging is orderable: 'forage <bush> "
+            "xN at <x,y,z>' (the fruitingbush-* family; a '-free' "
+            "suffix is snow cover, not another plant) - a bush that "
+            "is not yet ripe is reported, not picked; the pot-work "
+            "chain has its own 'pots' tool. If the user wants "
+            "something outside this vocabulary, say plainly the job "
+            "system has no goal verb for it yet, and offer the "
+            "closest thing you can order. "
             "WORLD BLOCK: the current-world section lists your body, the "
             "operator's PLAYER (by name, with its position and the "
             "distance from you), any other players, the NAMED ZONES as "
@@ -1144,11 +1182,21 @@ class Oikistes:
             "IF THE OPERATOR GIVES YOU A LOCATION OR COORDINATES, use the "
             "query tool in coordinate form against THAT location - do not "
             "scan your own position and call their spot empty. YOUR OWN "
-            "MOVEMENT IS GOTO: a pathfind order that can fail when the "
-            "way is blocked - report the harness message VERBATIM, do not "
-            "paraphrase it, and never claim to have teleported yourself "
-            "(only the player can be teleported; the teleport command "
-            "takes the player's name or uid as its first argument). When "
+            "MOVEMENT IS GOTO: a pathfind order that can fail. "
+            "TERRAIN - hills and ridges are normal work (multi-level "
+            "terrain pathfinds fine; do not treat it as an obstacle). "
+            "Hard limits, by the message you get: 'one step short' = "
+            "your body stands 1 cell from the target - at a bush or "
+            "solid cell that IS the arrival (interaction range; never "
+            "re-order the same goto); 'stuck after N repaths' = no "
+            "walkable route in budget; 'no path' = disconnected "
+            "terrain. Never walkable: water (no swimming, no bridges - "
+            "the lake is an edge, not a route) and any step up of 2+ "
+            "blocks (cliffs). On a goto failure report the harness "
+            "message VERBATIM and pick a different route or target. "
+            "Never claim to have teleported yourself (only the player "
+            "can be teleported; the teleport command takes the "
+            "player's name or uid as its first argument). When "
             "a tool returns an error, repeat the exact message in your "
             "report - paraphrasing it loses the diagnosis. After each "
             "action you see its "
@@ -1252,6 +1300,7 @@ class Oikistes:
             return None, ["a chat is already in flight"]
         try:
             autonomy = self.autonomy()
+            self._live_world_check()
             self.log("user", message, actor=actor)
             actions = []
             digest = self.world_digest()

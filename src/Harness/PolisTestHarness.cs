@@ -311,7 +311,13 @@ public class PolisTestHarness : IDisposable
                 {
                     ok = true,
                     harness = new { running = isRunning, port },
-                    server = new { runPhase = runPhase.ToString(), worldReady },
+                    server = new { runPhase = runPhase.ToString(), worldReady,
+                                   // The world name as the game sees it
+                                   // (2026-10-10): the Oikistes agent
+                                   // reads this every turn - its env
+                                   // world is only the seed, the game is
+                                   // the authority.
+                                   worldName = sapi.World?.WorldName ?? "" },
                     websocket = new { connections = broadcaster?.ConnectionCount ?? 0 },
                     timeMs = sapi.World?.ElapsedMilliseconds ?? 0,
                     modVersion = modInfo?.Version ?? ""
