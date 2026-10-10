@@ -1,0 +1,43 @@
+{
+  "_comment": "First early-game ladder (2026-10-10): only fully-proven stages. P0 zone, P3 forage-eat, P6 pots (crucible food chain), plus P1 flint-tools with a live knapping surface. Exit oracles read WORLD STATE (never mission claims). Run: python3 scripts/r2-progression.py builds/ladder-earlygame.json --world polis-survival-5",
+  "world": "polis-survival-5",
+  "zones": [
+    {"name": "base", "box": [512054, 118, 511934, 512142, 126, 512018]}
+  ],
+  "stages": [
+    {
+      "id": "P0",
+      "desc": "settlement zone exists (runner creates it if absent)",
+      "pre": {},
+      "exit": {"all": [{"zone": "base"}]}
+    },
+    {
+      "id": "P1",
+      "desc": "stone tools: mine loose flint, craft the knapping surface, knap 12 flakes",
+      "chain": "flint-tools",
+      "params": {"surface_at": [512067, 118, 511977]},
+      "exit": {"all": [{"item_count": {"code": "flint", "min": 12, "where": "all"}}]}
+    },
+    {
+      "id": "P3",
+      "desc": "forage-eat: a bot finds a wild fruiting bush, picks and eats to satiety",
+      "jobs": [
+        {"id": "j1", "type": "forage", "plant": "fruit", "quantity": 1}
+      ],
+      "exit": {"all": [{"any_bot_sat": 1400}]}
+    },
+    {
+      "id": "P6",
+      "desc": "pots: clayform -> pit-kiln fire -> firepit cook -> eat (one background chain)",
+      "chain": "pots",
+      "params": {
+        "form_at": [512096, 123, 511971],
+        "hole_at": [512098, 121, 511972],
+        "firepit_at": [512090, 121, 511967]
+      },
+      "exit": {"all": [
+        {"any_bot_sat": 1400}
+      ]}
+    }
+  ]
+}

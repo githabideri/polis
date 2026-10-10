@@ -152,7 +152,11 @@ except Exception:
     check("unknown plan raises", True)
 
 # 5. the library index
-check("list_plans finds the hut", list_plans(BUILDS) == ["hut"],
+# 2026-10-10: the builds dir holds the whole plan family now (box3x3,
+# cottage, the hut variants, ...), so assert membership, not the
+# exact list (the exact-list assertion has been red since the hut
+# family grew - see the other stale hut-expectations in this file).
+check("list_plans finds the hut", "hut" in list_plans(BUILDS),
       str(list_plans(BUILDS)))
 check("list_plans on a missing dir is empty",
       list_plans(os.path.join(BUILDS, "nope")) == [])
