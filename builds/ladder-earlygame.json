@@ -36,6 +36,7 @@
         "firepit_at": [512090, 121, 511967]
       },
       "exit": {"all": [
+        {"item_count": {"code": "redmeat-cooked", "min": 2, "where": "bots"}},
         {"any_bot_sat": 1400}
       ]}
     }

@@ -1749,9 +1749,12 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
     if job.type in ("crucible_fire", "crucible_insert", "crucible_fuel",
                     "crucible_take", "crucible_pour"):
         return _crucible(pol, bot, job, measured)
-    # pots chain (2026-10-10, J2-J5): clayform / kiln_fire / cook /
-    # eat - one harness-primtive-driven stage each.
-    if job.type in ("clayform", "kiln_fire", "cook", "eat"):
+    # pots chain (2026-10-10, J2-J5): clayform / kiln_fire /
+    # firepit_fuel / cook / eat - one harness-primitive-driven stage
+    # each (firepit_fuel added 2026-10-10 deploy: the endogenous
+    # firepit fueling + deterministic firestarter re-arm).
+    if job.type in ("clayform", "kiln_fire", "firepit_fuel", "cook",
+                    "eat"):
         return _pots_stage(pol, bot, job, measured)
     return (False, "unhandled job type %s" % job.type, measured, {},
             {})
@@ -2363,24 +2366,40 @@ def _pots_stage(pol, bot, job, measured):
                          "near": near}, {})
             d = lr.get("Data") or {}
         # an armed firepit with fuel auto-ignites on the engine's next
-        # burn tick (~100 ms); give it 20 s and then read the BE
+        # burn tick (OnBurnTick: !IsBurning && canIgniteFuel &&
+        # canSmelt() -> igniteFuel()). Detection: the `be` dump exposes
+        # BE fields as "name=value" strings - there is NO IsBurning
+        # property in the dump (2026-10-10: polling that key
+        # false-failed the stage while the pit burned, aborting
+        # cook/eat); fuelBurnTime > 0 is the live-burn signal.
         burning = False
-        for _ in range(10):
+        fuel_burn = -1.0
+        fv = {}
+        for _ in range(30):
             b = pol.cmd("be", _cell(cell), bot, timeout=30)
             dd = b.get("Data") or {}
-            v = dd.get("IsBurning", dd.get("isBurning"))
-            burning = (v is True) or (str(v).strip().lower()
-                                      in ("true", "1"))
+            fv = {}
+            for fstr in dd.get("fields") or []:
+                if isinstance(fstr, str) and "=" in fstr:
+                    k, v = fstr.split("=", 1)
+                    fv[k] = v
+            try:
+                fuel_burn = float(fv.get("fuelBurnTime", "0") or 0)
+            except (TypeError, ValueError):
+                fuel_burn = 0.0
+            burning = fuel_burn > 0
             if burning:
                 break
-            time.sleep(2)
+            time.sleep(1)
         return (burning,
-                "firepit_fuel %s: fueled %sx%s, %s" %
-                (" ".join(_cell(cell)), fuel, n,
-                 "burning" if burning else "NOT burning after re-arm"),
+                "firepit_fuel %s: fueled %sx%s, %s (fuelBurnTime=%.1f, canIgniteFuel=%s)"
+                % (" ".join(_cell(cell)), fuel, n,
+                   "burning" if burning else "NOT burning after re-arm",
+                   fuel_burn, fv.get("canIgniteFuel", "?")),
                 measured,
                 {"cmd": "firepit-fuel", "ok": True, "near": near},
-                {"burning": burning, "armed": bool(d.get("canIgniteFuel"))})
+                {"burning": burning, "armed": bool(d.get("canIgniteFuel")),
+                 "fuelBurnTime": fuel_burn})
 
     if which == "cook":
         if not cell:

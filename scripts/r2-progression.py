@@ -79,10 +79,15 @@ class World:
         self.zones = self._read_zones()
 
     def _read_zones(self):
-        w = _jget(self.base + "/polis/world?key=" + KEY).get("Data") or {}
+        r = _jget(self.base + "/polis/zones")
+        zones = (r.get("Data") or {}).get("zones") or []
         out = {}
-        for z in w.get("zones") or []:
-            out[z.get("name")] = z
+        for z in zones:
+            b = z.get("bounds") or {}
+            out[z.get("name")] = {
+                "name": z.get("name"),
+                "box": [b.get("x1"), b.get("y1"), b.get("z1"),
+                        b.get("x2"), b.get("y2"), b.get("z2")]}
         return out
 
     def command(self, cmd, *args):
@@ -210,14 +215,16 @@ def check_item_count(w, val):
 
 def check_any_bot_sat(w, val):
     v = w.vitals()
-    sats = [x.get("sat") for x in (v.get("bots") or [])
+    ents = v.get("entities") or v.get("bots") or []
+    sats = [x.get("sat") for x in ents
             if isinstance(x.get("sat"), (int, float))]
     return bool(sats) and max(sats) >= val, "max sat %s (need %s)" % (sats and max(sats), val)
 
 
 def check_all_bots_sat(w, val):
     v = w.vitals()
-    sats = [x.get("sat") for x in (v.get("bots") or [])
+    ents = v.get("entities") or v.get("bots") or []
+    sats = [x.get("sat") for x in ents
             if isinstance(x.get("sat"), (int, float))]
     return bool(sats) and min(sats) >= val, "min sat %s (need %s)" % (sats and min(sats), val)
 
@@ -232,7 +239,7 @@ ORACLES = {
     "container_items": check_container_items,
     "item_count": check_item_count,
     "any_bot_sat": check_any_bot_sat,
-    "all_bots_sat": check_all_bot_sat,
+    "all_bots_sat": check_all_bots_sat,
 }
 
 
@@ -273,33 +280,53 @@ def _fmt(results):
     return "; ".join(bad) if bad else "all predicates passed (%d)" % len(results)
 
 
-def run_jobs(w, stage, output_dir):
+def player_uid(w):
+    # /polis/players uses its own envelope ({ok, players}), not
+    # CommandResult {Ok, Data}
+    r = _jget(w.base + "/polis/players")
+    players = r.get("players") or (r.get("Data") or {}).get("players") or []
+    if not players:
+        raise SystemExit("no online player (the mission needs one)")
+    return players[0].get("uid")
+
+
+def run_jobs(w, stage, output_dir, keep):
+    mission = os.path.join(HERE, "r2-live-mission.py")
+    out = os.path.join(output_dir, stage["id"] + ".run.json")
+    base_cmd = [sys.executable, mission,
+                "--harness", w.base,
+                "--uid", player_uid(w),
+                "--no-planner",
+                "--goal", stage.get("desc", stage["id"]),
+                "--keep-bots", ",".join(str(b) for b in keep),
+                "--out", out]
+    def run_and_judge(cmd, label):
+        p2 = subprocess.run(cmd, capture_output=True, text=True,
+                             timeout=6000)
+        tail = (p2.stdout or p2.stderr)[-400:]
+        # the mission exits 0 regardless of outcome - the run JSON's
+        # "outcome" field is the truth (2026-10-10: a firepit_fuel
+        # stage failure returned rc=0 and the ladder called it "jobs
+        # ok"; only the exit oracle - a weak one at that - caught it)
+        try:
+            rj = json.load(open(out))
+            outcome = rj.get("outcome")
+        except Exception:
+            outcome = "unreadable"
+        ok = p2.returncode == 0 and outcome == "complete"
+        return ok, ("%s rc=%d outcome=%s out=%s"
+                    % (label, p2.returncode, outcome, tail))
+
     if stage.get("chain"):
-        params = stage.get("params") or {}
-        cmd = [sys.executable, os.path.join(HERE, "r2-live-mission.py"),
-               "chain", stage["chain"]]
-        for k, v in params.items():
-            cmd += ["--" + k, str(v)]
-        cmd += ["--world-name", w.world_name]
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=6000)
-        out = p.stdout.strip()
-        ok = p.returncode == 0
-        return ok, ("chain %s rc=%d out=%s" % (stage["chain"], p.returncode,
-                     out[-400:] if out else p.stderr[-400:]))
+        cmd = base_cmd + ["--chain", stage["chain"],
+                          "--chain-params",
+                          json.dumps(stage.get("params") or {})]
+        return run_and_judge(cmd, "chain " + stage["chain"])
     jobs = stage.get("jobs")
     if jobs is None:
         return True, "no jobs (pure-oracle stage)"
-    payload = {"world": w.world_name, "jobs": jobs,
-               "params": stage.get("params") or {}}
-    jf = os.path.join(output_dir, "ladder-" + stage["id"] + ".json")
-    with open(jf, "w") as f:
-        json.dump(payload, f, indent=2)
-    p = subprocess.run([sys.executable, os.path.join(HERE, "r2-live-mission.py"),
-                        "mission", jf, "--world-name", w.world_name,
-                        "--output", os.path.join(output_dir, stage["id"] + ".run.json")],
-                       capture_output=True, text=True, timeout=6000)
-    return p.returncode == 0, ("jobs rc=%d out=%s" % (p.returncode,
-                     (p.stdout or p.stderr)[-400:]))
+    return run_and_judge(base_cmd + ["--jobs", json.dumps(jobs)], "jobs")
+
 
 
 def main():
@@ -337,16 +364,21 @@ def main():
     # (a P0-style precondition of the ladder, not a stage claim)
     for z in spec.get("zones") or []:
         if z["name"] not in w.zones:
-            r = w.command("zone", z["name"], "create", *z["box"])
+            r = w.command("zone-define", z["name"], *z["box"])
             print("zone %s: %s" % (z["name"], r.get("Message")))
             w.zones = w._read_zones()
 
     output_dir = os.path.join(R2, "runs", "ladder-" + time.strftime("%Y%m%d-%H%M"))
     os.makedirs(output_dir, exist_ok=True)
 
+    # keep list: every bot alive before the ladder (the mission's boot
+    # sweep kills the rest; an explicit spec-level "keep_bots" wins)
+    brecs = w.bots()
+    blist = brecs.get("bots") if isinstance(brecs, dict) else brecs
+    keep = spec.get("keep_bots") or [b["id"] for b in blist]
     summary = {"world": world_name, "date": time.strftime("%Y-%m-%d %H:%M UTC",
                  time.gmtime()), "stages": [],
-               "overall": "pending"}
+               "overall": "pending", "keep_bots": keep}
     started = opts["start"] is None
     stopped = False
     for stage in spec["stages"]:
@@ -372,7 +404,7 @@ def main():
                 break
             print("  pre ok")
         t0 = time.time()
-        ok, det = run_jobs(w, stage, output_dir)
+        ok, det = run_jobs(w, stage, output_dir, keep)
         ms = int((time.time() - t0) * 1000)
         if not ok:
             entry.update(status="FAILED", detail=det, ms=ms)
