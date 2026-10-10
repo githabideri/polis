@@ -51,6 +51,8 @@ on the model-mux box.
   `kiln create -> crucible -> feed -> ignite -> ff` sequence in ONE live session; only the
   fired output (persistent storage block in the hole) survives.
 
+- **1.22.7 firepit cook/fuel quirk (open, 2026-10-10; upstream report candidate, pair with the pit-kiln one):** two raw meats + two charcoal in a firepit produced only **one** cooked output in seven consecutive chain runs (earlier same-day runs on an older build cooked 2/2, so it is timing-dependent, not build-dependent): the burn dies mid-cook and the engine **drops the still-raw second meat** (not in any inventory, slot, or on the ground). The mod only writes items to slots and polls the output - it never touches the fire's fuel or smelt timers. Blocks the P6 ladder's strict `outcome: complete` gate (eat fails 1/2); the four pots-chain stage mechanics (clayform, pit-kiln fire, firepit fuel, cook, eat) are each live-validated individually on 2026-10-10. Workaround if the chain needs 2/2: one meat per fuel load (or refuel mid-cook). Evidence: the day's P6 run JSONs on the game container.
+
 - **5x5 ring dead-end (13.13):** single-bot face-placement cannot complete
   ring edges of 5+ at tier 2+ (runs 14–17 each died at a different wall
   cell; all rejections were correct). Options: harness standing-range 2,
