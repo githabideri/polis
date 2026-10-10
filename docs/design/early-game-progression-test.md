@@ -12,7 +12,7 @@ go-ing to air (`CompleteKnapToBot`), and the output lands directly in the
 bot's inventory. Open for the no-give P1 endogenous run: the surface item
 has no recipe (creative/decorative) — its world source is still to be
 settled (the flint side is solved: `looseflints` RightClickPickup).
-Next: J2+J3 (clayform + kiln).
+Next: chain `pots` (J2+J3+J4+J5), the R2 job wrappers, Oikistes integration, J5 tend + P7.
 
 ## The unit: one job = one world transformation, three proofs
 
@@ -59,7 +59,7 @@ crucible-*, forage, vitals, zone/query.
 | # | job | wraps | oracle (world state) | unlocks |
 |---|-----|-------|---------------------|---------|
 | J1 | `knap` | `knap <pos> <recipe>`; sub-step places a knapping surface if absent; flint/loose-stone in cargo | delta: knife-blade-flint / axehead-flint / arrowhead-flint | P1 stone tools (keystone) | **done 2026-10-10** (contract + live; see Status) |
-| J2 | `clayform` | `clayform <pos> <recipe>`; sub-step places the form block; clay-\<color\> in cargo | delta: `*-raw` item | pots, molds, anvil |
+| J2 | `clayform` | `clayform <pos> <recipe>`; sub-step places the form block; clay-\<color\> in cargo | delta: `*-raw` item (output lands in a groundstorage the table converts into on completion; clear the target cell to air first - tufts block placement) | pots, molds, anvil |
 | J3 | `kiln` | crucible-chain skeleton re-pointed at a firepit kiln (place raw → fuel → wait → take) | delta: fired item (cooking-pot, storage, mold) | P4 cooking, P6 storage |
 | J4 | `smelt-copper` | crucible-copper chain + C# crucible-progress read (anvil-state pattern) so the wait ends on engine pace, not a tuned timer | delta: nuggets; 40 = the wiki's age-gate number | P8 the age transition |
 | J5 | `tend` | poll farmland stage (query) → wait real clock → harvestcrop | delta: harvested grain | P7 crops |
