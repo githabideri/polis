@@ -198,3 +198,89 @@ def flint_tools(material="flint", surface_at=None,
                  "material": axe, "source": axe_source,
                  "n": 1, "origin": "deterministic"})
     return jobs
+
+
+@chain("pots")
+def pots(clay="clay-red", clay_n=4, form_recipe="crucible-red-raw",
+         fired=None, form_at=None, hole_at=None, firepit_at=None,
+         meat="redmeat-raw", meat_n=2, fuel="charcoal", fuel_n=2,
+         give=()):
+    """The pot-work food chain (2026-10-10, J2-J5 of the early-game
+    ladder - all four stages live-verified on the survival run;
+    see STATUS.md). One end-to-end pass proves the fired-clay food
+    capability: clay -> clayform table (raw item in the table's
+    groundstorage) -> pit kiln (fired item from the hole storage) ->
+    firepit cooking (the engine's own DoSmelt on the input slot) ->
+    the bot eats (the shared policy-gated eat core).
+
+    Parameters (live-world facts, supplied at invocation):
+
+    clay / clay_n:      the clay item given to the bot (the only
+                        permitted external input; 1.22 has clay-red
+                        and clay-blue)
+    form_recipe:        the clayform recipe's OUTPUT code
+                        (e.g. crucible-red-raw, pot-red-raw)
+    fired:              the expected FIRED item; default derived
+                        (1.22 renames the fired color: red ->
+                        earthyorange; other colors pass it explicitly)
+    form_at:            [x, y, z] - the AIR cell the clayform table is
+                        placed in (the executor clears it first; soil
+                        tufts block the placement check)
+    hole_at:            [x, y, z] - the floor cell of a 1-deep hole
+                        (the pit kiln runs create/feed/ignite/ff in
+                        one live session; the fired output lands in
+                        the storage at that cell)
+    firepit_at:         [x, y, z] - the firepit cell (fuel slot 0,
+                        input slot 1, output slot 2)
+    meat / meat_n:      the raw food to cook (default redmeat-raw)
+    fuel / fuel_n:      the firepit's fuel (default charcoal)
+    give:               additional (item, qty) external setup
+    """
+    for name, val in (("form_at", form_at), ("hole_at", hole_at),
+                      ("firepit_at", firepit_at)):
+        if val is None:
+            raise ValueError(
+                "pots: %s is required ([x, y, z])" % name)
+    if not give:
+        give = [(clay, clay_n), (meat, meat_n)]
+    if fired is None:
+        parts = form_recipe.split("-")
+        fired = (parts[0] + "-earthyorange-fired"
+                 if len(parts) >= 3 and parts[1] == "red"
+                 else (form_recipe[:-4] + "-fired"
+                       if form_recipe.endswith("-raw")
+                       else form_recipe))
+    cooked = (meat[:-4] + "-cooked" if meat.endswith("-raw")
+              else meat)
+    jobs = []
+    n = 0
+
+    def nid():
+        nonlocal n
+        n += 1
+        return "p%d" % n
+
+    for i, (item, qty) in enumerate(give):
+        jobs.append({"id": "g%d" % i, "type": "give_tool",
+                     "material": item, "n": int(qty),
+                     "origin": "operator"})
+    jobs.append({"id": nid(), "type": "clayform",
+                 "at": [int(v) for v in form_at],
+                 "material": form_recipe,
+                 "expect": clay,
+                 "n": 1, "origin": "deterministic"})
+    jobs.append({"id": nid(), "type": "kiln_fire",
+                 "at": [int(v) for v in hole_at],
+                 "material": fired,
+                 "recipes": [form_recipe],
+                 "n": 1, "origin": "deterministic"})
+    jobs.append({"id": nid(), "type": "cook",
+                 "at": [int(v) for v in firepit_at],
+                 "material": cooked,
+                 "recipes": [meat],
+                 "expect": fuel, "n": int(fuel_n),
+                 "origin": "deterministic"})
+    jobs.append({"id": nid(), "type": "eat",
+                 "material": cooked, "n": int(meat_n),
+                 "origin": "deterministic"})
+    return jobs

@@ -620,7 +620,8 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
                 # so no res-* reference exists by construction.
                 if campaign and (
                         (j.at and j.type in ("mine", "chop"))
-                        or j.type in ("forage", "crucible_take")):
+                        or j.type in ("forage", "crucible_take",
+                                      "clayform", "kiln_fire", "cook")):
                     avail[j.material] = avail.get(j.material, 0) + \
                         (j.quantity or 1)
                     continue

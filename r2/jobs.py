@@ -182,6 +182,39 @@ JOB_CATALOG = {
                         "source": "world",  "needs": ("material",)},
     "crucible_pour":   {"produces": False, "consumes": True,
                         "source": "world",  "needs": ("material", "at")},
+    # pots chain stages (2026-10-10, J2-J5 of the early-game ladder):
+    # the fired-clay food chain, each stage driving the live-verified
+    # harness primitives (STATUS.md). GOAL-SCOPED exactly like the
+    # crucible family: campaign chains only, never the 27B vocabulary.
+    # Ledger convention (like chop/forage): `material` is what the
+    # job PRODUCES (the claim the ledger budgets); consumed inputs
+    # ride `expect` (the clay / the fuel) and `recipes` (the second
+    # input, where present). The campaign exemption credits the
+    # production; inputs are gated by the executor's cargo
+    # precondition, not the ledger.
+    # clayform: `at` the air cell the table is placed in (cleared
+    # first - tufts block the placement check), `material` the raw
+    # output (the table's recipe name), `expect` the clay item in
+    # cargo.
+    "clayform":  {"produces": True,  "consumes": False,
+                 "source": "world",  "needs": ("at", "material")},
+    # kiln_fire: `at` the 1-deep hole's floor cell (the pit-kiln
+    # pipeline create/feed/ignite/ff in one live session),
+    # `material` the FIRED item (1.22 renames the fired color:
+    # red -> earthyorange), `recipes` [the raw input].
+    "kiln_fire": {"produces": True,  "consumes": False,
+                 "source": "world",  "needs": ("at", "material",
+                                               "recipes")},
+    # cook: `at` the firepit cell (the engine's own DoSmelt: the
+    # fuel - `expect` - into slot 0, the raw food `recipes[0]` into
+    # the input slot 1), `material` the cooked item.
+    "cook":      {"produces": True,  "consumes": False,
+                 "source": "world",  "needs": ("at", "material",
+                                               "recipes")},
+    # eat: the shared policy-gated eat core (PolisEatService); the
+    # oracle is the reported before/after saturation + units eaten.
+    "eat":       {"produces": False, "consumes": True,
+                 "source": "world",  "needs": ("material",)},
     "give_tool": {"produces": True,  "consumes": False,
                   "source": "external", "needs": ("material",)},
     "pickup":    {"produces": False, "consumes": False,
@@ -202,7 +235,8 @@ PLANNER_JOB_TYPES = tuple(
     k for k in JOB_CATALOG
     if k not in ("build_plan", "chop", "forage", "crucible_fire",
                  "crucible_insert", "crucible_fuel", "crucible_take",
-                 "crucible_pour"))
+                 "crucible_pour", "clayform", "kiln_fire", "cook",
+                 "eat"))
 
 #: provenance of a job's origin (13.1, frozen): the queue runs a mix of
 #: jobs made by different principals; the run JSON is the transparency

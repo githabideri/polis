@@ -1749,6 +1749,10 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
     if job.type in ("crucible_fire", "crucible_insert", "crucible_fuel",
                     "crucible_take", "crucible_pour"):
         return _crucible(pol, bot, job, measured)
+    # pots chain (2026-10-10, J2-J5): clayform / kiln_fire / cook /
+    # eat - one harness-primtive-driven stage each.
+    if job.type in ("clayform", "kiln_fire", "cook", "eat"):
+        return _pots_stage(pol, bot, job, measured)
     return (False, "unhandled job type %s" % job.type, measured, {},
             {})
 
@@ -2158,6 +2162,241 @@ def _crucible(pol, bot, job, measured):
          "last_action": {k: la.get(k) for k in ("Name", "Ok", "Msg")},
          "data": data}, \
         {"measured": measured, "data": data}
+
+
+def _pots_stage(pol, bot, job, measured):
+    """One pots-chain stage (2026-10-10, J2-J5). Each stage drives the
+    harness primitives that were live-verified on the survival run,
+    then observes the FRESH world as its oracle (the 12.6/13.2 split:
+    the command's verdict is `execution`, the world check is
+    `oracle`). All stages are goal-scoped campaign jobs (the 27B
+    planner never learned this vocabulary).
+
+    Engine facts baked in (measured 2026-10-10, survival-5):
+    - clayform places its own game:clayform table via direct SetBlock,
+      but the placement check treats soil tufts as blocking: the
+      target cell is cleared to air first. On completion the table
+      converts to a groundstorage holding the shaped RAW item.
+    - the pit kiln (1-deep hole) must run create/feed/ignite/ff in ONE
+      live session (the game:pitkiln block is non-persistent; the
+      fired output lands in the persistent storage at the hole floor
+      and survives the session).
+    - the 1.22 firepit cooks the INPUT slot (1) through the item's
+      own DoSmelt (fuel slot 0, output slot 2); the pot is only
+      needed for multi-ingredient meals.
+    - eat runs the shared policy-gated core (PolisEatService).
+    """
+    def _cell(c):
+        return [str(v) for v in (c or [])]
+
+    def _goto(cell):
+        # the workstation actions enforce a short reach (4.5 m). The
+        # engine's goto verdict is not a distance truth: long walks
+        # get declared failed while the bot keeps walking (run 5:
+        # 108 m -> 25 m with the engine saying "no"). So poll the
+        # actual bot position and re-issue until we are in range or
+        # the budget runs out.
+        tx, ty, tz = int(cell[0]) + 1, int(cell[1]), int(cell[2])
+        t0 = time.time()
+        last_issue = 0.0
+        while time.time() - t0 < 180:
+            if time.time() - last_issue > 20:
+                try:
+                    pol.cmd("goto", [str(tx), str(ty), str(tz),
+                                     "true", "0.02", "true"], bot,
+                            timeout=15)
+                except Exception:
+                    pass
+                last_issue = time.time()
+            try:
+                pos = pol.state(bot).get("Bot", {}).get("Pos") or []
+            except Exception:
+                pos = []
+            if len(pos) >= 3:
+                d = ((float(pos[0]) - tx) ** 2 +
+                     (float(pos[2]) - tz) ** 2) ** 0.5
+                if d <= 4:
+                    return True
+            time.sleep(3)
+        return False
+
+    def _stored(cell):
+        d = pol.cmd("container-contents", _cell(cell), bot,
+                    timeout=30).get("Data") or {}
+        return {s.get("code"): s.get("qty", 1)
+                for s in d.get("slots", []) if s.get("code")}
+
+    def _take(cell, slot, tries=4):
+        for _ in range(tries):
+            r = pol.cmd("container-take",
+                        _cell(cell) + [str(slot)], bot, timeout=30)
+            if not r.get("Ok"):
+                break
+
+    def _inv():
+        return inventory_of(pol.state(bot))
+
+    which = job.type
+    cell = job.at or []
+
+    if which == "clayform":
+        if not cell:
+            return (False, "clayform: no at cell", measured,
+                    {"cmd": "clayform", "ok": False,
+                     "reason": "no at"}, {})
+        recipe = job.material or ""
+        clay = job.expect or "clay-red"
+        pre = _inv()
+        have = (pre.get("game:" + clay, 0) + pre.get(clay, 0))
+        if have <= 0:
+            return (False, "clayform: no %s in cargo" % clay,
+                    measured, {"cmd": "clayform", "ok": False,
+                               "reason": "no clay"}, {})
+        near = _goto(cell)
+        # the placement check treats tufts as blocking: clear first
+        pol.cmd("setblock", ["game:air"] + _cell(cell), bot, timeout=30)
+        r = pol.cmd("clayform", _cell(cell) + [recipe, "8"], bot,
+                    timeout=180)
+        stored = {}
+        for _ in range(30):
+            stored = _stored(cell)
+            if stored:
+                break
+            time.sleep(2)
+        for i in range(4):
+            _take(cell, i)
+        post = _inv()
+        have_out = (post.get("game:" + recipe, 0)
+                    + post.get(recipe, 0))
+        for k, v in _delta_dict(pre, post).items():
+            measured[k] = measured.get(k, 0) + v
+        ok = r.get("Ok") is True and have_out > 0
+        return (ok,
+                "clayform %s recipe=%s stored=%s bot_has=%d"
+                % (" ".join(_cell(cell)), recipe, stored, have_out),
+                measured,
+                {"cmd": "clayform",
+                 "args": _cell(cell) + [recipe, "8"],
+                 "ok": r.get("Ok"), "near": near},
+                {"stored": stored, "bot_has": have_out,
+                 "expected": recipe})
+
+    if which == "kiln_fire":
+        if not cell:
+            return (False, "kiln_fire: no at cell", measured,
+                    {"cmd": "kiln", "ok": False,
+                     "reason": "no at"}, {})
+        fired = job.material or ""
+        raw = (job.recipes or [fired])[0]
+        pre = _inv()
+        have = (pre.get("game:" + raw, 0) + pre.get(raw, 0))
+        if have <= 0:
+            return (False, "kiln_fire: no %s in cargo" % raw,
+                    measured, {"cmd": "kiln", "ok": False,
+                               "reason": "no raw item"}, {})
+        near = _goto(cell)
+        steps = []
+        # create preserves the fireable item only if it is already in
+        # the hole storage or passed as [itemCode qty] (the vanilla
+        # conversion has no other input path) - we pass the bot's raw
+        # item explicitly.
+        r = pol.cmd("kiln", ["create"] + _cell(cell) + [raw, "1"],
+                    bot, timeout=120)
+        steps.append(("create", bool(r.get("Ok"))))
+        steps.append(("feed",
+                     bool(pol.cmd("kiln", ["feed"] + _cell(cell),
+                                  bot, timeout=300).get("Ok"))))
+        steps.append(("ignite",
+                     bool(pol.cmd("kiln", ["ignite"] + _cell(cell),
+                                  bot, timeout=60).get("Ok"))))
+        rff = pol.cmd("kiln", ["ff"] + _cell(cell), bot, timeout=60)
+        steps.append(("ff", bool(rff.get("Ok"))))
+        # OnFired lands the fired item in the storage at the hole
+        # floor (the same cell the kiln BE occupied)
+        stored = {}
+        for _ in range(30):
+            stored = _stored(cell)
+            if fired in stored:
+                break
+            time.sleep(2)
+        _take(cell, 0)
+        _take(cell, 1)
+        _take(cell, 2)
+        _take(cell, 3)
+        post = _inv()
+        have_out = (post.get("game:" + fired, 0) + post.get(fired, 0))
+        for k, v in _delta_dict(pre, post).items():
+            measured[k] = measured.get(k, 0) + v
+        ok = all(o for _, o in steps) and have_out > 0
+        return (ok,
+                "kiln_fire %s %s -> %s steps=%s bot_has=%d"
+                % (" ".join(_cell(cell)), raw, fired, steps,
+                   have_out),
+                measured,
+                {"cmd": "kiln", "steps": steps, "near": near},
+                {"stored": stored, "bot_has": have_out,
+                 "expected": fired})
+
+    if which == "cook":
+        if not cell:
+            return (False, "cook: no at cell (the firepit)", measured,
+                    {"cmd": "cook", "ok": False,
+                     "reason": "no at"}, {})
+        cooked = job.material or ""
+        raw = (job.recipes or [cooked])[0]
+        fuel = job.expect or "charcoal"
+        n = job.quantity or 1
+        pre = _inv()
+        near = _goto(cell)
+        # fuel + raw food into the firepit slots (0 fuel, 1 input)
+        pol.cmd("container-set",
+                _cell(cell) + ["0", fuel, str(n)], bot, timeout=30)
+        pol.cmd("container-set",
+                _cell(cell) + ["1", raw, str(n)], bot, timeout=30)
+        r = pol.cmd("be", _cell(cell) + ["igniteFuel"], bot,
+                    timeout=60)
+        out = {}
+        for _ in range(60):
+            d = pol.cmd("container-contents", _cell(cell), bot,
+                        timeout=30).get("Data") or {}
+            out = {s.get("code"): s.get("qty", 1)
+                   for s in d.get("slots", [])
+                   if s.get("code") and s.get("slot") == 2}
+            if out:
+                break
+            time.sleep(3)
+        _take(cell, 2)
+        post = _inv()
+        have_out = (post.get("game:" + cooked, 0)
+                    + post.get(cooked, 0))
+        for k, v in _delta_dict(pre, post).items():
+            measured[k] = measured.get(k, 0) + v
+        ok = r.get("Ok") is not False and have_out > 0
+        return (ok,
+                "cook %s %sx%s fuel=%s -> output=%s bot_has=%d"
+                % (" ".join(_cell(cell)), raw, n, fuel, out,
+                   have_out),
+                measured,
+                {"cmd": "be:igniteFuel",
+                 "ok": r.get("Ok"), "output": out, "near": near},
+                {"bot_has": have_out, "expected": cooked})
+
+    if which == "eat":
+        item = job.material or ""
+        n = job.quantity or 1
+        r = pol.cmd("eat", [item, str(n)], bot, timeout=120)
+        d = r.get("Data") or {}
+        ok = r.get("Ok") is True
+        return (ok,
+                "eat %sx %s: %s" % (n, item, r.get("Message") or ""),
+                {item: d.get("units", 0) if ok else 0},
+                {"cmd": "eat", "args": [item, str(n)],
+                 "ok": r.get("Ok")},
+                {"before": d.get("before"), "after": d.get("after"),
+                 "units": d.get("units")})
+
+    return (False, "pots stage: unknown type %s" % which, measured,
+            {}, {})
 
 
 def _parse_keep(args):

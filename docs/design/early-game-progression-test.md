@@ -12,7 +12,7 @@ go-ing to air (`CompleteKnapToBot`), and the output lands directly in the
 bot's inventory. Open for the no-give P1 endogenous run: the surface item
 has no recipe (creative/decorative) — its world source is still to be
 settled (the flint side is solved: `looseflints` RightClickPickup).
-Next: chain `pots` (J2+J3+J4+J5), the R2 job wrappers, Oikistes integration, J5 tend + P7.
+Next: Oikistes integration (the 27B dispatches the `pots` chain), J5 tend + P7, the user runbook.
 
 ## The unit: one job = one world transformation, three proofs
 
