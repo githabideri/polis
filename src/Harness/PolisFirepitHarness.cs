@@ -45,18 +45,23 @@ using Vintagestory.GameContent;
 /// </summary>
 public partial class PolisSystem
 {
-    PolisTestHarness.CommandResult _FirepitPut(BotState bot, PolisTestHarness.CommandContext context, string[] args, int slot, string cmdName)
+    PolisTestHarness.CommandResult _FirepitPut(BotState bot, PolisTestHarness.CommandContext context, string[] args, int slot, string cmdName, int itemIdx = 3)
     {
         if (!double.TryParse(args[0], out var fx) || !double.TryParse(args[1], out var fy) || !double.TryParse(args[2], out var fz))
             return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
         var pos = new Vec3d(fx, fy, fz).AsBlockPos;
 
-        string itemCode = (args.Length > 3 && !string.IsNullOrEmpty(args[3])) ? args[3] : "";
+        // firepit-fuel: <x> <y> <z> [itemCode] [count]        -> itemIdx 3
+        // firepit-put:  <x> <y> <z> <slot> [itemCode] [count] -> itemIdx 4
+        // (2026-10-10: the shared helper read args[3] as the item on
+        // both paths; the put path handed it the slot number and failed
+        // with "carries no 'game:1'")
+        string itemCode = (args.Length > itemIdx && !string.IsNullOrEmpty(args[itemIdx])) ? args[itemIdx] : "";
         int count = 1;
         if (slot == 0 && string.IsNullOrEmpty(itemCode)) itemCode = "charcoal";
         if (string.IsNullOrEmpty(itemCode))
             return new PolisTestHarness.CommandResult { Ok = false, Message = "itemCode required (slot " + slot + ")" };
-        if (args.Length > (slot == 0 ? 4 : 4) && int.TryParse(args[4], out var c))
+        if (args.Length > itemIdx + 1 && int.TryParse(args[itemIdx + 1], out var c))
             count = Math.Max(1, Math.Min(64, c));
         if (!itemCode.StartsWith("game:")) itemCode = "game:" + itemCode;
 
@@ -130,7 +135,7 @@ public partial class PolisSystem
             return new PolisTestHarness.CommandResult { Ok = false, Message = "slot must be 0..6 (0 fuel, 1 input, 2 output, 3-6 cooking)" };
         if (!TryGetHarnessBot(context, out var bot, out var err))
             return new PolisTestHarness.CommandResult { Ok = false, Message = err };
-        return _FirepitPut(bot, context, args, slot, "firepit-put");
+        return _FirepitPut(bot, context, args, slot, "firepit-put", 4);
     }
 
     PolisTestHarness.CommandResult ExecuteFirepitLightCommand(string[] args, PolisTestHarness.CommandContext context)
