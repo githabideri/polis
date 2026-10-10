@@ -322,7 +322,15 @@ internal static class PolisInventoryHelpers
     }
 
     internal static bool IsItem(ItemStack it, string code)
-        => it != null && it.StackSize > 0 && it.Collectible?.Code?.ToString() == code;
+    {
+        if (it == null || it.StackSize <= 0 || it.Collectible?.Code == null) return false;
+        // resolve the query so short names ("redmeat-cooked") match stored
+        // full codes ("game:redmeat-cooked")
+        string want;
+        try { want = new AssetLocation(code).ToString(); }
+        catch { want = code; }
+        return it.Collectible.Code.ToString() == want;
+    }
 
     private static bool ConsumeOneInSlot(ItemSlot slot, string code)
     {

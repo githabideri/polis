@@ -47,7 +47,10 @@ namespace Polis.Core
             if (nut == null)
                 return (false, $"{code} is not edible (no nutrition properties)", 0f, 0f, 0);
 
-            var (allowed, reason) = PolisPolicyEngine.Instance.Evaluate(player, "food", code, nut.FoodCategory.ToString());
+            // The policy gate sees the RESOLVED code (game:...) - callers
+            // pass short names ("redmeat-cooked") which would never match a
+            // code-anchored rule; category rules are unaffected either way.
+            var (allowed, reason) = PolisPolicyEngine.Instance.Evaluate(player, "food", item.Code.ToString(), nut.FoodCategory.ToString());
             if (!allowed)
                 return (false, $"policy denied: {reason}", 0f, 0f, 0);
 

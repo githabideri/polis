@@ -6351,6 +6351,7 @@ public partial class PolisSystem
                 return new PolisTestHarness.CommandResult { Ok = false, Message = giveErr2 };
             if (!PolisInventoryHelpers.TryInsertIntoBotInventory(e, toGive, out _, out string giveErr))
                 return new PolisTestHarness.CommandResult { Ok = false, Message = $"Could not give {code}: {giveErr}" };
+            have = PolisInventoryHelpers.CountBotItems(e, code);
         }
 
         var (ok, reason, before, after, units) = PolisEatService.Eat(e, owner, code, count, sapi.Logger.Debug);
