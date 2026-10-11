@@ -413,7 +413,6 @@ internal static class PolisInventoryHelpers
         err = "player inventory full (leftover not placed)";
         return false;
     }
-}
 
     internal static bool IsItem(ItemStack it, string code)
     {
