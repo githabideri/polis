@@ -1435,7 +1435,7 @@ public partial class PolisSystem
                 var playerIds = new HashSet<long>();
                 foreach (var p in sapi.World.AllOnlinePlayers)
                     if (p is IServerPlayer sp && sp.Entity != null)
-                        playerIds.Add(sp.Entity.Id);
+                        playerIds.Add(sp.Entity.EntityId);
                 var isPlayer = unknown.Where(id => playerIds.Contains(id)).ToList();
                 if (isPlayer.Count > 0)
                     hint = $" id(s) {string.Join(",", isPlayer)} are the player, not bots — follow makes bots follow the player;";
