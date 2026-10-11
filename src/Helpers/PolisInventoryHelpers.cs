@@ -338,8 +338,12 @@ internal static class PolisInventoryHelpers
         if (mgr != null)
             foreach (var inv in mgr.Inventories.Values)
             {
-                if (inv == null) continue;   // some named slots are unassigned
-                for (int i = 0; i < inv.Count; i++) list.Add(inv[i]);
+                if (inv == null || inv.Count <= 0) continue;
+                for (int i = 0; i < inv.Count; i++)
+                {
+                    try { list.Add(inv[i]); }   // slots can be null/unassigned;
+                    catch { }                   // the callers null-check every slot
+                }
             }
         return list;
     }
