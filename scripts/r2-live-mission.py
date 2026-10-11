@@ -159,18 +159,28 @@ def parse_goal_line(line):
     return goal
 
 
-def boot(pol, radius=14, keep=None):
+def boot(pol, radius=14, keep=None, attach=None):
     """Fresh bot + first world observation. Returns (bot, wm, state,
     scan_summary). `keep`: bot ids the sweep must NOT kill (2026-10-10:
     the sweep used to kill the Oikistes body and the operator's whole
     crew on every mission - the body-as-identity contract needs them
-    to survive the mission's world reset)."""
+    to survive the mission's world reset). `attach` (2026-10-11,
+    campaign mode): run the mission ON a named existing bot instead
+    of spawning - its carried inventory is the campaign's banked
+    state (the haul survives across milestones because the mission
+    neither spawns a stranger nor reaps the carrier)."""
+    keep = list(keep or [])
+    if attach is not None:
+        keep.append(attach)
     pol.sweep_bots(keep=keep)
     time.sleep(2)
-    r = v5.http_json(pol.base + "/polis/command",
-                     {"cmd": "spawn", "args": [],
-                      "context": {"playerUid": pol.uid}})
-    bot = (r.get("Data") or {}).get("id")
+    if attach is not None:
+        bot = attach
+    else:
+        r = v5.http_json(pol.base + "/polis/command",
+                         {"cmd": "spawn", "args": [],
+                          "context": {"playerUid": pol.uid}})
+        bot = (r.get("Data") or {}).get("id")
     st = pol.state(bot)
     pos = st["Bot"]["Pos"]
     wm = WorldModel()
@@ -3281,6 +3291,12 @@ def main():
                          "comma-separated ids")
     ap.add_argument("--body", type=int, default=0,
                     help="the agent's own body id ('self' resolves to it)")
+    ap.add_argument("--bot", type=int, default=0,
+                    help="campaign attach (2026-10-11): run the mission "
+                         "ON this existing bot instead of spawning - "
+                         "its cargo is the campaign's banked state and "
+                         "survives the run (the mission neither spawns "
+                         "a stranger nor reaps the carrier)")
     args = ap.parse_args()
 
     # a mission-plan template renders to a --jobs list before anything
@@ -3310,6 +3326,21 @@ def main():
         return
     pol = v5.Polis(args.harness, args.uid)
 
+    # 0. campaign attach (2026-10-11): the named carrier must be
+    #    ALIVE before anything else - a dead id is a world fact, not
+    #    a silent respawn (the oikistes service owns body respawn).
+    if args.bot:
+        st0 = pol.state(args.bot)
+        if not (st0.get("Bot") or {}).get("Pos"):
+            run.update({"outcome": "rejected",
+                        "reason": ("attach: bot %d is not alive "
+                                   "(the campaign carrier is dead or "
+                                   "gone - rebind it or let the agent "
+                                   "service respawn its body)"
+                                   % args.bot)})
+            return finish(args.out, run, t0)
+        run["attach"] = args.bot
+
     # 1. goal intake (grammar + known site)
     gd = parse_goal_line(args.goal)
     try:
@@ -3321,7 +3352,8 @@ def main():
 
     # 2. world observation
     keep_bots = _parse_keep(args)
-    bot, wm, st, boot_scan = boot(pol, keep=keep_bots or None)
+    bot, wm, st, boot_scan = boot(pol, keep=keep_bots or None,
+                                  attach=args.bot or None)
     run["bot"] = bot
     run["boot_scan"] = boot_scan
     for spec in args.pregive:
@@ -3785,10 +3817,23 @@ def main():
                                                % (goal.object, what,
                                                   ", ".join(SOURCE_MATERIALS)))})
                         return finish(args.out, run, t0)
+                    # 2026-10-11 (campaign attach): gather only the
+                    # SHORTFALL. The bot's carried cargo is the
+                    # campaign's banked state - a knife whose flint
+                    # was gathered in a previous milestone must not
+                    # re-gather it.
+                    item = _mk.MATERIAL_ITEM.get(what, what)
+                    have = (int(inv.get(item, 0) or 0)
+                            + int(inv.get("game:" + item, 0) or 0))
+                    need = q - have
+                    if need <= 0:
+                        # already carried: no job (the knap/craft
+                        # that follows consumes the carried amount)
+                        continue
                     cl = [r for r in wm.resources.values()
                           if fam_match_resource(r, s.families)]
                     sub_goal = types.SimpleNamespace(verb="gather",
-                                                     object=what, n=q)
+                                                     object=what, n=need)
                     sub_jobs, _note = compile_gather_plan(
                         cl, sub_goal, s, bot_pos=(bp[0], bp[2]),
                         inv=inv)

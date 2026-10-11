@@ -1158,6 +1158,19 @@ class Oikistes:
         if pre_roster:
             cmd += ["--keep-bots",
                     ",".join(str(i) for i in sorted(pre_roster))]
+        # 2026-10-11 (campaign mode): a non-goto mission runs ON the
+        # agent's own body (the --bot attach) - its cargo is the
+        # campaign's banked state and survives the run. A dead body
+        # with the respawn budget spent is an honest rejection, not a
+        # silent stranger spawn (the oikistes identity contract above).
+        if goto_target is None:
+            bid = self.body()
+            if bid is None:
+                return ("mission REJECTED - my body is dead and the "
+                        "respawn budget is spent for this service "
+                        "boot; rebind it (POST /oikistes/bot) or "
+                        "restart the oikistes service")
+            cmd += ["--bot", str(bid)]
         # 2026-10-10 (second pass): the mission runs in the BACKGROUND.
         # The old blocking subprocess.run held the agent (and the chat
         # lock, and the user's UI - 90-minute 'unreachable' windows)
