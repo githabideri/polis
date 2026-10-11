@@ -886,7 +886,13 @@ public class PolisTestHarness : IDisposable
                     limit = parsedLimit;
                 }
 
-                radius = GameMath.Clamp(radius, 1f, 32f);
+                // 32 -> 64 on 2026-10-11 (the berry A/B): the old cap made
+                // every query for resources 33+ blocks out report zero,
+                // so both tested brains burned their whole perception
+                // budget circling a target they could never have seen.
+                // The block census behind a r=64 radius is still far
+                // cheaper than a box scan of the same volume.
+                radius = GameMath.Clamp(radius, 1f, 64f);
                 limit = GameMath.Clamp(limit, 1, 200);
 
                 if (botId == null && string.IsNullOrWhiteSpace(uid))

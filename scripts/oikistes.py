@@ -377,7 +377,10 @@ def _targets_digest(r, cap=12):
 
 class Oikistes:
     MEMORY_TURNS = 6          # rolling memory (each = user msg + reply)
-    MAX_ACTIONS = 4           # tool actions per chat turn
+    MAX_ACTIONS = 6           # tool actions per chat turn (4 -> 6 on
+            # 2026-10-11: the A/B leg measured both brains burning all 4
+            # perception steps before ever considering the mission tool;
+            # the extra room is for the perceive-then-dispatch sequence)
 
     def __init__(self, args):
         self.args = args

@@ -166,7 +166,7 @@
      },
      "radius": {
       "type": "integer",
-      "description": "radius for the coordinate form"
+      "description": "radius for the coordinate form (capped at 64 by the endpoint)"
      }
     },
     "required": [
