@@ -949,7 +949,17 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
             if _in_site(cell):
                 parts.append("%s:site" % (cell,))
                 continue
-            if not _exposed(cell):
+            if not _exposed(cell) and cmd_name != "chop":
+                # chop is exempt (2026-10-11, M3): the air-above rule
+                # is a SURFACE-SAFETY heuristic (keep the bot from
+                # mining its own support), but the engine happily
+                # side-chops a canopy cell roofed by its plain-leaf
+                # layer - the M3 run proved it (the birch's branchy
+                # layer under the leaves-grown1 canopy dropped its
+                # stick when chopped from the side; the heuristic had
+                # parked the whole job "0 of 1 mined (buried)").
+                # The engine's chop verdict is the authority (13.2);
+                # an unreachable cell fails honestly there.
                 parts.append("%s:buried" % (cell,))
                 continue
             # self-guard (2026-10-05 incident): never mine the bot's own

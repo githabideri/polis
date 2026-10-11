@@ -314,6 +314,8 @@ def compile_gather_plan(clusters, goal, src, bot_pos=None, inv=None):
     # 2026-10-11: era-aware allocation (docstring). The hand families
     # come first; the tool families only join the plan when a
     # pickaxe is in the cargo.
+    # 2026-10-11 (M3): exposed-before-roofed key (see the else below)
+    _mk = lambda r: (0 if getattr(r, "mineable_cells", None) else 1, dist(r))
     hand_fams = getattr(src, "hand_families", None)
     if hand_fams:
         has_pickaxe = any(
@@ -324,10 +326,15 @@ def compile_gather_plan(clusters, goal, src, bot_pos=None, inv=None):
         tool = [r for r in clusters if r not in hand]
         if not has_pickaxe:
             tool = []
-        cands = (sorted(hand, key=dist)
-                 + sorted(tool, key=dist))
+        cands = (sorted(hand, key=_mk)
+                 + sorted(tool, key=_mk))
+    # 2026-10-11 (M3): exposed clusters (scan-time mineable subset) rank
+    # before roofed ones; a covered cluster costs an extra clear step
+    # at execution and can exhaust a small job's budget (the birch's
+    # branchy layer sits under its plain-leaf canopy). Covered clusters
+    # still join - the executor clears the cover.
     else:
-        cands = sorted(clusters, key=dist)
+        cands = sorted(clusters, key=_mk)
     total = sum(int(r.observed_quantity or 0) for r in cands)
 
     if cands and total >= n:
