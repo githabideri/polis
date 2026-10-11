@@ -2576,8 +2576,8 @@ def run_goto_player(args, run, t0):
 
     # 2. resolve the bot set (ids that are actually alive)
     allbots = pol.get("/polis/bots")
-    items = allbots.get("bots") if isinstance(allbots, dict) else allbots
-    ids = sorted(b.get("id") for b in (items or [])
+    items = ((allbots.get("Data") or allbots) or {}).get("bots") or []
+    ids = sorted(b.get("id") for b in items
                  if b.get("id") is not None)
     spec = (args.bots or "self").strip().lower()
     if spec == "self":
