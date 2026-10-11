@@ -333,7 +333,7 @@ internal static class PolisInventoryHelpers
             var it = slot?.Itemstack;
             if (it != null && IsItem(it, code)) total += it.StackSize;
         }
-        var inv = player.PlayerInventory;
+        var inv = player.Player?.InventoryManager?.Inventories;
         if (inv != null)
             for (int i = 0; i < inv.Count; i++)
             {
@@ -355,7 +355,7 @@ internal static class PolisInventoryHelpers
         {
             player.RightHandItemSlot, player.LeftHandItemSlot
         };
-        var inv = player.PlayerInventory;
+        var inv = player.Player?.InventoryManager?.Inventories;
         if (inv != null)
             for (int i = 0; i < inv.Count; i++) slots.Add(inv.Slots[i]);
         foreach (var slot in slots)
@@ -382,7 +382,7 @@ internal static class PolisInventoryHelpers
         {
             if (slot != null && ConsumeOneInSlot(slot, code)) return true;
         }
-        var inv = player.PlayerInventory;
+        var inv = player.Player?.InventoryManager?.Inventories;
         if (inv != null)
             for (int i = 0; i < inv.Count; i++)
             {
@@ -403,7 +403,7 @@ internal static class PolisInventoryHelpers
         {
             player.RightHandItemSlot, player.LeftHandItemSlot
         };
-        var inv = player.PlayerInventory;
+        var inv = player.Player?.InventoryManager?.Inventories;
         if (inv != null)
             for (int i = 0; i < inv.Count; i++) targets.Add(inv.Slots[i]);
         foreach (var slot in targets)

@@ -59,7 +59,7 @@ namespace Polis.Core
             if (toEat <= 0) return (false, $"bot carries no {code}", 0f, 0f, 0);
             if (have < toEat) return (false, $"bot carries {have}x {code} (< {toEat})", 0f, 0f, 0);
 
-            int before = SaturationOf(agent);
+            float before = SaturationOf(agent);
             int eaten = 0;
             for (int i = 0; i < toEat; i++)
             {
@@ -123,7 +123,7 @@ namespace Polis.Core
         }
 
         float after = SaturationOf(player);
-        log?.Invoke($"[eatplayer] {player.PlayerName}: {eaten}x {code} ({nut.FoodCategory}) {before:F1} -> {after:F1} saturation");
+        log?.Invoke($"[eatplayer] {player.Player?.PlayerName}: {eaten}x {code} ({nut.FoodCategory}) {before:F1} -> {after:F1} saturation");
         return (true, $"ate {eaten}x {code}: {before:F1} -> {after:F1} saturation", before, after, eaten);
     }
 
