@@ -1144,7 +1144,7 @@ class Oikistes:
             # arrival (2026-10-11: the 13:01 flint-search goto ended in
             # 0 s with no run for exactly this reason).
             cmd += ["--site", ",".join(toks[1:4])]
-        if verb in ("mine", "harvest", "gather", "sow", "forage", "build",
+        if verb in ("mine", "harvest", "gather", "sow", "forage", "build", "make",
                     "build-plan"):
             cmd.append("--no-planner")
         else:

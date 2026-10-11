@@ -3421,7 +3421,7 @@ def main():
                    and lookup_source(goal.object) is not None)
     if ((getattr(args, "no_planner", False)
          and goal.verb in ("mine", "harvest", "gather", "sow",
-                           "build", "build-plan"))
+                           "build", "build-plan", "make"))
             or src_map_hit):
         # the deterministic goal compiler (13.6 step 2, no LLM): a
         # one-verb acquisition goal has one obvious plan - the closest
