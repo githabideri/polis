@@ -135,6 +135,26 @@ on the model-mux box.
 
 ## Next (in binding order)
 
+0. **Survival campaign state (2026-10-11, world polis-survival-6, day-locked).**
+   Milestones verified through R2: **M1 flint x10** (search→extract, ~3 min),
+   **M2 knife** (knap + craft, 12 s), **M3 firestarter** (knife-harvested
+   drygrass + sticks, 21 s), **M4 axe** (knap + craft, 54 s), **M5 campfire**
+   (firepit fuel + endogenous firestarter re-arm + engine auto-ignition,
+   53 s), **M6 food** (8 wild-cranberry berries foraged from two
+   `fruitingbush-wild-cranberry` bushes ~55 blocks NE; the `ripen` test
+   lever was used on both bushes - disclosed environment intervention,
+   because the day-locked clock never advances the in-game growth months;
+   a bonus `linensack` drop arrived with the picks - an honest world
+   drop, no give issued). The carrier (the Oikistes body) holds knife,
+   firestarter, axe, firewood x2, 8 fruit-cranberry, linensack. All
+   provisioned looseflints are spent - further flint is ore-gated behind
+   the pickaxe, i.e. behind copper. **Next frontier (G14): the 1.22
+   metallurgy bootstrap** - no furnace exists in 1.22; the path is
+   native-copper ore (`ore-nativecopper-claystone`, 45 blocks near camp)
+   → anvil + chisel (`anvil-smith` harness command; the 1.22 tooling
+   station) → copper ingot → copper pickaxe → flint ore. Open questions
+   to answer in the ildasm dumps: what the native-copper ore block drops
+   when mined, and how the first anvil + chisel bootstrap.
 1. **Survival pilot prep (current driver).** Design settled in
    `docs/design/food-hunger-skills-policies.md` (2026-10-04; ground truth
    from decompiling the 1.22.7 assemblies): hunger is a player-entity
