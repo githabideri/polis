@@ -290,6 +290,8 @@ public partial class PolisSystem
                     return ExecuteHungerCommand(args, context);
                 case "vitals":
                     return ExecuteVitalsCommand(args, context);
+                case "follow":
+                    return ExecuteFollowCommand(args, context);
                 case "eat":
                     return ExecuteEatCommand(args, context);
                 case "eatplayer":
@@ -1387,6 +1389,46 @@ public partial class PolisSystem
         }
 
         return result;
+    }
+
+    // The explicit follow toggle (2026-10-11): `follow <id,id...>` or
+    // `follow off`. No NLP — the operator (or Oikistes via its follow
+    // tool, or the webui button) names the scope; the mod tracks.
+    PolisTestHarness.CommandResult ExecuteFollowCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length == 0)
+        {
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = $"follow state: active={followBots.Count > 0} bots=[{string.Join(",", followBots.OrderBy(x => x))}]",
+                Data = new { active = followBots.Count > 0, bots = followBots.OrderBy(x => x).ToList() }
+            };
+        }
+        if (args[0] == "off")
+        {
+            int n = FollowClear(m => sapi.Logger.Debug($"[polis] {m}"));
+            return new PolisTestHarness.CommandResult { Ok = true, Message = $"follow off (released {n})" };
+        }
+        var ids = args[0].Split(',')
+            .Select(s => s.Trim())
+            .Where(s => s.Length > 0)
+            .Select(s => long.TryParse(s, out var v) ? (long?)v : null)
+            .Where(v => v != null)
+            .Select(v => v.Value)
+            .ToList();
+        if (ids.Count == 0)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "usage: follow <id,id...> | follow off" };
+        }
+        int added = FollowAdd(ids, m => sapi.Logger.Debug($"[polis] {m}"));
+        var unknown = ids.Where(id => !bots.ContainsKey(id)).ToList();
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"follow: +{added} -> [{string.Join(",", followBots.OrderBy(x => x))}]" +
+                      (unknown.Count > 0 ? $" (unknown bots: {string.Join(",", unknown)})" : "")
+        };
     }
 
     PolisTestHarness.CommandResult ExecuteGotoCommand(string[] args, PolisTestHarness.CommandContext context)

@@ -319,6 +319,7 @@ public class PolisTestHarness : IDisposable
                                    // the authority.
                                    worldName = sapi.World?.WorldName ?? "" },
                     websocket = new { connections = broadcaster?.ConnectionCount ?? 0 },
+                    follow = new { active = followBots.Count > 0, bots = followBots.OrderBy(x => x).ToList() },
                     timeMs = sapi.World?.ElapsedMilliseconds ?? 0,
                     modVersion = modInfo?.Version ?? ""
                 });

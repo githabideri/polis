@@ -258,22 +258,31 @@ async function oneshot(kind) {
             .catch(e => ({ Ok: false, Message: e.message }));
         log(`USE at ${cx},${cy},${cz}: ${r.Message || (r.Ok ? 'ok' : 'failed')}`,
             r.Ok ? 'success' : 'error');
-    } else if (kind === 'goto-me') {
-        // 'Come to me': the selected bot walks to the player's live
-        // position (the mission tool's goto-player is the agent's
-        // version of the same call).
-        const p = getPrimaryPlayer();
-        const botId = getSelectedBotId();
-        if (!p || botId == null) { log('select a bot first', 'error'); return; }
-        if (!shadow) resyncShadowFromServer();
-        if (!shadow) { log('no valid player pose', 'error'); return; }
-        const r = await api.command('goto',
-            [String(Math.round(shadow.x)), String(Math.round(shadow.y)),
-             String(Math.round(shadow.z)), 'true', '0.02', 'true'],
-            { botId: Number(botId), actor: 'user' })
+    } else if (kind === 'follow' || kind === 'follow-all') {
+        // The follow TOGGLE (2026-10-11): the mod's follow controller
+        // tracks the chosen bots to the player's LIVE position (2 s
+        // tick, re-issue after 6+ blocks, idle bots only) until it is
+        // switched off. The operator's movement primitive - no NLP
+        // sifter, no one-shot walk that leaves the bot standing there.
+        const all = kind === 'follow-all';
+        const cur = (state.follow && state.follow.active)
+            ? state.follow.bots : [];
+        const ids = all
+            ? [...state.bots.keys()]
+            : [getSelectedBotId()].filter(id => id != null);
+        if (!ids.length) {
+            log(all ? 'no bots online' : 'select a bot first', 'error');
+            return;
+        }
+        const same = ids.length === cur.length
+            && ids.every(i => cur.includes(i));
+        const r = await api.command(
+                'follow', same ? ['off'] : [ids.join(',')],
+                { actor: 'user' })
             .catch(e => ({ Ok: false, Message: e.message }));
-        log(`bot #${botId} → you: ${r.Message || 'issued'}`,
+        log(`${all ? 'FOLLOW ALL' : 'FOLLOW'} ${same ? 'off' : `on [${ids.join(',')}]`}: ${r.Message || 'ok'}`,
             r.Ok ? 'success' : 'error');
+        pollStatus();
     } else if (kind === 'stop') {
         // The always-visible override (webui-mobile.md): stop the selected
         // bot's current action — bot.Activity.CancelAll() server-side.

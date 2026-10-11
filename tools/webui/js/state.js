@@ -56,6 +56,14 @@ function createState() {
             lastSeen: null,
         },
 
+        // Follow mode (2026-10-11): the explicit follow toggle -
+        // which bots are tracking the player's live position right
+        // now (PolisFollowController, 2 s tick in the mod).
+        follow: {
+            active: false,
+            bots: [],
+        },
+
         // Current selection
         selection: {
             type: SelectionType.NONE,
@@ -135,7 +143,18 @@ function createState() {
         /**
          * Get current selection
          */
-        get selection() {
+        
+
+        /**
+         * Follow mode (2026-10-11): the explicit follow toggle.
+         * Which bots the mod is currently tracking to the player.
+         */
+        get follow() {
+            return {
+                active: _state.follow.active,
+                bots: [..._state.follow.bots],
+            };
+        },get selection() {
             return { ..._state.selection };
         },
 
@@ -176,6 +195,11 @@ function createState() {
             if (data.server) {
                 _state.connection.worldReady = data.server.worldReady ?? false;
                 _state.connection.worldName = data.server.worldName ?? null;
+            }
+
+            if (data.follow) {
+                _state.follow.active = !!data.follow.active;
+                _state.follow.bots = (data.follow.bots || []).map(Number);
             }
 
             notifyChange('connection');

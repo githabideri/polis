@@ -616,7 +616,7 @@ class Oikistes:
     KNOWN = frozenset(
         ("state", "scan", "screenshot", "events", "autonomy",
          "mission", "pots", "give", "command", "query", "zone",
-         "crew"))
+         "crew", "follow"))
 
     def check_tool(self, tool, autonomy):
         if tool not in self.KNOWN:
@@ -627,7 +627,7 @@ class Oikistes:
             return tool in READONLY
         if autonomy == "guarded":
             return tool in READONLY or tool in (
-                "mission", "pots", "give", "zone")
+                "mission", "pots", "give", "zone", "follow")
         return True  # free
 
     # zone subcommands that READ (everything else writes the zone
@@ -679,6 +679,8 @@ class Oikistes:
                     a = {"n": int(parts[0])}
                 except (IndexError, ValueError):
                     a = {"n": None}
+            elif tool == "follow":
+                a = {"mode": a.strip()} if a.strip() else {"mode": "off"}
             else:
                 a = {}
         if not self.check_tool(tool, autonomy):
@@ -779,9 +781,32 @@ class Oikistes:
                 return "%s: %s" % (r.get("Message") or
                                    r.get("error"),
                                    r.get("Data") or "")
+            if tool == "follow":
+                return self._follow(a)
         except Exception as e:
             return "tool %s failed: %r" % (tool, e)
         return "unknown tool %r" % tool
+
+    def _follow(self, a):
+        """The follow TOGGLE (2026-10-11): mode me|all|off. The mod's
+        follow controller (PolisFollowController) tracks the chosen
+        bots to the player's LIVE position on a 2 s tick (re-issue
+        after 6+ blocks, idle bots only) until turned off. Explicit by
+        design - not a natural-language sifter."""
+        mode = str((a or {}).get("mode", "off")).lower()
+        if mode not in ("me", "all", "off"):
+            return "follow: mode must be 'me', 'all' or 'off'"
+        if mode == "off":
+            r = self.polis.cmd("follow", ["off"], actor="oikistes")
+            return r.get("Message") or str(r)
+        if mode == "me":
+            ids = [self.bot]
+        else:
+            ids = [b.get("id") for b in self.polis.bots_list()
+                   if b.get("id") is not None]
+        r = self.polis.cmd("follow", [",".join(str(i) for i in ids)],
+                           actor="oikistes")
+        return r.get("Message") or str(r)
 
     def _crew(self, n):
         """crew=<n>: bring the worker roster (MY BODY EXCLUDED) to
@@ -899,87 +924,6 @@ class Oikistes:
         r = self.polis.cmd(cmd, args, None, actor="oikistes")
         return "zone %s: %s" % (sub, r.get("Message") or r.get("error")
                                 or ("ok" if r.get("Ok") else "no reply"))
-
-    def _movement_reflex(self, message):
-        """'come to me' / 'come over' / 'join me' (+ 'all of you' /
-        'the crew' / 'everyone' = every living bot): the movement
-        reflex (2026-10-11). The selected bots walk to the player's
-        LIVE position (players are not sites; the planner can never
-        target them). Returns (reply, actions) or None when the
-        message is not a movement order."""
-        m = message.lower()
-        if not re.search(
-                r"\bcome (to me|to my position|to where i am|over|here)\b"
-                r"|\bgo to (me|my position|where i am)\b"
-                r"|\bjoin (me|us)\b",
-                m):
-            return None
-        if self.mission and not self.mission.get("done"):
-            return ("I'm in the middle of %s - come again when it "
-                    "reports finished." % self.mission.get("goal"), [])
-        try:
-            plist = self.polis.get("/polis/players")
-        except Exception:
-            plist = None
-        items = plist if isinstance(plist, list) else \
-            (((plist or {}).get("players")) or [])
-        target = None
-        for p in items:
-            if (p.get("uid") or "") == self.args.uid:
-                target = p
-                break
-        if target is None and len(items) == 1:
-            target = items[0]
-        pos = (target or {}).get("pos") or []
-        if len(pos) < 3:
-            return ("I can't see where you are - I'll stay here.", [])
-        cell = (int(pos[0]), int(pos[1]), int(pos[2]))
-        allbots = bool(re.search(
-            r"\ball (of )?(you|the crew|the bots)\b"
-            r"|\bwhole crew\b|\beveryone\b|\bthe crew\b",
-            m))
-        try:
-            allids = [b.get("id") for b in self.polis.bots_list()
-                      if b.get("id") is not None]
-        except Exception:
-            allids = []
-        pick = [b for b in (allids if allbots else [self.bot])
-                if b is not None]
-        if not pick:
-            return ("I have no body and no crew to send.", [])
-        # issue every goto at once (parallel walk), then wait for each
-        # bot's goto LastAction to resolve (the goto_wait contract)
-        for b in pick:
-            try:
-                self.polis.goto(b, cell[0], cell[1], cell[2], t=120)
-            except Exception:
-                pass
-        results = {}
-        deadline = time.time() + 120
-        while time.time() < deadline and len(results) < len(pick):
-            for b in pick:
-                if b in results:
-                    continue
-                try:
-                    la = (self.polis.state(b) or {}).get("LastAction") or {}
-                except Exception:
-                    continue
-                if la.get("Name") == "goto" and la.get("Ok") is not None:
-                    results[b] = bool(la.get("Ok"))
-            time.sleep(1)
-        arrived = [b for b in pick if results.get(b)]
-        failed = [b for b in pick if not results.get(b)]
-        who = "the whole crew" if allbots else "I"
-        if len(arrived) == len(pick):
-            reply = "I'm here." if not allbots else \
-                "The whole crew is here."
-        else:
-            reply = ("%d of %d arrived at your position; "
-                     "bot %s is stuck or still on the way." %
-                     (len(arrived), len(pick),
-                      ",".join(str(b) for b in failed) or "-"))
-        return (reply, ["goto-player %s -> (%d,%d,%d) [reflex]" %
-                        (",".join(str(b) for b in pick), *cell)])
 
     def run_mission(self, goal_line, bots="self"):
         """Order work through the R2 job system (the actuator).
@@ -1223,13 +1167,15 @@ class Oikistes:
     # -- the conversation loop ------------------------------------------
     def system_prompt(self, autonomy, digest, memory):
         tools = ("state, scan, screenshot, events, autonomy, give, "
-                 "mission, query, zone, crew, command")
+                 "mission, query, zone, crew, command, follow")
         return (
             "You are OIKISTES, the settlement's builder manager. You "
             "are in the world, not above it: your body is bot %s "
-            "standing in it. When the operator says 'come to me', "
-            "YOU go - you order your body (mission, bots='self'). "
-            "The operator's player is your partner in the same world. "
+            "standing in it. If the operator wants you by their side, "
+            "use the follow toggle (mode 'me' = your body, 'all' = the "
+            "whole crew, 'off' = stop following) - they also have a "
+            "button for it. The operator's player is your partner in "
+            "the same world. "
             "Answer them directly, in short plainspoken replies, in "
             "first person: your actions are yours, never 'the bot "
             "will do it'.\n"
@@ -1287,6 +1233,10 @@ class Oikistes:
             "named rectangular world regions (define <name> x1 y1 z1 "
             "x2 y2 z2; show/remove <name>; rename <old> <new> - "
             "writes are free-only); "
+            "follow={mode:me|all|off} the follow TOGGLE - 'me': your "
+            "body walks to the player and stays with them; 'all': the "
+            "whole crew; 'off': release them (the mod tracks the "
+            "player's live position until off); "
             "command=<cmd,args> "
             "a direct harness command (free only). Rules for the risky "
             "ones: 'despawn <id>' removes EXACTLY the bot with that id - if "
@@ -1451,19 +1401,11 @@ class Oikistes:
             autonomy = self.autonomy()
             self._live_world_check()
             self.log("user", message, actor=actor)
-            # movement reflex (2026-10-11): 'come to me' is the
-            # operator's most frequent order and exactly where this
-            # model's tool-calling fails (observed phantom 'I have
-            # ordered my body' with no tool call at all, 02:10 - the
-            # crew sat at spawn while it narrated a dispatch). An
-            # unambiguous movement order is a REFLEX: executed
-            # deterministically before the LLM sees it, answered from
-            # the real result - honest by construction.
-            reflex = self._movement_reflex(message)
-            if reflex is not None:
-                reply, actions = reflex
-                self.log("oikistes", reply)
-                return reply, actions
+            # Movement is not a reflex any more (2026-10-11, operator
+            # decision: the old 'come to me' regex was too tight a
+            # sifter for natural language). Following is an EXPLICIT
+            # toggle - the `follow` tool / the webui button - and
+            # everything else goes through the model as usual.
             actions = []
             digest = self.world_digest()
             reply = ""

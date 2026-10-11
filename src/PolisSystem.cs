@@ -76,6 +76,7 @@ public partial class PolisSystem : ModSystem
     public override void StartServerSide(ICoreServerAPI api)
     {
         sapi = api;
+        FollowInit();
         if (Environment.GetEnvironmentVariable("POLIS_API_PROBE") == "1")
             Polis.PolisApiProbe.DumpWorld(api);
         PolisHarmony.Apply(api);
