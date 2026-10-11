@@ -304,6 +304,7 @@ public class PolisTestHarness : IDisposable
             else if (path == "/polis/status" && request.HttpMethod == "GET")
             {
                 var runPhase = sapi.Server?.CurrentRunPhase ?? EnumServerRunPhase.Standby;
+                var fsys = sapi.ModLoader?.GetModSystem<PolisSystem>();
                 var worldReady = (int)runPhase >= (int)EnumServerRunPhase.WorldReady;
                 var modInfo = sapi.ModLoader?.GetMod("polis")?.Info;
 
@@ -319,7 +320,9 @@ public class PolisTestHarness : IDisposable
                                    // the authority.
                                    worldName = sapi.World?.WorldName ?? "" },
                     websocket = new { connections = broadcaster?.ConnectionCount ?? 0 },
-                    follow = new { active = followBots.Count > 0, bots = followBots.OrderBy(x => x).ToList() },
+                    follow = new { active = fsys?.IsFollowing() ?? false,
+                                   bots = fsys?.FollowingBotIds()
+                                         ?? new System.Collections.Generic.List<long>() },
                     timeMs = sapi.World?.ElapsedMilliseconds ?? 0,
                     modVersion = modInfo?.Version ?? ""
                 });

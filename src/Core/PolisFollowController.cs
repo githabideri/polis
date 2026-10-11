@@ -30,7 +30,9 @@ public partial class PolisSystem
 
     internal void FollowInit()
     {
-        sapi.Event.RegisterCallback((Action)FollowTick, 2000);
+        // The 1.22.7 event API takes (Action<float> dt, intervalMs);
+        // the dt is discarded - the interval is the tick.
+        sapi.Event.RegisterCallback((float dt) => FollowTick(), 2000);
     }
 
     internal int FollowAdd(System.Collections.Generic.IEnumerable<long> ids, Action<string> log)
@@ -44,6 +46,11 @@ public partial class PolisSystem
         log?.Invoke($"follow on: bot(s) {string.Join(",", followBots.OrderBy(x => x))}");
         return added;
     }
+
+    internal bool IsFollowing() => followBots.Count > 0;
+
+    internal System.Collections.Generic.List<long> FollowingBotIds()
+        => followBots.OrderBy(x => x).ToList();
 
     internal int FollowClear(Action<string> log)
     {
