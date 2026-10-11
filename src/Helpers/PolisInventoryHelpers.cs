@@ -337,7 +337,10 @@ internal static class PolisInventoryHelpers
         var mgr = player.Player?.InventoryManager;
         if (mgr != null)
             foreach (var inv in mgr.Inventories.Values)
+            {
+                if (inv == null) continue;   // some named slots are unassigned
                 for (int i = 0; i < inv.Count; i++) list.Add(inv[i]);
+            }
         return list;
     }
 
