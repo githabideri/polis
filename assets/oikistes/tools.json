@@ -4,7 +4,11 @@
     "function": {
       "name": "state",
       "description": "Inspect your own body: position, hands, backpack, last action result, what is around your cell, and the current world digest.",
-      "parameters": { "type": "object", "properties": {}, "required": [] }
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
     }
   },
   {
@@ -15,10 +19,22 @@
       "parameters": {
         "type": "object",
         "properties": {
-          "x": { "type": "integer", "description": "center x (default 0)" },
-          "y": { "type": "integer", "description": "center y (default 2)" },
-          "z": { "type": "integer", "description": "center z (default 0)" },
-          "r": { "type": "integer", "description": "radius in blocks (default 8)" }
+          "x": {
+            "type": "integer",
+            "description": "center x (default 0)"
+          },
+          "y": {
+            "type": "integer",
+            "description": "center y (default 2)"
+          },
+          "z": {
+            "type": "integer",
+            "description": "center z (default 0)"
+          },
+          "r": {
+            "type": "integer",
+            "description": "radius in blocks (default 8)"
+          }
         },
         "required": []
       }
@@ -29,7 +45,11 @@
     "function": {
       "name": "screenshot",
       "description": "Save a view from your body's perspective to the observation directory.",
-      "parameters": { "type": "object", "properties": {}, "required": [] }
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
     }
   },
   {
@@ -39,7 +59,12 @@
       "description": "Recent actor-tagged activity (who did what, last n events).",
       "parameters": {
         "type": "object",
-        "properties": { "n": { "type": "integer", "description": "how many (default 8)" } },
+        "properties": {
+          "n": {
+            "type": "integer",
+            "description": "how many (default 8)"
+          }
+        },
         "required": []
       }
     }
@@ -49,7 +74,11 @@
     "function": {
       "name": "autonomy",
       "description": "Read the current autonomy preset. It is world-owned: you read it, you cannot change it.",
-      "parameters": { "type": "object", "properties": {}, "required": [] }
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
     }
   },
   {
@@ -60,10 +89,18 @@
       "parameters": {
         "type": "object",
         "properties": {
-          "item": { "type": "string", "description": "item code, e.g. redmeat-cooked" },
-          "qty": { "type": "integer", "description": "quantity (default 1)" }
+          "item": {
+            "type": "string",
+            "description": "item code, e.g. redmeat-cooked"
+          },
+          "qty": {
+            "type": "integer",
+            "description": "quantity (default 1)"
+          }
         },
-        "required": ["item"]
+        "required": [
+          "item"
+        ]
       }
     }
   },
@@ -75,8 +112,14 @@
       "parameters": {
         "type": "object",
         "properties": {
-          "goal": { "type": "string", "description": "the goal line (omit to query mission status)" },
-          "bots": { "type": "string", "description": "'self' (your body, default) | 'all' | 'id1,id2'" }
+          "goal": {
+            "type": "string",
+            "description": "the goal line (omit to query mission status)"
+          },
+          "bots": {
+            "type": "string",
+            "description": "'self' (your body, default) | 'all' | 'id1,id2'"
+          }
         },
         "required": []
       }
@@ -90,11 +133,33 @@
       "parameters": {
         "type": "object",
         "properties": {
-          "form_at": { "type": "array", "items": { "type": "integer" }, "description": "[x,y,z] air cell for the clayform table" },
-          "hole_at": { "type": "array", "items": { "type": "integer" }, "description": "[x,y,z] floor of the 1-deep hole (pit kiln)" },
-          "firepit_at": { "type": "array", "items": { "type": "integer" }, "description": "[x,y,z] the firepit cell" }
+          "form_at": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "[x,y,z] air cell for the clayform table"
+          },
+          "hole_at": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "[x,y,z] floor of the 1-deep hole (pit kiln)"
+          },
+          "firepit_at": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "[x,y,z] the firepit cell"
+          }
         },
-        "required": ["form_at", "hole_at", "firepit_at"]
+        "required": [
+          "form_at",
+          "hole_at",
+          "firepit_at"
+        ]
       }
     }
   },
@@ -106,12 +171,30 @@
       "parameters": {
         "type": "object",
         "properties": {
-          "target": { "type": "string", "description": "zone name or 'x z [radius]'" },
-          "mode": { "type": "string", "enum": ["blocks", "entities", "all"] },
-          "code": { "type": "string", "description": "block/entity code substring filter" },
-          "radius": { "type": "integer", "description": "radius for the coordinate form" }
+          "target": {
+            "type": "string",
+            "description": "zone name or 'x z [radius]'"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "blocks",
+              "entities",
+              "all"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "description": "block/entity code substring filter"
+          },
+          "radius": {
+            "type": "integer",
+            "description": "radius for the coordinate form"
+          }
         },
-        "required": ["target"]
+        "required": [
+          "target"
+        ]
       }
     }
   },
@@ -123,10 +206,26 @@
       "parameters": {
         "type": "object",
         "properties": {
-          "sub": { "type": "string", "enum": ["list", "show", "define", "remove", "rename"] },
-          "args": { "type": "array", "items": { "type": "string" } }
+          "sub": {
+            "type": "string",
+            "enum": [
+              "list",
+              "show",
+              "define",
+              "remove",
+              "rename"
+            ]
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         },
-        "required": ["sub"]
+        "required": [
+          "sub"
+        ]
       }
     }
   },
@@ -137,8 +236,15 @@
       "description": "Size the worker roster (your body excluded) to exactly n: it recruits if short, retires the newest if over (hard cap 8). The ONE way to change crew size - never raw spawn/despawn.",
       "parameters": {
         "type": "object",
-        "properties": { "n": { "type": "integer", "description": "target worker count" } },
-        "required": ["n"]
+        "properties": {
+          "n": {
+            "type": "integer",
+            "description": "target worker count"
+          }
+        },
+        "required": [
+          "n"
+        ]
       }
     }
   },
@@ -150,10 +256,20 @@
       "parameters": {
         "type": "object",
         "properties": {
-          "cmd": { "type": "string", "description": "the harness command name" },
-          "args": { "type": "array", "items": { "type": "string" } }
+          "cmd": {
+            "type": "string",
+            "description": "the harness command name"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         },
-        "required": ["cmd"]
+        "required": [
+          "cmd"
+        ]
       }
     }
   },
@@ -164,8 +280,19 @@
       "description": "The follow TOGGLE. mode 'me': your body walks to the operator and stays with them; 'all': the whole crew; 'off': release (the mod tracks the player's live position until off; idle bots only, never interrupts running work).",
       "parameters": {
         "type": "object",
-        "properties": { "mode": { "type": "string", "enum": ["me", "all", "off"] } },
-        "required": ["mode"]
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "me",
+              "all",
+              "off"
+            ]
+          }
+        },
+        "required": [
+          "mode"
+        ]
       }
     }
   }

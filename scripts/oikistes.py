@@ -192,7 +192,8 @@ class LLM:
             time.sleep(5)
         return False
 
-    def chat(self, messages, tools=None, timeout=240):
+    def chat(self, messages, tools=None, timeout=240,
+             thinking=None, max_tokens=None):
         """One OpenAI-compatible chat-completions round - engine-
         agnostic: strata (llama.cpp) and vLLM both serve this shape,
         and any future OpenAI-compatible brain works unchanged.
@@ -201,21 +202,24 @@ class LLM:
         tool choice, and the reply may carry tool_calls instead of
         content.
 
+        thinking: None = default (on for tool rounds); pass True to
+        force it on for a plain-text step (see the loop: the 3.6's
+        chat template emits an immediate im_end when thinking is
+        switched OFF mid-conversation - measured 10-11 - so the
+        summary step runs thinking ON with a bigger budget).
+
         Returns (content, tool_calls): tool_calls is a list of
         {"id", "name", "args_json"} or None when the model answered
         in plain text. reasoning_content (the 3.6 thinking stream)
         is the model's scratchpad - dropped, never shown."""
         body = {
             "model": self.model, "temperature": 0.2,
-            "max_tokens": self.max_tokens,
+            "max_tokens": max_tokens or self.max_tokens,
             "messages": messages,
         }
         if self.llama:
-            # thinking ON: the 3.6 is a thinking model and its
-            # reasoning made the native tool calls reliable (10-11
-            # A/B: 227 chars of thinking, then a clean call). The
-            # budget has headroom so thinking cannot eat the call.
-            body["chat_template_kwargs"] = {"enable_thinking": True}
+            tt = bool(tools) if thinking is None else thinking
+            body["chat_template_kwargs"] = {"enable_thinking": tt}
         if tools:
             body["tools"] = tools
             body["tool_choice"] = "auto"
@@ -776,6 +780,18 @@ class Oikistes:
                     out += " embodiment=? (%s)" % e
                 return out + "\n" + "\n".join(self._world_lines(pos))
             if tool == "scan":
+                # no coordinates: the box is centred on the BODY, not the
+                # world origin (10-11: the model's natural no-arg scans
+                # hit (0,2,0) twice before it thought to check its own
+                # position - one wasted round trip per search)
+                if "x" not in a and "z" not in a:
+                    try:
+                        pos = ((self.polis.state(bot).get("Bot") or {})
+                               .get("Pos", [0, 0, 0]))
+                        a = {"x": int(pos[0]), "y": int(pos[1]),
+                             "z": int(pos[2])}
+                    except Exception:
+                        pass
                 x = int(a.get("x", 0)); y = int(a.get("y", 2))
                 z = int(a.get("z", 0)); rad = int(a.get("r", 8) or 8)
                 res = self.polis.cmd(
@@ -1309,7 +1325,9 @@ class Oikistes:
                     autonomy, self.world_digest(),
                     self.memory_text())
                 content, calls = llm.chat(
-                    msgs, tools=(None if last else self.tools))
+                    msgs, tools=(None if last else self.tools),
+                    thinking=(True if last else None),
+                    max_tokens=(4000 if last else None))
                 if calls and not last:
                     # feed the assistant turn back exactly as the
                     # server wants it (the chat template renders the
@@ -1338,7 +1356,14 @@ class Oikistes:
                 reply = (content or "").strip()
                 break
             if not reply:
-                reply = "done"
+                # the model spent the whole step thinking and said
+                # nothing: report what actually happened instead of
+                # a bare "done" (10-11: the flint search ended in
+                # "done" twice and the operator could not tell what
+                # the agent had done)
+                ran = ", ".join(dict.fromkeys(a["tool"] for a in actions))
+                reply = ("no reply text (thinking ate the budget)"
+                         " - ran: " + ran) if ran else "done"
             self.log("oikistes", reply)
             return reply, actions
         finally:

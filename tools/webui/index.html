@@ -54,6 +54,16 @@
                 <h2 class="rail-title">Players <span id="player-count" class="count mono">0</span></h2>
                 <div id="players-list" class="entity-list"></div>
             </section>
+
+            <!-- Bot actions live with the bot list (2026-10-11: moved from
+                 the control rail — select and act in one place; the right
+                 rail keeps the steering surfaces). -->
+            <section class="rail-section" id="bot-actions-section">
+                <h2 class="rail-title">Bot <span id="bot-id-label" class="count mono"></span></h2>
+                <div id="bot-actions" class="action-list">
+                    <div class="placeholder">select a bot</div>
+                </div>
+            </section>
         </aside>
 
         <!-- ── Center: the stage (live game image) ────────────────────── -->
@@ -115,20 +125,15 @@
 
             <section class="rail-section">
                 <h2 class="rail-title">Me <span class="meta-inline">player</span></h2>
-                <div class="pad pad-view">
+                <div class="pad pad-me">
                     <button class="pad-btn" data-oneshot="eatplayer" title="Eat the first food item you are carrying (auto-picks; the webui has no in-game right-click, this is it)">EAT</button>
                     <button class="pad-btn" data-oneshot="useitem" title="Use your held item on the block you are facing (firepit, block placement, ...)">USE</button>
                     <button class="pad-btn" data-oneshot="follow" title="The selected bot walks to you and stays with you as you move - toggle (click again to release)">FOLLOW</button>
-                    <button class="pad-btn pad-w" data-oneshot="follow-all" title="ALL bots walk to you and stay with you - toggle (click again to release)">FOLLOW ALL</button>
+                    <button class="pad-btn" data-oneshot="follow-all" title="ALL bots walk to you and stay with you - toggle (click again to release)">FOLLOW ALL</button>
                 </div>
             </section>
 
-            <section class="rail-section">
-                <h2 class="rail-title">Bot <span id="bot-id-label" class="count mono"></span></h2>
-                <div id="bot-actions" class="action-list">
-                    <div class="placeholder">select a bot</div>
-                </div>
-            </section>
+            <!-- (Bot section moved to the world rail, 2026-10-11) -->
 
             <!-- Oikistes (2026-09-27 re-scope): the settlement agent. The chat
                  is a stub until the R2 job system + runtime exist; the autonomy
@@ -137,20 +142,22 @@
                  enforces in the execution path (mod owns it; UI reads/writes). -->
             <section class="rail-section" id="oikistes-section">
                 <h2 class="rail-title">Oikistes <span class="meta-inline">agent</span></h2>
-                <div class="ov-row">
-                    <span class="ov-k">autonomy</span>
-                    <select id="autonomySelect" class="sel" title="The agent's action authority. Owned by the mod (world config 'polis_oikistes_autonomy'); the UI and, later, a cultural/tech-tree system write it — the agent only reads it.">
-                        <option value="free">free</option>
-                        <option value="guarded" selected>guarded</option>
-                        <option value="strict">strict</option>
-                    </select>
-                </div>
-                <div class="ov-row">
-                    <span class="ov-k">brain</span>
-                    <select id="oikBrain" class="sel" title="The agent's model (live switch). primary = the always-on vLLM 27B judge; alt = the 35B on the llama.cpp mux — same task battery, two brains, comparable in the transcript.">
-                        <option value="primary">primary</option>
-                        <option value="alt">alt</option>
-                    </select>
+                <div class="ov-rows">
+                    <div class="ov-row">
+                        <span class="ov-k">autonomy</span>
+                        <select id="autonomySelect" class="sel" title="The agent's action authority. Owned by the mod (world config 'polis_oikistes_autonomy'); the UI and, later, a cultural/tech-tree system write it — the agent only reads it.">
+                            <option value="free">free</option>
+                            <option value="guarded" selected>guarded</option>
+                            <option value="strict">strict</option>
+                        </select>
+                    </div>
+                    <div class="ov-row">
+                        <span class="ov-k">brain</span>
+                        <select id="oikBrain" class="sel" title="The agent's model (live switch). primary = the always-on vLLM 27B judge; alt = the 35B on the llama.cpp mux — same task battery, two brains, comparable in the transcript.">
+                            <option value="primary">primary</option>
+                            <option value="alt">alt</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="chat-log" id="oikistesLog">
                     <div class="log-line"><span class="t">—</span>The Oikistes is here. Tell it what to observe or what to build — it reads the world through the harness, orders work through the job system, and answers directly. Its autonomy level (mod-owned, above) decides how far it may act.</div>

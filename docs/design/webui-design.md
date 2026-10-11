@@ -85,3 +85,16 @@ and no beige/serif "anti-slop" tell. The design is derived from the function:
 If you change the palette or typeface, you are changing the identity — say
 why in the commit. Adding a functional area requires a place in the four-area
 map above.
+
+## Layout history
+
+- **2026-10-11 density pass (user request):** "make the game view a bit
+  smaller and the panel bigger — ideally all functionality without
+  scrolling." Rails widened (220/340), console shrunk to a 3-line status
+  strip, view pad collapsed to one row, move/Me pads shortened, the Me
+  pad got its own 2x2 grid (it had been riding the view pad's cross
+  template, which pushed FOLLOW ALL into the corner — the visible
+  button misalignment), autonomy+brain share one row. The Bot section
+  moved from the Control rail to the World rail (select and act in one
+  place; the Control rail keeps the steering surfaces). Identity
+  (palette/type/accent) untouched; the Stage remains the largest area.
