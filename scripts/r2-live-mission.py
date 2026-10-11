@@ -3222,8 +3222,15 @@ def run_campaign(args, run, t0):
         index[fid] = {"id": fid, "kind": f.kind,
                       "requirement": f.requirement}
     plan_raw = [j.to_dict() for j in jobs_raw]
+    # 2026-10-11 (M5): the operator campaign's goal line scopes the
+    # VOCABULARY (search is deterministic-compiler scoped to gather/
+    # make goals - a search job in a campaign otherwise dies "outside
+    # the planner vocabulary"). Pass the verb only: the goal-target
+    # checks stay off (at=None), the campaign jobs keep the say.
+    _gd = parse_goal_line(args.goal)
+    _scope = types.SimpleNamespace(verb=_gd.get("verb", ""), at=None)
     jobs, failure = validate_plan(
-        plan_raw, index, inv, goal=None, recipes=recipes, cells=cells,
+        plan_raw, index, inv, goal=_scope, recipes=recipes, cells=cells,
         campaign=True)
     run["planner"] = {"mode": "operator-campaign", "goal": args.goal,
                       "jobs": len(jobs_raw)}
