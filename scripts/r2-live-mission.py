@@ -3775,32 +3775,46 @@ def main():
             bp = st["Bot"]["Pos"]
             knap_cell = None
             if any(k == "knap" for k, _, _ in steps):
-                # the knap command needs a KNAPPING SURFACE (solid
-                # soil/rock/sand) - it rejected a tallgrass cell on
-                # 2026-10-11. The nearest such cell in a 4-ring.
+                # the knap command runs on a PLACED knappingsurface
+                # block (BlockKnappingSurface) - the place command puts
+                # it into an AIR cell by clicking the ground below (the
+                # engine's placement rule; an occupied cell is refused).
+                # So the target is the air cell ABOVE a bare soil/rock
+                # cell within a 4-ring. (2026-10-11: the first version
+                # targeted the ground cell itself and the placement
+                # died on the occupied cell.)
                 bcell = (int(bp[0]), int(bp[1]), int(bp[2]))
+                blocks = pol.cell_blocks(bot, bcell, pad=4) or []
+                bypos = {tuple(b.get("pos") or ()):
+                         str(b.get("code") or "") for b in blocks}
                 cands = []
-                for b in (pol.cell_blocks(bot, bcell, pad=4) or []):
+                for b in blocks:
                     code = str(b.get("code") or "").replace("game:", "")
                     if code.startswith(("soil-", "rock-", "crackedrock-",
                                         "sand-", "stone-")):
                         p = b.get("pos") or []
                         if len(p) == 3:
-                            # 2026-10-11: 3D distance - x/z alone tied a
-                            # surface cell with a 110-block-deep column
-                            # cell and the tie went to the deep one.
-                            d = (abs(p[0] - bp[0]) + abs(p[1] - bp[1])
-                                 + abs(p[2] - bp[2]))
-                            cands.append((d, list(p)))
+                            tp = (int(p[0]), int(p[1]) + 1, int(p[2]))
+                            # air: the scan skips air cells, so absent
+                            # from the block list (and inside the box)
+                            if tp not in bypos:
+                                # 3D distance - x/z alone tied a surface
+                                # cell with a deep column cell.
+                                d = (abs(tp[0] - bp[0])
+                                     + abs(tp[1] - bp[1])
+                                     + abs(tp[2] - bp[2]))
+                                cands.append((d, list(tp)))
                 if cands:
                     cands.sort(key=lambda t: t[0])
                     knap_cell = cands[0][1]
                 else:
                     run.update({"outcome": "rejected",
                                 "reason": ("deterministic: no knapping "
-                                           "surface (bare soil/rock) in "
-                                           "4 blocks of the bot - make "
-                                           "needs a bare ground cell")})
+                                           "cell - no bare soil/rock "
+                                           "cell with an air cell above "
+                                           "it in 4 blocks of the bot "
+                                           "(the surface block is placed "
+                                           "on top of the ground)")})
                     return finish(args.out, run, t0)
             plan_dicts = []
             dep = []
