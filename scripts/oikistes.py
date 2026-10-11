@@ -161,11 +161,16 @@ class Polis:
 
 
 class LLM:
-    def __init__(self, base, model, max_tokens=400):
+    def __init__(self, base, model, max_tokens=1200, llama=False):
         self.url = base.rstrip("/") + "/v1/chat/completions"
         self.base = base.rstrip("/")
         self.model = model
         self.max_tokens = max_tokens
+        # llama=True: the engine is llama.cpp (strata) and speaks
+        # chat_template_kwargs. vLLM (the 27B unit) is left on its own
+        # template defaults - those already produced correct native
+        # tool calls in the 10-11 A/B, so nothing is sent there.
+        self.llama = llama
 
     def _wait_loaded(self, budget=120):
         """The 35B lives on an exclusive-GPU mux: when its server dies
@@ -187,17 +192,33 @@ class LLM:
             time.sleep(5)
         return False
 
-    def chat(self, messages, timeout=240):
+    def chat(self, messages, tools=None, timeout=240):
+        """One OpenAI-compatible chat-completions round - engine-
+        agnostic: strata (llama.cpp) and vLLM both serve this shape,
+        and any future OpenAI-compatible brain works unchanged.
+        `tools` is the JSON-schema tool array (assets/oikistes/
+        tools.json); with it present the request asks for automatic
+        tool choice, and the reply may carry tool_calls instead of
+        content.
+
+        Returns (content, tool_calls): tool_calls is a list of
+        {"id", "name", "args_json"} or None when the model answered
+        in plain text. reasoning_content (the 3.6 thinking stream)
+        is the model's scratchpad - dropped, never shown."""
         body = {
             "model": self.model, "temperature": 0.2,
             "max_tokens": self.max_tokens,
             "messages": messages,
-            # thinking off: the reasoning mode burns the whole budget
-            # in invisible tokens and returns empty content (measured on
-            # both the 27B judge and the 35B) - the action protocol is a
-            # short-JSON task, it wants direct answers
-            "chat_template_kwargs": {"enable_thinking": False},
         }
+        if self.llama:
+            # thinking ON: the 3.6 is a thinking model and its
+            # reasoning made the native tool calls reliable (10-11
+            # A/B: 227 chars of thinking, then a clean call). The
+            # budget has headroom so thinking cannot eat the call.
+            body["chat_template_kwargs"] = {"enable_thinking": True}
+        if tools:
+            body["tools"] = tools
+            body["tool_choice"] = "auto"
         try:
             r = http_json(self.url, body, timeout=timeout, retries=1)
         except Exception:
@@ -208,40 +229,63 @@ class LLM:
             m = r["choices"][0]["message"]
         except (KeyError, IndexError) as e:
             raise RuntimeError("no completion: %r" % e)
-        return (m.get("content") or "").strip()
+        content = (m.get("content") or "").strip()
+        calls = None
+        if m.get("tool_calls"):
+            calls = []
+            for i, tc in enumerate(m["tool_calls"]):
+                fn = tc.get("function") or {}
+                calls.append({"id": tc.get("id") or ("call_%d" % i),
+                              "name": fn.get("name") or "",
+                              "args_json": fn.get("arguments") or "{}"})
+        return content, calls
+
+
+# ----------------------------------------------------------------------
+# prompt assets (the model-visible surface: data files, not code)
+# ----------------------------------------------------------------------
+
+ASSETS = os.path.join(REPO, "assets", "oikistes")
+
+PROMPT_TOKENS = ("@@BODY@@", "@@AUTONOMY@@", "@@AUTONOMY_NOTE@@",
+                 "@@PLANS@@", "@@WORLD@@", "@@MEMORY@@")
+
+
+def _load_prompt_assets():
+    """Load the model-visible surface: the system prompt template
+    (assets/oikistes/prompt.md - @@TOKENS@@ filled per turn) and the
+    OpenAI `tools=` array (assets/oikistes/tools.json - the single
+    source of truth for what a tool is). The split: what the MODEL
+    SEES is data; what the MACHINE DOES (dispatch, the autonomy gate)
+    stays in code. Fails at startup, loudly: a brain configured by
+    files must not silently run without them (the service is
+    Restart=always, so the error shows in the journal)."""
+    tpath = os.path.join(ASSETS, "prompt.md")
+    jpath = os.path.join(ASSETS, "tools.json")
+    try:
+        template = open(tpath).read()
+        tools = json.load(open(jpath))
+    except Exception as e:
+        raise SystemExit("oikistes: cannot load prompt assets "
+                          "%s / %s: %r" % (tpath, jpath, e))
+    present = set(re.findall(r"@@[A-Z_]+@@", template))
+    missing = [t for t in PROMPT_TOKENS if t not in present]
+    if missing:
+        raise SystemExit("oikistes: prompt.md missing tokens: %s"
+                          % ", ".join(missing))
+    for t in tools:
+        fn = t.get("function") or {}
+        if not (fn.get("name") and fn.get("description")
+                and "parameters" in fn):
+            raise SystemExit(
+                "oikistes: bad tool definition in tools.json: %r"
+                % (fn.get("name", t)))
+    return template, tools
 
 
 # ----------------------------------------------------------------------
 # the query tool's helpers (module level: pure, testable)
 # ----------------------------------------------------------------------
-
-def _extract_action_json(text):
-    """The 35B-class brains sometimes emit the tool object AFTER a line
-    of prose ('Done. I have marked ... {"action":...}'). The chat loop
-    used to treat such a reply as a final answer, so the tool call was
-    lost and the raw JSON leaked into the transcript (2026-10-07: the
-    'base' exchange). Find the first balanced object that carries an
-    'action' key; None when the text holds no such object."""
-    i = text.find('{"action"')
-    if i < 0:
-        return None
-    depth = 0
-    for j in range(i, len(text)):
-        c = text[j]
-        if c == '{':
-            depth += 1
-        elif c == '}':
-            depth -= 1
-            if depth == 0:
-                try:
-                    obj = json.loads(text[i:j + 1])
-                except ValueError:
-                    return None
-                if isinstance(obj, dict) and "action" in obj:
-                    return obj
-                return None
-    return None
-
 
 def _query_args(parts):
     """Parse the query tool's argument tokens. Two shapes:
@@ -330,10 +374,22 @@ class Oikistes:
         # swappable brains: primary (default) + optional alt - the
         # operator switches at runtime (POST /oikistes/model) to A/B
         # the models on the same task battery
-        self.models = {"primary": LLM(args.llm, args.llm_model)}
+        self.models = {"primary": LLM(args.llm, args.llm_model,
+                                      llama=True)}
         if args.alt_llm and args.alt_model:
             self.models["alt"] = LLM(args.alt_llm, args.alt_model)
         self.active = os.environ.get("OIK_BRAIN") or "primary"
+        # the model-visible surface (data files, not code) - loaded
+        # once at boot; the sync check against KNOWN catches a
+        # tools.json drift at startup instead of at first chat
+        self.prompt_template, self.tools = _load_prompt_assets()
+        _names = [t["function"]["name"] for t in self.tools]
+        _unknown = [n for n in _names if n not in self.KNOWN]
+        _missing = sorted(self.KNOWN - set(_names))
+        if _unknown or _missing:
+            raise SystemExit(
+                "oikistes: tools.json out of sync with KNOWN tools "
+                "(unknown=%s missing=%s)" % (_unknown, _missing))
         self.lock = threading.Lock()
         self.mission = None
         self.born = time.time()
@@ -1166,193 +1222,22 @@ class Oikistes:
 
     # -- the conversation loop ------------------------------------------
     def system_prompt(self, autonomy, digest, memory):
-        tools = ("state, scan, screenshot, events, autonomy, give, "
-                 "mission, query, zone, crew, command, follow")
-        return (
-            "You are OIKISTES, the settlement's builder manager. You "
-            "are in the world, not above it: your body is bot %s "
-            "standing in it. If the operator wants you by their side, "
-            "use the follow toggle (mode 'me' = your body, 'all' = the "
-            "whole crew, 'off' = stop following) - they also have a "
-            "button for it. The operator's player is your partner in "
-            "the same world. "
-            "Answer them directly, in short plainspoken replies, in "
-            "first person: your actions are yours, never 'the bot "
-            "will do it'.\n"
-            "AUTONOMY: %s. This is a WORLD-OWNED policy, not yours: you "
-            "read it, the execution path enforces it. You can never "
-            "change it yourself. %s\n"
-            "TOOLS (when you must act, answer with exactly one JSON "
-            "object, no prose: {\"action\":\"<tool>\","
-            "\"args\":{...},\"say\":\"<one short line>\"}). "
-            "Available: %s. Tool meanings: state=inspect your body and "
-            "inventory; scan=<x,y,z> block census; screenshot=save a "
-            "view; events=recent actor-tagged activity; autonomy=read "
-            "the preset; give=<item,qty> hand an item to your body; "
-            "mission=<goal line> dispatch a BACKGROUND job through "
-            "the job system (returns at once; the settlement is not "
-            "blocked) - or mission with NO goal to report the "
-            "running/finished status; the optional "
-            "bots='self'|'all'|[ids] picks which bots run it "
-            "(default self = your body). 'goto <player>' (or 'goto "
-            "me') brings the selected bots to the player's live "
-            "position - 'come to me' works; name the player when "
-            "more than one is online; "
-            "pots={form_at:[x,y,z], hole_at:[x,y,z], "
-            "firepit_at:[x,y,z]} dispatch the POT-WORK FOOD CHAIN as "
-            "one background mission (clay -> clayform table -> the "
-            "raw crucible -> pit-kiln firing -> the fired crucible "
-            "-> firepit cooking -> cooked meat -> the bot eats; it "
-            "gives the bot its own clay and meat as the only external "
-            "input; it cooks ONE meat per fire load - the 1.22 "
-            "firepit reliably drops a second meat in the same load "
-            "(engine quirk, not a mission bug); "
-            "All three cells are REQUIRED: the air cell the "
-            "clayform table is placed in, the floor of a 1-deep hole "
-            "(the pit kiln), the firepit cell - they live at the "
-            "base, so query the base zone first if you do not have "
-            "them; "
-            "(goals like 'mine granite x1', 'harvest rye x1', 'sow rye "
-            "x1 at site-A', 'forage whitecurrant x2 at <x,y,z>', "
-            "'build granite x4 at site-A', 'place "
-            "granite at site-A x1 supply external', 'build-plan "
-            "hut-dirt at base'); a STRUCTURE (hut, box, fence) is built "
-            "with 'build-plan <plan-name> at <site>' - never 'build "
-            "<plan-name>', which treats the plan name as a material. "
-            "Without 'supply external' the plan is self-sufficient: the "
-            "job system prepends the missing hand-minable materials as "
-            "mine jobs of its own. "
-            "query={target:<zonename | x z [radius]>} [mode=blocks|entities|all] "
-            "[code=<substr>] what is in a named zone or around a point "
-            "(the target key takes the zone name or two coordinates, "
-            "e.g. {\"target\":\"storage1\"} or {\"target\":\"512020 512025\","
-            "\"mode\":\"all\"}; a compact digest of the targets scan - "
-            "counts plus a capped code/position list; the coordinate "
-            "form walks your body there first); "
-            "zone={sub:list|show|define|remove|rename, args:[...]} "
-            "named rectangular world regions (define <name> x1 y1 z1 "
-            "x2 y2 z2; show/remove <name>; rename <old> <new> - "
-            "writes are free-only); "
-            "follow={mode:me|all|off} the follow TOGGLE - 'me': your "
-            "body walks to the player and stays with them; 'all': the "
-            "whole crew; 'off': release them (the mod tracks the "
-            "player's live position until off); "
-            "command=<cmd,args> "
-            "a direct harness command (free only). Rules for the risky "
-            "ones: 'despawn <id>' removes EXACTLY the bot with that id - if "
-            "the reply names a different id or returns an error, STOP and "
-            "report it verbatim; never 'repair' a failed despawn by "
-            "spawning. 'spawn' ADDS a new bot to the world; it is a creation "
-            "act, never a retry mechanism for any other command. A 'sow <crop> xN at "
-            "<site>' mission is the COMPLETE endogenous chain - the "
-            "mission itself harvests the seed and sows it; never "
-            "pre-harvest for it. A 'build <material> xN at <site>' "
-            "mission places N blocks as a ring platform at the site "
-            "(add 'supply external' if the bot holds none). "
-            "BUILDINGS: 'build-plan <id> at <site>' erects a whole "
-            "building from the library; plans available now: %s. A "
-            "building is DATA (a plan file), not a fixed shape - new "
-            "buildings arrive as new files, and a composition of "
-            "build primitives that stands well is worth saving as "
-            "one. A hut means: a floor, walls with ONE opening (the "
-            "door), a roof over - a place to shelter from weather and "
-            "the night. Suggest only work you can actually order from "
-            "this vocabulary. Foraging is orderable: 'forage <bush> "
-            "xN at <x,y,z>' (the fruitingbush-* family; a '-free' "
-            "suffix is snow cover, not another plant) - a bush that "
-            "is not yet ripe is reported, not picked; the pot-work "
-            "chain has its own 'pots' tool. If the user wants "
-            "something outside this vocabulary, say plainly the job "
-            "system has no goal verb for it yet, and offer the "
-            "closest thing you can order. "
-            "WORLD BLOCK: the current-world section lists your body, the "
-            "operator's PLAYER (by name, with its position and the "
-            "distance from you), any other players, the NAMED ZONES as "
-            "the registry holds them (never define a zone that is already "
-            "listed, and never claim to have defined one without the zone "
-            "list in front of you), and the BOT ROSTER (id at x,z). "
-            "IF THE OPERATOR GIVES YOU A LOCATION OR COORDINATES, use the "
-            "query tool in coordinate form against THAT location - do not "
-            "scan your own position and call their spot empty. YOUR OWN "
-            "MOVEMENT IS GOTO: a pathfind order that can fail. "
-            "TERRAIN - hills and ridges are normal work (multi-level "
-            "terrain pathfinds fine; do not treat it as an obstacle). "
-            "Hard limits, by the message you get: 'one step short' = "
-            "your body stands 1 cell from the target - at a bush or "
-            "solid cell that IS the arrival (interaction range; never "
-            "re-order the same goto); 'stuck after N repaths' = no "
-            "walkable route in budget; 'no path' = disconnected "
-            "terrain. Never walkable: water (no swimming, no bridges - "
-            "the lake is an edge, not a route) and any step up of 2+ "
-            "blocks (cliffs). On a goto failure report the harness "
-            "message VERBATIM and pick a different route or target. "
-            "Never claim to have teleported yourself (only the player "
-            "can be teleported; the teleport command takes the "
-            "player's name or uid as its first argument). When "
-            "a tool returns an error, repeat the exact message in your "
-            "report - paraphrasing it loses the diagnosis. After each "
-            "action you see its "
-            "result; once you are done acting you MUST answer in "
-            "plain text with a short report. You are the Oikistes: "
-            "answer as it, in short plainspoken sentences - never "
-            "echo the input back.\n"
-            "OPERATING DISCIPLINE (hard rules): "
-            "1 HONEST REPORTS - claim only what you SAW in a harness "
-            "reply. A mission exists ONLY when the tool reply named "
-            "it; saying 'I dispatched X' without that reply is a lie - "
-            "call the tool first, then report its words. Ordered is "
-            "not done; a mission 'started' is running, "
-            "not finished. When a tool fails, repeat the exact message "
-            "and stop guessing at it. "
-            "2 PLAN BEFORE ACTING - a multi-part request ('do it all') "
-            "gets decomposed into an ordered plan that you report FIRST; "
-            "then you execute one step at a time (a mission at a time, "
-            "watched via events) - never launch a swarm of parallel "
-            "jobs, and never start a build you have not checked the "
-            "material for. "
-            "3 FAIL FAST - the same goal failing twice means STOP: "
-            "report the exact failure and say what would have to be "
-            "true for it to work. Never retry an identical command with "
-            "identical arguments. A reply that names a different id or "
-            "count than you requested is a bug report, not a nudge to "
-            "improvise. "
-            "4 CREW - size the crew with the crew TOOL, never with raw "
-            "spawn/despawn (that is how an 18-bot swarm grew, 2026-10-10). "
-            "{'tool':'crew','args':{'n':2}} sets the worker roster (your "
-            "body excluded) to exactly 2: it recruits if short, retires "
-            "the newest if over (hard cap 8). Read the digest first - "
-            "it lists the roster. One message = one mission = at most a "
-            "small crew change; when work ends, shrink back toward 1-2 "
-            "and report the final headcount. A growing roster across "
-            "turns is a bug. "
-            "5 MISSIONS RUN IN THE BACKGROUND - a 'mission' call "
-            "dispatches and returns at once (the settlement stays "
-            "conversable the whole run, 90-min cap). Tell the user what "
-            "you dispatched; when they ask (or you need the result), "
-            "call 'mission' WITH NO goal - it reports running or the "
-            "final verdict. Never dispatch the same goal twice while "
-            "one is running - re-mining piles surplus blocks into the "
-            "world. "
-            "6 BUILD FROM WHAT EXISTS - soil/dirt is the common, "
-            "hand-minable material (in this game version 'dirt' is the "
-            "soil-* block family); granite (rock-granite) needs a "
-            "mining step first. If a building's material is not on "
-            "hand, say so and order the mining - do not order the "
-            "building and call the failure an accident. "
-            "7 FOOD FIRST - satiety is in the digest (your body and "
-            "the operator's player): if either is low, securing food "
-            "(forage the nearest bush, eat) is the FIRST job, before "
-            "building or mining. A hungry settlement is a failed one.\n"
-            "Current world (fresh): %s\n"
-            "Recent exchanges:\n%s"
-            % (self.bot, autonomy.upper(),
-               {"strict": "reads only - no missions, no giving, no "
+        # The prompt is a TEMPLATE FILE (assets/oikistes/prompt.md),
+        # not a code string: it is content the model reads. The
+        # autonomy note stays inline - it is the human-readable form
+        # of the gate the code enforces (check_tool).
+        note = {"strict": "reads only - no missions, no giving, no "
                            "commands",
                 "guarded": "you may order missions and give items; "
                            "direct commands are denied",
-                "free": "all tools are open"}[autonomy],
-               tools, ", ".join(self.plans) or "none yet", digest,
-               memory or "(none yet)"))
+                "free": "all tools are open"}[autonomy]
+        return (self.prompt_template
+                .replace("@@BODY@@", str(self.bot))
+                .replace("@@AUTONOMY@@", autonomy.upper())
+                .replace("@@AUTONOMY_NOTE@@", note)
+                .replace("@@PLANS@@", ", ".join(self.plans) or "none yet")
+                .replace("@@WORLD@@", digest)
+                .replace("@@MEMORY@@", memory or "(none yet)"))
 
     def memory_text(self):
         try:
@@ -1396,62 +1281,61 @@ class Oikistes:
 
     def chat(self, message, actor="user"):
         if not self.lock.acquire(blocking=False):
-            return None, ["a chat is already in flight"]
+            return None, ["a chat is in flight"]
         try:
             autonomy = self.autonomy()
             self._live_world_check()
             self.log("user", message, actor=actor)
-            # Movement is not a reflex any more (2026-10-11, operator
-            # decision: the old 'come to me' regex was too tight a
-            # sifter for natural language). Following is an EXPLICIT
-            # toggle - the `follow` tool / the webui button - and
-            # everything else goes through the model as usual.
+            # Following is an EXPLICIT toggle (the follow tool / the
+            # webui button) - no movement reflex any more (2026-10-11,
+            # operator decision: the old 'come to me' regex was too
+            # tight a sifter for natural language).
             actions = []
-            digest = self.world_digest()
+            llm = self.models[self.active]
+            msgs = [
+                {"role": "system",
+                 "content": self.system_prompt(
+                     autonomy, self.world_digest(),
+                     self.memory_text())},
+                {"role": "user", "content": message},
+            ]
             reply = ""
             for step in range(self.MAX_ACTIONS + 1):
                 last = step == self.MAX_ACTIONS
-                base = self.system_prompt(autonomy, digest,
-                                          self.memory_text())
-                if step == 0:
-                    msg = base + "\n\nNew message from %s: %s" % (
-                        actor, message)
-                else:
-                    msg = (base +
-                           "\n\nYour actions this turn and their "
-                           "results:\n" + json.dumps(actions,
-                                                      indent=1))
-                if last:
-                    msg += ("\nAnswer NOW in plain text - no JSON "
-                            "action, a short report of what happened.")
-                out = self.models[self.active].chat(
-                    [{"role": "user", "content": msg}])
-                if not last:
-                    act = None
-                    pre = ""
-                    if out.startswith("{"):
+                # the world keeps moving between tool calls: the
+                # system message (fresh digest) is rebuilt in place
+                # each step
+                msgs[0]["content"] = self.system_prompt(
+                    autonomy, self.world_digest(),
+                    self.memory_text())
+                content, calls = llm.chat(
+                    msgs, tools=(None if last else self.tools))
+                if calls and not last:
+                    # feed the assistant turn back exactly as the
+                    # server wants it (the chat template renders the
+                    # tool_calls before the role:tool results)
+                    msgs.append({
+                        "role": "assistant",
+                        "content": content or None,
+                        "tool_calls": [{
+                            "id": c["id"], "type": "function",
+                            "function": {"name": c["name"],
+                                         "arguments": c["args_json"]}}
+                            for c in calls]})
+                    for c in calls:
                         try:
-                            act = json.loads(out)
+                            a = json.loads(c["args_json"] or "{}")
                         except ValueError:
-                            act = {"action": "state", "args": {},
-                                   "say": "malformed action"}
-                    else:
-                        # the 35B emits the action object after a line of
-                        # prose - execute it instead of leaking it into
-                        # the transcript (the 'base' exchange, 2026-10-07)
-                        act = _extract_action_json(out)
-                        if act is not None:
-                            pre = out[:out.find('{"action"')].strip(" .,:-")
-                    if act is not None:
-                        tool = str(act.get("action") or "")
-                        args = act.get("args") or {}
-                        obs = self.do_tool(tool, args, autonomy)
-                        actions.append({"tool": tool, "args": args,
-                                        "observation": obs[:400]})
-                        reply = str(act.get("say") or pre or "")
-                        digest = self.world_digest()   # fresh each step
-                        continue
-                reply = out
+                            a = {}
+                        obs = self.do_tool(c["name"], a, autonomy)
+                        actions.append({"tool": c["name"], "args": a,
+                                        "observation": str(obs)[:400]})
+                        msgs.append({"role": "tool",
+                                     "tool_call_id": c["id"],
+                                     "name": c["name"],
+                                     "content": str(obs)[:400]})
+                    continue
+                reply = (content or "").strip()
                 break
             if not reply:
                 reply = "done"
