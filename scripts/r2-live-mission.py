@@ -67,6 +67,7 @@ from r2.jobs import Goal, Job, Failure, FAILURE_CODES as _FAILURE_CODES
 from r2 import approach as r2approach
 from r2.queries import classify
 from r2.sources import (lookup as lookup_source, fam_match,
+                        fam_match_resource, _fam_of_cluster,
                         compile_gather_plan, scan_report,
                         MATERIALS as SOURCE_MATERIALS)
 
@@ -753,8 +754,13 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
         target_mat = classify(rec.code)[1]
         cells = _fresh_exposed(pol, bot, rec, wm, target_mat)
         if not cells:
-            cells = list(rec.mineable_cells) if rec.mineable_cells \
-                else list(rec.cells)
+            # the world model stores cells as LISTS (cluster_cells' dict
+            # shape) - normalize to tuples: the loop's `tried` set and
+            # the tuple-cell guards assume hashable cells
+            # (2026-10-11: an unhashable list crashed the job here).
+            cells = [tuple(c) for c in rec.mineable_cells] \
+                if rec.mineable_cells else \
+                [tuple(c) for c in rec.cells]
         # walk order (2026-10-07): TOP-DOWN before nearest. The
         # distance-only order sent the bot to a hollow's exposed FLOOR
         # cells (air above them) and left it stranded 2+ below the rim
@@ -869,6 +875,22 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
         max_cells_tried = need * 2 + 80
         scan_every = 3
         iters_since_scan = 0
+        # 2026-10-11 (search-derived gathers): the cluster may run dry
+        # before `need` items are in the cargo while OTHER matching
+        # clusters the search registered are still mineable. A bare
+        # `gather flint x10` must not park the shortfall on one dry
+        # cluster - re-resolve the next matching cluster and keep
+        # digging (bounded: each cluster is used at most once).
+        used_clusters = {rec.id}
+        # 2026-10-11: era-aware re-targeting - the same rule as the
+        # resolver: tool-family clusters (ore) are only re-targeted
+        # with a pickaxe in the cargo.
+        _src_x = lookup_source(job.material) if job.material else None
+        _hand_fams = [f for f in (getattr(_src_x, "hand_families", ())
+                                  if _src_x else ())]
+        _has_pick = any(
+            str(k).split(":")[-1].lower().startswith("pickaxe-")
+            for k in inventory_of(pol.state(bot)))
         while mined < need and cells_tried < max_cells_tried:
             iters_since_scan += 1
             if iters_since_scan >= scan_every or not cells:
@@ -881,7 +903,34 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
                 cells.sort(key=lambda c: (-c[1], abs(c[0] - bp2[0]) +
                            abs(c[2] - bp2[2])))
             if not cells:
-                break
+                next_rec = None
+                if job.expect and mined < need:
+                    fams_x = [f for f in job.expect.split(",")
+                              if f and f.endswith("-")]
+                    for cand in wm.resources.values():
+                        if cand.id in used_clusters or \
+                                (cand.observed_quantity or 0) <= 0:
+                            continue
+                        if _hand_fams and not _has_pick \
+                                and not _fam_of_cluster(cand,
+                                                        _hand_fams):
+                            continue
+                        if fam_match_resource(cand, fams_x):
+                            next_rec = cand
+                            break
+                if next_rec is None:
+                    break
+                used_clusters.add(next_rec.id)
+                rec = next_rec
+                target_mat = classify(rec.code)[1]
+                cells = _fresh_exposed(pol, bot, rec, wm, target_mat)
+                if not cells:
+                    cells = [tuple(c) for c in rec.mineable_cells] \
+                        if rec.mineable_cells else \
+                        [tuple(c) for c in rec.cells]
+                if not cells:
+                    continue  # next iteration tries the next cluster
+                continue
             cell = cells.pop(0)
             tried.add(cell)
             cells_tried += 1
@@ -2359,7 +2408,11 @@ def _search(pol, bot, wm, job, run, measured):
     rings_done = []
     import math as _m
     p_max = int((_m.sqrt(1_000_000 / max(8.0, bp[1] + 1.0)) - 1.0) / 2.0)
-    radii = [r for r in (4, 8, 16, 32) if r <= max(4, p_max)]
+    # 2026-10-11: the widest ring grows to 48 where the 1M-cell cap
+    # allows (at y~111 that is a 97x113x97 box) - the camp-area flint
+    # survey found the only sources 10m out and nothing within 64m;
+    # a search that gives up at 32m declares victory early.
+    radii = [r for r in (4, 8, 16, 32, 48) if r <= max(4, p_max)]
     for radius in radii:
         data = None
         for _ in range(3):
@@ -2431,15 +2484,47 @@ def _resolve_gather_target(wm, pol, bot, job):
     src = lookup_source(job.material)
     fams = [f for f in (job.expect or "").split(",")
             if f and f.endswith("-")]
+    era_note = None
     if fams:
-        cands = [r for r in wm.resources.values()
-                 if any(fam_match(r.code, f) for f in fams)
-                 and (r.observed_quantity or 0) > 0]
+        # 2026-10-11: era-aware resolution - a source may name two
+        # eras (flint: loose ground flint early, the ore vein after
+        # the pickaxe). Hand-family clusters come first; tool-family
+        # ones are only touched with a pickaxe in the cargo (the
+        # engine refuses the bare-hand mine of ore).
+        inv_now = inventory_of(pol.state(bot))
+        has_pick = any(str(k).split(":")[-1].lower().startswith("pickaxe-")
+                       for k in inv_now)
+        hand_fams = list(getattr(src, "hand_families", ()) or ())
+        all_matching = [r for r in wm.resources.values()
+                        if fam_match_resource(r, fams)
+                        and (r.observed_quantity or 0) > 0]
+        cands = [r for r in all_matching
+                 if not hand_fams or has_pick
+                 or _fam_of_cluster(r, hand_fams)]
+        if not cands and all_matching and hand_fams and not has_pick:
+            # 2026-10-11: the honest era message - the world DOES hold
+            # the material, in a form this hand cannot yet break. The
+            # old generic "registered none" hid exactly that.
+            n_blocked = sum(int(r.observed_quantity or 0)
+                            for r in all_matching)
+            era_note = ("%d %s block(s) in %d cluster(s) observed, but "
+                        "every one needs a pickaxe (none in cargo); "
+                        "no hand-breakable %s within the search radius "
+                        "(rings to r=%d)"
+                        % (n_blocked, job.material, len(all_matching),
+                           job.material, max(r for r in (4, 8, 16, 32, 48))
+                           ))
         if cands:
             bp = tuple(pol.state(bot)["Bot"]["Pos"])
-            cands.sort(key=lambda r: (abs(int(r.centroid[0]) - bp[0])
-                                      + abs(int(r.centroid[2]) - bp[2]),
-                                      -(r.observed_quantity or 0)))
+
+            def _rank(r):
+                tool_era = (1 if hand_fams and
+                            not _fam_of_cluster(r, hand_fams) else 0)
+                return (tool_era,
+                        abs(int(r.centroid[0]) - bp[0])
+                        + abs(int(r.centroid[2]) - bp[2]),
+                        -(r.observed_quantity or 0))
+            cands.sort(key=_rank)
             return (cands[0],
                     "resolved %s (%d observed, %d cells)"
                     % (cands[0].id, cands[0].observed_quantity or 0,
@@ -2455,6 +2540,8 @@ def _resolve_gather_target(wm, pol, bot, job):
                     loose = (d, eid, code, p)
     if loose is not None:
         return (None, "loose %s" % loose[2], (loose[1], loose[2], loose[3]))
+    if era_note:
+        return (None, era_note, None)
     return (None,
             "no %s observed - the search rings registered none "
             "(the world model holds no matching cluster)" % job.material,
@@ -3681,6 +3768,10 @@ def main():
                     return finish(args.out, run, t0)
             plan_dicts = []
             dep = []
+            # the candidate index (validator input) - the same call the
+            # other branches make before validate_plan
+            _p, index = build_planner_prompt(wm, goal, inv, fixtures,
+                                             center=(bp[0], 0, bp[2]))
             for kind, what, q in steps:
                 jid = "j%d" % (len(plan_dicts) + 1)
                 if kind == "gather":
@@ -3695,11 +3786,12 @@ def main():
                                                   ", ".join(SOURCE_MATERIALS)))})
                         return finish(args.out, run, t0)
                     cl = [r for r in wm.resources.values()
-                          if any(fam_match(r.code, f) for f in s.families)]
+                          if fam_match_resource(r, s.families)]
                     sub_goal = types.SimpleNamespace(verb="gather",
                                                      object=what, n=q)
                     sub_jobs, _note = compile_gather_plan(
-                        cl, sub_goal, s, bot_pos=(bp[0], bp[2]))
+                        cl, sub_goal, s, bot_pos=(bp[0], bp[2]),
+                        inv=inv)
                     for sj in sub_jobs:
                         sj["id"] = "j%d" % (len(plan_dicts) + 1)
                         sj["depends_on"] = list(dep)
@@ -3732,6 +3824,16 @@ def main():
             # campaign=True: make is an OPERATOR-declared chain (the
             # same scoping the --jobs campaign gets) - the 27B never
             # emits knap/craft chains itself.
+            # 2026-10-11: the 16-candidate cap can cut a chain's small
+            # clusters (they rank far in distance order); the validator
+            # must still resolve every cluster the deterministic chain
+            # names. The index is the trust boundary - supplement it
+            # with exactly the clusters the chain references.
+            for pd in plan_dicts:
+                s_id = pd.get("source")
+                if s_id and s_id in wm.resources \
+                        and s_id not in index:
+                    index[s_id] = wm.resources[s_id]
             jobs, failure = validate_plan(json.dumps(plan_dicts), index,
                                           inv, goal=goal,
                                           recipes=craft_rows or None,
@@ -3776,10 +3878,24 @@ def main():
                 # run time against what the search registered (the
                 # found cells are not knowable at compile time).
                 clusters = [r for r in wm.resources.values()
-                            if any(fam_match(r.code, f)
-                                   for f in src.families)]
+                            if fam_match_resource(r, src.families)]
                 plan_dicts, note = compile_gather_plan(
-                    clusters, goal, src, bot_pos=(bp[0], bp[2]))
+                    clusters, goal, src, bot_pos=(bp[0], bp[2]),
+                    inv=inv)
+                # the candidate index the validator checks against
+                # (the 2026-10-11 crash: this branch used `index`
+                # before build_planner_prompt ever ran on it)
+                _p, index = build_planner_prompt(wm, goal, inv,
+                                                 fixtures,
+                                                 center=(bp[0], 0,
+                                                        bp[2]))
+                # 2026-10-11: the 16-candidate cap can cut the mapped
+                # clusters (small ore clusters rank far); the validator
+                # resolves the plan against this index, so the clusters
+                # compile_gather_plan allocated to must be in it.
+                for c in clusters:
+                    if c.id not in index:
+                        index[c.id] = c
                 jobs, failure = validate_plan(json.dumps(plan_dicts),
                                               index, inv, goal=goal)
                 run["planner"] = {"mode": "deterministic",
@@ -3910,9 +4026,35 @@ def main():
     run["queue"] = gs.to_dict()
     run["worldSnapshot"] = wm.to_dict()
     run["outcome"] = gs.status
+    # Verdict honesty (2026-10-11): for a bare producer goal (gather /
+    # harvest / mine), the outcome must reflect what was MEASURED in
+    # the cargo, not whether the job loop ended quietly. The
+    # soft-success design (2026-10-05) parks a shortfall on the build
+    # preflight - that reasoning applies to build goals; a `gather
+    # flint x10` that measured 2 flints is a PARTIAL goal, and the
+    # summary says the number.
+    if run["outcome"] == "complete" and \
+            goal.verb in ("gather", "harvest", "mine"):
+        want = goal.n or 1
+        src_map = lookup_source(goal.object)
+        got = 0
+        for s in run.get("steps") or []:
+            meas = (s.get("oracle") or {}).get("measured") or {}
+            for code, q in meas.items():
+                c = str(code).split(":")[-1].lower()
+                if c == goal.object or \
+                        (src_map and src_map.matches_drop(c)):
+                    got += q
+        if got < want:
+            run["outcome"] = "partial"
+            run["reason"] = ("%s %s: measured %d of %d in cargo "
+                             "(the loops mined what they could reach)"
+                             % (goal.verb, goal.object, got, want))
     print("GOAL %s: %s  (%d jobs, %ds)"
           % (gs.status.upper(), goal.describe(), len(jobs),
              int(time.time() - t0)))
+    if run["outcome"] == "partial" and run.get("reason"):
+        print("  note: %s" % run["reason"])
     if gs.failure:
         print("  failure: %s - %s" % (gs.failure.code, gs.failure.detail))
     finish(args.out, run, t0)

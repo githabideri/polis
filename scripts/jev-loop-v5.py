@@ -148,6 +148,12 @@ class Polis:
             self.cmd("despawn", [str(i)], i)
     def cell_blocks(self, bot, cell, pad=1):
         x, y, z = cell
+        # the scan command parses INT coordinates (int.TryParse, 2026-10-11
+        # trap: a float string like "512095.91394" fails the parse and the
+        # command returns a usage error that reads as "0 blocks scanned" -
+        # every search ring of the 2026-10-11 mission died this way).
+        # Truncate to ints here; the C# side also accepts floats now.
+        x, y, z = int(x), int(y), int(z)
         r = self.cmd("scan", [str(x - pad), "2", str(z - pad),
                               str(x + pad), str(y + 2), str(z + pad)], bot)
         self.last_scan = r

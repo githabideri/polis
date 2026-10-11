@@ -28,7 +28,7 @@ class Source:
     """One row of the map: what a material word means in the world."""
 
     def __init__(self, material, families, drops, kind="mine",
-                 loose=(), tool=None, aliases=()):
+                 loose=(), tool=None, aliases=(), hand_families=()):
         self.material = material        # canonical claim word ("flint")
         self.families = tuple(families)  # block code prefixes ("ore-flint-")
         self.drops = tuple(drops)        # drop item codes / prefixes
@@ -36,6 +36,12 @@ class Source:
         self.loose = tuple(loose)        # loose ground-item codes (pickup)
         self.tool = tool                 # item required in the right hand
         self.aliases = tuple(aliases)    # other words that name this
+        # 2026-10-11: the families breakable BEFORE a metal pickaxe
+        # exists (hand/knife). A source may serve two eras - flint
+        # comes from loose ground blocks early and from the ore vein
+        # after M9; the allocator prefers the hand families and only
+        # touches the rest when a pickaxe is in the cargo.
+        self.hand_families = tuple(hand_families)
 
     def families_str(self):
         """The Job.expect comma list for the search/extract jobs."""
@@ -87,12 +93,50 @@ def fam_match(code, family):
     return c == f or c == f + "-free"
 
 
+def fam_match_resource(rec, families):
+    """Family matching against a WORLD-MODEL resource record, which
+    stores the CLASSIFIED material, not the raw block code
+    (2026-10-11: classify strips the kind prefix - the ore block
+    `ore-flint-claystone` becomes kind=ore, material=flint-claystone -
+    so the family `ore-flint-` no longer matches the stored code and
+    the search-derived gather resolution saw a world full of flint
+    ore it could not name). Unknown-kind records keep the full code as
+    their material and match as before. Matches the stored code and,
+    where the kind is a classified prefix, the reconstructed raw code
+    (`kind-material`)."""
+    codes = []
+    if isinstance(rec, str):
+        codes = [rec]
+    else:
+        codes = [getattr(rec, "code", None) or ""]
+        kind = getattr(rec, "kind", None)
+        mat = getattr(rec, "material", None)
+        if kind and mat and kind != "block":
+            codes.append("%s-%s" % (kind, mat))
+    out = False
+    for f in families:
+        if not f or not str(f).endswith("-"):
+            continue
+        f = str(f).strip().lower()
+        for c in codes:
+            c = str(c).lower()
+            if c == f[:-1] or c.startswith(f):
+                out = True
+    return out
+
+
 #: the map, in canonical order (early game first). Verified against
 #: the live 1.22.7 registry 2026-10-11.
 SOURCES = {
     "flint": Source(
-        "flint", families=("ore-flint-",),
-        drops=("ore-flint-", "flint"), kind="mine"),
+        "flint", families=("ore-flint-", "looseflints-"),
+        drops=("flint",), kind="mine",
+        # 1.22: ore blocks need a pickaxe (copper tier, M9); the early
+        # knives come from looseflints-* ground blocks (broken by hand/
+        # knife into flint stones) - both families live here on purpose
+        # so the same `gather flint` serves both eras.
+        aliases=("flintstone",),
+        hand_families=("looseflints-",)),
     "stick": Source(
         "stick", families=("leavesbranchy-", "leaves-"),
         drops=("stick",), loose=("stick",), kind="chop"),
@@ -203,12 +247,25 @@ def scan_report(counter, material):
             % (total, ", ".join(uniq[:6]) or "nothing", material))
 
 
-def compile_gather_plan(clusters, goal, src, bot_pos=None):
+def _fam_of_cluster(rec, families):
+    """True if the resource record matches any of the (prefix) family
+    globs - via fam_match_resource (the record holds the classified
+    material, the families name the raw block codes)."""
+    return fam_match_resource(rec, families)
+
+
+def compile_gather_plan(clusters, goal, src, bot_pos=None, inv=None):
     """The deterministic gather compile for a source-mapped material.
 
     clusters: world-model records already filtered to this source's
     block families (distance ordering happens here). goal: the gather
-    Goal. bot_pos: (x, z) for distance ordering (optional).
+    Goal. bot_pos: (x, z) for distance ordering (optional). inv: the
+    bot's inventory (optional) - 2026-10-11: families outside the
+    source's hand_families (e.g. flint ORE) need a metal pickaxe and
+    are excluded until one is in the cargo (the engine refuses the
+    bare-hand mine; pre-M9 the only flint is loose ground flint).
+    Within an era, the hand families are allocated before the tool
+    families.
 
     Two shapes:
       direct  - the ledger covers the quantity: one gather job per
@@ -233,7 +290,23 @@ def compile_gather_plan(clusters, goal, src, bot_pos=None):
         return (abs(int(r.centroid[0]) - int(bot_pos[0]))
                 + abs(int(r.centroid[2]) - int(bot_pos[1])))
 
-    cands = sorted(clusters, key=dist)
+    # 2026-10-11: era-aware allocation (docstring). The hand families
+    # come first; the tool families only join the plan when a
+    # pickaxe is in the cargo.
+    hand_fams = getattr(src, "hand_families", None)
+    if hand_fams:
+        has_pickaxe = any(
+            str(k).split(":")[-1].lower().startswith("pickaxe-")
+            for k in (inv or {}))
+        hand = [r for r in clusters
+                if _fam_of_cluster(r, hand_fams)]
+        tool = [r for r in clusters if r not in hand]
+        if not has_pickaxe:
+            tool = []
+        cands = (sorted(hand, key=dist)
+                 + sorted(tool, key=dist))
+    else:
+        cands = sorted(clusters, key=dist)
     total = sum(int(r.observed_quantity or 0) for r in cands)
 
     if cands and total >= n:

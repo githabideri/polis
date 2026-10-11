@@ -3790,14 +3790,21 @@ public partial class PolisSystem
             return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: scan <x1> <y1> <z1> <x2> <y2> <z2> [--include-air]" };
         }
 
-        if (!int.TryParse(args[0], out var x1) || !int.TryParse(args[1], out var y1) || !int.TryParse(args[2], out var z1))
+        // 2026-10-11: float-tolerant coordinate parsing - the mission
+        // layer passes str() of state floats ("512095.91394"); the old
+        // int.TryParse rejected those as "Invalid from coordinates",
+        // which the search rings read as "0 blocks scanned" and
+        // reported as an honest-but-wrong "no flint". Ints still work.
+        if (!double.TryParse(args[0], out var xd0) || !double.TryParse(args[1], out var yd0) || !double.TryParse(args[2], out var zd0))
         {
             return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid from coordinates" };
         }
-        if (!int.TryParse(args[3], out var x2) || !int.TryParse(args[4], out var y2) || !int.TryParse(args[5], out var z2))
+        if (!double.TryParse(args[3], out var xd1) || !double.TryParse(args[4], out var yd1) || !double.TryParse(args[5], out var zd1))
         {
             return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid to coordinates" };
         }
+        int x1 = (int)Math.Floor(xd0), y1 = (int)Math.Floor(yd0), z1 = (int)Math.Floor(zd0);
+        int x2 = (int)Math.Floor(xd1), y2 = (int)Math.Floor(yd1), z2 = (int)Math.Floor(zd1);
 
         bool includeAir = args.Length > 6 && args[6].ToLowerInvariant() == "--include-air";
 
