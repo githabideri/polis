@@ -1051,6 +1051,14 @@ class Oikistes:
                 trip = toks[i + 1].split(",")
                 if len(trip) == 3 and all(p.isdigit() for p in trip):
                     cmd += ["--site", toks[i + 1]]
+        elif verb.lower() == "goto" and len(toks) == 4 and \
+                all(t.isdigit() for t in toks[1:4]):
+            # 'goto x y z' (space-separated, as the tool doc says) -
+            # the planner can never emit coordinates, so the triple must
+            # become the AUTHORITATIVE site here or the goal dies on
+            # arrival (2026-10-11: the 13:01 flint-search goto ended in
+            # 0 s with no run for exactly this reason).
+            cmd += ["--site", ",".join(toks[1:4])]
         if verb in ("mine", "harvest", "sow", "forage", "build",
                     "build-plan"):
             cmd.append("--no-planner")

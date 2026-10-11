@@ -606,6 +606,14 @@ let statusTimer = null, eventTimer = null, clockTimer = null, lastEventTs = 0;
 async function pollStatus() {
     try {
         const data = await api.getStatus();
+        // world name in the top bar (2026-10-11): the instance
+        // identifier - stale/old instances run different worlds.
+        const wn = $('world-name');
+        if (wn) {
+            const name = data && data.worldName ? data.worldName : '';
+            wn.textContent = name ? '· ' + name : '';
+            wn.title = name ? 'world: ' + name : '';
+        }
         state.updateFromStatus(data);
         const [bots, players, vitals] = await Promise.all([
             api.getBots().catch(() => null),

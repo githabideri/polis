@@ -27,6 +27,10 @@
         </div>
         <div class="tb-mid">
             <span id="world-clock" class="world-clock mono">—</span>
+            <!-- world name (2026-10-11): which world THIS instance is
+                 running - the 192.168.0.114 vs 192.168.178.49 mixup
+                 cost a day; the top bar now tells you at a glance. -->
+            <span id="world-name" class="world-name mono" title="the world this instance is running"></span>
             <!-- current-step (2026-10-04 mobile/field variant, webui-mobile.md):
                  what the agent / decision loop is doing right now — the last
                  agent- or harness-actor event, so the operator doesn't have to
