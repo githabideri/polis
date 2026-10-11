@@ -154,8 +154,14 @@ class Polis:
         # every search ring of the 2026-10-11 mission died this way).
         # Truncate to ints here; the C# side also accepts floats now.
         x, y, z = int(x), int(y), int(z)
-        r = self.cmd("scan", [str(x - pad), "2", str(z - pad),
-                              str(x + pad), str(y + 2), str(z + pad)], bot)
+        # 2026-10-11: the y1="2" here was a relic of the old flat test
+        # world (y2-6). On Standard terrain (y111+) the column spanned
+        # y2..y+2 - a 110-block deep drill - and callers that pick the
+        # nearest candidate by x/z distance (the make branch's knap
+        # surface) selected the DEEPEST cell of the column (y2) instead
+        # of the ground cell. Symmetric box, small up-bias kept.
+        r = self.cmd("scan", [str(x - pad), str(y - pad), str(z - pad),
+                              str(x + pad), str(y + pad + 2), str(z + pad)], bot)
         self.last_scan = r
         return (r.get("Data") or {}).get("blocks", [])
     def marker_present(self, bot, cell, marker=None):

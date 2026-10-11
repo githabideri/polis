@@ -3786,7 +3786,11 @@ def main():
                                         "sand-", "stone-")):
                         p = b.get("pos") or []
                         if len(p) == 3:
-                            d = abs(p[0] - bp[0]) + abs(p[2] - bp[2])
+                            # 2026-10-11: 3D distance - x/z alone tied a
+                            # surface cell with a 110-block-deep column
+                            # cell and the tie went to the deep one.
+                            d = (abs(p[0] - bp[0]) + abs(p[1] - bp[1])
+                                 + abs(p[2] - bp[2]))
                             cands.append((d, list(p)))
                 if cands:
                     cands.sort(key=lambda t: t[0])
