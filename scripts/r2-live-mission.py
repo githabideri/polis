@@ -3490,11 +3490,11 @@ def main():
     # search->extract chain (r2/sources.py) is its compile path (the
     # 10-11 incident: `gather flint x10` was handed to the 27B, which
     # hallucinated a resource id and died in the validator).
-    src_map_hit = (goal.verb == "gather"
+    src_map_hit = (goal.verb in ("gather", "forage")
                    and lookup_source(goal.object) is not None)
     if ((getattr(args, "no_planner", False)
-         and goal.verb in ("mine", "harvest", "gather", "sow",
-                           "build", "build-plan", "make"))
+         and goal.verb in ("mine", "harvest", "gather", "forage",
+                           "sow", "build", "build-plan", "make"))
             or src_map_hit):
         # the deterministic goal compiler (13.6 step 2, no LLM): a
         # one-verb acquisition goal has one obvious plan - the closest
@@ -4019,8 +4019,55 @@ def main():
             flex = goal.verb in ("gather", "harvest")
             want_obj = str(goal.object).split(":")[-1].lower()
             src = (lookup_source(goal.object)
-                   if goal.verb == "gather" else None)
-            if src is not None:
+                   if goal.verb in ("gather", "forage") else None)
+            if src is not None and goal.verb == "forage":
+                # 2026-10-11 (the berry A/B): a forage goal is
+                # one-verb acquisition like gather - one job, no LLM.
+                # The agent's query found the instance (the goal's
+                # `at`); without one the executor finds the nearest
+                # in range at run time. The job is GOAL-SCOPED, so the
+                # validator runs campaign-scoped - the plan is
+                # compiler-synthesized and the 27B never sees it (the
+                # chop/build_plan precedent). The 27B planner has no
+                # forage verb at all, so without this branch every
+                # agent-dispatched forage died at its candidate list.
+                plant_glob = src.families[0] + "*"
+                at = None
+                if getattr(goal, "at", None):
+                    nums = [t for t in str(goal.at).split(",")
+                            if t.strip().lstrip("-").isdigit()]
+                    if len(nums) == 3:
+                        at = [int(t) for t in nums]
+                plan_dicts = [{"id": "j1", "type": "forage",
+                               "plant": plant_glob,
+                               "material": src.material,
+                               "quantity": int(goal.n or 1),
+                               "origin": "deterministic"}]
+                if at is not None:
+                    plan_dicts[0]["at"] = at
+                _p, index = build_planner_prompt(wm, goal, inv,
+                                                 fixtures,
+                                                 center=(bp[0], 0,
+                                                        bp[2]))
+                jobs, failure = validate_plan(
+                    json.dumps(plan_dicts), index, inv, goal=goal,
+                    campaign=True)
+                run["planner"] = {"mode": "deterministic",
+                                  "chosen": {"source_map":
+                                             src.material,
+                                             "strategy":
+                                             ("at" if at is not None
+                                              else "nearest-in-range"),
+                                             "families":
+                                             src.families},
+                                  "candidates": sorted(index)}
+                run["plan"] = {"raw": json.dumps(plan_dicts),
+                               "latency_ms": 0,
+                               "jobs": [j.to_dict() for j in jobs]
+                               if jobs else plan_dicts,
+                               "failure": (failure.to_dict()
+                                           if failure else None)}
+            if src is not None and goal.verb != "forage":
                 # 2026-10-11: source-mapped gather - the
                 # search->extract chain (r2/sources.py). The ledger
                 # names a vein by its first-seen block code
