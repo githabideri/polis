@@ -568,17 +568,30 @@ class Oikistes:
                                for k, v in top) or "empty ground"
         except Exception:
             pass
-        base = ("bot=%d pos=(%s,%s,%s) holding=[%s] last_action=%s%s "
-                "around=[%s] recent=[%s]"
+        base = ("bot=%d pos=(%s,%s,%s) sat=%s/%s holding=[%s] "
+                "last_action=%s%s around=[%s] recent=[%s]"
                 % (bot,
                    pos[0] if len(pos) > 0 else "?",
                    pos[1] if len(pos) > 1 else "?",
                    pos[2] if len(pos) > 2 else "?",
+                   b.get("Saturation") or 0,
+                   b.get("MaxSaturation") or "?",
                    ", ".join(inv) or "nothing",
                    la.get("Name") or "-",
                    (" (%s)" % la.get("Msg")) if la.get("Msg") else "",
                    around,
                    "; ".join(evs) or "-"))
+        # the player's satiety (2026-10-11, rule 7 'FOOD FIRST': the
+        # digest is the only place the LLM sees hunger - the first
+        # run lost the operator to starvation while the body munched
+        # on its own ration)
+        try:
+            vit = self.polis.get("/polis/vitals")
+            for p in (vit or {}).get("players") or []:
+                base += (" | player %s sat=%s/%s" % (
+                    p.get("name"), p.get("sat"), p.get("satMax")))
+        except Exception:
+            pass
         out = base
         m = self.mission
         if m is not None:
@@ -627,7 +640,7 @@ class Oikistes:
         # says an object - normalize per tool instead of failing
         if isinstance(a, str):
             if tool == "mission":
-                a = {"goal": a}
+                a = {"goal": a, "bots": "self"}
             elif tool == "give":
                 parts = a.split()
                 a = {"item": parts[0],
@@ -744,7 +757,12 @@ class Oikistes:
             if tool == "mission":
                 if not a.get("goal"):
                     return self._mission_status()
-                return self.run_mission(str(a["goal"]))
+                if isinstance(a.get("bots"), (list, tuple)):
+                    a["bots"] = ",".join(str(x) for x in a["bots"])
+                elif a.get("bots") is None:
+                    a["bots"] = "self"
+                return self.run_mission(str(a["goal"]),
+                                        a.get("bots") or "self")
             if tool == "pots":
                 return self.run_pots(a)
             if tool == "query":
@@ -881,14 +899,18 @@ class Oikistes:
         return "zone %s: %s" % (sub, r.get("Message") or r.get("error")
                                 or ("ok" if r.get("Ok") else "no reply"))
 
-    def run_mission(self, goal_line):
+    def run_mission(self, goal_line, bots="self"):
         """Order work through the R2 job system (the actuator).
         Structured verbs (mine/harvest/sow) go through the deterministic
         compiler; anything else gets the 27B planner + validator.
         A goal that names its site as 'at x,y,z' passes the triple
         through as the AUTHORITATIVE --site (register_site's operator
         path) - a surveyed ledge, not the auto-found cell east of the
-        spawn (2026-10-07: the builder surveys before it builds)."""
+        spawn (2026-10-07: the builder surveys before it builds).
+        A 'goto <player>' goal (2026-10-11, the 'come to me' case) is
+        the exception: players are not sites, so the planner can never
+        target them - the fast path walks the selected bots (bots:
+        'self' | 'all' | 'id1,id2') to the player's live position."""
         verb = goal_line.split()[0] if goal_line.split() else ""
         out = os.path.join(
             self.args.datadir,
@@ -898,8 +920,31 @@ class Oikistes:
                "--harness", self.args.harness,
                "--uid", self.args.uid,
                "--goal", goal_line, "--out", out]
+        goto_target = None
         toks = goal_line.split()
-        if "at" in toks:
+        if verb.lower() == "goto" and len(toks) > 1:
+            obj = toks[1].strip().lower().rstrip(".,")
+            players = self.polis.get("/polis/players")
+            plist = players if isinstance(players, list) else \
+                ((players or {}).get("players") or [])
+            if obj in ("me", "player", "operator", "operator's", "you"):
+                for p in plist:
+                    if (p.get("uid") or "") == self.args.uid:
+                        goto_target = p
+                        break
+                if goto_target is None and len(plist) == 1:
+                    goto_target = plist[0]
+            else:
+                for p in plist:
+                    if (p.get("name") or "").lower() == obj or \
+                            (p.get("uid") or "").lower() == obj:
+                        goto_target = p
+                        break
+        if goto_target is not None:
+            cmd += ["--goto-player",
+                    goto_target.get("name") or self.args.uid,
+                    "--bots", str(bots), "--body", str(self.bot)]
+        elif "at" in toks:
             i = toks.index("at")
             if i + 1 < len(toks):
                 trip = toks[i + 1].split(",")
@@ -1092,10 +1137,14 @@ class Oikistes:
         tools = ("state, scan, screenshot, events, autonomy, give, "
                  "mission, query, zone, crew, command")
         return (
-            "You are the OIKISTES, the settlement's builder manager, a "
-            "builder bot with a body in a block world. Your partners are "
-            "the settlement's operator (you) and the devops engineer; "
-            "you answer them directly, in short plainspoken replies.\n"
+            "You are OIKISTES, the settlement's builder manager. You "
+            "are in the world, not above it: your body is bot %s "
+            "standing in it. When the operator says 'come to me', "
+            "YOU go - you order your body (mission, bots='self'). "
+            "The operator's player is your partner in the same world. "
+            "Answer them directly, in short plainspoken replies, in "
+            "first person: your actions are yours, never 'the bot "
+            "will do it'.\n"
             "AUTONOMY: %s. This is a WORLD-OWNED policy, not yours: you "
             "read it, the execution path enforces it. You can never "
             "change it yourself. %s\n"
@@ -1109,7 +1158,12 @@ class Oikistes:
             "mission=<goal line> dispatch a BACKGROUND job through "
             "the job system (returns at once; the settlement is not "
             "blocked) - or mission with NO goal to report the "
-            "running/finished status; "
+            "running/finished status; the optional "
+            "bots='self'|'all'|[ids] picks which bots run it "
+            "(default self = your body). 'goto <player>' (or 'goto "
+            "me') brings the selected bots to the player's live "
+            "position - 'come to me' works; name the player when "
+            "more than one is online; "
             "pots={form_at:[x,y,z], hole_at:[x,y,z], "
             "firepit_at:[x,y,z]} dispatch the POT-WORK FOOD CHAIN as "
             "one background mission (clay -> clayform table -> the "
@@ -1206,7 +1260,10 @@ class Oikistes:
             "echo the input back.\n"
             "OPERATING DISCIPLINE (hard rules): "
             "1 HONEST REPORTS - claim only what you SAW in a harness "
-            "reply. Ordered is not done; a mission 'started' is running, "
+            "reply. A mission exists ONLY when the tool reply named "
+            "it; saying 'I dispatched X' without that reply is a lie - "
+            "call the tool first, then report its words. Ordered is "
+            "not done; a mission 'started' is running, "
             "not finished. When a tool fails, repeat the exact message "
             "and stop guessing at it. "
             "2 PLAN BEFORE ACTING - a multi-part request ('do it all') "
@@ -1243,10 +1300,14 @@ class Oikistes:
             "soil-* block family); granite (rock-granite) needs a "
             "mining step first. If a building's material is not on "
             "hand, say so and order the mining - do not order the "
-            "building and call the failure an accident.\n"
+            "building and call the failure an accident. "
+            "7 FOOD FIRST - satiety is in the digest (your body and "
+            "the operator's player): if either is low, securing food "
+            "(forage the nearest bush, eat) is the FIRST job, before "
+            "building or mining. A hungry settlement is a failed one.\n"
             "Current world (fresh): %s\n"
             "Recent exchanges:\n%s"
-            % (autonomy.upper(),
+            % (self.bot, autonomy.upper(),
                {"strict": "reads only - no missions, no giving, no "
                            "commands",
                 "guarded": "you may order missions and give items; "

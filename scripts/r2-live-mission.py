@@ -2538,6 +2538,116 @@ def _parse_keep(args):
             if x.strip().isdigit()]
 
 
+def run_goto_player(args, run, t0):
+    """Bring the selected bots to the live player (2026-10-11, the
+    'come to me' case). Players are NOT sites: the planner's candidate
+    lists can never contain them, so a 'goto <player>' goal could only
+    be rejected (observed 2026-10-11: the whole crew stayed at spawn
+    while the operator starved). This path is fully deterministic - no
+    planner, no spawn, no boot sweep: the selected EXISTING bots are
+    issued the goto together (they walk in parallel) and are waited
+    on by their position-verified LastAction, the v5.goto_wait
+    contract. 'self' = the agent's body (it is an identity; the keep
+    logic never touches it here at all - no sweep runs)."""
+    run["mode"] = "goto-player"
+    pol = v5.Polis(args.harness, args.uid)
+
+    # 1. resolve the player (name or uid, case-insensitive)
+    players = pol.get("/polis/players")
+    plist = players if isinstance(players, list) else \
+        ((players or {}).get("players") or [])
+    want = args.goto_player.strip().lower()
+    target = None
+    for p in plist:
+        if (p.get("name") or "").lower() == want or \
+                (p.get("uid") or "").lower() == want:
+            target = p
+            break
+    if target is None:
+        run.update({"outcome": "rejected",
+                    "reason": "no online player named %r (online: %s)"
+                               % (args.goto_player,
+                                  ", ".join(p.get("name") or "?"
+                                            for p in plist))})
+        return finish(args.out, run, t0)
+
+    pos = target.get("pos") or [0, 0, 0]
+    cell = (int(pos[0]), int(pos[1]), int(pos[2]))
+
+    # 2. resolve the bot set (ids that are actually alive)
+    allbots = pol.get("/polis/bots")
+    items = allbots.get("bots") if isinstance(allbots, dict) else allbots
+    ids = sorted(b.get("id") for b in (items or [])
+                 if b.get("id") is not None)
+    spec = (args.bots or "self").strip().lower()
+    if spec == "self":
+        pick = [args.body] if args.body else []
+    elif spec == "all":
+        pick = ids
+    else:
+        try:
+            pick = sorted(int(x) for x in spec.split(",") if x.strip())
+        except ValueError:
+            pick = []
+    pick = [b for b in pick if b in ids]
+    if not pick:
+        run.update({"outcome": "rejected",
+                    "reason": "no selected bot is alive (spec=%r, "
+                              "bots=%s)" % (args.bots, ids)})
+        return finish(args.out, run, t0)
+
+    run["goal"] = {"line": "goto %s" % args.goto_player,
+                   "origin": "deterministic-goto-player",
+                   "player": target.get("name"),
+                   "cell": list(cell)}
+
+    # 3. issue every goto at once (parallel walk), then wait for each
+    #    bot's goto LastAction to resolve (the goto_wait contract,
+    #    shared with the executor path)
+    for b in pick:
+        pol.cmd("goto",
+                [str(cell[0]), str(cell[1]), str(cell[2]),
+                 "true", "0.02", "true"], b)
+    results = {}
+    deadline = time.time() + 180
+    while time.time() < deadline and len(results) < len(pick):
+        for b in pick:
+            if b in results:
+                continue
+            st = pol.state(b)
+            la = st.get("LastAction") or {}
+            if la.get("Name") == "goto" and la.get("Ok") is not None:
+                results[b] = {"ok": bool(la.get("Ok")),
+                              "msg": la.get("Msg") or ""}
+        time.sleep(1)
+    for b in pick:
+        if b not in results:
+            results[b] = {"ok": False, "msg": "wait timeout (180s)"}
+        run["steps"].append({
+            "job": "goto-player", "bot": b,
+            "origin": "deterministic-goto-player",
+            "at": list(cell),
+            "arrived": results[b]["ok"],
+            "detail": results[b]["msg"],
+        })
+
+    arrived = sum(1 for r in results.values() if r["ok"])
+    if arrived == len(pick):
+        verdict = "complete"
+        why = "%d/%d bot(s) arrived at %s (%d,%d,%d)" % (
+            arrived, len(pick), target.get("name"), *cell)
+    else:
+        failed = "; ".join("bot %s: %s" % (b, r["msg"])
+                           for b, r in results.items() if not r["ok"])
+        verdict = "partial" if arrived else "failed"
+        why = "%d/%d bot(s) arrived at %s (%d,%d,%d); %s" % (
+            arrived, len(pick), target.get("name"), *cell, failed)
+    run.update({"outcome": verdict, "reason": why,
+                "oracle": {"results": {
+                    str(b): r for b, r in results.items()}}})
+    return finish(args.out, run, t0)
+
+
 def run_campaign(args, run, t0):
     """The operator campaign (--jobs, 2026-10-06): an explicit
     deterministic job list (give / chop / craft / mine / place), no
@@ -2695,6 +2805,18 @@ def main():
                     help="external setup before the goal: '<item> <qty>' "
                          "(logged in the run JSON - a harness privilege, "
                          "not a world fact)")
+    ap.add_argument("--goto-player", default="",
+                    help="goto fast path (2026-10-11, the 'come to me' "
+                         "case): bring the selected bots to the LIVE player "
+                         "named here (name or uid). Deterministic: no "
+                         "planner, no spawn, no boot sweep - the players are "
+                         "not sites, so the planner can never target them.")
+    ap.add_argument("--bots", default="self",
+                    help="bot set for --goto-player: 'self' (the agent's "
+                         "body, --body) | 'all' (every living bot) | "
+                         "comma-separated ids")
+    ap.add_argument("--body", type=int, default=0,
+                    help="the agent's own body id ('self' resolves to it)")
     args = ap.parse_args()
 
     # a mission-plan template renders to a --jobs list before anything
@@ -2716,6 +2838,9 @@ def main():
            "goal_line": args.goal,
            "steps": []}
     t0 = time.time()
+    if args.goto_player:
+        run_goto_player(args, run, t0)
+        return
     if args.jobs:
         run_campaign(args, run, t0)
         return

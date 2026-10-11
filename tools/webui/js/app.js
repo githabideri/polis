@@ -228,6 +228,52 @@ async function oneshot(kind) {
                 : (b.Backpack ?? b.backpack ? 'has backpack' : '—');
             log(`bot #${botId}: hp ${b.CurrentHealth ?? b.currentHealth ?? '?'} | right ${b.RightHand ?? b.rightHand ?? '—'} | left ${b.LeftHand ?? b.leftHand ?? '—'} | backpack ${bp}`, 'success');
         } catch (e) { log(`scan #${botId}: ${e.message}`, 'error'); }
+    } else if (kind === 'eatplayer') {
+        // 2026-10-11: the player has no in-game right-click through the
+        // webui (noVNC in the browser does not forward keys reliably) -
+        // the EAT button is how an operator eats. No args = the server
+        // auto-picks the first food carried; result names the item and
+        // the new saturation.
+        const p = getPrimaryPlayer();
+        if (!p) { log('no player online', 'error'); return; }
+        const r = await api.command('eatplayer', [],
+            { playerUid: p.uid, actor: 'user' })
+            .catch(e => ({ Ok: false, Message: e.message }));
+        log(`EAT: ${r.Message || (r.Ok ? 'ok' : 'failed')}`,
+            r.Ok ? 'success' : 'error');
+        pollStatus();  // refresh vitals (the saturation readout)
+    } else if (kind === 'useitem') {
+        // Use the held item on the block 2 cells in front of the
+        // player (forward = (sin(yaw), cos(yaw)) - the convention this
+        // UI's movement pad is measured against, 2026-09-27).
+        const p = getPrimaryPlayer();
+        if (!p) { log('no player online', 'error'); return; }
+        if (!shadow) resyncShadowFromServer();
+        if (!shadow) { log('no valid player pose', 'error'); return; }
+        const cx = Math.round(shadow.x + Math.sin(shadow.yaw) * 2);
+        const cz = Math.round(shadow.z + Math.cos(shadow.yaw) * 2);
+        const cy = Math.round(shadow.y);
+        const r = await api.command('useitem', [String(cx), String(cy), String(cz)],
+            { playerUid: p.uid, actor: 'user' })
+            .catch(e => ({ Ok: false, Message: e.message }));
+        log(`USE at ${cx},${cy},${cz}: ${r.Message || (r.Ok ? 'ok' : 'failed')}`,
+            r.Ok ? 'success' : 'error');
+    } else if (kind === 'goto-me') {
+        // 'Come to me': the selected bot walks to the player's live
+        // position (the mission tool's goto-player is the agent's
+        // version of the same call).
+        const p = getPrimaryPlayer();
+        const botId = getSelectedBotId();
+        if (!p || botId == null) { log('select a bot first', 'error'); return; }
+        if (!shadow) resyncShadowFromServer();
+        if (!shadow) { log('no valid player pose', 'error'); return; }
+        const r = await api.command('goto',
+            [String(Math.round(shadow.x)), String(Math.round(shadow.y)),
+             String(Math.round(shadow.z)), 'true', '0.02', 'true'],
+            { botId: Number(botId), actor: 'user' })
+            .catch(e => ({ Ok: false, Message: e.message }));
+        log(`bot #${botId} → you: ${r.Message || 'issued'}`,
+            r.Ok ? 'success' : 'error');
     } else if (kind === 'stop') {
         // The always-visible override (webui-mobile.md): stop the selected
         // bot's current action — bot.Activity.CancelAll() server-side.
@@ -647,6 +693,16 @@ function wireConsole() {
         if (e.key === 'Enter') { executeCommand(el.cmdInput.value); el.cmdInput.value = ''; }
     });
     el.cmdSubmit.addEventListener('click', () => { executeCommand(el.cmdInput.value); el.cmdInput.value = ''; });
+    // command quick-chips (2026-10-11): the common CLI one-liners as
+    // buttons - click fills the line, Enter runs it (fill-not-run is
+    // deliberate: daylock on as a one-click surprise is how worlds get
+    // frozen by accident)
+    document.querySelectorAll('[data-cmdchip]').forEach(chip => {
+        chip.addEventListener('click', () => {
+            el.cmdInput.value = chip.dataset.cmdchip;
+            el.cmdInput.focus();
+        });
+    });
     el.btnResync.addEventListener('click', () => {
         shadow = null;
         pollStatus();

@@ -292,6 +292,8 @@ public partial class PolisSystem
                     return ExecuteVitalsCommand(args, context);
                 case "eat":
                     return ExecuteEatCommand(args, context);
+                case "eatplayer":
+                    return ExecuteEatPlayerCommand(args, context);
                 case "hungerpause":
                     return ExecuteHungerPauseCommand(args, context);
                 case "policy":
@@ -6404,6 +6406,62 @@ public partial class PolisSystem
     //        hungerpause on|off     → set the selected bot's
     //        EntityPolisBot.HungerSuspended (the polis hunger behavior
     //        suspends the engine drain while set).
+
+    // --- Player eat (2026-10-11, the webui EAT button / the
+    //     starving-operator case): the player's mirror of the bot
+    //     `eat` command - the same nutrition core (PolisEatService),
+    //     consuming from the player's own hands + inventory. No args
+    //     = auto-eat the first edible item carried (the button case);
+    //     args: eatplayer <itemCode> [count=1] (count 0 = all).
+    PolisTestHarness.CommandResult ExecuteEatPlayerCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (!TryGetContextPlayer(context, out var player, out var perr))
+            return new PolisTestHarness.CommandResult { Ok = false, Message = perr };
+        var pe = player.Entity as EntityPlayer;
+        if (pe == null)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "player entity unavailable" };
+
+        string code = args.Length > 0 ? args[0] : null;
+        if (code == null || code.Length == 0)
+        {
+            code = PolisInventoryHelpers.FirstEdibleItemCode(pe);
+            if (code == null)
+                return new PolisTestHarness.CommandResult
+                {
+                    Ok = false,
+                    Message = "no food in inventory (carry at least one edible item)"
+                };
+        }
+        int count = 1;
+        if (args.Length > 1 && int.TryParse(args[1], out var c)) count = Math.Max(0, c);
+
+        var (ok, reason, before, after, units) =
+            PolisEatService.EatPlayer(pe, code, count, sapi.Logger.Debug);
+
+        string category = null;
+        if (TryResolveStack(code, 1, out var unit2, out _))
+        {
+            var c2 = unit2.Collectible;
+            var nut2 = c2?.GetNutritionProperties(sapi.World, unit2, pe) ?? c2?.NutritionProps;
+            category = nut2?.FoodCategory.ToString();
+        }
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = ok,
+            Message = ok
+                ? $"{player.PlayerName} ate {units}x {code}{(category != null ? $" ({category})" : "")}: {before:F1} -> {after:F1} saturation"
+                : $"eat failed: {reason}",
+            Data = new
+            {
+                item = code,
+                category,
+                before,
+                after,
+                units,
+            },
+        };
+    }
 
     PolisTestHarness.CommandResult ExecuteHungerPauseCommand(string[] args, PolisTestHarness.CommandContext context)
     {

@@ -59,44 +59,16 @@ namespace Polis.Core
             if (toEat <= 0) return (false, $"bot carries no {code}", 0f, 0f, 0);
             if (have < toEat) return (false, $"bot carries {have}x {code} (< {toEat})", 0f, 0f, 0);
 
-            float before = SaturationOf(agent);
+            int before = SaturationOf(agent);
             int eaten = 0;
             for (int i = 0; i < toEat; i++)
             {
                 if (!PolisInventoryHelpers.ConsumeOneFromBotInventory(agent, code))
                     return (false, $"consume failed partway (ate {eaten}/{toEat})", before, SaturationOf(agent), eaten);
 
-                // The engine's satiety path: ReceiveSaturation with the
-                // item's own SaturationLossDelay — the 1.22 way, not the
-                // deprecated AddSaturation.
-                agent.ReceiveSaturation(nut.Satiety, nut.FoodCategory, nut.SaturationLossDelay, 1f);
-
-                if (Math.Abs(nut.Health) > 1e-4f)
-                {
-                    agent.ReceiveDamage(new DamageSource
-                    {
-                        Type = EnumDamageType.Hunger,
-                        Source = EnumDamageSource.Internal,
-                    }, -nut.Health);
-                }
-
-                if (Math.Abs(nut.Intoxication) > 1e-4f)
-                {
-                    float cur = agent.WatchedAttributes.GetFloat("intoxication", 0f);
-                    agent.WatchedAttributes.SetFloat("intoxication", Math.Min(1.1f, cur + nut.Intoxication));
-                }
-                if (Math.Abs(nut.Psychedelic) > 1e-4f)
-                {
-                    float cur2 = agent.WatchedAttributes.GetFloat("psychedelic", 0f);
-                    agent.WatchedAttributes.SetFloat("psychedelic", Math.Min(2f, cur2 + nut.Psychedelic));
-                }
-
-                if (nut.EatenStack != null && nut.EatenStack.Code != null && nut.EatenStack.StackSize > 0)
-                {
-                    var leftover = world.GetItem(nut.EatenStack.Code);
-                    if (leftover != null)
-                        PolisInventoryHelpers.TryInsertIntoBotInventory(agent, new ItemStack(leftover, nut.EatenStack.StackSize), out _, out _);
-                }
+                var leftover = ApplyUnit(agent, nut);
+                if (leftover != null)
+                    PolisInventoryHelpers.TryInsertIntoBotInventory(agent, leftover, out _, out _);
 
                 eaten++;
             }
@@ -106,7 +78,98 @@ namespace Polis.Core
             return (true, $"ate {eaten}x {code}: {before:F1} -> {after:F1} saturation", before, after, eaten);
         }
 
-        public static float SaturationOf(EntityAgent agent)
+    /// <summary>
+    /// The player mirror of Eat (2026-10-11, webui EAT button / the
+    /// starving-operator case): the same nutrition core, consuming from
+    /// the player's own hands + inventory. code may be a short name
+    /// ("redmeat-cooked"); count 0 = all carried units.
+    /// </summary>
+    public static (bool Ok, string Reason, float Before, float After, int Units) EatPlayer(
+        EntityPlayer player, string code, int count, Action<string> log = null)
+    {
+        if (player == null) return (false, "player is null", 0f, 0f, 0);
+        if (code == null) return (false, "no item code", 0f, 0f, 0);
+
+        var world = player.World;
+        var item = world.GetItem(new AssetLocation(code));
+        if (item == null) return (false, $"item '{code}' not found", 0f, 0f, 0);
+
+        var unit = new ItemStack(item, 1);
+        var nut = item.GetNutritionProperties(world, unit, player) ?? item.NutritionProps;
+        if (nut == null)
+            return (false, $"{code} is not edible (no nutrition properties)", 0f, 0f, 0);
+
+        var (allowed, reason) = PolisPolicyEngine.Instance.Evaluate(player.PlayerUID, "food", item.Code.ToString(), nut.FoodCategory.ToString());
+        if (!allowed)
+            return (false, $"policy denied: {reason}", 0f, 0f, 0);
+
+        int have = PolisInventoryHelpers.CountPlayerItems(player, code);
+        int toEat = count == 0 ? have : count;
+        if (toEat <= 0) return (false, $"carries no {code}", 0f, 0f, 0);
+        if (have < toEat) return (false, $"carries {have}x {code} (< {toEat})", 0f, 0f, 0);
+
+        float before = SaturationOf(player);
+        int eaten = 0;
+        for (int i = 0; i < toEat; i++)
+        {
+            if (!PolisInventoryHelpers.ConsumeOneFromPlayerInventory(player, code))
+                return (false, $"consume failed partway (ate {eaten}/{toEat})", before, SaturationOf(player), eaten);
+
+            var leftover = ApplyUnit(player, nut);
+            if (leftover != null)
+                PolisInventoryHelpers.TryInsertIntoPlayerInventory(player, leftover, out _, out _);
+
+            eaten++;
+        }
+
+        float after = SaturationOf(player);
+        log?.Invoke($"[eatplayer] {player.PlayerName}: {eaten}x {code} ({nut.FoodCategory}) {before:F1} -> {after:F1} saturation");
+        return (true, $"ate {eaten}x {code}: {before:F1} -> {after:F1} saturation", before, after, eaten);
+    }
+
+        /// <summary>
+    /// The engine's per-unit satiety application (the shared heart of
+    /// Eat and EatPlayer - 2026-10-11: the player can eat through the
+    /// same path, the webui EAT button). Returns the EatenStack
+    /// leftover (null if none) for the caller to insert.
+    /// </summary>
+    private static ItemStack ApplyUnit(EntityAgent agent, NutritionProps nut)
+    {
+        // The engine's satiety path: ReceiveSaturation with the
+        // item's own SaturationLossDelay — the 1.22 way, not the
+        // deprecated AddSaturation.
+        agent.ReceiveSaturation(nut.Satiety, nut.FoodCategory, nut.SaturationLossDelay, 1f);
+
+        if (Math.Abs(nut.Health) > 1e-4f)
+        {
+            agent.ReceiveDamage(new DamageSource
+            {
+                Type = EnumDamageType.Hunger,
+                Source = EnumDamageSource.Internal,
+            }, -nut.Health);
+        }
+
+        if (Math.Abs(nut.Intoxication) > 1e-4f)
+        {
+            float cur = agent.WatchedAttributes.GetFloat("intoxication", 0f);
+            agent.WatchedAttributes.SetFloat("intoxication", Math.Min(1.1f, cur + nut.Intoxication));
+        }
+        if (Math.Abs(nut.Psychedelic) > 1e-4f)
+        {
+            float cur2 = agent.WatchedAttributes.GetFloat("psychedelic", 0f);
+            agent.WatchedAttributes.SetFloat("psychedelic", Math.Min(2f, cur2 + nut.Psychedelic));
+        }
+
+        if (nut.EatenStack != null && nut.EatenStack.Code != null && nut.EatenStack.StackSize > 0)
+        {
+            var leftover = agent.World.GetItem(nut.EatenStack.Code);
+            if (leftover != null)
+                return new ItemStack(leftover, nut.EatenStack.StackSize);
+        }
+        return null;
+    }
+
+    public static float SaturationOf(EntityAgent agent)
             => agent?.WatchedAttributes?.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f;
 
         public static float MaxSaturationOf(EntityAgent agent)

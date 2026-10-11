@@ -114,6 +114,15 @@
             </section>
 
             <section class="rail-section">
+                <h2 class="rail-title">Me <span class="meta-inline">player</span></h2>
+                <div class="pad pad-view">
+                    <button class="pad-btn" data-oneshot="eatplayer" title="Eat the first food item you are carrying (auto-picks; the webui has no in-game right-click, this is it)">EAT</button>
+                    <button class="pad-btn" data-oneshot="useitem" title="Use your held item on the block you are facing (firepit, block placement, ...)">USE</button>
+                    <button class="pad-btn pad-w" data-oneshot="goto-me" title="Bring the selected bot to your position ('come to me')">GOTO ME</button>
+                </div>
+            </section>
+
+            <section class="rail-section">
                 <h2 class="rail-title">Bot <span id="bot-id-label" class="count mono"></span></h2>
                 <div id="bot-actions" class="action-list">
                     <div class="placeholder">select a bot</div>
@@ -171,7 +180,16 @@
             <input id="command-input" class="mono" type="text"
                    placeholder="command&#8195;&#8212;&#8195;e.g. time &#183; daylock on &#183; spawnentity playerbot"
                    autocomplete="off" spellcheck="false">
-            <button id="command-submit" class="ghost" title="Run">&#8629;</button>
+            <button id="command-submit" class="ghost" title="Run (Enter)">&#8629;</button>
+        </div>
+        <div class="cmd-chips" title="Click to fill the line, Enter to run">
+            <button class="chip chip-btn" data-cmdchip="time">time</button>
+            <button class="chip chip-btn" data-cmdchip="daylock on">daylock on</button>
+            <button class="chip chip-btn" data-cmdchip="daylock off">daylock off</button>
+            <button class="chip chip-btn" data-cmdchip="spawnentity playerbot">+ bot</button>
+            <button class="chip chip-btn" data-cmdchip="despawn">despawn</button>
+            <button class="chip chip-btn" data-cmdchip="sanity storms off">storms off</button>
+            <button class="chip chip-btn" data-cmdchip="sanity storms sometimes">storms on</button>
             <button id="btn-diag" class="chip chip-btn" title="Export a JSON diagnostics blob (network, errors, state) — attach it when reporting a bug">diag</button>
         </div>
     </footer>

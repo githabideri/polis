@@ -321,6 +321,121 @@ internal static class PolisInventoryHelpers
         return false;
     }
 
+    /// <summary>
+    /// Count carried units of an item in a PLAYER's hands + inventory
+    /// (the player mirror of CountBotItems; eatplayer, 2026-10-11).
+    /// </summary>
+    internal static int CountPlayerItems(EntityPlayer player, string code)
+    {
+        int total = 0;
+        foreach (var slot in new[] { player.RightHandItemSlot, player.LeftHandItemSlot })
+        {
+            var it = slot?.Itemstack;
+            if (it != null && IsItem(it, code)) total += it.StackSize;
+        }
+        var inv = player.Inventory;
+        if (inv != null)
+            for (int i = 0; i < inv.Count; i++)
+            {
+                var it = inv.Slots[i]?.Itemstack;
+                if (it != null && IsItem(it, code)) total += it.StackSize;
+            }
+        return total;
+    }
+
+    /// <summary>
+    /// Find the first edible item code in a player's hands + inventory
+    /// (auto-eat: no item argument, 2026-10-11 webui EAT button).
+    /// Returns null when the player carries no food at all.
+    /// </summary>
+    internal static string FirstEdibleItemCode(EntityPlayer player)
+    {
+        var world = player.World;
+        var slots = new System.Collections.Generic.List<ItemSlot>
+        {
+            player.RightHandItemSlot, player.LeftHandItemSlot
+        };
+        var inv = player.Inventory;
+        if (inv != null)
+            for (int i = 0; i < inv.Count; i++) slots.Add(inv.Slots[i]);
+        foreach (var slot in slots)
+        {
+            var it = slot?.Itemstack;
+            if (it == null || it.StackSize <= 0 || it.Collectible == null) continue;
+            var item = world.GetItem(it.Collectible.Code);
+            if (item == null) continue;
+            var nut = item.GetNutritionProperties(world, it, player) ?? item.NutritionProps;
+            if (nut != null)
+                return it.Collectible.Code.ToString();
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Consume one unit of an item from a PLAYER's hands + inventory
+    /// (the player mirror of ConsumeOneFromBotInventory; the eatplayer
+    /// command path - 2026-10-11 webui eat button).
+    /// </summary>
+    internal static bool ConsumeOneFromPlayerInventory(EntityPlayer player, string code)
+    {
+        foreach (var slot in new[] { player.RightHandItemSlot, player.LeftHandItemSlot })
+        {
+            if (slot != null && ConsumeOneInSlot(slot, code)) return true;
+        }
+        var inv = player.Inventory;
+        if (inv != null)
+            for (int i = 0; i < inv.Count; i++)
+            {
+                if (ConsumeOneInSlot(inv.Slots[i], code)) return true;
+            }
+        return false;
+    }
+
+    /// <summary>
+    /// Insert a stack into a player's hands + inventory (the player
+    /// mirror of TryInsertIntoBotInventory; EatenStack leftovers, 2026-10-11).
+    /// </summary>
+    internal static bool TryInsertIntoPlayerInventory(EntityPlayer player, ItemStack stack, out ItemStack leftover, out string err)
+    {
+        leftover = null; err = null;
+        if (stack == null || stack.StackSize <= 0) { leftover = stack; return true; }
+        var targets = new System.Collections.Generic.List<ItemSlot>
+        {
+            player.RightHandItemSlot, player.LeftHandItemSlot
+        };
+        var inv = player.Inventory;
+        if (inv != null)
+            for (int i = 0; i < inv.Count; i++) targets.Add(inv.Slots[i]);
+        foreach (var slot in targets)
+        {
+            if (slot == null) continue;
+            var it = slot.Itemstack;
+            if (it != null && it.StackSize > 0 && it.IsCollectibleSameAs(stack) &&
+                it.StackSize < it.MaxStackSize)
+            {
+                int space = it.MaxStackSize - it.StackSize;
+                int moved = Math.Min(space, stack.StackSize);
+                stack.StackSize -= moved;
+                it.StackSize += moved;
+                if (stack.StackSize <= 0) return true;
+            }
+        }
+        foreach (var slot in targets)
+        {
+            if (slot == null) continue;
+            var it = slot.Itemstack;
+            if (it == null || it.StackSize <= 0)
+            {
+                int take = Math.Min(stack.StackSize, stack.MaxStackSize);
+                slot.Itemstack = new ItemStack(stack, take);
+                stack.StackSize -= take;
+                if (stack.StackSize <= 0) return true;
+            }
+        }
+        leftover = stack;
+        return false;
+    }
+
     internal static bool IsItem(ItemStack it, string code)
     {
         if (it == null || it.StackSize <= 0 || it.Collectible?.Code == null) return false;

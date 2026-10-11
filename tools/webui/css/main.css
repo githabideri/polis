@@ -399,8 +399,8 @@ details.rail-section[open] > summary::before { content: '\2013'; }
     margin: 0 10px 10px;
     display: flex;
     flex-direction: column;
-    min-height: 170px;
-    max-height: 42vh;
+    min-height: 52px;
+    max-height: 22vh;   /* 2026-10-11: was 42vh - the log is a status strip, not a pane (it was stealing the viewport) */
     background: var(--bg1);
     border: 1px solid var(--line);
     border-radius: 4px;
@@ -409,10 +409,11 @@ details.rail-section[open] > summary::before { content: '\2013'; }
 
 #log-entries {
     flex: 1;
+    max-height: 100px;
     overflow-y: auto;
-    padding: 10px 14px;
-    font-size: 12px;
-    line-height: 1.75;
+    padding: 8px 14px;
+    font-size: 11px;
+    line-height: 1.6;
 }
 .log-line { white-space: pre-wrap; word-break: break-word; }
 .log-line .t { color: var(--text-faint); margin-right: 10px; }
@@ -430,6 +431,14 @@ details.rail-section[open] > summary::before { content: '\2013'; }
     border-top: 1px solid var(--line);
     background: var(--bg2);
 }
+
+.cmd-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 12px 8px;
+}
+.cmd-chips .chip { font-size: 11px; padding: 2px 8px; }
 .cmd-row .prompt {
     font-family: var(--mono);
     color: var(--accent);
