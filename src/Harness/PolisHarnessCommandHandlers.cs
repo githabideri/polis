@@ -439,7 +439,7 @@ public partial class PolisSystem
             // 2026-10-11: the bare Message hid every NRE (eatplayer
             // debug: three build rounds with no stack). One stack frame
             // in the reply + the full exception in the server log.
-            try { sapi.Logger.Warn("[polis-harness] command exception: " + ex); }
+            try { sapi.Logger.Notification("[polis-harness] command exception: " + ex); }
             catch { }
             var frame = (ex.StackTrace ?? "").Split('\n').FirstOrDefault(f =>
                 f.Contains("Polis")) ?? (ex.StackTrace ?? "").Split('\n')[0];
