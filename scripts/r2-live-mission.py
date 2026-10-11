@@ -3813,7 +3813,7 @@ def main():
             berry = goal.object if str(goal.object).startswith(
                 "fruit-") else "fruit-" + goal.object
             raw = json.dumps([{"id": "j0", "type": "goto",
-                               "at": at_cells,
+                               "target": at_cells,
                                "origin": "deterministic"},
                               {"id": "j1", "type": "forage",
                                "quantity": n, "at": at_cells,
