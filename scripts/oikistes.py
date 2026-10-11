@@ -1427,8 +1427,22 @@ class Oikistes:
                 {"role": "user", "content": message},
             ]
             reply = ""
-            for step in range(self.MAX_ACTIONS + 1):
-                last = step == self.MAX_ACTIONS
+            # 2026-10-11 (the berry A/B): the old loop STRIPPED the tools
+            # on the final step to force a plain-text summary - which
+            # trapped an agent that discovered its target on the last
+            # tool step (the 35B found all seven bushes in its final
+            # query and then had no mission tool left to call). Every
+            # step now keeps the tools; the turn ends when the model
+            # answers in plain text, and a tools-only run falls back to
+            # the honest "ran: ..." report below.
+            for step in range(self.MAX_ACTIONS + 2):
+                last = step == self.MAX_ACTIONS + 1
+                if last:
+                    # the last resort still runs thinking ON with the
+                    # bigger budget (the 3.6 template quirk), but keeps
+                    # the tools: a discovered target may need one more
+                    # dispatch.
+                    pass
                 # the world keeps moving between tool calls: the
                 # system message (fresh digest) is rebuilt in place
                 # each step
@@ -1436,11 +1450,11 @@ class Oikistes:
                     autonomy, self.world_digest(),
                     self.memory_text())
                 content, calls = llm.chat(
-                    msgs, tools=(None if last else self.tools),
+                    msgs, tools=self.tools,
                     thinking=(True if last else None),
                     max_tokens=(6000 if last else None),
                     thinking_budget=(3000 if last else None))
-                if calls and not last:
+                if calls:
                     # feed the assistant turn back exactly as the
                     # server wants it (the chat template renders the
                     # tool_calls before the role:tool results)
@@ -1464,7 +1478,14 @@ class Oikistes:
                                      "tool_call_id": c["id"],
                                      "name": c["name"],
                                      "content": str(obs)[:400]})
-                    continue
+                    if not last:
+                        continue
+                    # final step spent its turn on a tool (e.g. the
+                    # mission dispatch the discovery earned): the turn
+                    # ends here, the honest "ran: ..." report below
+                    # covers it.
+                    reply = ""
+                    break
                 reply = (content or "").strip()
                 break
             if not reply:
