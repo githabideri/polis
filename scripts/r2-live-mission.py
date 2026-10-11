@@ -3779,12 +3779,16 @@ def main():
                            "jobs": [j.to_dict() for j in jobs] if jobs else None,
                            "failure": failure.to_dict() if failure else None}
         elif goal.verb == "forage":
-            # cell-targeted forage (2026-10-11): one forage job at the
-            # goal's bush cell (the P3 ladder chain minus the ripen
-            # test lever). The plant family glob matches the live block
-            # code; the material names the expected berry (the ledger's
-            # gain check). The executor re-scans the cell's ring before
-            # picking and rejects an empty cell at the preflight.
+            # cell-targeted forage (2026-10-11): the goal form of the
+            # P3 ladder chain: a GOTO to the bush (the operator's --jobs
+            # lists walked the bot over first; the goal form must do it
+            # itself - the forage preflight refuses a bot more than a
+            # pick away, 'walk it over first') plus the forage job at
+            # the goal's bush cell. The plant family glob matches the
+            # live block code; the material names the expected berry
+            # (the ledger's gain check). The executor re-scans the
+            # cell's ring before picking and rejects an empty cell at
+            # the preflight.
             n = goal.n or 1
             at = getattr(goal, "at", None)
             try:
@@ -3808,10 +3812,14 @@ def main():
                 "fruitingbush") else "fruitingbush-*"
             berry = goal.object if str(goal.object).startswith(
                 "fruit-") else "fruit-" + goal.object
-            raw = json.dumps({"id": "j1", "type": "forage",
-                              "quantity": n, "at": at_cells,
-                              "plant": fam, "material": berry,
-                              "origin": "deterministic"})
+            raw = json.dumps([{"id": "j0", "type": "goto",
+                               "at": at_cells,
+                               "origin": "deterministic"},
+                              {"id": "j1", "type": "forage",
+                               "quantity": n, "at": at_cells,
+                               "plant": fam, "material": berry,
+                               "depends_on": ["j0"],
+                               "origin": "deterministic"}])
             bpf = st["Bot"]["Pos"]
             prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
                                                  center=(bpf[0], 0,
