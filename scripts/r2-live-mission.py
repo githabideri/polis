@@ -113,8 +113,29 @@ def parse_goal_line(line):
     i = 0
     while i < len(rest):
         if rest[i] == "at" and i + 1 < len(rest):
-            goal["at"] = rest[i + 1]
-            i += 2
+            # 'at x y z' (space-separated, how models write it) or
+            # 'at x,y,z' (one token): merge up to 3 numeric tokens
+            # into one comma-joined cell (2026-10-11: the 27B wrote
+            # 'at 512060 512000' and the old single-token parse died on
+            # the second number). A non-numeric first token is a SITE
+            # NAME (site-A) - keep the old single-token behavior.
+            nxt = rest[i + 1]
+            parts = nxt.replace(",", " ").split()
+            if not parts or not all(p.lstrip("-").isdigit() for p in parts):
+                goal["at"] = nxt
+                i += 2
+                continue
+            coords = []
+            j = i + 1
+            while j < len(rest) and len(coords) < 3:
+                parts = rest[j].replace(",", " ").split()
+                if not parts or not all(p.lstrip("-").isdigit()
+                                        for p in parts):
+                    break
+                coords.extend(int(p) for p in parts)
+                j += 1
+            goal["at"] = ",".join(str(c) for c in coords[:3])
+            i = j
         elif rest[i].startswith("x") and rest[i][1:].isdigit():
             goal["n"] = int(rest[i][1:])
             i += 1
