@@ -23,7 +23,7 @@ from dataclasses import dataclass, field, asdict
 # --------------------------------------------------------------------------
 
 GOAL_VERBS = ("mine", "harvest", "gather", "place", "goto", "sow", "plant",
-              "forage", "build", "construct", "build-plan", "craft")
+              "forage", "build", "construct", "build-plan", "craft", "make")
 
 #: operator synonyms that normalize onto another grammar verb
 GOAL_VERB_ALIASES = {"plant": "sow", "construct": "build"}
@@ -63,6 +63,10 @@ class Goal:
         if not isinstance(d, dict):
             raise GoalGrammarError("goal must be a JSON object")
         verb = d.get("verb")
+        # 2026-10-11: the grammar is case-insensitive on the verb -
+        # "Gather flint x10" is the same goal as "gather flint x10"
+        # (a capitalized verb must not silently change the routing).
+        verb = verb.lower() if isinstance(verb, str) else verb
         if verb not in GOAL_VERBS:
             raise GoalGrammarError(
                 "verb %r outside the v1 grammar %r" % (verb, GOAL_VERBS))
@@ -127,6 +131,21 @@ JOB_CATALOG = {
     # deterministic compiler, not the 27B planner vocabulary yet.
     "gather":    {"produces": True,  "consumes": False,
                   "source": "world",    "needs": ("material", "quantity")},
+    # search (2026-10-11, the search->extract chain): an expanding-ring
+    # scan around the bot (radii 4/8/16/32, the last adapted to the
+    # 1M-cell scan cap at the bot's altitude) that registers every
+    # block it sees with the world model until the job's quantity of
+    # family-matching blocks / loose items is observed or the rings are
+    # exhausted. The oracle is the OBSERVATION itself - it produces no
+    # ledger material; the following extract job (no source id) resolves
+    # its target at runtime against what search found. `expect` is the
+    # comma list of block-family prefixes (+ loose item codes) to
+    # match. GOAL-SCOPED exactly like chop: catalog + validator +
+    # executor, but NOT in the 27B planner vocabulary - only the
+    # deterministic compiler may emit it.
+    "search":    {"produces": False, "consumes": False,
+                  "source": "world",    "needs": ("material", "quantity",
+                                                  "expect")},
     "place":     {"produces": False, "consumes": True,
                   "source": "world",    "needs": ("target", "material")},
     "goto":      {"produces": False, "consumes": False,
@@ -273,9 +292,9 @@ JOB_CATALOG = {
 #: need them, the 27B never learned them.
 PLANNER_JOB_TYPES = tuple(
     k for k in JOB_CATALOG
-    if k not in ("build_plan", "chop", "forage", "gather", "crucible_fire",
-                 "crucible_insert", "crucible_fuel", "crucible_take",
-                 "crucible_pour", "clayform", "kiln_fire",
+    if k not in ("build_plan", "chop", "forage", "gather", "search",
+                 "crucible_fire", "crucible_insert", "crucible_fuel",
+                 "crucible_take", "crucible_pour", "clayform", "kiln_fire",
                  "firepit_fuel", "cook", "eat"))
 
 #: provenance of a job's origin (13.1, frozen): the queue runs a mix of

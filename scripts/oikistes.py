@@ -161,11 +161,18 @@ class Polis:
 
 
 class LLM:
-    def __init__(self, base, model, max_tokens=1200, llama=False):
+    def __init__(self, base, model, max_tokens=4000, llama=False,
+                 thinking_budget=3000):
         self.url = base.rstrip("/") + "/v1/chat/completions"
         self.base = base.rstrip("/")
         self.model = model
         self.max_tokens = max_tokens
+        # thinking_budget: the llama.cpp Qwen3 template accepts it as
+        # a top-level body param (live-verified on the strata mux
+        # 2026-10-11) and caps the THINKING stream separately from
+        # max_tokens - without it the 3.6 spends the entire output
+        # budget on scratchpad and emits no tool call / reply.
+        self.thinking_budget = thinking_budget
         # llama=True: the engine is llama.cpp (strata) and speaks
         # chat_template_kwargs. vLLM (the 27B unit) is left on its own
         # template defaults - those already produced correct native
@@ -193,7 +200,7 @@ class LLM:
         return False
 
     def chat(self, messages, tools=None, timeout=240,
-             thinking=None, max_tokens=None):
+             thinking=None, max_tokens=None, thinking_budget=None):
         """One OpenAI-compatible chat-completions round - engine-
         agnostic: strata (llama.cpp) and vLLM both serve this shape,
         and any future OpenAI-compatible brain works unchanged.
@@ -220,6 +227,10 @@ class LLM:
         if self.llama:
             tt = bool(tools) if thinking is None else thinking
             body["chat_template_kwargs"] = {"enable_thinking": tt}
+            tb = (thinking_budget if thinking_budget is not None
+                  else self.thinking_budget)
+            if tt and tb:
+                body["thinking_budget"] = tb
         if tools:
             body["tools"] = tools
             body["tool_choice"] = "auto"
@@ -675,7 +686,7 @@ class Oikistes:
 
     KNOWN = frozenset(
         ("state", "scan", "screenshot", "events", "autonomy",
-         "mission", "pots", "give", "command", "query", "zone",
+         "mission", "pots", "command", "query", "zone",
          "crew", "follow", "vocab", "preview"))
 
     def check_tool(self, tool, autonomy):
@@ -687,7 +698,7 @@ class Oikistes:
             return tool in READONLY
         if autonomy == "guarded":
             return tool in READONLY or tool in (
-                "mission", "pots", "give", "zone", "follow", "preview")
+                "mission", "pots", "zone", "follow", "preview")
         return True  # free
 
     # zone subcommands that READ (everything else writes the zone
@@ -702,11 +713,6 @@ class Oikistes:
         if isinstance(a, str):
             if tool == "mission":
                 a = {"goal": a, "bots": "self"}
-            elif tool == "give":
-                parts = a.split()
-                a = {"item": parts[0],
-                     "qty": int(parts[1]) if len(parts) > 1 and
-                     parts[1].isdigit() else 1} if parts else {}
             elif tool == "command":
                 a = {"cmd": a.split()[0],
                      "args": a.split()[1:]} if a.strip() else {}
@@ -830,12 +836,6 @@ class Oikistes:
             if tool == "autonomy":
                 return "autonomy preset: %s (mod-owned; I cannot change it)" \
                     % self.autonomy()
-            if tool == "give":
-                r = self.polis.cmd("give", [str(a["item"]),
-                                            str(int(a.get("qty", 1)))],
-                                   bot, actor="oikistes")
-                return ("gave %s x%s: %s" % (a["item"], a.get("qty", 1),
-                                             r.get("Message")))
             if tool == "mission":
                 if not a.get("goal"):
                     return self._mission_status()
@@ -1337,8 +1337,10 @@ class Oikistes:
         # of the gate the code enforces (check_tool).
         note = {"strict": "reads only - no missions, no giving, no "
                            "commands",
-                "guarded": "you may order missions and give items; "
-                           "direct commands are denied",
+                "guarded": "you may order missions; direct commands "
+                           "and item-giving are denied (item needs "
+                           "go through gather/craft missions or the "
+                           "operator)",
                 "free": "all tools are open"}[autonomy]
         return (self.prompt_template
                 .replace("@@BODY@@", str(self.bot))
@@ -1420,7 +1422,8 @@ class Oikistes:
                 content, calls = llm.chat(
                     msgs, tools=(None if last else self.tools),
                     thinking=(True if last else None),
-                    max_tokens=(4000 if last else None))
+                    max_tokens=(6000 if last else None),
+                    thinking_budget=(3000 if last else None))
                 if calls and not last:
                     # feed the assistant turn back exactly as the
                     # server wants it (the chat template renders the

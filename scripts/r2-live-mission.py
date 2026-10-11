@@ -45,6 +45,7 @@ import importlib.util
 import json
 import os
 import sys
+import types
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -62,9 +63,12 @@ from r2.plannerprompt import build_planner_prompt
 from r2.embodiment import embodiment as _embodiment_fn, is_solid  # 09-29: the body-vs-solid-world check
 from r2.plancheck import validate_plan, check_goal
 from r2.jobqueue import GoalState
-from r2.jobs import Goal, Job, Failure
+from r2.jobs import Goal, Job, Failure, FAILURE_CODES as _FAILURE_CODES
 from r2 import approach as r2approach
 from r2.queries import classify
+from r2.sources import (lookup as lookup_source, fam_match,
+                        compile_gather_plan, scan_report,
+                        MATERIALS as SOURCE_MATERIALS)
 
 # material name -> the ITEM code a give_tool job supplies (the placeable
 # stone item, per the 2026-09-28 probe: rock-granite is what place
@@ -523,6 +527,11 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
     change' must produce different attribution. All game checks are
     FRESH observations (the 12.6 invariant)."""
     measured = {}
+    # search (2026-10-11, the search->extract chain): the expanding-
+    # ring scan. It produces no ledger material - the oracle IS the
+    # observation (what the rings held).
+    if job.type == "search":
+        return _search(pol, bot, wm, job, run, measured)
     if job.type == "give_tool":
         item = GIVE_ITEM.get(job.material, job.material)
         qty = job.quantity or 1
@@ -694,6 +703,22 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
     rec = wm.resources.get(job.source) if job.type in (
         "mine", "harvest", "pickup", "gather") else None
     if job.type in ("mine", "harvest", "pickup", "gather"):
+        # search-derived gather (2026-10-11): no source id - the
+        # target resolves here, at run time, against what the search
+        # job registered (the richest matching cluster) or a loose
+        # ground entity of the source's loose codes.
+        if rec is None and job.type == "gather" and not job.at \
+                and job.expect:
+            rec, note, loose_ref = _resolve_gather_target(wm, pol, bot,
+                                                          job)
+            if rec is None and loose_ref is not None:
+                return _pickup_loose(pol, bot, wm, job, run, measured,
+                                     loose_ref)
+            if rec is None:
+                return (False,
+                        "gather %s: %s" % (job.material, note),
+                        measured, {},
+                        {"resolution": note, "measured": measured})
         if rec is None:
             return (False, "resource %s vanished from the model" % job.source,
                     measured, {}, {"block_gone": None,
@@ -778,9 +803,18 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
             tr = pol.cmd("give", ["pickaxe-iron", "1"], bot)
             tool_note = "gave pickaxe-iron ok=%s; " % bool(tr.get("Ok"))
         detail = "%s %s -> %s" % (job.type, rec.code, tool_note)
-        cmd_name = {"mine": "mine", "harvest": "harvestcrop",
-                    "gather": ("harvestcrop" if rec.kind == "crop"
-                               else "mine")}.get(job.type)
+        # leaves/log clusters break with the CHOP command (2026-10-11):
+        # the mine command is for hard blocks; the leaf family is how
+        # a search-derived `gather stick` gets its sticks (the engine
+        # drops the item when the leaves are chopped).
+        if (job.type == "gather" and rec.code and rec.code.startswith(
+                ("leavesbranchy-", "leaves-", "log-grown-",
+                 "log-placed-", "wood-"))):
+            cmd_name = "chop"
+        else:
+            cmd_name = {"mine": "mine", "harvest": "harvestcrop",
+                        "gather": ("harvestcrop" if rec.kind == "crop"
+                                   else "mine")}.get(job.type)
         mined, parts = 0, []
         last_la, last_attempts = {}, []
         wedged_rescues = 0  # budget: 4 hard-resets per mine job
@@ -2298,6 +2332,162 @@ def _gather_loose(pol, bot, wm, job, run, measured):
          "measured": measured}
 
 
+def _search(pol, bot, wm, job, run, measured):
+    """The search job (2026-10-11, the search->extract chain): an
+    expanding-ring census around the bot (r=4 -> 8 -> 16 -> 32, the
+    last ring adapted to the 1M-cell scan cap at the bot's altitude),
+    each ring a full scan observed into the world model. Stops early
+    when the job's quantity of family-matching blocks (or loose ground
+    items) is observed; otherwise it fails HONESTLY - the oracle names
+    what the rings actually held (grass, soil, birch leaves), not a
+    generic not-found. It produces no ledger material: the following
+    extract job resolves its target against what the rings registered.
+    Chunk-stable reads: a scan across a chunk boundary can return an
+    empty census - re-issue before trusting it. The raw scan box is
+    (2p+1)^2 x (y+1) cells (y runs 2..bot.y+2), so at high altitude
+    the cap shrinks the widest ring - the ring list adapts instead of
+    issuing a box the harness will reject."""
+    from collections import Counter
+    fams = [f for f in (job.expect or "").split(",")
+            if f and f.endswith("-")]
+    loose = [f for f in (job.expect or "").split(",")
+             if f and not f.endswith("-")]
+    need = job.quantity or 1
+    bp = tuple(pol.state(bot)["Bot"]["Pos"])
+    found = 0
+    last_counter = Counter()
+    rings_done = []
+    import math as _m
+    p_max = int((_m.sqrt(1_000_000 / max(8.0, bp[1] + 1.0)) - 1.0) / 2.0)
+    radii = [r for r in (4, 8, 16, 32) if r <= max(4, p_max)]
+    for radius in radii:
+        data = None
+        for _ in range(3):
+            time.sleep(2)
+            try:
+                d = pol.cell_blocks(bot, bp, pad=radius)
+            except Exception:
+                d = None
+            if d:
+                data = d
+                break
+        if data is None:
+            continue
+        counter = Counter()
+        for b in data:
+            code = str(b.get("code") or "").replace("game:", "")
+            if not code or code == "air":
+                continue
+            counter[code] += 1
+        last_counter = counter
+        # register the ring's census with the world model - this is
+        # what the extract job's runtime resolution finds.
+        try:
+            wm.observe_scan(pol.last_scan or {"Data": {"blocks": data}},
+                            reason="search")
+        except Exception:
+            pass  # the census already counts toward the oracle
+        ring_found = sum(q for code, q in counter.items()
+                         if any(fam_match(code, f) for f in fams))
+        for lc in loose:
+            for eid, code, p in _targets_entities(pol, bot, lc,
+                                                  radius + 8, 400):
+                if not (fam_match(code, lc) or code == lc):
+                    continue
+                ring_found += 1
+        found += ring_found
+        rings_done.append({"radius": radius,
+                           "blocks": sum(counter.values()),
+                           "matching": ring_found})
+        run["search"] = rings_done
+        if found >= need:
+            detail = ("search %s: found %d of %d within ring r=%d"
+                      % (job.material, found, need, radius))
+            return (True, detail, measured,
+                    {"cmd": "scan", "rings": rings_done, "ok": True},
+                    {"found": found, "required": need,
+                     "census": dict(last_counter)})
+    # every ring, every direction, held none - the honest failure.
+    fail_report = scan_report(last_counter, job.material)
+    return (False,
+            "search %s: %s" % (job.material, fail_report),
+            measured,
+            {"cmd": "scan", "rings": rings_done, "ok": True,
+             "failure": {"code": "resource_not_found"}},
+            {"found": found, "required": need,
+             "census": dict(last_counter),
+             "failure": {"code": "resource_not_found",
+                         "detail": fail_report}})
+
+
+def _resolve_gather_target(wm, pol, bot, job):
+    """(rec, note, loose) - the run-time resolution of a search-derived
+    gather (no source id). Richest first among clusters matching the
+    job's block-family globs (distance, then quantity); else the
+    nearest loose ground entity of the source's loose codes; else the
+    honest report. The world model's records are the truth the search
+    registered - a scan fact, never a model guess."""
+    import math as _m
+    src = lookup_source(job.material)
+    fams = [f for f in (job.expect or "").split(",")
+            if f and f.endswith("-")]
+    if fams:
+        cands = [r for r in wm.resources.values()
+                 if any(fam_match(r.code, f) for f in fams)
+                 and (r.observed_quantity or 0) > 0]
+        if cands:
+            bp = tuple(pol.state(bot)["Bot"]["Pos"])
+            cands.sort(key=lambda r: (abs(int(r.centroid[0]) - bp[0])
+                                      + abs(int(r.centroid[2]) - bp[2]),
+                                      -(r.observed_quantity or 0)))
+            return (cands[0],
+                    "resolved %s (%d observed, %d cells)"
+                    % (cands[0].id, cands[0].observed_quantity or 0,
+                       len(cands[0].cells or [])),
+                    None)
+    loose = None
+    if src is not None and src.loose:
+        for lc in src.loose:
+            for eid, code, p in _targets_entities(pol, bot, lc, 32, 200):
+                bp = tuple(pol.state(bot)["Bot"]["Pos"])
+                d = _m.hypot(p[0] - bp[0], p[2] - bp[2])
+                if loose is None or d < loose[0]:
+                    loose = (d, eid, code, p)
+    if loose is not None:
+        return (None, "loose %s" % loose[2], (loose[1], loose[2], loose[3]))
+    return (None,
+            "no %s observed - the search rings registered none "
+            "(the world model holds no matching cluster)" % job.material,
+            None)
+
+
+def _pickup_loose(pol, bot, wm, job, run, measured, entity):
+    """Pick up ONE resolved loose ground entity (the search-derived
+    gather's entity arm, 2026-10-11): approach + pickup; the gain is
+    measured as the pre/post inventory delta, never assumed. The
+    mission driver re-runs the job while the goal stands - each run
+    resolves the next nearest entity (loose items despawn and
+    multiply; the targets query is live)."""
+    import math as _m
+    eid, code, cell = entity
+    pre = inventory_of(pol.state(bot))
+    bp = tuple(pol.state(bot)["Bot"]["Pos"])
+    d = _m.hypot(cell[0] - bp[0], cell[2] - bp[2])
+    v5.goto_wait(pol, bot, cell, timeout=max(30, int(2.5 * d) + 10))
+    r = pol.cmd("pickup", [str(eid)], bot, timeout=60)
+    post = inventory_of(pol.state(bot))
+    m = _delta_dict(pre, post)
+    gained = _delta_gain(pre, post, job)
+    ok = bool(r.get("Ok")) and gained > 0
+    detail = ("pickup %s (entity %s) -> %s, gained %d %s"
+              % (code, eid, m or "(none)", gained, job.material))
+    return ok, detail, m, \
+        {"cmd": "pickup", "target": eid,
+         "ok": bool(r.get("Ok")), "msg": r.get("Message") or ""}, \
+        {"picked": m, "gained": gained, "wanted": job.material,
+         "required": job.quantity or 1}
+
+
 def _delta_dict(pre, post):
     """{code: post-pre} over positive deltas (the measured drop)."""
     out = {}
@@ -2314,13 +2504,17 @@ def _delta_gain(pre, post, job):
     are compared with the `game:` namespace prefix stripped - the
     ledger claims are written bare, the live inventory codes carry the
     prefix (2026-10-10: a forage that gathered 5 berries reported 0
-    because of the prefix)."""
+    because of the prefix). A source-mapped claim (r2/sources.py,
+    2026-10-11) also counts the source's yield codes - the engine
+    drops `cattailtops`/`stick`/`stone-granite`, not the claim word."""
     want = (job.material or "").split(":")[-1].lower()
+    src = lookup_source(want) if want else None
     gain = 0
     for k, v in _delta_dict(pre, post).items():
         kc = k.split(":")[-1].lower()
         mat = (classify(k)[1] or "").split(":")[-1].lower()
-        if want and mat != want and kc != want:
+        if want and mat != want and kc != want \
+                and not (src is not None and src.matches_drop(kc)):
             continue
         gain += v
     return gain
@@ -3099,8 +3293,17 @@ def main():
         return finish(args.out, run, t0)
 
     # 3. plan + validate (deterministic, goal-aware)
-    if getattr(args, "no_planner", False) and goal.verb in (
-            "mine", "harvest", "gather", "sow", "build", "build-plan"):
+    # 2026-10-11: a gather of a source-mapped material never reaches
+    # the LLM planner, even without --no-planner: the deterministic
+    # search->extract chain (r2/sources.py) is its compile path (the
+    # 10-11 incident: `gather flint x10` was handed to the 27B, which
+    # hallucinated a resource id and died in the validator).
+    src_map_hit = (goal.verb == "gather"
+                   and lookup_source(goal.object) is not None)
+    if ((getattr(args, "no_planner", False)
+         and goal.verb in ("mine", "harvest", "gather", "sow",
+                           "build", "build-plan"))
+            or src_map_hit):
         # the deterministic goal compiler (13.6 step 2, no LLM): a
         # one-verb acquisition goal has one obvious plan - the closest
         # resource with sufficient observed quantity. The SAME
@@ -3429,6 +3632,121 @@ def main():
             run["plan"] = {"raw": raw, "latency_ms": 0,
                            "jobs": [j.to_dict() for j in jobs] if jobs else None,
                            "failure": failure.to_dict() if failure else None}
+        elif goal.verb == "make":
+            # make <tool> [xN] (2026-10-11, the survival campaign's
+            # tool-making): the deterministic chain from r2/makechains.py
+            # - gather steps (source map; search->extract when the
+            # ledger is short), the knap on a bare surface cell, the
+            # grid craft. Chain order is the dependency order (gather ->
+            # knap -> craft). Everything the game knows is re-checked
+            # live: the craft job against the live recipe table (the
+            # validator's pattern check), the knap by the engine's own
+            # surface + recipe validation at execution.
+            import r2.makechains as _mk
+            n = goal.n or 1
+            try:
+                steps = _mk.steps_for(str(goal.object), n)
+            except KeyError:
+                run.update({"outcome": "rejected",
+                            "reason": ("deterministic: no make chain for "
+                                       "%r yet (chains: %s)"
+                                       % (goal.object,
+                                          ", ".join(sorted(_mk.CHAINS))))})
+                return finish(args.out, run, t0)
+            bp = st["Bot"]["Pos"]
+            knap_cell = None
+            if any(k == "knap" for k, _, _ in steps):
+                # the knap command needs a KNAPPING SURFACE (solid
+                # soil/rock/sand) - it rejected a tallgrass cell on
+                # 2026-10-11. The nearest such cell in a 4-ring.
+                bcell = (int(bp[0]), int(bp[1]), int(bp[2]))
+                cands = []
+                for b in (pol.cell_blocks(bot, bcell, pad=4) or []):
+                    code = str(b.get("code") or "").replace("game:", "")
+                    if code.startswith(("soil-", "rock-", "crackedrock-",
+                                        "sand-", "stone-")):
+                        p = b.get("pos") or []
+                        if len(p) == 3:
+                            d = abs(p[0] - bp[0]) + abs(p[2] - bp[2])
+                            cands.append((d, list(p)))
+                if cands:
+                    cands.sort(key=lambda t: t[0])
+                    knap_cell = cands[0][1]
+                else:
+                    run.update({"outcome": "rejected",
+                                "reason": ("deterministic: no knapping "
+                                           "surface (bare soil/rock) in "
+                                           "4 blocks of the bot - make "
+                                           "needs a bare ground cell")})
+                    return finish(args.out, run, t0)
+            plan_dicts = []
+            dep = []
+            for kind, what, q in steps:
+                jid = "j%d" % (len(plan_dicts) + 1)
+                if kind == "gather":
+                    s = lookup_source(what)
+                    if s is None:
+                        run.update({"outcome": "rejected",
+                                    "reason": ("deterministic: make %s "
+                                               "needs %r, which has no "
+                                               "source map entry yet "
+                                               "(mapped: %s)"
+                                               % (goal.object, what,
+                                                  ", ".join(SOURCE_MATERIALS)))})
+                        return finish(args.out, run, t0)
+                    cl = [r for r in wm.resources.values()
+                          if any(fam_match(r.code, f) for f in s.families)]
+                    sub_goal = types.SimpleNamespace(verb="gather",
+                                                     object=what, n=q)
+                    sub_jobs, _note = compile_gather_plan(
+                        cl, sub_goal, s, bot_pos=(bp[0], bp[2]))
+                    for sj in sub_jobs:
+                        sj["id"] = "j%d" % (len(plan_dicts) + 1)
+                        sj["depends_on"] = list(dep)
+                        plan_dicts.append(sj)
+                        dep = [sj["id"]]
+                elif kind == "knap":
+                    stone = _mk.KNAPOUS_STONE.get(what, "flint")
+                    plan_dicts.append({"id": jid, "type": "knap",
+                                       "recipes": [what],
+                                       "material": stone,
+                                       "quantity": q, "at": knap_cell,
+                                       "depends_on": list(dep),
+                                       "origin": "deterministic"})
+                    dep = [jid]
+                elif kind == "craft":
+                    plan_dicts.append({"id": jid, "type": "craft",
+                                       "material": what, "source": what,
+                                       "quantity": q,
+                                       "depends_on": list(dep),
+                                       "origin": "deterministic"})
+                    dep = [jid]
+            # the live recipe table (the craft pattern check needs it;
+            # the campaign path does the same, 2026-10-06)
+            craft_rows = []
+            seen_out = set()
+            for pd in plan_dicts:
+                if pd["type"] == "craft" and pd["material"] not in seen_out:
+                    seen_out.add(pd["material"])
+                    craft_rows.extend(_live_recipes(pol, pd["material"]))
+            # campaign=True: make is an OPERATOR-declared chain (the
+            # same scoping the --jobs campaign gets) - the 27B never
+            # emits knap/craft chains itself.
+            jobs, failure = validate_plan(json.dumps(plan_dicts), index,
+                                          inv, goal=goal,
+                                          recipes=craft_rows or None,
+                                          campaign=True)
+            run["planner"] = {"mode": "deterministic",
+                              "chosen": {"chain": goal.object,
+                                         "steps": [list(s)
+                                                  for s in steps],
+                                         "knap_cell": knap_cell},
+                              "candidates": sorted(index)}
+            run["plan"] = {"raw": json.dumps(plan_dicts), "latency_ms": 0,
+                           "jobs": [j.to_dict() for j in jobs]
+                           if jobs else None,
+                           "failure": (failure.to_dict()
+                                       if failure else None)}
         else:
             import math as _math
             bp = st["Bot"]["Pos"]
@@ -3441,62 +3759,117 @@ def main():
             # free` - the model carries the full variant code in `code`).
             flex = goal.verb in ("gather", "harvest")
             want_obj = str(goal.object).split(":")[-1].lower()
-            best = None
-            for r in wm.resources.values():
-                if not (r.material == want_obj
-                        or _code_matches(r.code, goal.object)):
-                    continue
-                if r.observed_quantity < (goal.n or 1):
-                    continue
-                c = r.cells[0]
-                d = _math.hypot(c[0] - bp[0], c[2] - bp[2])
-                if best is None or d < best[0]:
-                    best = (d, r)
-            # loose-item fallback: the world model clusters BLOCKS;
-            # ground items (looseflints-*) are entities - one live
-            # targets query, centred on the bot.
-            loose = None
-            if best is None and flex:
-                for eid, code, p in _targets_entities(pol, bot, goal.object,
-                                                      32, 200):
-                    d = _math.hypot(p[0] - bp[0], p[2] - bp[2])
-                    if loose is None or d < loose[0]:
-                        loose = (d, eid, code, p)
-            if best is None and loose is None:
-                run.update({"outcome": "rejected",
-                            "reason": "deterministic: no %s resource with "
-                                      "sufficient observed quantity" % goal.object})
-                return finish(args.out, run, t0)
-            prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
-                                                 center=(bp[0], 0, bp[2]))
-            if loose is not None:
-                d, eid, lcode, p = loose
-                raw = json.dumps({"id": "j1", "type": "gather",
-                                  "quantity": goal.n or 1,
-                                  "material": lcode,
-                                  "at": [p[0], p[1], p[2]],
-                                  "origin": "deterministic"})
+            src = (lookup_source(goal.object)
+                   if goal.verb == "gather" else None)
+            if src is not None:
+                # 2026-10-11: source-mapped gather - the
+                # search->extract chain (r2/sources.py). The ledger
+                # names a vein by its first-seen block code
+                # ("ore-flint-andesite"); the source map bridges the
+                # material word to the block family, so a `gather
+                # flint` compiles deterministically instead of dying
+                # on "no flint resource with sufficient observed
+                # quantity" or being handed to the 27B. Direct extract
+                # when the ledger covers the quantity; otherwise a
+                # search job first (expanding rings centred on the
+                # bot), and the extract job resolves its target at
+                # run time against what the search registered (the
+                # found cells are not knowable at compile time).
+                clusters = [r for r in wm.resources.values()
+                            if any(fam_match(r.code, f)
+                                   for f in src.families)]
+                plan_dicts, note = compile_gather_plan(
+                    clusters, goal, src, bot_pos=(bp[0], bp[2]))
+                jobs, failure = validate_plan(json.dumps(plan_dicts),
+                                              index, inv, goal=goal)
                 run["planner"] = {"mode": "deterministic",
-                                  "chosen": {"entity": eid, "code": lcode,
-                                              "distance": round(d, 1)},
+                                  "chosen": {"source_map": src.material,
+                                             "strategy":
+                                             ("search->extract"
+                                              if plan_dicts[0]["type"]
+                                              == "search" else "direct"),
+                                             "families": src.families},
                                   "candidates": sorted(index)}
+                run["plan"] = {"raw": json.dumps(plan_dicts),
+                               "latency_ms": 0,
+                               "jobs": [j.to_dict() for j in jobs]
+                               if jobs else plan_dicts,
+                               "failure": (failure.to_dict()
+                                           if failure else None),
+                               "note": note}
             else:
-                d, r = best
-                raw = json.dumps({"id": "j1",
-                                  "type": ("gather" if flex else goal.verb),
-                                  "quantity": goal.n or 1, "source": r.id,
-                                  "material": r.material,
-                                  "tool": goal.tool,
-                                  "origin": "deterministic"})
-                run["planner"] = {"mode": "deterministic",
-                                  "chosen": {"id": r.id,
-                                              "distance": round(d, 1),
-                                              "observed": r.observed_quantity},
-                                  "candidates": sorted(index)}
-            jobs, failure = validate_plan(raw, index, inv, goal=goal)
-            run["plan"] = {"raw": raw, "latency_ms": 0,
-                           "jobs": [j.to_dict() for j in jobs] if jobs else None,
-                           "failure": failure.to_dict() if failure else None}
+                best = None
+                for r in wm.resources.values():
+                    if not (r.material == want_obj
+                            or _code_matches(r.code, goal.object)):
+                        continue
+                    if r.observed_quantity < (goal.n or 1):
+                        continue
+                    c = r.cells[0]
+                    d = _math.hypot(c[0] - bp[0], c[2] - bp[2])
+                    if best is None or d < best[0]:
+                        best = (d, r)
+                # loose-item fallback: the world model clusters BLOCKS;
+                # ground items (looseflints-*) are entities - one live
+                # targets query, centred on the bot.
+                loose = None
+                if best is None and flex:
+                    for eid, code, p in _targets_entities(pol, bot,
+                                                          goal.object,
+                                                          32, 200):
+                        d = _math.hypot(p[0] - bp[0], p[2] - bp[2])
+                        if loose is None or d < loose[0]:
+                            loose = (d, eid, code, p)
+                if best is None and loose is None:
+                    reason = ("deterministic: no %s resource with "
+                              "sufficient observed quantity"
+                              % goal.object)
+                    if flex:
+                        reason += (" (the material is not in the "
+                                   "source map; the deterministic "
+                                   "gather chain covers: %s)"
+                                   % ", ".join(SOURCE_MATERIALS))
+                    run.update({"outcome": "rejected", "reason": reason})
+                    return finish(args.out, run, t0)
+                prompt, index = build_planner_prompt(wm, goal, inv,
+                                                     fixtures,
+                                                     center=(bp[0], 0,
+                                                            bp[2]))
+                if loose is not None:
+                    d, eid, lcode, p = loose
+                    raw = json.dumps({"id": "j1", "type": "gather",
+                                      "quantity": goal.n or 1,
+                                      "material": lcode,
+                                      "at": [p[0], p[1], p[2]],
+                                      "origin": "deterministic"})
+                    run["planner"] = {"mode": "deterministic",
+                                      "chosen": {"entity": eid,
+                                                 "code": lcode,
+                                                 "distance": round(d, 1)},
+                                      "candidates": sorted(index)}
+                else:
+                    d, r = best
+                    raw = json.dumps({"id": "j1",
+                                      "type": ("gather" if flex
+                                                else goal.verb),
+                                      "quantity": goal.n or 1,
+                                      "source": r.id,
+                                      "material": r.material,
+                                      "tool": goal.tool,
+                                      "origin": "deterministic"})
+                    run["planner"] = {"mode": "deterministic",
+                                      "chosen": {"id": r.id,
+                                                "distance": round(d, 1),
+                                                "observed":
+                                                r.observed_quantity},
+                                      "candidates": sorted(index)}
+                jobs, failure = validate_plan(raw, index, inv,
+                                               goal=goal)
+                run["plan"] = {"raw": raw, "latency_ms": 0,
+                               "jobs": [j.to_dict() for j in jobs]
+                               if jobs else None,
+                               "failure": (failure.to_dict()
+                                           if failure else None)}
     else:
         prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
                                              center=(st["Bot"]["Pos"][0], 0,
@@ -3660,6 +4033,12 @@ def run_jobs(pol, bot, base, gs, job, run, wm, botref=None):
         code = "fixture_failed" if job.type in ("place", "build",
                                                "build_plan") \
             else "job_budget_exhausted"
+        # executor-supplied attribution (2026-10-11): a job that knows
+        # WHY it failed (the search oracle's resource_not_found) names
+        # the layer-specific code; the generic code is the fallback.
+        fa = (oracle or {}).get("failure")
+        if isinstance(fa, dict) and fa.get("code") in _FAILURE_CODES:
+            code = fa["code"]
         gs.job_failed(job, Failure(code, detail))
 
 

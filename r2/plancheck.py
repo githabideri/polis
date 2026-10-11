@@ -23,6 +23,7 @@ import json
 from .jobs import (Job, Failure, JOB_CATALOG, Goal, GoalGrammarError,
                    deps_consistent)
 from .queries import classify
+from .sources import lookup as _source_lookup
 
 MAX_QUANTITY = 100  # a single job asking for more is a plan smell
 
@@ -407,6 +408,19 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
                 "%s is outside the planner vocabulary "
                 "(operator-campaign scoped)" % j.type,
                 job_id=jid)
+        # search (2026-10-11, same precedent): the gather
+        # search->extract chain's scan job - goal-scoped to gather
+        # (and make: a make chain's gather step may search too),
+        # never in the 27B's vocabulary (it scans; it produces no
+        # ledger material).
+        if j.type == "search" \
+                and getattr(goal, "verb", None) not in ("gather", "make"):
+            return None, Failure(
+                "planner_invalid_json",
+                "search is outside the planner vocabulary "
+                "(deterministic-compiler scoped: the gather "
+                "search->extract chain)",
+                job_id=jid)
         jobs.append(j)
 
     # 3. references (the trust boundary - 5.2)
@@ -619,10 +633,16 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
                 # (symbolic intermediate of the smelt chain) budget
                 # their claim the same way: they are campaign-scoped,
                 # so no res-* reference exists by construction.
-                if campaign and (
-                        (j.at and j.type in ("mine", "chop", "gather"))
-                        or j.type in ("forage", "crucible_take",
-                                      "clayform", "kiln_fire", "cook")):
+                if (j.type == "gather" and not j.source and not j.at) \
+                        or (campaign and (
+                            (j.at and j.type in ("mine", "chop", "gather"))
+                            or j.type in ("forage", "crucible_take",
+                                          "clayform", "kiln_fire", "cook"))):
+                    # a search-derived gather (2026-10-11) has no res-*
+                    # reference by construction - the target resolves at
+                    # run time against what the search job registered -
+                    # and budgets its claim like the other referenceless
+                    # producers.
                     avail[j.material] = avail.get(j.material, 0) + \
                         (j.quantity or 1)
                     continue
@@ -637,7 +657,16 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
                         "producer job %s has unknown source %s"
                         % (j.id, j.source), job_id=j.id)
                 measured = getattr(rec, "drops", None)
-                if measured is not None and measured != j.material:
+                # 12.9 with the source-map extension (r2/sources.py,
+                # 2026-10-11): a source-mapped claim is also valid when
+                # the measured drop is one of that source's yield codes
+                # - the ledger names the vein by block
+                # ("ore-flint-andesite"), the goal names the material
+                # ("flint"); granite ore drops the granite stone.
+                s = _source_lookup(j.material)
+                if (measured is not None and measured != j.material
+                        and not (s is not None
+                                 and s.matches_drop(measured))):
                     return None, Failure(
                         "planner_invalid_reference",
                         "producer job %s claims material %r but the "

@@ -15,7 +15,7 @@
   "type": "function",
   "function": {
    "name": "scan",
-   "description": "Block census of a box in the world: the r x r x r region around cell (x,y,z) (y spans y..y+4). Returns block codes with counts. Your own position is the default center.",
+   "description": "Block census of a box around a cell: x spans x±4r, z spans z±4r, y spans y..y+2r (up to 1M cells; r=16 is the practical max). It only sees AT OR ABOVE the given y - it cannot see underground. For something below the surface, or for a specific material, use the query tool with a code filter instead.",
    "parameters": {
     "type": "object",
     "properties": {
@@ -84,29 +84,6 @@
  {
   "type": "function",
   "function": {
-   "name": "give",
-   "description": "Hand an item to your own body (item code + quantity).",
-   "parameters": {
-    "type": "object",
-    "properties": {
-     "item": {
-      "type": "string",
-      "description": "item code, e.g. redmeat-cooked"
-     },
-     "qty": {
-      "type": "integer",
-      "description": "quantity (default 1)"
-     }
-    },
-    "required": [
-     "item"
-    ]
-   }
-  }
- },
- {
-  "type": "function",
-  "function": {
    "name": "mission",
    "description": "Dispatch a BACKGROUND job through the job system - returns at once, 90-minute cap, the settlement stays conversable. Call with NO goal to report the running/finished state instead. Goal grammar: 'gather <material> xN [tool <item>] [at <x,y,z>]' (BASICS - the world provides however it provides: a loose ground item (flint, a dropped stick) is picked up, a plant (cattail/tallplant-*) is broken - with a knife or scythe in the bot's hand the reed keeps its root and regrows, without one it is destroyed, a crop is harvested, a bush picked; 'harvest' is the same verb), 'mine <material> xN', 'sow <crop> xN at <site>' (complete endogenous chain - it harvests its own seed), 'forage <bush> xN at <x,y,z>' (fruitingbush-* family), 'build <material> xN at <site>' (N blocks as a ring platform; add 'supply external' if the bot holds none), 'build-plan <plan-id> at <site>' (a whole building from the library - never 'build <plan-id>'), 'goto <player>' (bring the selected bots to the player's live position). Coordinates in a goal are space-separated numbers.",
    "parameters": {
@@ -167,7 +144,7 @@
   "type": "function",
   "function": {
    "name": "query",
-   "description": "What is in a NAMED ZONE or around a point: a compact digest (counts plus a capped code/position list). target: a zone name, or two coordinates 'x z' (an optional third number is the radius; the coordinate form walks your body there first). mode: blocks | entities | all (default all). code: substring filter.",
+   "description": "What is in a NAMED ZONE or around a point: a compact digest (counts plus a capped code/position list). target: a zone name, or two coordinates 'x z' (an optional third number is the radius; the coordinate form walks your body there first). mode: blocks | entities | all (default all). code: substring filter - the radius scan is centred on your body and DOES see underground, so 'code: ore-flint' finds buried veins that a scan cannot.",
    "parameters": {
     "type": "object",
     "properties": {

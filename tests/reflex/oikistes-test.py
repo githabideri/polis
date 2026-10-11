@@ -24,14 +24,20 @@ READONLY = {"state", "scan", "screenshot", "events", "autonomy"}
 # strict: reads only
 for t in READONLY:
     check("strict allows %s" % t, oik.check_tool(t, "strict"))
-for t in ("mission", "give", "command"):
+for t in ("mission", "command"):
     check("strict denies %s" % t, not oik.check_tool(t, "strict"))
-# guarded: reads + mission + give
-for t in READONLY | {"mission", "give"}:
+# 2026-10-11: `give` is REMOVED from the agent's surface (the agent
+# must not fabricate resources; the operator keeps /polis/command).
+# It is refused in every mode, and the refusal says why.
+for preset in ("strict", "guarded", "free"):
+    check("%s refuses the removed give tool" % preset,
+          not oik.check_tool("give", preset))
+# guarded: reads + mission
+for t in READONLY | {"mission"}:
     check("guarded allows %s" % t, oik.check_tool(t, "guarded"))
 check("guarded denies command", not oik.check_tool("command", "guarded"))
-# free: everything
-for t in READONLY | {"mission", "give", "command"}:
+# free: everything on the 14-tool surface
+for t in READONLY | {"mission", "command"}:
     check("free allows %s" % t, oik.check_tool(t, "free"))
 # unknown tool: denied everywhere
 for preset in ("strict", "guarded", "free"):

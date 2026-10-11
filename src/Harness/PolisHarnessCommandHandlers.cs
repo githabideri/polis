@@ -240,6 +240,8 @@ public partial class PolisSystem
                     return ExecuteStopCommand(args, context);
                 case "give":
                     return ExecuteGiveCommand(args, context);
+                case "transfer":
+                    return ExecuteTransferCommand(args, context);
                 case "drop":
                     return ExecuteDropCommand(args, context);
                 case "pickup":
@@ -1290,6 +1292,88 @@ public partial class PolisSystem
             : $"Gave {qty}x {itemCode} to bot #{bot.Entity.EntityId}";
 
         return new PolisTestHarness.CommandResult { Ok = true, Message = message };
+    }
+
+    /// <summary>
+    /// transfer &lt;fromBotId&gt; &lt;toBotId&gt; &lt;itemCode&gt; [qty]
+    /// Honest bot-to-bot inventory move (no spawning): moves up to qty
+    /// units of itemCode out of the from-bot's cargo/hands into the
+    /// to-bot's inventory. The campaign "supply the crew" primitive:
+    /// the body gathers, the crew gets their knives. Unlike `give`
+    /// nothing is created; a unit that cannot be delivered back to
+    /// the sender so no item is ever lost or duplicated.
+    /// </summary>
+    PolisTestHarness.CommandResult ExecuteTransferCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 3)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: transfer <fromBotId> <toBotId> <itemCode> [qty]" };
+        }
+
+        if (!long.TryParse(args[0], out var fromId) || !long.TryParse(args[1], out var toId))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid bot ids" };
+        }
+
+        var itemCode = args[2];
+        int qty = args.Length > 3 && int.TryParse(args[3], out var q) ? q : 1;
+
+        var fromEnt = sapi.World.GetEntityById(fromId) as EntityAgent;
+        var toEnt = sapi.World.GetEntityById(toId) as EntityAgent;
+        if (fromEnt == null || !fromEnt.Alive)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"From bot #{fromId} not found/alive" };
+        }
+        if (toEnt == null || !toEnt.Alive)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"To bot #{toId} not found/alive" };
+        }
+
+        var item = ResolveItemLenient(sapi.World, itemCode);
+        if (item == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"Item '{itemCode}' not found" };
+        }
+
+        int have = PolisInventoryHelpers.CountBotItems(fromEnt, itemCode);
+        if (have == 0)
+        {
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = false,
+                Message = $"Bot #{fromId} has no {itemCode} (to move {qty})"
+            };
+        }
+
+        int moved = 0;
+        string stuck = null;
+        for (int i = 0; i < qty; i++)
+        {
+            if (!PolisInventoryHelpers.ConsumeOneFromBotInventory(fromEnt, itemCode)) break;
+            if (!PolisInventoryHelpers.TryInsertIntoBotInventory(
+                    toEnt, new ItemStack(item, 1), out var inserted, out var reason))
+            {
+                // delivery failed: give the unit back so nothing is lost
+                PolisInventoryHelpers.TryInsertIntoBotInventory(
+                    fromEnt, new ItemStack(item, 1), out _, out _);
+                stuck = reason ?? "no space";
+                break;
+            }
+            moved += inserted;
+        }
+
+        int left = PolisInventoryHelpers.CountBotItems(fromEnt, itemCode);
+        string message = stuck == null
+            ? $"Transferred {moved}x {itemCode}: bot #{fromId} -> bot #{toId} (sender now has {left})"
+            : $"Transferred {moved}x {itemCode}: bot #{fromId} -> bot #{toId}, stopped ({stuck}); sender has {left}";
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = message,
+            Data = new { from = fromId, to = toId, item = itemCode,
+                          moved = moved, senderLeft = left, stuck = stuck }
+        };
     }
 
     PolisTestHarness.CommandResult ExecuteDropCommand(string[] args, PolisTestHarness.CommandContext context)
@@ -6072,7 +6156,8 @@ public partial class PolisSystem
         // Teleports a player to the specified position with optional view
         // direction. A NAME as well as a uid is accepted: the agent brains
         // only ever know the display name, and a human types the name
-        // (2026-10-10: 'the system doesn't recognize dingsdangser').
+        // (2026-10-10: a name-only lookup failed against a uid-typed
+        //  config - names are resolved against the connected players).
         if (args.Length < 4)
         {
             return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: teleport <playerUid or playerName> <x> <y> <z> [yaw] [pitch]" };

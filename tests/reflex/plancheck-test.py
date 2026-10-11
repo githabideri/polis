@@ -124,13 +124,26 @@ jobs, f = validate_plan(
 check("duplicate claim rejected",
       jobs is None and f.code == "claim_conflict", str(f and f.to_dict()))
 
-# 10. producer claims a material its MEASURED drop contradicts
+# 10. producer claims a material its MEASURED drop contradicts - a
+#     claim word that is NOT the source of that drop (12.9, kept strict)
 jobs, f = validate_plan(
-    '[{"id":"j1","type":"mine","source":"res-01","material":"granite"}]',
+    '[{"id":"j1","type":"mine","source":"res-01","material":"clay"}]',
     INDEX, INV_GRANITE)
 check("producer/measured-drop mismatch rejected",
       jobs is None and f.code == "planner_invalid_reference",
       str(f and f.to_dict()))
+
+# 10a. source-map claim (2026-10-11, r2/sources.py): the ledger names
+#      the vein by its first-seen block code; granite ore's measured
+#      drop is the granite stone, so the claim word "granite" is a
+#      DOCUMENTED yield here - the 12.9 rejection that made a
+#      source-mapped gather unexecutable is lifted for map materials
+#      only (a non-map mismatch above stays rejected).
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"mine","source":"res-01","material":"granite"}]',
+    INDEX, INV_GRANITE)
+check("source-mapped claim accepted (granite ore drops the granite stone)",
+      jobs is not None and f is None, str(f and f.to_dict()))
 
 # 10b. same claim WITHOUT a measured drop: no claim possible - allowed
 jobs, f = validate_plan(
@@ -442,6 +455,38 @@ check("chop target: family root ok",
       check_chop_target([1, 2, 3], "log-grown", "log-grown-oak-ud") is None)
 check("chop target: mismatch fails",
       check_chop_target([1, 2, 3], "log-grown-*", "rock-granite") is not None)
+
+# --- search (2026-10-11, the search->extract chain) -----------------------
+# the scan job is goal-scoped to gather, exactly like build_plan is
+# scoped to build-plan: the deterministic compiler emits it, the 27B
+# never sees it in its vocabulary.
+g_flint = _G(verb="gather", object="flint", n=10)
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"search","material":"flint","quantity":10,'
+    '"expect":"ore-flint-"}]', INDEX, INV_EMPTY, goal=g_flint)
+check("gather goal: search job passes (the deterministic scan)",
+      jobs is not None and f is None, str(f and f.to_dict()))
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"search","material":"granite","quantity":5,'
+    '"expect":"rock-granite,crackedrock-granite"}]',
+    INDEX, INV_EMPTY, goal=_G(verb="mine", object="granite", n=5))
+check("mine goal: search job rejected (vocabulary gate)",
+      jobs is None and f.code == "planner_invalid_json",
+      str(f and f.to_dict()))
+# the search->extract pair: scan first, then the extract that carries
+# the family globs and no source id - it budgets its claim without a
+# res-* reference (the target resolves at run time against what the
+# search registered).
+g_cattail = _G(verb="gather", object="cattail", n=25)
+jobs, f = validate_plan(
+    '[{"id":"j1","type":"search","material":"cattail","quantity":25,'
+    '"expect":"tallplant-coopersreed-"},'
+    '{"id":"j2","type":"gather","material":"cattail","quantity":25,'
+    '"expect":"tallplant-coopersreed-","depends_on":["j1"]}]',
+    INDEX, INV_EMPTY, goal=g_cattail)
+check("search->extract pair validates (extract without a source id)",
+      jobs is not None and f is None and len(jobs) == 2,
+      str(f and f.to_dict()))
 
 print()
 print("plancheck-test: %d passed, %d failed" % (PASS, FAIL))
