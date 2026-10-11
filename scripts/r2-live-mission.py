@@ -3212,6 +3212,13 @@ def main():
             try:
                 at_cells = [int(v) for v in
                             str(at).replace(" ", ",").split(",")]
+                # 2-coord 'at x z' (model shorthand): take y from the
+                # body's current level (surface bushes share it, 2026-10-11)
+                if len(at_cells) == 2:
+                    at_cells = [at_cells[0],
+                                int((st.get("Bot") or {}).get("Pos")
+                                     [1]),
+                                at_cells[1]]
                 assert len(at_cells) == 3
             except (ValueError, AssertionError):
                 run.update({"outcome": "rejected",

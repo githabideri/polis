@@ -1002,6 +1002,9 @@ class Oikistes:
                "--harness", self.args.harness,
                "--uid", self.args.uid,
                "--goal", goal_line, "--out", out]
+        if self.args.llm:
+            cmd += ["--llm", self.args.llm,
+                    "--llm-model", self.args.llm_model or "default"]
         goto_target = None
         toks = goal_line.split()
         if verb.lower() == "goto" and len(toks) > 1:
@@ -1175,6 +1178,9 @@ class Oikistes:
                "--chain-params", json.dumps(params),
                "--goal", "pots chain (clay to cooked meat to eat)",
                "--out", out]
+        if self.args.llm:
+            cmd += ["--llm", self.args.llm,
+                    "--llm-model", self.args.llm_model or "default"]
         pre_roster = set(b.get("id")
                          for b in self.polis.bots_list())
         if pre_roster:
