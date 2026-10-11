@@ -133,7 +133,7 @@ namespace Polis.Core
     /// same path, the webui EAT button). Returns the EatenStack
     /// leftover (null if none) for the caller to insert.
     /// </summary>
-    private static ItemStack ApplyUnit(EntityAgent agent, NutritionProps nut)
+    private static ItemStack ApplyUnit(EntityAgent agent, FoodNutritionProperties nut)
     {
         // The engine's satiety path: ReceiveSaturation with the
         // item's own SaturationLossDelay — the 1.22 way, not the
