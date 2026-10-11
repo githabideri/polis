@@ -135,6 +135,10 @@ class Polis:
         keep_set = keep if isinstance(keep, (set, list, tuple)) else None
         for b in (items or []):
             i = b.get("id") if isinstance(b, dict) else None
+            try:
+                i = int(i)
+            except (TypeError, ValueError):
+                pass
             if i is None or (keep_set is not None and i in keep_set) \
                     or i == keep:
                 continue

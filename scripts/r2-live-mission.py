@@ -183,9 +183,10 @@ def boot(pol, radius=14, keep=None, attach=None):
     of spawning - its carried inventory is the campaign's banked
     state (the haul survives across milestones because the mission
     neither spawns a stranger nor reaps the carrier)."""
-    keep = list(keep or [])
+    keep = [int(k) for k in (keep or [])
+            if str(k).strip().lstrip("-").isdigit()]
     if attach is not None:
-        keep.append(attach)
+        keep.append(int(attach))
     pol.sweep_bots(keep=keep)
     time.sleep(2)
     if attach is not None:
@@ -1792,17 +1793,59 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
         # is a target too - the forage goal's walk-onto-bush pre-step.
         # Only a STRING target is a fixture name (the .get below is
         # what blew up with 'unhashable type: list').
-        t = job.target
-        if isinstance(t, (list, tuple)) and len(t) == 3:
-            cell = tuple(int(v) for v in t)
+        t2 = job.target
+        if isinstance(t2, (list, tuple)) and len(t2) == 3:
+            cell = tuple(int(v) for v in t2)
         else:
-            fix = wm.fixtures.get(t)
+            fix = wm.fixtures.get(t2)
             cell = tuple(fix.cell) if fix else base
-        g = v5.goto_wait(pol, bot, cell)
-        return (bool(g.get("ok")), "goto %s -> %s" % (job.target,
-                                                      g.get("msg")),
-                measured, {"goto": g.get("msg")},
-                {"arrived": bool(g.get("ok"))})
+        # 2026-10-11 (the berry A/B): LastAction is NOT the arrival
+        # oracle - the engine records the goto's Ok the moment the bot
+        # STARTS moving (the A1 run: 'goto ok' after ~10 s of a 34-34
+        # block hillside walk, forage preflight then measured 62
+        # blocks and refused). Position is: within 2.5 of the target
+        # (a solid target like a bush settles on the adjacent cell -
+        # exactly where the forage pick range wants the bot), or a
+        # definitive action failure, or a stalled walk (30 s without
+        # progress), or the 240 s budget.
+        r = pol.cmd("goto", ["%0.1f" % (cell[0] + 0.5), str(cell[1]),
+                              "%0.1f" % (cell[2] + 0.5), "true",
+                              "0.02", "true"], bot)
+        if not r.get("Ok") and r.get("arrived") is not True:
+            return (False, "goto %s -> %s" % (job.target,
+                                              r.get("Message") or r.get("error")),
+                    measured, {"goto": r.get("Message")}, {})
+        t0 = time.time()
+        last_d = None
+        stuck = 0.0
+        d = 1e9
+        while time.time() - t0 < 240:
+            st = pol.state(bot)
+            pos = (st.get("Bot") or {}).get("Pos") or [0, 0, 0]
+            la = st.get("LastAction") or {}
+            if len(pos) == 3:
+                d = ((pos[0] - cell[0]) ** 2 +
+                     (pos[2] - cell[2]) ** 2) ** 0.5
+            if d <= 2.5:
+                return (True, "goto %s -> arrived (%.1f m from target)"
+                        % (job.target, d),
+                        measured, {"goto": "arrived"},
+                        {"arrived": True, "distance": round(d, 1)})
+            if la.get("Name") == "goto" and la.get("Ok") is False:
+                return (False, "goto %s -> failed: %s"
+                        % (job.target, la.get("Msg")),
+                        measured, {"goto": la.get("Msg")}, {})
+            if last_d is not None and abs(last_d - d) < 0.5:
+                stuck += 2
+                if stuck > 30:
+                    break
+            else:
+                stuck = 0.0
+            last_d = d
+            time.sleep(2)
+        return (False, "goto %s -> not arrived (%.1f m after %ds)"
+                % (job.target, d, int(time.time() - t0)),
+                measured, {}, {})
     if job.type == "wait":
         # a time valve: quantity is SECONDS (default 2). The crucible
         # chain (2026-10-07) uses it to wait out engine smelt progress
