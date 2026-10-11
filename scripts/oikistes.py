@@ -368,7 +368,7 @@ def _targets_digest(r, cap=12):
         out += ": " + "; ".join(lines)
     if n > len(lines):
         out += " (+%d more)" % (n - len(lines))
-    return out[:400]
+    return out[:800]
 
 
 # ----------------------------------------------------------------------
@@ -1473,11 +1473,11 @@ class Oikistes:
                             a = {}
                         obs = self.do_tool(c["name"], a, autonomy)
                         actions.append({"tool": c["name"], "args": a,
-                                        "observation": str(obs)[:400]})
+                                        "observation": str(obs)[:800]})
                         msgs.append({"role": "tool",
                                      "tool_call_id": c["id"],
                                      "name": c["name"],
-                                     "content": str(obs)[:400]})
+                                     "content": str(obs)[:800]})
                     if not last:
                         continue
                     # final step spent its turn on a tool (e.g. the
