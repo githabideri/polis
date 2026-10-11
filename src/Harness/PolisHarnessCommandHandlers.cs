@@ -6431,19 +6431,24 @@ public partial class PolisSystem
         string code = args.Length > 0 ? args[0] : null;
         if (code == null || code.Length == 0)
         {
-            code = PolisEatService.FirstPolicyAllowedEdibleCode(pe);
+            // The operator's own eating is NOT gated by the food policy
+            // (it governs the settlement's agents); auto-pick = first
+            // edible (2026-10-11, operator decision).
+            code = PolisEatService.FirstPolicyAllowedEdibleCode(pe,
+                enforcePolicy: false);
             if (code == null)
                 return new PolisTestHarness.CommandResult
                 {
                     Ok = false,
-                    Message = "no policy-allowed food in inventory (edible but denied, or nothing edible at all)"
+                    Message = "no food in inventory (nothing edible at all)"
                 };
         }
         int count = 1;
         if (args.Length > 1 && int.TryParse(args[1], out var c)) count = Math.Max(0, c);
 
         var (ok, reason, before, after, units) =
-            PolisEatService.EatPlayer(pe, code, count, sapi.Logger.Debug);
+            PolisEatService.EatPlayer(pe, code, count, sapi.Logger.Debug,
+                enforcePolicy: false); // operator's own food: exempt
 
         string category = null;
         if (TryResolveStack(code, 1, out var unit2, out _))
