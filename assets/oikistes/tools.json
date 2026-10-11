@@ -277,7 +277,7 @@
   "type": "function",
   "function": {
    "name": "vocab",
-   "description": "The name<->code resolver: the operator says a human word (\"cattail\", \"flint\", \"stick\", \"cranberry\"), the game knows codes. Queries the LIVE in-game registry (self-syncing across game updates) and returns matching codes + names + measured drop lists. Call it for any resource word that is not on the hot list before dispatching a gather/mine mission.",
+   "description": "The name<->code resolver: the operator says a human word (\"cattail\", \"flint\", \"stick\", \"berry\"), the game knows codes. Queries the LIVE in-game registry (self-syncing across game updates) and returns matching codes + names + measured drop lists. Call it for any resource word that is not on the hot list before dispatching a gather/mine mission.",
    "parameters": {
     "type": "object",
     "properties": {

@@ -297,8 +297,8 @@ This document lists commonly used block and item codes for the polis project. Th
 
 ### Berry Bushes (Harvestable)
 
-**1.22 pattern:** `game:fruitingbush-{state}-{type}` (the 1.21
-`{size}berrybush-{type}-{state}` codes are gone)
+**1.22 pattern:** `game:fruitingbush-{state}-{type}-{cover}` (the 1.21
+`{size}berrybush-{type}-{state}` codes are gone; cover = `free`/`snow`)
 
 - `state`: `wild` (affects the forage stat, `forageStatAffectedByType`),
   `grown` (planted)
@@ -310,7 +310,11 @@ This document lists commonly used block and item codes for the polis project. Th
 | `game:fruitingbush-grown-blueberry` | Grown blueberry bush |
 | `game:fruitingbush-wild-cranberry` | Wild cranberry bush |
 
-Harvest with `harvest`; the drop is the matching `game:fruit-{type}` item.
+Pick with the forage path (the engine's pick arm; a harvestcrop or
+plain break only yields leafy plant debris); the drop is the matching
+`game:fruit-{type}` item (avg 5.5, 2.75 for cloudberry/strawberry).
+Harvesting leaves the bush standing; a cut bush becomes
+`fruitingbushcutting-{type}-free`.
 
 ### Fruit (Harvested)
 

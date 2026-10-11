@@ -43,7 +43,7 @@ class Goal:
 # --- the table ------------------------------------------------------------
 check("the map holds the 11 source-mapped materials, in order",
       MATERIALS == ("flint", "stick", "wood", "cattail", "drygrass",
-                    "cranberry", "dirt", "granite", "stone", "clay",
+                    "berry", "dirt", "granite", "stone", "clay",
                     "sand"),
       str(MATERIALS))
 check("every source names at least one block family and one drop",
@@ -79,8 +79,12 @@ check("lookup alias: coopersreed -> cattail",
       lookup("coopersreed") is SOURCES["cattail"])
 check("lookup alias: cattailtops (the drop) -> cattail",
       lookup("cattailtops") is SOURCES["cattail"])
-check("lookup alias: berries -> cranberry",
-      lookup("berries") is SOURCES["cranberry"])
+check("lookup alias: berries -> berry",
+      lookup("berries") is SOURCES["berry"])
+check("lookup alias: cranberry (1.21 continuity) -> berry",
+      lookup("cranberry") is SOURCES["berry"])
+check("lookup alias: whitecurrant (the 1.22 type) -> berry",
+      lookup("whitecurrant") is SOURCES["berry"])
 check("lookup alias: soil -> dirt", lookup("soil") is SOURCES["dirt"])
 check("lookup block code: ore-flint-andesite -> flint (the 2026-10-11 "
       "failure mode: the ledger named the vein, the goal the material)",
@@ -94,8 +98,10 @@ check("lookup namespaced block: game:tallplant-coopersreed-land-normal-free "
       is SOURCES["cattail"])
 check("lookup leaf block: leavesbranchy-grown1-birch -> stick",
       lookup("leavesbranchy-grown1-birch") is SOURCES["stick"])
-check("lookup drop code: fruit-cranberry -> cranberry",
-      lookup("fruit-cranberry") is SOURCES["cranberry"])
+check("lookup drop code: fruit-cranberry -> berry",
+      lookup("fruit-cranberry") is SOURCES["berry"])
+check("lookup drop code: fruit-whitecurrant -> berry (1.22)",
+      lookup("fruit-whitecurrant") is SOURCES["berry"])
 check("lookup drop code: stone-granite -> granite",
       lookup("stone-granite") is SOURCES["granite"])
 check("lookup snow-covered block: rock-granite-free -> granite",
@@ -216,8 +222,8 @@ check("partial ledger: search leads, the note counts the shortfall",
 
 # 6. forage source: the extract job carries the forage glob (the
 #    engine's pick arm, not the break command)
-cranberry = SOURCES["cranberry"]
-jobs, note = compile_gather_plan([], Goal(5), cranberry, bot_pos=(0, 0))
+berry = SOURCES["berry"]
+jobs, note = compile_gather_plan([], Goal(5), berry, bot_pos=(0, 0))
 check("forage source: the extract job names the forage family glob",
       jobs[1].get("plant") == "fruitingbush-*", str(jobs))
 

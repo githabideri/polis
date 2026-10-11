@@ -169,10 +169,21 @@ SOURCES = {
         # all tallgrass is hand-era (knife cut) - no pickaxe gate
         hand_families=("tallgrass-",),
         aliases=("dry grass", "tallgrass", "grass")),
-    "cranberry": Source(
-        "cranberry", families=("fruitingbush-",),
-        drops=("fruit-cranberry", "cranberry"), kind="forage",
-        aliases=("berries", "berry")),
+    # 2026-10-11 (1.22.7 flora, vs-codes): all ten berry types collapsed
+    # into ONE block family, fruitingbush-{state}-{type}-{cover} (state
+    # wild/grown, cover free/snow), and the fruit is one `fruit` item
+    # with fruit-{type} variants (there is no plain `berry` item). The
+    # 1.21 bushes (big/smallberrybush) stay in the families for old
+    # worlds; their type-named items (blueberry, whitecurrant, ...) are
+    # the legacy drops. "cranberry" stays as an alias for continuity.
+    "berry": Source(
+        "berry", families=("fruitingbush-", "bigberrybush-",
+                            "smallberrybush-"),
+        drops=("fruit-", "blueberry", "whitecurrant", "cranberry",
+               "redcurrant", "blackcurrant", "blackberry", "raspberry",
+               "strawberry", "cloudberry", "beautyberry"), kind="forage",
+        aliases=("berries", "berry", "currant", "blueberry",
+                 "cranberry")),
     "dirt": Source(
         "dirt", families=("soil-", "dirt"),
         drops=("soil-", "dirt"), kind="mine",
