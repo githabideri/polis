@@ -803,9 +803,15 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
             # spawn) when the bot owns none - the honest failure names
             # the gap (craft the knife first).
             want_t = job.tool.split(":")[-1].lower()
-            owns = any((t or "").split(":")[-1].lower() == want_t or
-                       (t or "").split(":")[-1].lower().endswith("-" + want_t)
-                       for t in tool_codes)
+            # 2026-10-11 (M5): the job may name a tool FAMILY ("axe",
+            # "knife") while the cargo carries the concrete item
+            # (axe-flint, knife-generic-flint) - match the family
+            # token too (tohand resolves family names itself).
+            owns = any(
+                (t or "").split(":")[-1].lower() == want_t
+                or (t or "").split(":")[-1].lower().endswith("-" + want_t)
+                or (t or "").split(":")[-1].lower().split("-")[0] == want_t
+                for t in tool_codes)
             if not owns:
                 return (False,
                         "%s %s -> needs %s in hand; not in cargo (the "
