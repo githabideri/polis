@@ -971,6 +971,16 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
             if code0 is None or code0 == "game:air":
                 parts.append("%s:gone" % (cell,))
                 continue
+            # 2026-10-11 (G12): the harvestcrop command REFUSES cuttable
+            # plants ("not harvestable" - tallgrass included). Those go
+            # through the mine path, where the knife gate implements the
+            # engine's own CuttableTallGrass (knife in hand -> drygrass
+            # + eaten stub; no knife -> destroyed, no drops). Crops keep
+            # harvestcrop. The per-cell live code decides, so a mixed
+            # cluster is dispatched cell by cell.
+            if job.type == "harvest" and cmd_name == "harvestcrop" \
+                    and classify(code0)[0] != "crop":
+                cmd_name = "mine"
             pre = inventory_of(pol.state(bot))
             # 13.6 step 1: APPROACH resolution (per cell). goto and
             # approach are separate concepts: a mine job means "interact

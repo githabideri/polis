@@ -62,6 +62,7 @@ PREFIX_RULES = [
     ("crop-", "crop"),
     ("ore-", "ore"),
     ("stone-", "stone"),
+    ("tallgrass-", "plant"),  # 2026-10-11: cuttable tallgrass (drygrass source)
     # the 1.22.7 forageable (vs-codes): the fruiting bush block is a
     # plant; its harvest drop (fruit-<type>) is food (2026-10-07
     # survival run - the forage job's ledger needs the drop's kind).
@@ -112,6 +113,14 @@ def classify(code):
                 except ValueError:
                     name, props = rest, {}
                 return (kind, name, props, c)
+            # 2026-10-11 (G12): tallgrass's variants are GROWTH STAGES
+            # x habitat (veryshort/short/mediumshort/medium/tall/eaten
+            # x free/land) - the cuttable plant family. One material
+            # word for all variants, so a mixed-variant camp field is
+            # one cluster (the knife gate in the mine action treats
+            # every non-eaten variant the same).
+            if prefix == "tallgrass-":
+                return ("plant", "tallgrass", {}, c)
             return (kind, rest, {}, c)
     return ("block", c, {}, c)
 

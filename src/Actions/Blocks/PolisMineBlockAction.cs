@@ -291,37 +291,75 @@ class PolisMineBlockAction : EntityActionBase
             return;
         }
 
-        // 1.22: GetDrops() is the virtual loot source (rock blocks override
-        // it with per-type drops; the plain Drops field is empty for them).
-        var drops = block.GetDrops(world, pos, null, 1.0f) ?? Array.Empty<ItemStack>();
-
         var agent = vas.Entity as EntityAgent;
 
-        // Reed knife gate (mirrors BlockReeds.OnBlockBroken, 1.22.7):
-        // breaking a GROWN reed while holding a knife or scythe
-        // transitions it to the harvested stump (roots stay in the
-        // ground, the plant regrows in 7 days) instead of destroying it
-        // outright. Anything else - bare hands, pickaxe - drops the
-        // tops and the block is gone. 1.22's BreakBlock only has an
-        // IPlayer overload (loot would route to the human), so this
-        // bot-side break path reproduces the engine's own block outcome
-        // here; the held-item check reads the bot's right hand (the
-        // same slot the tool validation above uses).
+        // The held item, same slot the reed gate and the tool validation
+        // above use (right hand first, then cargo slot 0). The knife-cut
+        // gates below read it the same way.
+        var held = (toolSlot?.Itemstack != null) ? toolSlot.Itemstack
+            : (agent != null && PolisInventoryHelpers.BotCargo(agent) is { } cargo
+               && cargo.Count > 0) ? cargo[0].Itemstack : null;
+        string hcode = (held?.Collectible?.Code?.Path ?? "").ToLowerInvariant();
+        // 1.22's CollectibleObject exposes no tag API the mod can
+        // call (ildasm-verified: no HasTag/Tags members); code-path
+        // matching is the established mod pattern (the clay check)
+        // and covers the survival knife/sickle/scythe families.
+        bool knifeLike = hcode.StartsWith("knife") ||
+                         hcode.StartsWith("sickle") ||
+                         hcode.StartsWith("scythe");
+
         int targetId = 0; // air
-        if (block is BlockReeds &&
+        var drops = new List<ItemStack>();
+
+        string codePath = ((RegistryObject)block).Code?.Path ?? "";
+        bool tallGrassCuttable = codePath.StartsWith("tallgrass")
+            && ((RegistryObject)block).Variant.TryGetValue("tallgrass", out var tgState)
+            && tgState != "eaten";
+
+        if (tallGrassCuttable && knifeLike && held != null)
+        {
+            // Grass-cut gate (mirrors BlockBehaviorCuttableTallGrass.
+            // OnBlockBroken, 1.22.7): cutting tallgrass with a knife-like
+            // tool drops the tool-conditional loot (dry grass) and
+            // transitions the block to the "eaten" stub (it regrows over
+            // days) instead of destroying it. The engine's gate checks the
+            // PLAYER's active tool; the bot is the actor here, so we
+            // reproduce it with the bot's held tool. The engine's own drop
+            // evaluator (BlockDropItemStack.ToRandomItemstackForPlayer)
+            // matches entry.Tool against the actor's tool, so the knife
+            // drops only come out of a knife cut - bare hands get the
+            // unconditional drops (none for grass: the block is gone, as
+            // in vanilla).
+            var heldTool = held.Collectible.Tool;
+            foreach (var entry in block.Drops ?? Array.Empty<BlockDropItemStack>())
+            {
+                bool toolOk = !entry.Tool.HasValue
+                    || (heldTool.HasValue && entry.Tool == heldTool);
+                if (!toolOk) continue;
+                var stack = entry.GetNextItemStack(1.0f);
+                if (stack != null && stack.Collectible is IResolvableCollectible resolvable)
+                {
+                    var ds = new DummySlot(stack);
+                    resolvable.Resolve(ds, world, true);
+                    stack = ds.Itemstack;
+                }
+                if (stack != null) drops.Add(stack);
+            }
+            // the engine's own transition: the eaten variant (only the
+            // tallgrass variant is set - habitat etc. stay untouched)
+            var eaten = world.GetBlock(((RegistryObject)block).CodeWithVariant("tallgrass", "eaten"));
+            if (eaten != null) targetId = eaten.BlockId;
+            debugLog?.Invoke($"[mine] grass cut: {block.Code} (knife in hand), {drops.Count} drop(s), stub={(eaten != null)}");
+        }
+        else if (block is BlockReeds &&
             ((RegistryObject)block).Variant["state"] == "normal")
         {
-            var held = (toolSlot?.Itemstack != null) ? toolSlot.Itemstack
-                : (agent != null && PolisInventoryHelpers.BotCargo(agent) is { } cargo
-                   && cargo.Count > 0) ? cargo[0].Itemstack : null;
-            string hcode = (held?.Collectible?.Code?.Path ?? "").ToLowerInvariant();
-            // 1.22's CollectibleObject exposes no tag API the mod can
-            // call (ildasm-verified: no HasTag/Tags members); code-path
-            // matching is the established mod pattern (the clay check)
-            // and covers the survival knife/sickle/scythe families.
-            bool knifeLike = hcode.StartsWith("knife") ||
-                             hcode.StartsWith("sickle") ||
-                             hcode.StartsWith("scythe");
+            // Reed knife gate (mirrors BlockReeds.OnBlockBroken, 1.22.7):
+            // breaking a GROWN reed while holding a knife or scythe
+            // transitions it to the harvested stump (roots stay in the
+            // ground, the plant regrows in 7 days) instead of destroying
+            // it outright. Anything else - bare hands, pickaxe - drops
+            // the tops and the block is gone.
             if (knifeLike)
             {
                 // the engine's own transition: the harvested variant
@@ -330,6 +368,23 @@ class PolisMineBlockAction : EntityActionBase
                     new string[] { "habitat", "state" },
                     new string[] { "land", "harvested" }));
                 if (stump != null) targetId = stump.BlockId;
+            }
+            // 1.22: GetDrops() is the virtual loot source (the block's
+            // own per-type drops; the plain Drops field is empty for
+            // them). Null player = no tool-conditional drops.
+            foreach (var s in block.GetDrops(world, pos, null, 1.0f) ?? Array.Empty<ItemStack>())
+            {
+                if (s != null) drops.Add(s);
+            }
+        }
+        else
+        {
+            // 1.22: GetDrops() is the virtual loot source (rock blocks
+            // override it with per-type drops; the plain Drops field is
+            // empty for them).
+            foreach (var s in block.GetDrops(world, pos, null, 1.0f) ?? Array.Empty<ItemStack>())
+            {
+                if (s != null) drops.Add(s);
             }
         }
         world.BlockAccessor.SetBlock(targetId, pos);
@@ -344,7 +399,10 @@ class PolisMineBlockAction : EntityActionBase
             }
         }
 
-        debugLog?.Invoke($"[mine] break as bot: {block.Code}, {drops.Length} drop(s)");
+        if (!tallGrassCuttable)
+        {
+            debugLog?.Invoke($"[mine] break as bot: {block.Code}, {drops.Count} drop(s)");
+        }
     }
 
     void CollectDrops(IWorldAccessor world)

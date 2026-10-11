@@ -152,6 +152,23 @@ SOURCES = {
         drops=("cattailtops", "cattailroot"), kind="mine",
         tool="knife-generic-flint",
         aliases=("cattailtops", "cattailroot", "coopersreed", "reeds")),
+    "drygrass": Source(
+        # 2026-10-11 (G12 solved, ildasm-verified on 1.22.7): tallgrass
+        # is CUT, not harvested. BlockBehaviorCuttableTallGrass.OnBlockBroken
+        # fires when the breaker's active tool is a knife: the block drops
+        # the knife-conditional loot (drygrass - the drop table entry with
+        # Tool=Knife; ToRandomItemstackForPlayer matches it against the
+        # actor's tool) and transitions to the "eaten" stub (regrows over
+        # days). Without a knife the grass is destroyed, no drops - same
+        # as vanilla. The knife gate lives in the mine action
+        # (PolisMineBlockAction), so this source is kind=mine with the
+        # knife tool; the harvestcrop command refuses all tallgrass.
+        "drygrass", families=("tallgrass-",),
+        drops=("drygrass",), kind="mine",
+        tool="knife-generic-flint",
+        # all tallgrass is hand-era (knife cut) - no pickaxe gate
+        hand_families=("tallgrass-",),
+        aliases=("dry grass", "tallgrass", "grass")),
     "cranberry": Source(
         "cranberry", families=("fruitingbush-",),
         drops=("fruit-cranberry", "cranberry"), kind="forage",

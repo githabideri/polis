@@ -41,14 +41,25 @@ class Goal:
 
 
 # --- the table ------------------------------------------------------------
-check("the map holds the 10 source-mapped materials, in order",
-      MATERIALS == ("flint", "stick", "wood", "cattail", "cranberry",
-                    "dirt", "granite", "stone", "clay", "sand"),
+check("the map holds the 11 source-mapped materials, in order",
+      MATERIALS == ("flint", "stick", "wood", "cattail", "drygrass",
+                    "cranberry", "dirt", "granite", "stone", "clay",
+                    "sand"),
       str(MATERIALS))
 check("every source names at least one block family and one drop",
       all(s.families and s.drops for s in SOURCES.values()))
 check("cattail carries the knife gate",
       SOURCES["cattail"].tool == "knife-generic-flint")
+check("drygrass is the cuttable tallgrass (knife tool, all hand-era)",
+      SOURCES["drygrass"].families == ("tallgrass-",)
+      and SOURCES["drygrass"].drops == ("drygrass",)
+      and SOURCES["drygrass"].kind == "mine"
+      and SOURCES["drygrass"].tool == "knife-generic-flint"
+      and SOURCES["drygrass"].hand_families == ("tallgrass-",))
+check("lookup('grass') resolves to the drygrass source",
+      lookup("grass") is SOURCES["drygrass"])
+check("lookup of a tallgrass variant code resolves to drygrass",
+      lookup("tallgrass-medium-free") is SOURCES["drygrass"]) 
 check("sticks are an ITEM: leaf block families + a loose ground code",
       SOURCES["stick"].families == ("leavesbranchy-",)
       and "stick" in SOURCES["stick"].loose)
