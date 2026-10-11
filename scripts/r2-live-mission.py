@@ -1788,8 +1788,16 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
              "measured": measured}
 
     if job.type in ("goto", "travel"):
-        fix = wm.fixtures.get(job.target)
-        cell = tuple(fix.cell) if fix else base
+        # 2026-10-11 (the berry A/B): a raw cell (list/tuple of three)
+        # is a target too - the forage goal's walk-onto-bush pre-step.
+        # Only a STRING target is a fixture name (the .get below is
+        # what blew up with 'unhashable type: list').
+        t = job.target
+        if isinstance(t, (list, tuple)) and len(t) == 3:
+            cell = tuple(int(v) for v in t)
+        else:
+            fix = wm.fixtures.get(t)
+            cell = tuple(fix.cell) if fix else base
         g = v5.goto_wait(pol, bot, cell)
         return (bool(g.get("ok")), "goto %s -> %s" % (job.target,
                                                       g.get("msg")),
