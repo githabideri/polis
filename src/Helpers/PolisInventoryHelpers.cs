@@ -337,7 +337,7 @@ internal static class PolisInventoryHelpers
         var mgr = player.Player?.InventoryManager;
         if (mgr != null)
             foreach (var inv in mgr.Inventories.Values)
-                for (int i = 0; i < inv.Count; i++) list.Add(inv.Slots[i]);
+                for (int i = 0; i < inv.Count; i++) list.Add(inv[i]);
         return list;
     }
 
@@ -400,30 +400,20 @@ internal static class PolisInventoryHelpers
     {
         leftover = null; err = null;
         if (stack == null || stack.StackSize <= 0) { leftover = stack; return true; }
-        var targets = PlayerSlots(player);
-        foreach (var slot in targets)
+        // the engine's own move logic (the same helper the bot path
+        // uses): stack merge / slot fill, one call per slot.
+        var dummy = new DummySlot(null) { Itemstack = stack.Clone() };
+        foreach (var slot in PlayerSlots(player))
         {
-            if (slot == null) continue;
-            var it = slot.Itemstack;
-            if (it != null && it.StackSize > 0 &&
-                (it.Collectible != null && stack.Collectible != null && it.Collectible.Code == stack.Collectible.Code) &&
-                it.StackSize < it.MaxStackSize)
-            {
-                int space = it.MaxStackSize - it.StackSize;
-                int moved = Math.Min(space, stack.StackSize);
-                stack.StackSize -= moved;
-                it.StackSize += moved;
-                if (stack.StackSize <= 0) return true;
-            }
-            else if (it == null || it.StackSize <= 0)
-            {
-                slot.Itemstack = stack;
-                return true;
-            }
+            if (slot == null || dummy.Empty) continue;
+            TryPutIntoSlot(player.World, dummy, slot, true);
         }
-        err = "player inventory full (no empty slot for the leftover)";
+        if (dummy.Empty) return true;
+        leftover = dummy.Itemstack;
+        err = "player inventory full (leftover not placed)";
         return false;
     }
+}
 
     internal static bool IsItem(ItemStack it, string code)
     {
