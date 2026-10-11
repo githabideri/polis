@@ -6431,12 +6431,12 @@ public partial class PolisSystem
         string code = args.Length > 0 ? args[0] : null;
         if (code == null || code.Length == 0)
         {
-            code = PolisInventoryHelpers.FirstEdibleItemCode(pe);
+            code = PolisEatService.FirstPolicyAllowedEdibleCode(pe);
             if (code == null)
                 return new PolisTestHarness.CommandResult
                 {
                     Ok = false,
-                    Message = "no food in inventory (carry at least one edible item)"
+                    Message = "no policy-allowed food in inventory (edible but denied, or nothing edible at all)"
                 };
         }
         int count = 1;

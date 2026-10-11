@@ -172,6 +172,31 @@ namespace Polis.Core
     public static float SaturationOf(EntityAgent agent)
             => agent?.WatchedAttributes?.GetTreeAttribute("hunger")?.GetFloat("currentsaturation", 0f) ?? 0f;
 
+        /// <summary>
+        /// The first item a player carries that is BOTH edible and
+        /// allowed by the food policy (auto-eat, 2026-10-11: a plain
+        /// 'first edible' picked the bread the policy still denied,
+        /// leaving the player starved next to allowed meat).
+        /// </summary>
+        public static string FirstPolicyAllowedEdibleCode(EntityPlayer player)
+        {
+            var world = player.World;
+            foreach (var slot in PolisInventoryHelpers.PlayerSlots(player))
+            {
+                var it = slot?.Itemstack;
+                if (it == null || it.StackSize <= 0 || it.Collectible == null) continue;
+                var item = world.GetItem(it.Collectible.Code);
+                if (item == null) continue;
+                var nut = item.GetNutritionProperties(world, it, player) ?? item.NutritionProps;
+                if (nut == null) continue;
+                var code = it.Collectible.Code.ToString();
+                var (allowed, _) = PolisPolicyEngine.Instance.Evaluate(
+                    player.PlayerUID, "food", code, nut.FoodCategory.ToString());
+                if (allowed) return code;
+            }
+            return null;
+        }
+
         public static float MaxSaturationOf(EntityAgent agent)
             => agent?.WatchedAttributes?.GetTreeAttribute("hunger")?.GetFloat("maxsaturation", 1500f) ?? 1500f;
     }
