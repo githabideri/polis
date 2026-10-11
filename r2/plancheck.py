@@ -186,7 +186,13 @@ def check_craft_pattern(recipe, inv, runs=1):
     if not pattern:
         return False, ["shaped recipe without an exposed pattern"], []
     cells_str = "".join(row for row in pattern.split(","))
-    cells = [ch for ch in cells_str if ch and ch != "."]
+    # empty cells are "." (fixture shape) or "_" (live 1.22 recipe
+    # shape - the firestarter "GS,S_": drygrass + two sticks + one
+    # HOLE; treating _ as a letter made it demand a third stick and
+    # rejected every satisfiable craft, 2026-10-11 night, M3) -
+    # both are holes, neither consumes an ingredient
+    cells = [ch for ch in cells_str
+             if ch and ch not in (".", "_")]
     slots, seen = [], set()
     for ch in cells:
         if ch not in seen:

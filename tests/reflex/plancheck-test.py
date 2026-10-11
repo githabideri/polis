@@ -337,6 +337,41 @@ ok, missing, _ = check_craft_pattern(
 check("shaped per-cell: cell/letter position mismatch rejected",
       not ok, str(missing))
 
+# The live 1.22.7 firestarter recipe (pulled 2026-10-11 from the world's
+# recipe book): a 2x2 grid with a HOLE ("_" in the live file shape, "."
+# in the fixture shape). The hole is not an ingredient: before the fix
+# "_" was treated as a letter demanding a third stick and every
+# satisfiable firestarter craft was rejected (M3, 2026-10-11 night).
+FIRE = {
+    "name": "recipes/grid/firestarter.json", "output": "firestarter",
+    "shapeless": False, "pattern": "GS,S_", "width": 2, "height": 2,
+    "ingredients": [
+        {"id": "G", "code": "drygrass", "qty": 1, "tags": [],
+         "isTool": False},
+        {"id": "S", "code": "stick", "qty": 1, "tags": [],
+         "isTool": False},
+        {"id": "S", "code": "stick", "qty": 1, "tags": [],
+         "isTool": False},
+    ],
+}
+ok, missing, subs = check_craft_pattern(
+    FIRE, {"drygrass": 1, "stick": 2}, 1)
+check("shaped with _ hole (live firestarter): drygrass + 2 sticks passes",
+      ok and not missing, str(missing))
+check("shaped _ hole: exactly the cells subtracted, hole consumes nothing",
+      sorted(subs) == [("drygrass", 1), ("stick", 2)], str(subs))
+ok, missing, _ = check_craft_pattern(
+    FIRE, {"drygrass": 1, "stick": 1}, 1)
+check("shaped _ hole: one stick short -> rejected (the S cells need two)",
+      not ok and any("stick" in m for m in missing), str(missing))
+ok, missing, subs = check_craft_pattern(
+    {"name": "firestarter-dot", "output": "firestarter", "shapeless": False,
+     "pattern": "GS,S.", "width": 2, "height": 2,
+     "ingredients": [dict(i) for i in FIRE["ingredients"]]},
+    {"drygrass": 1, "stick": 2}, 1)
+check("shaped with . hole (fixture shape): same semantics as _",
+      ok and sorted(subs) == [("drygrass", 1), ("stick", 2)], str(missing))
+
 # validate_plan end-to-end: the campaign's full ledger - the give's axe
 # and the chops' planned drops are what the craft's pattern check sees
 idx = {}
