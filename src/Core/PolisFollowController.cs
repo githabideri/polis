@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
 using Polis.Actions.Navigation;
 
 public partial class PolisSystem
@@ -29,7 +30,7 @@ public partial class PolisSystem
 
     internal void FollowInit()
     {
-        sapi.Event.RegisterCallback(FollowTick, 2000);
+        sapi.Event.RegisterCallback((Action)FollowTick, 2000);
     }
 
     internal int FollowAdd(System.Collections.Generic.IEnumerable<long> ids, Action<string> log)
@@ -57,19 +58,20 @@ public partial class PolisSystem
     {
         if (followBots.Count == 0) return;
 
-        // The estate runs one operator; take the first living player.
+        // The estate runs one operator; take the first online player.
         EntityPlayer player = null;
-        foreach (var e in sapi.World.GetEntities())
+        foreach (var p in sapi.World.AllOnlinePlayers)
         {
-            if (e is EntityPlayer p && !p.IsDead) { player = p; break; }
+            if (p is IServerPlayer sp && sp.Entity != null)
+            { player = sp.Entity; break; }
         }
         if (player == null) return; // offline: hold positions
 
-        var pcell = new Vec3i((int)player.ServerPos.X, (int)player.ServerPos.Y, (int)player.ServerPos.Z);
+        var pcell = new Vec3i((int)player.Pos.X, (int)player.Pos.Y, (int)player.Pos.Z);
 
         foreach (var id in followBots.ToArray())
         {
-            if (!bots.TryGetValue(id, out var bot) || bot.Entity == null || bot.Entity.IsDead)
+            if (!bots.TryGetValue(id, out var bot) || bot.Entity == null)
             {
                 followBots.Remove(id);
                 continue;
