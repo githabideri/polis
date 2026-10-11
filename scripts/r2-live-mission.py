@@ -2449,6 +2449,14 @@ def _search(pol, bot, wm, job, run, measured):
     # survey found the only sources 10m out and nothing within 64m;
     # a search that gives up at 32m declares victory early.
     radii = [r for r in (4, 8, 16, 32, 48) if r <= max(4, p_max)]
+    # 2026-10-11 (the berry search): the fixed list's 48 is EXCLUDED at
+    # y~111 (p_max=46: a 97-cell ring is 1.06M cells, over the scan
+    # cap) - so searches silently stopped at 32 and the wild berry
+    # bushes 55-60 blocks out were invisible. Close the gap with the
+    # widest ring the cap actually allows.
+    if p_max > 32 and int(p_max) not in radii:
+        radii.append(int(p_max))
+    radii.sort()
     for radius in radii:
         data = None
         for _ in range(3):
