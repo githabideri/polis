@@ -156,6 +156,20 @@ def parse_goal_line(line):
             i += 2
         else:
             raise ValueError("unparseable goal token %r" % rest[i])
+    # 2026-10-11 (the berry A/B): normalize the goal object to its
+    # canonical material when it names a raw BLOCK. Oiki's query tool
+    # reports block codes (fruitingbush-wild-whitecurrant-free), and
+    # a rational model writes them into the goal; the planner's
+    # candidate list names materials (berry), so the un-normalized
+    # code read as a mismatch and the 27B planner rejected a goal
+    # that was right. lookup already does the three-pass word / block
+    # family / drop resolution - a goal naming a block in the world
+    # lands on the source that yields it.
+    obj = goal.get("object") or ""
+    src = lookup_source(obj)
+    if src is not None and obj and obj != src.material:
+        goal["object_raw"] = obj
+        goal["object"] = src.material
     return goal
 
 
