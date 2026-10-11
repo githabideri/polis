@@ -542,8 +542,10 @@ public class PolisTestHarness : IDisposable
                             var code = obj.Code?.Path;
                             if (string.IsNullOrEmpty(code)) return;
                             if (wantKind != null && kind != wantKind) return;
-                            string name = null;
-                            try { name = obj.GetCollectibleName(sapi, 1); } catch { }
+                            string name = null; // 1.22's CollectibleObject has no
+                            // display-name API (ildasm-verified method list); the
+                            // code is the resolver - the agent's hot list and
+                            // judgement bridge the human word.
                             var hay = ((name ?? "") + " " + code).ToLowerInvariant();
                             if (wantName != null && !hay.Contains(wantName)) return;
                             scanned++;
@@ -568,7 +570,7 @@ public class PolisTestHarness : IDisposable
                                         {
                                             var ist = dd.GetNextItemStack(1.0f);
                                             if (ist?.Collectible == null) continue;
-                                            dropRows.Add(new { code = ist.Collectible.Code.Path, qty = ist.StackSize, chance = dd.Chance });
+                                            dropRows.Add(new { code = ist.Collectible.Code.Path, qty = ist.StackSize });
                                         }
                                     }
                                 }

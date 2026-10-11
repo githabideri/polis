@@ -5804,16 +5804,19 @@ public partial class PolisSystem
         }
         var hand = cargo[0];
         var taken = cargo[srcIdx].Itemstack;
-        if (hand.Itemstack != null && hand.Itemstack.Collectible != null
-            && hand.Itemstack.Collectible.Code.Path.ToLowerInvariant()
-            != taken.Collectible.Code.Path.ToLowerInvariant())
+        if (hand.Itemstack == null)
         {
-            hand.Swap(cargo[srcIdx]);
+            hand.Itemstack = taken;
+            cargo[srcIdx].Itemstack = null;
         }
         else
         {
-            hand.CopyFrom(cargo[srcIdx]);
-            cargo[srcIdx].Clear();
+            // different item in hand: whole-stack swap (no Split/
+            // CopyFrom/Clear in the 1.22 ItemSlot API - the verified
+            // pattern is the Itemstack property, as in equip/give)
+            var prev = hand.Itemstack;
+            hand.Itemstack = taken;
+            cargo[srcIdx].Itemstack = prev;
         }
         return new PolisTestHarness.CommandResult { Ok = true,
             Message = $"{taken.Collectible.Code.Path} x{taken.StackSize} now in right hand (was slot {srcIdx})" };

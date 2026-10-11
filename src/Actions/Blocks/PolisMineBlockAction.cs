@@ -314,9 +314,14 @@ class PolisMineBlockAction : EntityActionBase
             var held = (toolSlot?.Itemstack != null) ? toolSlot.Itemstack
                 : (agent != null && PolisInventoryHelpers.BotCargo(agent) is { } cargo
                    && cargo.Count > 0) ? cargo[0].Itemstack : null;
-            bool knifeLike = held?.Collectible != null &&
-                (held.Collectible.HasTag("tool-knife") ||
-                 held.Collectible.HasTag("tool-scythe"));
+            string hcode = (held?.Collectible?.Code?.Path ?? "").ToLowerInvariant();
+            // 1.22's CollectibleObject exposes no tag API the mod can
+            // call (ildasm-verified: no HasTag/Tags members); code-path
+            // matching is the established mod pattern (the clay check)
+            // and covers the survival knife/sickle/scythe families.
+            bool knifeLike = hcode.StartsWith("knife") ||
+                             hcode.StartsWith("sickle") ||
+                             hcode.StartsWith("scythe");
             if (knifeLike)
             {
                 // the engine's own transition: the harvested variant
