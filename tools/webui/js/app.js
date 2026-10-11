@@ -368,6 +368,15 @@ function renderSelectionInfo() {
 }
 
 function renderEntityLists() {
+    // Stale-selection guard (10-11 post-mortem): after a world/restart the
+    // entity ids change; a selection that survived in the browser then sent
+    // `follow <old-id>` nine times as a silent no-op. If the live roster is
+    // non-empty and does not contain the selected bot, drop the selection.
+    // An empty roster means "not loaded yet" - keep the selection then.
+    if (state.selection.type === SelectionType.BOT && state.bots.size > 0 && !state.bots.has(state.selection.id)) {
+        state.selection = { type: SelectionType.NONE, id: null, data: null };
+        console.log(`[webui] cleared stale bot selection #${state.selection?.id ?? 'old'}`);
+    }
     // bots
     const bots = [...state.bots.values()].sort((a, b) => a.id - b.id);
     el.botCount.textContent = String(bots.length);

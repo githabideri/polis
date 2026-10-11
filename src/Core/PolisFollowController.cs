@@ -14,6 +14,15 @@
 // The oikistes layer maps operator semantics onto this: "follow me" -> my
 // body's id, "follow all" -> every bot's ids. The webui exposes the same
 // as a toggle button.
+//
+// 10-11 post-mortem: the original registration used
+// sapi.Event.RegisterCallback((float dt) => FollowTick(), 2000) and the
+// callback never fired (follow armed, player moved 30 blocks, no re-issue,
+// no exception logged — it simply does not run on 1.22.7). The proven
+// repeated-tick path in this codebase is RegisterGameTickListener (the 50 ms
+// system tick and the 1 s zone tick both fire); the tick body is now
+// try/catch'd and every re-issue is logged, so a future silent death shows
+// up in the journal.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,9 +39,21 @@ public partial class PolisSystem
 
     internal void FollowInit()
     {
-        // The 1.22.7 event API takes (Action<float> dt, intervalMs);
-        // the dt is discarded - the interval is the tick.
-        sapi.Event.RegisterCallback((float dt) => FollowTick(), 2000);
+        // NOT Event.RegisterCallback — see the post-mortem above.
+        sapi.Event.RegisterGameTickListener(FollowTickListener, 2000);
+        sapi.Logger.Debug("[polis] follow: tick listener registered (2000ms)");
+    }
+
+    private void FollowTickListener(float dt)
+    {
+        try
+        {
+            FollowTick();
+        }
+        catch (Exception ex)
+        {
+            sapi.Logger.Error("[polis] follow tick threw: " + ex.Message + "\n" + ex.StackTrace);
+        }
     }
 
     internal int FollowAdd(System.Collections.Generic.IEnumerable<long> ids, Action<string> log)
@@ -63,6 +84,7 @@ public partial class PolisSystem
 
     internal void FollowTick()
     {
+        if (sapi == null || sapi.World == null) return;
         if (followBots.Count == 0) return;
 
         // The estate runs one operator; take the first online player.
@@ -98,6 +120,7 @@ public partial class PolisSystem
             if (!fresh) continue;
 
             followLastTargets[id] = pcell;
+            sapi.Logger.Debug($"[polis] follow: re-issue goto for {id} -> ({pcell.X},{pcell.Y},{pcell.Z})");
             void OnResult(bool ok, string msg)
             {
                 bot.RecordActionResult("follow", ok, msg, sapi.World.ElapsedMilliseconds);

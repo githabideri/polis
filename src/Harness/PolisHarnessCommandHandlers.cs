@@ -1423,11 +1423,35 @@ public partial class PolisSystem
         }
         int added = FollowAdd(ids, m => sapi.Logger.Debug($"[polis] {m}"));
         var unknown = ids.Where(id => !bots.ContainsKey(id)).ToList();
+        if (unknown.Count > 0)
+        {
+            // 10-11 post-mortem: the operator once passed a PLAYER entity id
+            // (28000) here and got ok=true with "+0" nine times — an
+            // invisible no-op. Unknown ids are now a hard error that names
+            // the valid bots, and a player id is called out explicitly.
+            string hint = null;
+            try
+            {
+                var playerIds = new HashSet<long>();
+                foreach (var p in sapi.World.AllOnlinePlayers)
+                    if (p is IServerPlayer sp && sp.Entity != null)
+                        playerIds.Add(sp.Entity.Id);
+                var isPlayer = unknown.Where(id => playerIds.Contains(id)).ToList();
+                if (isPlayer.Count > 0)
+                    hint = $" id(s) {string.Join(",", isPlayer)} are the player, not bots — follow makes bots follow the player;";
+            }
+            catch { /* the hint is best-effort */ }
+            var valid = bots.Keys.OrderBy(x => x).Select(x => x.ToString()).ToList();
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = false,
+                Message = $"no such bot(s): {string.Join(",", unknown)}.{hint} valid bot ids: [{string.Join(",", valid)}]"
+            };
+        }
         return new PolisTestHarness.CommandResult
         {
             Ok = true,
-            Message = $"follow: +{added} -> [{string.Join(",", followBots.OrderBy(x => x))}]" +
-                      (unknown.Count > 0 ? $" (unknown bots: {string.Join(",", unknown)})" : "")
+            Message = $"follow: +{added} -> [{string.Join(",", followBots.OrderBy(x => x))}]"
         };
     }
 
