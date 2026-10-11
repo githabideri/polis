@@ -138,7 +138,11 @@ SOURCES = {
         aliases=("flintstone",),
         hand_families=("looseflints-",)),
     "stick": Source(
-        "stick", families=("leavesbranchy-", "leaves-"),
+        # 2026-10-11: leavesbranchy- ONLY. Plain leaves-* drop nothing
+        # (measured live: a mined leaves-grown1-birch produced zero
+        # sticks and the knife craft died on the empty grid). Every
+        # leavesbranchy-* variant drops exactly 1 stick.
+        "stick", families=("leavesbranchy-",),
         drops=("stick",), loose=("stick",), kind="chop"),
     "wood": Source(
         "wood", families=("log-grown-", "log-placed-", "wood-"),

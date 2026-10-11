@@ -50,7 +50,7 @@ check("every source names at least one block family and one drop",
 check("cattail carries the knife gate",
       SOURCES["cattail"].tool == "knife-generic-flint")
 check("sticks are an ITEM: leaf block families + a loose ground code",
-      SOURCES["stick"].families == ("leavesbranchy-", "leaves-")
+      SOURCES["stick"].families == ("leavesbranchy-",)
       and "stick" in SOURCES["stick"].loose)
 check("wood covers grown AND placed logs (the log-grown->log-placed "
       "drop mapping)",

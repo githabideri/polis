@@ -3861,6 +3861,12 @@ def main():
                         plan_dicts.append(sj)
                         dep = [sj["id"]]
                 elif kind == "knap":
+                    # idempotency (campaign re-runs): a head the carrier
+                    # already holds is not chipped a second time.
+                    have_head = (int(inv.get(what, 0) or 0)
+                                 + int(inv.get("game:" + what, 0) or 0))
+                    if have_head >= q:
+                        continue
                     stone = _mk.KNAPOUS_STONE.get(what, "flint")
                     plan_dicts.append({"id": jid, "type": "knap",
                                        "recipes": [what],
@@ -3870,6 +3876,12 @@ def main():
                                        "origin": "deterministic"})
                     dep = [jid]
                 elif kind == "craft":
+                    have_out = (int(inv.get(what, 0) or 0)
+                                + int(inv.get("game:" + what, 0) or 0))
+                    if have_out >= q:
+                        # the finished tool is already carried: the
+                        # whole chain is done (nothing to append)
+                        continue
                     plan_dicts.append({"id": jid, "type": "craft",
                                        "material": what, "source": what,
                                        "quantity": q,
@@ -3884,6 +3896,15 @@ def main():
                 if pd["type"] == "craft" and pd["material"] not in seen_out:
                     seen_out.add(pd["material"])
                     craft_rows.extend(_live_recipes(pol, pd["material"]))
+            if not plan_dicts:
+                # every step was already in the carrier's cargo - the
+                # tool is made; nothing to run (idempotent re-request)
+                run.update({"outcome": "complete",
+                            "reason": ("deterministic: make %s - the "
+                                       "carrier already holds it; all "
+                                       "chain steps were in cargo"
+                                       % goal.object)})
+                return finish(args.out, run, t0)
             # campaign=True: make is an OPERATOR-declared chain (the
             # same scoping the --jobs campaign gets) - the 27B never
             # emits knap/craft chains itself.
