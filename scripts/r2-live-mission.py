@@ -2254,15 +2254,15 @@ def _pick_once(pol, bot, cell, count):
     the approach module's try_action shape."""
     r = pol.cmd("pick", [str(cell[0]), str(cell[1]), str(cell[2]),
                          str(max(1, count))], bot, timeout=120)
-    la = {"Name": "pick", "Ok": r.get("Ok"), "Msg": r.get("Message") or ""}
-    if r.get("Ok") is not False:
-        t_a = time.time()
-        while time.time() - t_a < 20:
-            la = pol.state(bot).get("LastAction") or {}
-            if la.get("Name") == "pick" and la.get("Ok") is not None:
-                break
-            time.sleep(1)
-    return {"ok": r.get("Ok") is True and la.get("Ok") is not False,
+    # The command response is the verdict: the handler runs the pick
+    # rounds synchronously and reports picked-count + the bush's new
+    # growth state (2026-10-11, the berry mission: this used to re-poll
+    # the bot's LastAction for up to 20 s and inherit a STALE goto
+    # entry ("one step short") when the walk had stopped adjacent -
+    # a 5-for-5 pick was recorded as a definitive failure). Trust r.
+    la = {"Name": "pick", "Ok": r.get("Ok"),
+          "Msg": r.get("Message") or ""}
+    return {"ok": r.get("Ok") is True,
             "last_action": la, "data": r.get("Data") or {}}
 
 
