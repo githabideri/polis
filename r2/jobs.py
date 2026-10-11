@@ -22,7 +22,7 @@ from dataclasses import dataclass, field, asdict
 # Goal grammar (v1)
 # --------------------------------------------------------------------------
 
-GOAL_VERBS = ("mine", "harvest", "place", "goto", "sow", "plant",
+GOAL_VERBS = ("mine", "harvest", "gather", "place", "goto", "sow", "plant",
               "forage", "build", "construct", "build-plan", "craft")
 
 #: operator synonyms that normalize onto another grammar verb
@@ -47,10 +47,16 @@ class Goal:
     supply: str | None = None    # operator declaration: "external" (the
                                  # orchestrator supplies the material
                                  # deterministically - 12.10 remediation (a))
+    tool: str | None = None      # item code the executor must hold in the
+                                 # right hand for the action (2026-10-11:
+                                 # reeds - a knife/scythe-held break keeps
+                                 # the root + regrows; the engine checks
+                                 # the held item, not the inventory)
 
     def to_dict(self):
         return {"verb": self.verb, "object": self.object,
-                "at": self.at, "n": self.n, "supply": self.supply}
+                "at": self.at, "n": self.n, "supply": self.supply,
+                "tool": self.tool}
 
     @classmethod
     def from_dict(cls, d):
@@ -74,7 +80,11 @@ class Goal:
         if supply is not None and supply != "external":
             raise GoalGrammarError(
                 "goal.supply must be 'external' or null, got %r" % supply)
-        return cls(verb=verb, object=obj, at=at, n=n, supply=supply)
+        tool = d.get("tool")
+        if tool is not None and not isinstance(tool, str):
+            raise GoalGrammarError("goal.tool must be a string or null")
+        return cls(verb=verb, object=obj, at=at, n=n, supply=supply,
+                   tool=tool)
 
     def describe(self):
         s = "%s %s" % (self.verb, self.object)
@@ -82,6 +92,8 @@ class Goal:
             s += " at %s" % self.at
         if self.n:
             s += " x%d" % self.n
+        if self.tool:
+            s += " tool %s" % self.tool
         return s
 
 
@@ -103,6 +115,18 @@ JOB_CATALOG = {
                   "source": "world",    "needs": ("source",)},
     "harvest":   {"produces": True,  "consumes": False,
                   "source": "world",    "needs": ("source",)},
+    # gather (2026-10-11): the basics umbrella - "gather flint x3",
+    # "gather cattail x2 tool knife-generic-flint". One verb, any
+    # legitimate means: the executor dispatches on the resource
+    # FAMILY at execution - loose ground item (the C# `pickup`),
+    # forageable bush (the pick path), crop (harvestcrop), any other
+    # block/plant (break/mine - tool-aware: what the bot HOLDS decides
+    # the reed's outcome, stump + root vs destruction). `harvest`
+    # remains the crop-specific verb; the deterministic compiler folds
+    # it into gather. GOAL-SCOPED like forage: campaigns + the
+    # deterministic compiler, not the 27B planner vocabulary yet.
+    "gather":    {"produces": True,  "consumes": False,
+                  "source": "world",    "needs": ("material", "quantity")},
     "place":     {"produces": False, "consumes": True,
                   "source": "world",    "needs": ("target", "material")},
     "goto":      {"produces": False, "consumes": False,
@@ -249,7 +273,7 @@ JOB_CATALOG = {
 #: need them, the 27B never learned them.
 PLANNER_JOB_TYPES = tuple(
     k for k in JOB_CATALOG
-    if k not in ("build_plan", "chop", "forage", "crucible_fire",
+    if k not in ("build_plan", "chop", "forage", "gather", "crucible_fire",
                  "crucible_insert", "crucible_fuel", "crucible_take",
                  "crucible_pour", "clayform", "kiln_fire",
                  "firepit_fuel", "cook", "eat"))
@@ -283,6 +307,11 @@ class Job:
                                    # log - the two families differ)
     plant: str | None = None       # forage: the forageable's block code
                                    # or family glob (`fruitingbush-*`)
+    tool: str | None = None        # harvest/mine: the item code to hold in
+                                   # the right hand for the action (2026-10-11
+                                   # reed knife gate: the break outcome -
+                                   # stump + root + regrowth vs destruction -
+                                   # is decided by the held tool)
     deliver: str | None = None     # forage: "carry" (default) | "drop"
                                    # (drop everything at the bot's feet
                                    # on completion)
@@ -336,6 +365,9 @@ class Job:
         plant = d.get("plant")
         if plant is not None and not isinstance(plant, str):
             raise ValueError("job %s: plant must be a string" % jid)
+        tool = d.get("tool")
+        if tool is not None and not isinstance(tool, str):
+            raise ValueError("job %s: tool must be a string" % jid)
         deliver = d.get("deliver")
         if deliver is not None and deliver not in ("carry", "drop"):
             raise ValueError("job %s: deliver must be 'carry' or 'drop'"
@@ -362,7 +394,7 @@ class Job:
                    source=d.get("source"), target=d.get("target"),
                    material=d.get("material"), quantity=qty,
                    plan=d.get("plan"), at=at, expect=expect,
-                   plant=plant, deliver=deliver, recipes=recipes,
+                   plant=plant, tool=tool, deliver=deliver, recipes=recipes,
                    depends_on=list(deps),
                    claims=list(d.get("claims") or []),
                    budget=int(d.get("budget") or 12),

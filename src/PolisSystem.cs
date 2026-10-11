@@ -37,6 +37,7 @@ public partial class PolisSystem : ModSystem
     readonly Dictionary<string, long> highlightClearAtMs = new Dictionary<string, long>();
     readonly Dictionary<string, long> pathHighlightClearAtMs = new Dictionary<string, long>();
     readonly Dictionary<string, long> zoneHighlightClearAtMs = new Dictionary<string, long>();
+    readonly Dictionary<string, long> buildPreviewClearAtMs = new Dictionary<string, long>();
     readonly Dictionary<string, PreviewState> previewByPlayer = new Dictionary<string, PreviewState>();
     long nextBotHighlightAtMs;
     long tickListenerId;
@@ -767,6 +768,7 @@ public partial class PolisSystem : ModSystem
         UpdatePreviewPaths();
         UpdateBotHighlights();
         UpdateZoneHighlights();
+        UpdateBuildPreviewHighlights();
     }
 
     /// <summary>
@@ -3355,6 +3357,50 @@ public partial class PolisSystem : ModSystem
         for (int i = 0; i < expired.Count; i++)
         {
             zoneHighlightClearAtMs.Remove(expired[i]);
+        }
+    }
+
+    /// <summary>
+    /// Build-preview highlight (2026-10-11): the TRANSPARENT BLUEPRINT the
+    /// human sees before a build is commenced - per-cell translucent
+    /// cubes via World.HighlightBlocks (no blocks placed, no claims,
+    /// no save-file impact; the same client-side channel the zone
+    /// wireframe and path previews use). Colors are the PRE-HOC mirror
+    /// of the post-build `verify` oracle: cyan = the cell is air/water
+    /// and will receive a block; red = collision (a different block
+    /// stands there); green = already correct; grey = unknown code.
+    /// Auto-clears after the duration (the same *ClearAtMs pattern).
+    /// </summary>
+    void HighlightBuildPreview(IServerPlayer player, List<BlockPos> positions, List<int> colors, int durationMs = 300000)
+    {
+        sapi.World.HighlightBlocks(player, PolisConstants.BuildPreviewHighlightSlotId, positions, colors,
+            EnumHighlightBlocksMode.Absolute, EnumHighlightShape.Cube);
+        buildPreviewClearAtMs[player.PlayerUID] = sapi.World.ElapsedMilliseconds + durationMs;
+    }
+
+    void UpdateBuildPreviewHighlights()
+    {
+        if (buildPreviewClearAtMs.Count == 0) return;
+
+        long now = sapi.World.ElapsedMilliseconds;
+        var expired = new List<string>();
+
+        foreach (var entry in buildPreviewClearAtMs)
+        {
+            if (now < entry.Value) continue;
+
+            var player = sapi.World.PlayerByUid(entry.Key) as IServerPlayer;
+            if (player != null)
+            {
+                sapi.World.HighlightBlocks(player, PolisConstants.BuildPreviewHighlightSlotId, new List<BlockPos>());
+            }
+
+            expired.Add(entry.Key);
+        }
+
+        for (int i = 0; i < expired.Count; i++)
+        {
+            buildPreviewClearAtMs.Remove(expired[i]);
         }
     }
 

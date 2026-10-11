@@ -144,6 +144,11 @@ def parse_goal_line(line):
                 raise ValueError("only 'supply external' is declared")
             goal["supply"] = "external"
             i += 2
+        elif rest[i] == "tool" and i + 1 < len(rest):
+            # 2026-10-11: the held-tool name (the reed knife gate -
+            # what the bot HOLDS decides the break's outcome)
+            goal["tool"] = rest[i + 1]
+            i += 2
         else:
             raise ValueError("unparseable goal token %r" % rest[i])
     return goal
@@ -672,6 +677,12 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
                          "(engine placement is not exposed)" if not
                          seed_post < seed_have else None)}
 
+    # cell-targeted gather (2026-10-11): one named cell, dispatched on
+    # its LIVE block (bush/crop/plant) - before the chop/cell-mine
+    # branch, which hard-wires the mine/chop command.
+    if job.type == "gather" and job.at:
+        return _gather_cell(pol, bot, wm, job, run, measured)
+
     # cell-targeted jobs (2026-10-06 campaign): a chop, or a mine that
     # names its own cell instead of a world resource - one fixed cell,
     # approach + engine verdict + measured drop
@@ -681,12 +692,22 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
     # resource-targeted jobs: the target cell is the resource's
     # representative cell (measured world fact, not model output)
     rec = wm.resources.get(job.source) if job.type in (
-        "mine", "harvest", "pickup") else None
-    if job.type in ("mine", "harvest", "pickup"):
+        "mine", "harvest", "pickup", "gather") else None
+    if job.type in ("mine", "harvest", "pickup", "gather"):
         if rec is None:
             return (False, "resource %s vanished from the model" % job.source,
                     measured, {}, {"block_gone": None,
                                    "measured": measured})
+        # 2026-10-11: the gather umbrella dispatches on the resource
+        # FAMILY - forageable bush -> the pick arm; crop -> harvestcrop
+        # (falls through); anything else -> the break/mine path (the
+        # held tool decides the reed's outcome - stump + root +
+        # regrowth vs outright destruction). The specific verbs keep
+        # their legacy meaning.
+        if job.type == "gather" and "fruitingbush" in (rec.code or ""):
+            job.plant = job.plant or rec.code
+            job.deliver = job.deliver or "carry"
+            return _forage(pol, bot, wm, job, run)
         need = job.quantity or 1
         # 2026-10-05: the quantity loop. A cluster holds more blocks
         # than one approach+act pair, so walk the cluster's cells until
@@ -733,14 +754,33 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
                 tool_codes.add(it["Code"])
         has_tool = any((t or "").startswith(
             ("pickaxe", "shovel", "axe", "hoe")) for t in tool_codes)
-        if job.type == "mine" and not has_tool and \
+        tool_note = ""
+        if job.tool:
+            # held-tool actions (the reed knife gate): the item must be
+            # in the RIGHT HAND (cargo slot 0 - what the engine checks).
+            # `tohand` moves an owned stack there; it refuses (no
+            # spawn) when the bot owns none - the honest failure names
+            # the gap (craft the knife first).
+            want_t = job.tool.split(":")[-1].lower()
+            owns = any((t or "").split(":")[-1].lower() == want_t or
+                       (t or "").split(":")[-1].lower().endswith("-" + want_t)
+                       for t in tool_codes)
+            if not owns:
+                return (False,
+                        "%s %s -> needs %s in hand; not in cargo (the "
+                        "honest gap: craft it first)"
+                        % (job.type, rec.code, job.tool), measured, {},
+                        {"block_gone": None, "measured": measured})
+            eq = pol.cmd("tohand", [job.tool], bot)
+            tool_note = "tohand %s ok=%s; " % (job.tool, bool(eq.get("Ok")))
+        elif job.type == "mine" and not has_tool and \
                 classify(rec.code)[1] not in HAND_MINABLE:
             tr = pol.cmd("give", ["pickaxe-iron", "1"], bot)
-            detail = ("%s %s -> gave pickaxe-iron ok=%s; "
-                      % (job.type, rec.code, bool(tr.get("Ok"))))
-        else:
-            detail = "%s %s -> " % (job.type, rec.code)
-        cmd_name = {"mine": "mine", "harvest": "harvestcrop"}.get(job.type)
+            tool_note = "gave pickaxe-iron ok=%s; " % bool(tr.get("Ok"))
+        detail = "%s %s -> %s" % (job.type, rec.code, tool_note)
+        cmd_name = {"mine": "mine", "harvest": "harvestcrop",
+                    "gather": ("harvestcrop" if rec.kind == "crop"
+                               else "mine")}.get(job.type)
         mined, parts = 0, []
         last_la, last_attempts = {}, []
         wedged_rescues = 0  # budget: 4 hard-resets per mine job
@@ -1871,7 +1911,52 @@ def _campaign_jobs(args):
     return jobs, None
 
 
-def _cell_break(pol, bot, wm, job, run):
+def _gather_cell(pol, bot, wm, job, run, measured):
+    """A cell-targeted gather (2026-10-11): the operator names one
+    fixed cell, same contract as _cell_break. Dispatch on the LIVE
+    block: bush -> the pick arm; crop -> harvestcrop; any other
+    plant/block -> mine (the held-tool gate - reed stump vs
+    destruction - lives in the mine action, not chop). A job that
+    names a tool moves it to the right hand first; if the bot does
+    not own one, the honest refusal names the gap (craft it first)."""
+    cell = [int(v) for v in job.at]
+    code0 = (_cell_code(pol, bot, cell) or "").lower()
+    if code0 and "fruitingbush" in code0:
+        job.plant = job.plant or code0
+        job.deliver = job.deliver or "carry"
+        return _forage(pol, bot, wm, job, run)
+    if job.tool:
+        st0 = pol.state(bot)
+        b0 = st0.get("Bot") or {}
+        tool_codes = set()
+        for k in ("RightHand", "LeftHand"):
+            it = b0.get(k)
+            if it and it.get("Code"):
+                tool_codes.add(it["Code"])
+        for it in (b0.get("Backpack") or []):
+            if it and it.get("Code"):
+                tool_codes.add(it["Code"])
+        want_t = job.tool.split(":")[-1].lower()
+        owns = any((t or "").split(":")[-1].lower() == want_t or
+                   (t or "").split(":")[-1].lower().endswith("-" + want_t)
+                   for t in tool_codes)
+        if not owns:
+            return (False,
+                    "gather %s @ %s -> needs %s in hand; not in cargo "
+                    "(the honest gap: craft it first)"
+                    % (job.material, cell, job.tool), measured, {},
+                    {"block_gone": None, "measured": measured})
+        eq = pol.cmd("tohand", [job.tool], bot)
+        if not eq.get("Ok"):
+            return (False, "gather %s @ %s -> tohand %s refused: %s"
+                    % (job.material, cell, job.tool, eq.get("Message")),
+                    measured, {}, {"block_gone": None, "measured": measured})
+    kind = classify(code0)[0]
+    cmd = "harvestcrop" if kind == "crop" else "mine"
+    return _cell_break(pol, bot, wm, job, run, cmd=cmd)
+
+
+def _cell_break(pol, bot, wm, job, run, cmd=None):
     """Approach + break ONE fixed cell (a chop job, or a cell-targeted
     mine from an operator campaign). Same contract as the mine branch:
     the approach module walks the standable cells around the block
@@ -1879,8 +1964,10 @@ def _cell_break(pol, bot, wm, job, run):
     the block-gone scan is the oracle; the drop is MEASURED as the
     pre/post inventory delta, never assumed; the wedge guard runs after
     the attempt (a wedged bot aborts with an honest diagnosis instead
-    of a silent stall)."""
-    cmd_name = "chop" if job.type == "chop" else "mine"
+    of a silent stall). `cmd` overrides the issued command (the 2026-10-11
+    gather cell arm: harvestcrop on a crop, mine on everything else -
+    the held-tool gate lives in the mine action, not chop)."""
+    cmd_name = cmd or ("chop" if job.type == "chop" else "mine")
     cell = [int(v) for v in job.at]
     measured = {}
     # staleness before the walk: the surveyed cell may already be empty
@@ -2011,6 +2098,35 @@ def _nearest_target(pol, bot, plant, radius=24, limit=50):
     return None
 
 
+def _targets_entities(pol, bot, plant, radius=32, limit=200):
+    """Loose GROUND ITEMS matching a code / family glob, from the
+    /polis/targets entities view (the blocks scan never sees item
+    entities - loose flint, dropped sticks; the 2026-10-11 gather
+    umbrella's loose arm). Returns [(entityId, code, [x, y, z])].
+    JSON case is tolerated (the harness serializes POCOs PascalCase;
+    older payloads camelCase)."""
+    token = str(plant or "").split(":")[-1].lower()
+    filter_ = token.split("*")[0]  # the codeContains substring
+    url = ("/polis/targets?botId=%d&mode=entities&radius=%d&limit=%d"
+           "&codeContains=%s") % (bot, radius, limit, filter_)
+    r = pol.get(url) or {}
+    out = []
+    for key in ("Entities", "entities"):
+        for e in (r.get(key) or []):
+            code = (e.get("Code") or e.get("code") or e.get("ItemCode")
+                    or e.get("itemcode") or "").split(":")[-1].lower()
+            if not code or not _code_matches(code, plant):
+                continue
+            p = e.get("Pos") or e.get("pos")
+            eid = e.get("EntityId")
+            if eid is None:
+                eid = e.get("id")
+            if not p or len(p) < 3 or eid is None:
+                continue
+            out.append((eid, code, [int(p[0]), int(p[1]), int(p[2])]))
+    return out
+
+
 def _pick_once(pol, bot, cell, count):
     """One pick round (Lane A's harness command: `pick x y z [count]`,
     issued from an adjacent cell - it runs the same pick path the
@@ -2134,6 +2250,52 @@ def _forage(pol, bot, wm, job, run):
          "approach_attempts": attempts}, \
         {"target": list(cell), "gathered": have, "wanted": want,
          "rounds": rounds, "measured": measured}
+
+
+def _gather_loose(pol, bot, wm, job, run, measured):
+    """Gather a LOOSE ground item (the 2026-10-11 gather umbrella's
+    entity arm): loose flint, dropped sticks - item entities the
+    block scan never sees. The live source is the /polis/targets
+    entities view, re-queried each round (entities despawn, move,
+    appear); walk to each matching entity and `pickup` it (the C# pickup
+    command transfers the stack into the bot's cargo and removes the
+    entity once absorbed). Gains are MEASURED as the pre/post inventory
+    delta, never assumed (the chop precedent)."""
+    import math as _m
+    want = str(job.material or "").split(":")[-1].lower()
+    need = job.quantity or 1
+    pre0 = inventory_of(pol.state(bot))
+    taken = 0
+    seen = set()
+    rounds = 0
+    max_rounds = max(2, min(job.budget or 12, need + 4))
+    while taken < need and rounds < max_rounds:
+        rounds += 1
+        ents = [e for e in _targets_entities(pol, bot, want, 32, 200)
+                if e[0] not in seen]
+        if not ents:
+            break
+        bp = pol.state(bot)["Bot"]["Pos"]
+        ents.sort(key=lambda e: _m.hypot(e[2][0] - bp[0], e[2][2] - bp[2]))
+        eid, code, cell = ents[0]
+        seen.add(eid)
+        d = _m.hypot(cell[0] - bp[0], cell[2] - bp[2])
+        v5.goto_wait(pol, bot, cell, timeout=max(30, int(2.5 * d) + 10))
+        r = pol.cmd("pickup", [str(eid)], bot, timeout=60)
+        if not r.get("Ok"):
+            continue  # out of range / vanished - the next round re-queries
+        post = inventory_of(pol.state(bot))
+        now = _delta_gain(pre0, post, job)
+        if now > taken:
+            taken = now
+    measured = _delta_dict(pre0, inventory_of(pol.state(bot)))
+    ok = taken >= need
+    detail = ("gather %s (loose) -> %d/%d picked up in %d round(s)"
+              % (job.material, taken, need, rounds))
+    return ok, detail, measured, \
+        {"cmd": "pickup", "target": job.at, "seen_entities": len(seen)}, \
+        {"gathered": taken, "wanted": need, "rounds": rounds,
+         "measured": measured}
 
 
 def _delta_dict(pre, post):
@@ -2938,7 +3100,7 @@ def main():
 
     # 3. plan + validate (deterministic, goal-aware)
     if getattr(args, "no_planner", False) and goal.verb in (
-            "mine", "harvest", "sow", "build", "build-plan"):
+            "mine", "harvest", "gather", "sow", "build", "build-plan"):
         # the deterministic goal compiler (13.6 step 2, no LLM): a
         # one-verb acquisition goal has one obvious plan - the closest
         # resource with sufficient observed quantity. The SAME
@@ -3270,9 +3432,19 @@ def main():
         else:
             import math as _math
             bp = st["Bot"]["Pos"]
+            # 2026-10-11: the flexible-gather verbs. `gather` is the
+            # basics umbrella (loose pickup / break / harvest / pick -
+            # dispatched on the resource family at execution); `harvest`
+            # folds into it. Both match a resource by material EXACTLY
+            # or by code family (the goal may name `tallplant-coopersreed`
+            # while the live code is `tallplant-coopersreed-land-normal-
+            # free` - the model carries the full variant code in `code`).
+            flex = goal.verb in ("gather", "harvest")
+            want_obj = str(goal.object).split(":")[-1].lower()
             best = None
             for r in wm.resources.values():
-                if r.material != goal.object:
+                if not (r.material == want_obj
+                        or _code_matches(r.code, goal.object)):
                     continue
                 if r.observed_quantity < (goal.n or 1):
                     continue
@@ -3280,21 +3452,47 @@ def main():
                 d = _math.hypot(c[0] - bp[0], c[2] - bp[2])
                 if best is None or d < best[0]:
                     best = (d, r)
-            if best is None:
+            # loose-item fallback: the world model clusters BLOCKS;
+            # ground items (looseflints-*) are entities - one live
+            # targets query, centred on the bot.
+            loose = None
+            if best is None and flex:
+                for eid, code, p in _targets_entities(pol, bot, goal.object,
+                                                      32, 200):
+                    d = _math.hypot(p[0] - bp[0], p[2] - bp[2])
+                    if loose is None or d < loose[0]:
+                        loose = (d, eid, code, p)
+            if best is None and loose is None:
                 run.update({"outcome": "rejected",
                             "reason": "deterministic: no %s resource with "
                                       "sufficient observed quantity" % goal.object})
                 return finish(args.out, run, t0)
-            d, r = best
-            raw = json.dumps({"id": "j1", "type": goal.verb,
-                              "quantity": goal.n or 1, "source": r.id,
-                              "origin": "deterministic"})
             prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
                                                  center=(bp[0], 0, bp[2]))
-            run["planner"] = {"mode": "deterministic",
-                              "chosen": {"id": r.id, "distance": round(d, 1),
-                                          "observed": r.observed_quantity},
-                              "candidates": sorted(index)}
+            if loose is not None:
+                d, eid, lcode, p = loose
+                raw = json.dumps({"id": "j1", "type": "gather",
+                                  "quantity": goal.n or 1,
+                                  "material": lcode,
+                                  "at": [p[0], p[1], p[2]],
+                                  "origin": "deterministic"})
+                run["planner"] = {"mode": "deterministic",
+                                  "chosen": {"entity": eid, "code": lcode,
+                                              "distance": round(d, 1)},
+                                  "candidates": sorted(index)}
+            else:
+                d, r = best
+                raw = json.dumps({"id": "j1",
+                                  "type": ("gather" if flex else goal.verb),
+                                  "quantity": goal.n or 1, "source": r.id,
+                                  "material": r.material,
+                                  "tool": goal.tool,
+                                  "origin": "deterministic"})
+                run["planner"] = {"mode": "deterministic",
+                                  "chosen": {"id": r.id,
+                                              "distance": round(d, 1),
+                                              "observed": r.observed_quantity},
+                                  "candidates": sorted(index)}
             jobs, failure = validate_plan(raw, index, inv, goal=goal)
             run["plan"] = {"raw": raw, "latency_ms": 0,
                            "jobs": [j.to_dict() for j in jobs] if jobs else None,

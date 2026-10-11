@@ -1,299 +1,345 @@
 [
-  {
-    "type": "function",
-    "function": {
-      "name": "state",
-      "description": "Inspect your own body: position, hands, backpack, last action result, what is around your cell, and the current world digest.",
-      "parameters": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "scan",
-      "description": "Block census of a box in the world: the r x r x r region around cell (x,y,z) (y spans y..y+4). Returns block codes with counts. Your own position is the default center.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "x": {
-            "type": "integer",
-            "description": "center x (default 0)"
-          },
-          "y": {
-            "type": "integer",
-            "description": "center y (default 2)"
-          },
-          "z": {
-            "type": "integer",
-            "description": "center z (default 0)"
-          },
-          "r": {
-            "type": "integer",
-            "description": "radius in blocks (default 8)"
-          }
-        },
-        "required": []
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "screenshot",
-      "description": "Save a view from your body's perspective to the observation directory.",
-      "parameters": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "events",
-      "description": "Recent actor-tagged activity (who did what, last n events).",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "n": {
-            "type": "integer",
-            "description": "how many (default 8)"
-          }
-        },
-        "required": []
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "autonomy",
-      "description": "Read the current autonomy preset. It is world-owned: you read it, you cannot change it.",
-      "parameters": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "give",
-      "description": "Hand an item to your own body (item code + quantity).",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "item": {
-            "type": "string",
-            "description": "item code, e.g. redmeat-cooked"
-          },
-          "qty": {
-            "type": "integer",
-            "description": "quantity (default 1)"
-          }
-        },
-        "required": [
-          "item"
-        ]
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "mission",
-      "description": "Dispatch a BACKGROUND job through the job system - returns at once, 90-minute cap, the settlement stays conversable. Call with NO goal to report the running/finished state instead. Goal grammar: 'mine <material> xN', 'harvest <crop> xN', 'sow <crop> xN at <site>' (complete endogenous chain - it harvests its own seed), 'forage <bush> xN at <x,y,z>' (fruitingbush-* family), 'build <material> xN at <site>' (N blocks as a ring platform; add 'supply external' if the bot holds none), 'build-plan <plan-id> at <site>' (a whole building from the library - never 'build <plan-id>'), 'goto <player>' (bring the selected bots to the player's live position). Coordinates in a goal are space-separated numbers.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "goal": {
-            "type": "string",
-            "description": "the goal line (omit to query mission status)"
-          },
-          "bots": {
-            "type": "string",
-            "description": "'self' (your body, default) | 'all' | 'id1,id2'"
-          }
-        },
-        "required": []
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "pots",
-      "description": "Dispatch the POT-WORK FOOD CHAIN as one background mission: clay -> clayform table -> raw crucible -> pit-kiln firing -> fired crucible -> firepit cooking -> the bot eats. It gives the bot its own clay and meat as the only external input; it cooks ONE meat per fire load (the 1.22 firepit drops a second meat in the same load - engine quirk, not a bug). All three cells are REQUIRED: the air cell the clayform table goes in, the floor of a 1-deep hole (the pit kiln), the firepit cell. They live at the base - query the base zone first if you do not have them.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "form_at": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            },
-            "description": "[x,y,z] air cell for the clayform table"
-          },
-          "hole_at": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            },
-            "description": "[x,y,z] floor of the 1-deep hole (pit kiln)"
-          },
-          "firepit_at": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            },
-            "description": "[x,y,z] the firepit cell"
-          }
-        },
-        "required": [
-          "form_at",
-          "hole_at",
-          "firepit_at"
-        ]
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "query",
-      "description": "What is in a NAMED ZONE or around a point: a compact digest (counts plus a capped code/position list). target: a zone name, or two coordinates 'x z' (an optional third number is the radius; the coordinate form walks your body there first). mode: blocks | entities | all (default all). code: substring filter.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "target": {
-            "type": "string",
-            "description": "zone name or 'x z [radius]'"
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "blocks",
-              "entities",
-              "all"
-            ]
-          },
-          "code": {
-            "type": "string",
-            "description": "block/entity code substring filter"
-          },
-          "radius": {
-            "type": "integer",
-            "description": "radius for the coordinate form"
-          }
-        },
-        "required": [
-          "target"
-        ]
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "zone",
-      "description": "Named rectangular world regions (the registry). sub: 'list' | 'show <name>' (read) | 'define <name> x1 y1 z1 x2 y2 z2' | 'remove <name>' | 'rename <old> <new>' (writes are free-only autonomy).",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "sub": {
-            "type": "string",
-            "enum": [
-              "list",
-              "show",
-              "define",
-              "remove",
-              "rename"
-            ]
-          },
-          "args": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "sub"
-        ]
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "crew",
-      "description": "Size the worker roster (your body excluded) to exactly n: it recruits if short, retires the newest if over (hard cap 8). The ONE way to change crew size - never raw spawn/despawn.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "n": {
-            "type": "integer",
-            "description": "target worker count"
-          }
-        },
-        "required": [
-          "n"
-        ]
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "command",
-      "description": "A direct harness command (free autonomy only). Risky ones: 'despawn <id>' removes EXACTLY the bot with that id - if the reply names a different id or errors, STOP and report verbatim, never 'repair' with a spawn. 'spawn' adds a new bot - a creation act, never a retry mechanism.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "cmd": {
-            "type": "string",
-            "description": "the harness command name"
-          },
-          "args": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "cmd"
-        ]
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "follow",
-      "description": "The follow TOGGLE. mode 'me': your body walks to the operator and stays with them; 'all': the whole crew; 'off': release (the mod tracks the player's live position until off; idle bots only, never interrupts running work).",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "mode": {
-            "type": "string",
-            "enum": [
-              "me",
-              "all",
-              "off"
-            ]
-          }
-        },
-        "required": [
-          "mode"
-        ]
-      }
-    }
+ {
+  "type": "function",
+  "function": {
+   "name": "state",
+   "description": "Inspect your own body: position, hands, backpack, last action result, what is around your cell, and the current world digest.",
+   "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+   }
   }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "scan",
+   "description": "Block census of a box in the world: the r x r x r region around cell (x,y,z) (y spans y..y+4). Returns block codes with counts. Your own position is the default center.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "x": {
+      "type": "integer",
+      "description": "center x (default 0)"
+     },
+     "y": {
+      "type": "integer",
+      "description": "center y (default 2)"
+     },
+     "z": {
+      "type": "integer",
+      "description": "center z (default 0)"
+     },
+     "r": {
+      "type": "integer",
+      "description": "radius in blocks (default 8)"
+     }
+    },
+    "required": []
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "screenshot",
+   "description": "Save a view from your body's perspective to the observation directory.",
+   "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "events",
+   "description": "Recent actor-tagged activity (who did what, last n events).",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "n": {
+      "type": "integer",
+      "description": "how many (default 8)"
+     }
+    },
+    "required": []
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "autonomy",
+   "description": "Read the current autonomy preset. It is world-owned: you read it, you cannot change it.",
+   "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "give",
+   "description": "Hand an item to your own body (item code + quantity).",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "item": {
+      "type": "string",
+      "description": "item code, e.g. redmeat-cooked"
+     },
+     "qty": {
+      "type": "integer",
+      "description": "quantity (default 1)"
+     }
+    },
+    "required": [
+     "item"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "mission",
+   "description": "Dispatch a BACKGROUND job through the job system - returns at once, 90-minute cap, the settlement stays conversable. Call with NO goal to report the running/finished state instead. Goal grammar: 'gather <material> xN [tool <item>] [at <x,y,z>]' (BASICS - the world provides however it provides: a loose ground item (flint, a dropped stick) is picked up, a plant (cattail/tallplant-*) is broken - with a knife or scythe in the bot's hand the reed keeps its root and regrows, without one it is destroyed, a crop is harvested, a bush picked; 'harvest' is the same verb), 'mine <material> xN', 'sow <crop> xN at <site>' (complete endogenous chain - it harvests its own seed), 'forage <bush> xN at <x,y,z>' (fruitingbush-* family), 'build <material> xN at <site>' (N blocks as a ring platform; add 'supply external' if the bot holds none), 'build-plan <plan-id> at <site>' (a whole building from the library - never 'build <plan-id>'), 'goto <player>' (bring the selected bots to the player's live position). Coordinates in a goal are space-separated numbers.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal": {
+      "type": "string",
+      "description": "the goal line (omit to query mission status)"
+     },
+     "bots": {
+      "type": "string",
+      "description": "'self' (your body, default) | 'all' | 'id1,id2'"
+     }
+    },
+    "required": []
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "pots",
+   "description": "Dispatch the POT-WORK FOOD CHAIN as one background mission: clay -> clayform table -> raw crucible -> pit-kiln firing -> fired crucible -> firepit cooking -> the bot eats. It gives the bot its own clay and meat as the only external input; it cooks ONE meat per fire load (the 1.22 firepit drops a second meat in the same load - engine quirk, not a bug). All three cells are REQUIRED: the air cell the clayform table goes in, the floor of a 1-deep hole (the pit kiln), the firepit cell. They live at the base - query the base zone first if you do not have them.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "form_at": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      },
+      "description": "[x,y,z] air cell for the clayform table"
+     },
+     "hole_at": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      },
+      "description": "[x,y,z] floor of the 1-deep hole (pit kiln)"
+     },
+     "firepit_at": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      },
+      "description": "[x,y,z] the firepit cell"
+     }
+    },
+    "required": [
+     "form_at",
+     "hole_at",
+     "firepit_at"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "query",
+   "description": "What is in a NAMED ZONE or around a point: a compact digest (counts plus a capped code/position list). target: a zone name, or two coordinates 'x z' (an optional third number is the radius; the coordinate form walks your body there first). mode: blocks | entities | all (default all). code: substring filter.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "target": {
+      "type": "string",
+      "description": "zone name or 'x z [radius]'"
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "blocks",
+       "entities",
+       "all"
+      ]
+     },
+     "code": {
+      "type": "string",
+      "description": "block/entity code substring filter"
+     },
+     "radius": {
+      "type": "integer",
+      "description": "radius for the coordinate form"
+     }
+    },
+    "required": [
+     "target"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "zone",
+   "description": "Named rectangular world regions (the registry) - the settlement and per-building areas the operator declares: sub: 'list' | 'show <name>' (read) | 'define <name> x1 y1 z1 x2 y2 z2' | 'remove <name>' | 'rename <old> <new>' (writes are free-only autonomy). 'show' also highlights the zone's wireframe for the operator.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "sub": {
+      "type": "string",
+      "enum": [
+       "list",
+       "show",
+       "define",
+       "remove",
+       "rename"
+      ]
+     },
+     "args": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    },
+    "required": [
+     "sub"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "crew",
+   "description": "Size the worker roster (your body excluded) to exactly n: it recruits if short, retires the newest if over (hard cap 8). The ONE way to change crew size - never raw spawn/despawn.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "n": {
+      "type": "integer",
+      "description": "target worker count"
+     }
+    },
+    "required": [
+     "n"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "command",
+   "description": "A direct harness command (free autonomy only). Risky ones: 'despawn <id>' removes EXACTLY the bot with that id - if the reply names a different id or errors, STOP and report verbatim, never 'repair' with a spawn. 'spawn' adds a new bot - a creation act, never a retry mechanism.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "cmd": {
+      "type": "string",
+      "description": "the harness command name"
+     },
+     "args": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    },
+    "required": [
+     "cmd"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "follow",
+   "description": "The follow TOGGLE. mode 'me': your body walks to the operator and stays with them; 'all': the whole crew; 'off': release (the mod tracks the player's live position until off; idle bots only, never interrupts running work).",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "mode": {
+      "type": "string",
+      "enum": [
+       "me",
+       "all",
+       "off"
+      ]
+     }
+    },
+    "required": [
+     "mode"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "vocab",
+   "description": "The name<->code resolver: the operator says a human word (\"cattail\", \"flint\", \"stick\", \"cranberry\"), the game knows codes. Queries the LIVE in-game registry (self-syncing across game updates) and returns matching codes + names + measured drop lists. Call it for any resource word that is not on the hot list before dispatching a gather/mine mission.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "word": {
+      "type": "string",
+      "description": "the human word"
+     }
+    },
+    "required": [
+     "word"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "preview",
+   "description": "The TRANSPARENT BLUEPRINT: before a build is commenced, show the whole building plan as translucent cubes at a ground anchor (nothing is placed - the operator sees it in VNC/webui; the reply reports willPlace/collision/already counts). ALWAYS preview a plan before proposing to build it; never build what the operator has not seen. plan: a library name (see 'build-plan'); origin: 'x y z'.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "plan": {
+      "type": "string",
+      "description": "building plan name"
+     },
+     "origin": {
+      "type": "string",
+      "description": "'x y z' ground anchor"
+     },
+     "duration_ms": {
+      "type": "integer"
+     }
+    },
+    "required": [
+     "plan",
+     "origin"
+    ]
+   }
+  }
+ }
 ]

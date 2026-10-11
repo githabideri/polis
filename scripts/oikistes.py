@@ -676,18 +676,18 @@ class Oikistes:
     KNOWN = frozenset(
         ("state", "scan", "screenshot", "events", "autonomy",
          "mission", "pots", "give", "command", "query", "zone",
-         "crew", "follow"))
+         "crew", "follow", "vocab", "preview"))
 
     def check_tool(self, tool, autonomy):
         if tool not in self.KNOWN:
             return False          # the gate whitelists; unknown is denied
         READONLY = ("state", "scan", "screenshot", "events", "autonomy",
-                    "query")
+                    "query", "vocab")
         if autonomy == "strict":
             return tool in READONLY
         if autonomy == "guarded":
             return tool in READONLY or tool in (
-                "mission", "pots", "give", "zone", "follow")
+                "mission", "pots", "give", "zone", "follow", "preview")
         return True  # free
 
     # zone subcommands that READ (everything else writes the zone
@@ -739,6 +739,13 @@ class Oikistes:
                     a = {"n": int(parts[0])}
                 except (IndexError, ValueError):
                     a = {"n": None}
+            elif tool == "vocab":
+                a = {"word": a}
+            elif tool == "preview":
+                # 'box3x3 123 45 678' - plan name then origin cell
+                parts = a.split()
+                a = {"plan": parts[0],
+                     "origin": " ".join(parts[1:])} if parts else {}
             elif tool == "follow":
                 a = {"mode": a.strip()} if a.strip() else {"mode": "off"}
             else:
@@ -844,6 +851,10 @@ class Oikistes:
                 return self._query(a)
             if tool == "zone":
                 return self._zone(a, autonomy)
+            if tool == "vocab":
+                return self._vocab(a)
+            if tool == "preview":
+                return self._preview(a)
             if tool == "crew":
                 return self._crew(a.get("n"))
             if tool == "command":
@@ -997,6 +1008,80 @@ class Oikistes:
         return "zone %s: %s" % (sub, r.get("Message") or r.get("error")
                                 or ("ok" if r.get("Ok") else "no reply"))
 
+    def _vocab(self, a):
+        """The name<->code resolver (2026-10-11): the user says a human
+        word ("cattail", "flint"), the game knows codes
+        (tallplant-coopersreed, looseflints-*). This queries the
+        harness' LIVE /polis/codes registry (self-syncing across game
+        updates - nothing pre-generated) and returns the matching
+        names/codes with their measured drop lists. Read-only, always
+        allowed."""
+        word = str(a.get("word") or a.get("name") or "").strip()
+        if not word:
+            return "vocab: give me a word to resolve"
+        r = self.get("/polis/codes?name=%s&limit=12" % quote(word.lower()))
+        d = r.get("Data") or r.get("data") or r
+        if not d.get("ok", True) and d.get("error"):
+            return "vocab: the codes endpoint is unavailable (%s) - " \
+                   "use the hot list or ask the operator" % d["error"]
+        rows = d.get("codes") or d.get("Codes") or []
+        if not rows:
+            return ("vocab: no code or name contains %r - it may be a "
+                    "variant spelling (ask again with the code you "
+                    "suspect, or check the hot list)" % word)
+        out = []
+        for x in rows:
+            code = x.get("code") or x.get("Code") or "?"
+            name = x.get("name") or x.get("Name") or ""
+            kind = x.get("kind") or x.get("Kind") or "?"
+            drops = []
+            for dr in (x.get("drops") or x.get("Drops") or [])[:4]:
+                dc = dr.get("code") or dr.get("Code") or "?"
+                dq = dr.get("qty") or dr.get("Qty") or 1
+                drops.append("%sx%s" % (dc, dq) if dq != 1 else dc)
+            out.append("%s %s (name: %s; drops: %s)"
+                       % (kind, code, name or "?",
+                          ", ".join(drops) if drops else "-"))
+        return ("vocab for %r (%d match%s):\n"
+                + "\n".join(out)) % (word, len(rows),
+                                     "" if len(rows) == 1 else "es")
+
+    def _preview(self, a):
+        """The TRANSPARENT BLUEPRINT (2026-10-11): before a build is
+        commenced, show the whole plan as translucent cubes at the
+        named origin (the harness' build-preview - nothing is placed;
+        cyan = will be placed, red = collision, green = already there,
+        grey = unknown code). The human sees it in VNC/webui; the
+        reply carries the same counts for my report. ALWAYS preview
+        before proposing a build; never build on a plan the human has
+        not seen previewed (guarded autonomy)."""
+        plan = str(a.get("plan") or "").strip()
+        origin = str(a.get("origin") or "").split()
+        dur = a.get("duration_ms") or 300000
+        try:
+            dur = int(dur)
+        except (TypeError, ValueError):
+            dur = 300000
+        if plan not in self.plans:
+            return ("preview: unknown plan %r (available: %s)"
+                    % (plan, ", ".join(self.plans)))
+        if len(origin) != 3:
+            return "preview: origin must be 'x y z' (the ground anchor)"
+        try:
+            x, y, z = (int(v) for v in origin)
+        except ValueError:
+            return "preview: origin must be three integers"
+        try:
+            bp = buildplans.load_plan(
+                os.path.join(REPO, "builds", plan + ".json"))
+        except Exception as e:
+            return "preview: plan %s failed to load: %s" % (plan, e)
+        payload = [{"pos": [x + dx, y + dy, z + dz], "code": m}
+                   for (dx, dy, dz), m in bp.blocks]
+        r = self.polis.cmd("build-preview", [json.dumps(payload), str(dur)],
+                           None, actor="oikistes")
+        return "preview: %s" % (r.get("Message") or r.get("error"))
+
     def run_mission(self, goal_line, bots="self"):
         """Order work through the R2 job system (the actuator).
         Structured verbs (mine/harvest/sow) go through the deterministic
@@ -1059,7 +1144,7 @@ class Oikistes:
             # arrival (2026-10-11: the 13:01 flint-search goto ended in
             # 0 s with no run for exactly this reason).
             cmd += ["--site", ",".join(toks[1:4])]
-        if verb in ("mine", "harvest", "sow", "forage", "build",
+        if verb in ("mine", "harvest", "gather", "sow", "forage", "build",
                     "build-plan"):
             cmd.append("--no-planner")
         else:

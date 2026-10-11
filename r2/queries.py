@@ -66,6 +66,9 @@ PREFIX_RULES = [
     # plant; its harvest drop (fruit-<type>) is food (2026-10-07
     # survival run - the forage job's ledger needs the drop's kind).
     ("fruitingbush-", "plant"),
+    # reeds/cattail (2026-10-11): a break with a knife/scythe HELD keeps
+    # the root + regrows; anything else destroys the plant.
+    ("tallplant-", "plant"),
     ("fruit-", "food"),
 ]
 

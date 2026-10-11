@@ -16,6 +16,7 @@ public static class PolisConstants
     public const int PreviewPathHighlightSlotId = 48524;
     public const int EnginePathDebugHighlightSlotId = 2;
     public const int ZoneHighlightSlotId = 48525;
+    public const int BuildPreviewHighlightSlotId = 48526;
 
     // Action ranges
     public const float DefaultActionRange = 4.5f;

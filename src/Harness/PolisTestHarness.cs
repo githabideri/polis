@@ -502,6 +502,100 @@ public class PolisTestHarness : IDisposable
                 }, "polis-harness-recipes");
             }
 
+            // The name<->code resolver endpoint (oikistes' `vocab` tool
+            // back-end, 2026-10-11): enumerate the in-memory registries
+            // (world.Blocks / world.Items - the 1.22 accessors; there is
+            // no BlockManager/CollectibleManager left) with the lang-file
+            // display names, so a human word ("cattail") resolves to the
+            // exact code(s) + measured drop list. Self-syncing across
+            // game updates - the live registry is the source, nothing is
+            // pre-generated. ?name=<substr> filters name-or-code,
+            // ?kind=block|item narrows the registry, ?limit caps the page
+            // (default 50, max 200). The full table is ~7.7k rows, which
+            // is exactly why this exists as an on-demand query instead of
+            // a prompt table.
+            else if (path == "/polis/codes" && request.HttpMethod == "GET")
+            {
+                var wantName = QueryValue(request, "name")?.ToLowerInvariant();
+                var wantKind = QueryValue(request, "kind")?.ToLowerInvariant();
+                int limit = 50;
+                var lim2 = QueryValue(request, "limit");
+                if (!string.IsNullOrWhiteSpace(lim2) && int.TryParse(lim2, out var lv2))
+                    limit = Math.Min(200, Math.Max(1, lv2));
+
+                sapi.Event.EnqueueMainThreadTask(() =>
+                {
+                    var rows = new System.Collections.Generic.List<object>();
+                    int scanned = 0;
+                    try
+                    {
+                        var world = sapi.World;
+                        if (world == null)
+                        {
+                            tcs.SetResult(new { ok = false, error = "world unavailable" });
+                            return;
+                        }
+
+                        void AddRow(string kind, CollectibleObject obj)
+                        {
+                            if (obj == null) return;
+                            var code = obj.Code?.Path;
+                            if (string.IsNullOrEmpty(code)) return;
+                            if (wantKind != null && kind != wantKind) return;
+                            string name = null;
+                            try { name = obj.GetCollectibleName(sapi, 1); } catch { }
+                            var hay = ((name ?? "") + " " + code).ToLowerInvariant();
+                            if (wantName != null && !hay.Contains(wantName)) return;
+                            scanned++;
+                            if (rows.Count >= limit) return;
+                            var dropRows = new System.Collections.Generic.List<object>();
+                            if (kind == "block")
+                            {
+                                Block b = obj as Block;
+                                if (b != null)
+                                {
+                                    try
+                                    {
+                                        foreach (var ds in b.GetDrops(world, new BlockPos(0, 0, 0), null, 1.0f) ?? Array.Empty<ItemStack>())
+                                        {
+                                            if (ds?.Collectible == null) continue;
+                                            dropRows.Add(new { code = ds.Collectible.Code.Path, qty = ds.StackSize });
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        foreach (var dd in b.Drops ?? Array.Empty<BlockDropItemStack>())
+                                        {
+                                            var ist = dd.GetNextItemStack(1.0f);
+                                            if (ist?.Collectible == null) continue;
+                                            dropRows.Add(new { code = ist.Collectible.Code.Path, qty = ist.StackSize, chance = dd.Chance });
+                                        }
+                                    }
+                                }
+                            }
+                            rows.Add(new
+                            {
+                                kind,
+                                code,
+                                name = name ?? (string)null,
+                                drops = dropRows
+                            });
+                        }
+
+                        foreach (var b in world.Blocks)
+                            AddRow("block", b);
+                        foreach (var it in world.Items)
+                            AddRow("item", it);
+
+                        tcs.SetResult(new { ok = true, scanned, count = rows.Count, codes = rows });
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.SetResult(new { ok = false, error = ex.Message });
+                    }
+                }, "polis-harness-codes");
+            }
+
             else if (path == "/polis/debug/charsel" && request.HttpMethod == "GET")
             {
                 var sp = sapi.World?.AllOnlinePlayers?.FirstOrDefault() as IServerPlayer;

@@ -443,7 +443,8 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
     #     missing entry reads as empty (unknown is never yes).
     if cells is not None:
         for j in jobs:
-            if j.type == "chop" or (j.type in ("mine", "forage") and j.at):
+            if j.type == "chop" or (j.type in ("mine", "forage", "gather")
+                                    and j.at):
                 key = tuple(int(v) for v in j.at) if j.at else None
                 code = None
                 if key is not None:
@@ -619,7 +620,7 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
                 # their claim the same way: they are campaign-scoped,
                 # so no res-* reference exists by construction.
                 if campaign and (
-                        (j.at and j.type in ("mine", "chop"))
+                        (j.at and j.type in ("mine", "chop", "gather"))
                         or j.type in ("forage", "crucible_take",
                                       "clayform", "kiln_fire", "cook")):
                     avail[j.material] = avail.get(j.material, 0) + \
@@ -649,7 +650,7 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
     # 6. claim compatibility (single bot: no two jobs on one resource)
     seen = {}
     for j in jobs:
-        if j.source and j.type in ("mine", "harvest"):
+        if j.source and j.type in ("mine", "harvest", "gather"):
             if j.source in seen:
                 return None, Failure(
                     "claim_conflict",

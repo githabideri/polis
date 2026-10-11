@@ -295,9 +295,40 @@ class PolisMineBlockAction : EntityActionBase
         // it with per-type drops; the plain Drops field is empty for them).
         var drops = block.GetDrops(world, pos, null, 1.0f) ?? Array.Empty<ItemStack>();
 
-        world.BlockAccessor.SetBlock(0, pos); // 0 = air
-
         var agent = vas.Entity as EntityAgent;
+
+        // Reed knife gate (mirrors BlockReeds.OnBlockBroken, 1.22.7):
+        // breaking a GROWN reed while holding a knife or scythe
+        // transitions it to the harvested stump (roots stay in the
+        // ground, the plant regrows in 7 days) instead of destroying it
+        // outright. Anything else - bare hands, pickaxe - drops the
+        // tops and the block is gone. 1.22's BreakBlock only has an
+        // IPlayer overload (loot would route to the human), so this
+        // bot-side break path reproduces the engine's own block outcome
+        // here; the held-item check reads the bot's right hand (the
+        // same slot the tool validation above uses).
+        int targetId = 0; // air
+        if (block is BlockReeds &&
+            ((RegistryObject)block).Variant["state"] == "normal")
+        {
+            var held = (toolSlot?.Itemstack != null) ? toolSlot.Itemstack
+                : (agent != null && PolisInventoryHelpers.BotCargo(agent) is { } cargo
+                   && cargo.Count > 0) ? cargo[0].Itemstack : null;
+            bool knifeLike = held?.Collectible != null &&
+                (held.Collectible.HasTag("tool-knife") ||
+                 held.Collectible.HasTag("tool-scythe"));
+            if (knifeLike)
+            {
+                // the engine's own transition: the harvested variant
+                // (it hard-codes habitat "land" - mirror it exactly)
+                var stump = world.GetBlock(((RegistryObject)block).CodeWithVariants(
+                    new string[] { "habitat", "state" },
+                    new string[] { "land", "harvested" }));
+                if (stump != null) targetId = stump.BlockId;
+            }
+        }
+        world.BlockAccessor.SetBlock(targetId, pos);
+
         foreach (var stack in drops)
         {
             bool inserted = agent != null

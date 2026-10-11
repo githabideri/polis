@@ -376,6 +376,10 @@ public partial class PolisSystem
                     return ExecuteRipenCommand(args, context);
                 case "equip":
                     return ExecuteEquipCommand(args, context);
+                case "tohand":
+                    return ExecuteToHandCommand(args, context);
+                case "build-preview":
+                    return ExecuteBuildPreviewCommand(args, context);
                 case "scan":
                     return ExecuteScanCommand(args, context);
                 case "verify":
@@ -5747,6 +5751,199 @@ public partial class PolisSystem
                 carcassBlockCode = carcassBlockCode
             }
         };
+    }
+
+    PolisTestHarness.CommandResult ExecuteToHandCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: tohand <itemcode>
+        // HONEST move (unlike `equip`, which spawns the item from
+        // nothing): move an EXISTING stack of the item from the bot's
+        // cargo to the right-hand slot (cargo slot 0 - the slot the
+        // mine action's tool validation reads). Needed for the reed
+        // knife gate: the engine's break outcome depends on what is
+        // HELD, and a crafted knife sitting in slot 3 does not count.
+        // Refuses (no spawn) if the bot does not own one.
+        if (args.Length < 1)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: tohand <itemcode>" };
+        }
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+        var agent = bot.Entity as EntityAgent;
+        var cargo = agent != null ? PolisInventoryHelpers.BotCargo(agent) : null;
+        if (cargo == null || cargo.Count == 0)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "bot has no cargo" };
+        }
+        string want = args[0].ToLowerInvariant();
+        var handStack = cargo[0].Itemstack;
+        if (handStack?.Collectible != null &&
+            handStack.Collectible.Code.Path.ToLowerInvariant().Contains(want))
+        {
+            return new PolisTestHarness.CommandResult { Ok = true,
+                Message = $"{handStack.Collectible.Code.Path} already in right hand" };
+        }
+        int srcIdx = -1;
+        for (int i = 1; i < cargo.Count; i++) // slot 0 is the destination
+        {
+            var st = cargo[i].Itemstack;
+            if (st == null || st.Collectible == null) continue;
+            var c = st.Collectible.Code.Path.ToLowerInvariant();
+            if (c == want || c.EndsWith("-" + want) || c.Contains(want))
+            {
+                srcIdx = i;
+                break;
+            }
+        }
+        if (srcIdx < 0)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false,
+                Message = $"bot does not own {args[0]} (honest: nothing to move)" };
+        }
+        var hand = cargo[0];
+        var taken = cargo[srcIdx].Itemstack;
+        if (hand.Itemstack != null && hand.Itemstack.Collectible != null
+            && hand.Itemstack.Collectible.Code.Path.ToLowerInvariant()
+            != taken.Collectible.Code.Path.ToLowerInvariant())
+        {
+            hand.Swap(cargo[srcIdx]);
+        }
+        else
+        {
+            hand.CopyFrom(cargo[srcIdx]);
+            cargo[srcIdx].Clear();
+        }
+        return new PolisTestHarness.CommandResult { Ok = true,
+            Message = $"{taken.Collectible.Code.Path} x{taken.StackSize} now in right hand (was slot {srcIdx})" };
+    }
+
+    PolisTestHarness.CommandResult ExecuteBuildPreviewCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: build-preview <json> [durationMs]
+        // json: [{"pos": [x, y, z], "code": "<block code>"}, ...] (max
+        // 4000 cells) - the TRANSPARENT BLUEPRINT (2026-10-11): the
+        // human sees the whole structure as translucent cubes BEFORE
+        // the build is commenced (World.HighlightBlocks - nothing is
+        // placed, no save-file impact; it auto-clears). Colors are the
+        // PRE-HOC mirror of the post-build `verify` oracle, so the
+        // agent and the human confirm from the same facts:
+        //   cyan   = the cell is air/water: the block will be placed
+        //   red    = collision: a different block stands there
+        //   green  = already correct (the block is already in place)
+        //   grey   = the code did not resolve
+        // The reply carries the same counts - the agent's confirmation
+        // is symmetric with what the human sees.
+        if (args.Length < 1)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false,
+                Message = "Usage: build-preview <json> [durationMs]" };
+        }
+        int durationMs = 300000;
+        if (args.Length > 1 && int.TryParse(args[1], out var dur))
+        {
+            durationMs = Math.Max(1000, Math.Min(3600000, dur));
+        }
+        IServerPlayer player = null;
+        if (context != null && !string.IsNullOrWhiteSpace(context.PlayerUid))
+        {
+            player = sapi.World.PlayerByUid(context.PlayerUid) as IServerPlayer;
+        }
+        if (player == null)
+        {
+            foreach (var p in sapi.World.AllOnlinePlayers)
+            {
+                player = p as IServerPlayer;
+                if (player != null) break;
+            }
+        }
+        if (player == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false,
+                Message = "No player available to show the preview" };
+        }
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(args[0]);
+            if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false,
+                    Message = "json must be an array of {pos, code} objects" };
+            }
+            var positions = new List<BlockPos>();
+            var colors = new List<int>();
+            int willPlace = 0, collision = 0, alreadyDone = 0, unknown = 0;
+            var seen = new HashSet<BlockPos>();
+            var cyan = ColorUtil.ToRgba(0, 230, 230, 120);
+            var red = ColorUtil.ToRgba(230, 60, 60, 160);
+            var green = ColorUtil.ToRgba(80, 200, 80, 120);
+            var grey = ColorUtil.ToRgba(160, 160, 160, 100);
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                if (positions.Count >= 4000) break;
+                var posEl = el.GetProperty("pos");
+                var code = el.GetProperty("code").GetString() ?? "";
+                if (posEl.ValueKind != System.Text.Json.JsonValueKind.Array
+                    || posEl.GetArrayLength() < 3)
+                {
+                    continue;
+                }
+                var pos = new BlockPos(
+                    posEl[0].GetInt32(), posEl[1].GetInt32(), posEl[2].GetInt32());
+                if (!seen.Add(pos)) continue;
+                var want = string.IsNullOrEmpty(code) ? null
+                    : sapi.World.GetBlock(new AssetLocation(
+                        code.Contains(":") ? code : "game:" + code));
+                var live = sapi.World.BlockAccessor.GetBlock(pos);
+                var liveCode = live?.Code?.Path ?? "air";
+                if (want == null)
+                {
+                    unknown++;
+                    colors.Add(grey);
+                }
+                else if (liveCode == want.Code.Path)
+                {
+                    alreadyDone++;
+                    colors.Add(green);
+                }
+                else if (live == null || live.Id == 0 || liveCode.Contains("water")
+                         || liveCode == "air" || liveCode.EndsWith("-free"))
+                {
+                    willPlace++;
+                    colors.Add(cyan);
+                }
+                else
+                {
+                    collision++;
+                    colors.Add(red);
+                }
+                positions.Add(pos);
+            }
+            if (positions.Count == 0)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false,
+                    Message = "no valid cells in the preview payload" };
+            }
+            HighlightBuildPreview(player, positions, colors, durationMs);
+            return new PolisTestHarness.CommandResult { Ok = true,
+                Message = $"preview: {positions.Count} cell(s) " +
+                          $"({willPlace} to place, {collision} collision, " +
+                          $"{alreadyDone} already, {unknown} unknown) " +
+                          $"for {durationMs} ms",
+                Data = new
+                {
+                    cells = positions.Count,
+                    willPlace, collision, alreadyDone, unknown,
+                    durationMs,
+                    player = player.PlayerName
+                } };
+        }
+        catch (Exception ex)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false,
+                Message = $"preview payload: {ex.Message}" };
+        }
     }
 
     PolisTestHarness.CommandResult ExecuteSpawnEntityCommand(string[] args, PolisTestHarness.CommandContext context)
