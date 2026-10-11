@@ -65,11 +65,11 @@ for tool, steps in CHAINS.items():
 check("steps_for knife x1",
       steps_for("knife", 1) ==
       [("gather", "flint", 2), ("knap", "knifeblade-flint", 1),
-       ("craft", "knife-generic-flint", 1)])
+       ("gather", "stick", 1), ("craft", "knife-generic-flint", 1)])
 check("steps_for knife x3 scales the gather",
       steps_for("knife", 3) ==
       [("gather", "flint", 6), ("knap", "knifeblade-flint", 3),
-       ("craft", "knife-generic-flint", 3)])
+       ("gather", "stick", 3), ("craft", "knife-generic-flint", 3)])
 check("steps_for torch x2",
       steps_for("torch", 2) ==
       [("gather", "drygrass", 4), ("gather", "stick", 2),

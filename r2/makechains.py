@@ -49,19 +49,26 @@ MATERIAL_ITEM = {
 #:                    match is by output code path, 2026-10-11)
 #:   kind "craft"  -> the output code (the live recipe table check)
 CHAINS = {
+    # 2026-10-11: every stone tool's craft consumes a stick (the
+    # 10-09 live chain proved the craft by GIVING it, g2; in the
+    # campaign it must be GATHERED or the craft dies on an empty
+    # grid).
     "knife": [
         ("gather", "flint", 2),
         ("knap", "knifeblade-flint", 1),
+        ("gather", "stick", 1),
         ("craft", "knife-generic-flint", 1),
     ],
     "axe": [
         ("gather", "flint", 2),
         ("knap", "axehead-flint", 1),
+        ("gather", "stick", 1),
         ("craft", "axe-flint", 1),
     ],
     "hoe": [
         ("gather", "flint", 2),
         ("knap", "hoehead-flint", 1),
+        ("gather", "stick", 1),
         ("craft", "hoe-flint", 1),
     ],
     "shovel": [
@@ -72,6 +79,7 @@ CHAINS = {
     "spear": [
         ("gather", "flint", 2),
         ("knap", "spearhead-flint", 1),
+        ("gather", "stick", 1),
         ("craft", "spear-generic-flint", 1),
     ],
     "firestarter": [
