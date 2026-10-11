@@ -1815,37 +1815,55 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
             return (False, "goto %s -> %s" % (job.target,
                                               r.get("Message") or r.get("error")),
                     measured, {"goto": r.get("Message")}, {})
-        t0 = time.time()
-        last_d = None
-        stuck = 0.0
-        d = 1e9
-        while time.time() - t0 < 240:
-            st = pol.state(bot)
-            pos = (st.get("Bot") or {}).get("Pos") or [0, 0, 0]
-            la = st.get("LastAction") or {}
-            if len(pos) == 3:
-                d = ((pos[0] - cell[0]) ** 2 +
-                     (pos[2] - cell[2]) ** 2) ** 0.5
-            if d <= 2.5:
-                return (True, "goto %s -> arrived (%.1f m from target)"
-                        % (job.target, d),
-                        measured, {"goto": "arrived"},
-                        {"arrived": True, "distance": round(d, 1)})
-            if la.get("Name") == "goto" and la.get("Ok") is False:
-                return (False, "goto %s -> failed: %s"
-                        % (job.target, la.get("Msg")),
-                        measured, {"goto": la.get("Msg")}, {})
-            if last_d is not None and abs(last_d - d) < 0.5:
-                stuck += 2
-                if stuck > 30:
-                    break
-            else:
-                stuck = 0.0
-            last_d = d
-            time.sleep(2)
-        return (False, "goto %s -> not arrived (%.1f m after %ds)"
-                % (job.target, d, int(time.time() - t0)),
-                measured, {}, {})
+        # 2026-10-11 (A1): the traverser's per-action repath budget is
+        # NON-DETERMINISTIC on hillside terrain - the same walk failed
+        # 'stuck after 3 repaths' in the mission and succeeded on the
+        # operator's immediate retry. A failed walk is re-issued (up to
+        # two more times) before the job reports it.
+        for attempt in (1, 2, 3):
+            t0 = time.time()
+            last_d = None
+            stuck = 0.0
+            d = 1e9
+            while time.time() - t0 < 240:
+                st = pol.state(bot)
+                pos = (st.get("Bot") or {}).get("Pos") or [0, 0, 0]
+                la = st.get("LastAction") or {}
+                if len(pos) == 3:
+                    d = ((pos[0] - cell[0]) ** 2 +
+                         (pos[2] - cell[2]) ** 2) ** 0.5
+                if d <= 2.5:
+                    return (True, "goto %s -> arrived (%.1f m from"
+                            " target, walk %d)" % (job.target, d,
+                                                   attempt),
+                            measured, {"goto": "arrived"},
+                            {"arrived": True, "distance":
+                             round(d, 1)})
+                if la.get("Name") == "goto" and la.get("Ok") is False:
+                    if attempt < 3:
+                        break   # re-issue the walk (new repath budget)
+                    return (False,
+                            "goto %s -> failed: %s (after %d walks)"
+                            % (job.target, la.get("Msg"), attempt),
+                            measured, {"goto": la.get("Msg")}, {})
+                if last_d is not None and abs(last_d - d) < 0.5:
+                    stuck += 2
+                    if stuck > 30:
+                        break  # stalled - retry or give up below
+                else:
+                    stuck = 0.0
+                last_d = d
+                time.sleep(2)
+            if attempt < 3:
+                pol.cmd("goto", ["%0.1f" % (cell[0] + 0.5),
+                                  str(cell[1]),
+                                  "%0.1f" % (cell[2] + 0.5), "true",
+                                  "0.02", "true"], bot)
+                continue
+            return (False, "goto %s -> not arrived (%.1f m from"
+                    " target after %ds, %d walks)"
+                    % (job.target, d, int(time.time() - t0), attempt),
+                    measured, {}, {})
     if job.type == "wait":
         # a time valve: quantity is SECONDS (default 2). The crucible
         # chain (2026-10-07) uses it to wait out engine smelt progress
