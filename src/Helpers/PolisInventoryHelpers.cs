@@ -322,24 +322,37 @@ internal static class PolisInventoryHelpers
     }
 
     /// <summary>
+    /// Every slot a player can carry items in (hands + all named
+    /// inventories - the 1.22 IPlayerInventoryManager.Inventories map).
+    /// The player-side mirror of the bot cargo walk (eatplayer,
+    /// 2026-10-11: EntityPlayer exposes no single inventory property).
+    /// </summary>
+    internal static System.Collections.Generic.List<ItemSlot> PlayerSlots(EntityPlayer player)
+    {
+        var list = new System.Collections.Generic.List<ItemSlot>
+        {
+            player.RightHandItemSlot,
+            player.LeftHandItemSlot
+        };
+        var mgr = player.Player?.InventoryManager;
+        if (mgr != null)
+            foreach (var inv in mgr.Inventories.Values)
+                for (int i = 0; i < inv.Count; i++) list.Add(inv.Slots[i]);
+        return list;
+    }
+
+    /// <summary>
     /// Count carried units of an item in a PLAYER's hands + inventory
     /// (the player mirror of CountBotItems; eatplayer, 2026-10-11).
     /// </summary>
     internal static int CountPlayerItems(EntityPlayer player, string code)
     {
         int total = 0;
-        foreach (var slot in new[] { player.RightHandItemSlot, player.LeftHandItemSlot })
+        foreach (var slot in PlayerSlots(player))
         {
             var it = slot?.Itemstack;
             if (it != null && IsItem(it, code)) total += it.StackSize;
         }
-        var inv = player.Player?.InventoryManager?.Inventories;
-        if (inv != null)
-            for (int i = 0; i < inv.Count; i++)
-            {
-                var it = inv.Slots[i]?.Itemstack;
-                if (it != null && IsItem(it, code)) total += it.StackSize;
-            }
         return total;
     }
 
@@ -351,14 +364,7 @@ internal static class PolisInventoryHelpers
     internal static string FirstEdibleItemCode(EntityPlayer player)
     {
         var world = player.World;
-        var slots = new System.Collections.Generic.List<ItemSlot>
-        {
-            player.RightHandItemSlot, player.LeftHandItemSlot
-        };
-        var inv = player.Player?.InventoryManager?.Inventories;
-        if (inv != null)
-            for (int i = 0; i < inv.Count; i++) slots.Add(inv.Slots[i]);
-        foreach (var slot in slots)
+        foreach (var slot in PlayerSlots(player))
         {
             var it = slot?.Itemstack;
             if (it == null || it.StackSize <= 0 || it.Collectible == null) continue;
@@ -378,39 +384,29 @@ internal static class PolisInventoryHelpers
     /// </summary>
     internal static bool ConsumeOneFromPlayerInventory(EntityPlayer player, string code)
     {
-        foreach (var slot in new[] { player.RightHandItemSlot, player.LeftHandItemSlot })
+        foreach (var slot in PlayerSlots(player))
         {
             if (slot != null && ConsumeOneInSlot(slot, code)) return true;
         }
-        var inv = player.Player?.InventoryManager?.Inventories;
-        if (inv != null)
-            for (int i = 0; i < inv.Count; i++)
-            {
-                if (ConsumeOneInSlot(inv.Slots[i], code)) return true;
-            }
         return false;
     }
 
     /// <summary>
     /// Insert a stack into a player's hands + inventory (the player
-    /// mirror of TryInsertIntoBotInventory; EatenStack leftovers, 2026-10-11).
+    /// mirror of TryInsertIntoBotInventory; EatenStack leftovers,
+    /// 2026-10-11).
     /// </summary>
     internal static bool TryInsertIntoPlayerInventory(EntityPlayer player, ItemStack stack, out ItemStack leftover, out string err)
     {
         leftover = null; err = null;
         if (stack == null || stack.StackSize <= 0) { leftover = stack; return true; }
-        var targets = new System.Collections.Generic.List<ItemSlot>
-        {
-            player.RightHandItemSlot, player.LeftHandItemSlot
-        };
-        var inv = player.Player?.InventoryManager?.Inventories;
-        if (inv != null)
-            for (int i = 0; i < inv.Count; i++) targets.Add(inv.Slots[i]);
+        var targets = PlayerSlots(player);
         foreach (var slot in targets)
         {
             if (slot == null) continue;
             var it = slot.Itemstack;
-            if (it != null && it.StackSize > 0 && (it.Collectible != null && stack.Collectible != null && it.Collectible.Code == stack.Collectible.Code) &&
+            if (it != null && it.StackSize > 0 &&
+                (it.Collectible != null && stack.Collectible != null && it.Collectible.Code == stack.Collectible.Code) &&
                 it.StackSize < it.MaxStackSize)
             {
                 int space = it.MaxStackSize - it.StackSize;
@@ -419,20 +415,13 @@ internal static class PolisInventoryHelpers
                 it.StackSize += moved;
                 if (stack.StackSize <= 0) return true;
             }
-        }
-        foreach (var slot in targets)
-        {
-            if (slot == null) continue;
-            var it = slot.Itemstack;
-            if (it == null || it.StackSize <= 0)
+            else if (it == null || it.StackSize <= 0)
             {
-                int take = Math.Min(stack.StackSize, stack.MaxStackSize);
-                slot.Itemstack = new ItemStack(stack, take);
-                stack.StackSize -= take;
-                if (stack.StackSize <= 0) return true;
+                slot.Itemstack = stack;
+                return true;
             }
         }
-        leftover = stack;
+        err = "player inventory full (no empty slot for the leftover)";
         return false;
     }
 
