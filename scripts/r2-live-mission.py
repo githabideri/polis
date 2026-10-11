@@ -3175,8 +3175,26 @@ def run_campaign(args, run, t0):
     # every operator campaign killed the Oikistes body and the crew on
     # boot), so it is threaded here exactly as the planner path does.
     keep = _parse_keep(args)
-    bot, wm, st, boot_scan = boot(pol, keep=keep or None)
+    # 2026-10-11 (the 20:10:39 kill): a named carrier (--bot) is a
+    # keep, not a spare - run_campaign used to boot WITHOUT the
+    # attach argument, so the sweep despawned the very bot the
+    # campaign was attached to (and the oikistes body with it:
+    # despawn[135438]+spawn[135729] logged at 20:10:39-41). The
+    # planner path's liveness pre-check gets the same treatment here:
+    # a dead attach id is a world fact, not a silent respawn.
+    attach = getattr(args, "bot", None)
+    if attach:
+        st0 = pol.state(attach)
+        if not (st0.get("Bot") or {}).get("Pos"):
+            run.update({"outcome": "rejected",
+                        "reason": ("attach: bot %d is not alive "
+                                   "(rebind it or let the agent "
+                                   "service respawn its body)"
+                                   % attach)})
+            return finish(args.out, run, t0)
+    bot, wm, st, boot_scan = boot(pol, keep=keep or None, attach=attach)
     run["keep_bots"] = keep
+    run["attach"] = attach
     run["bot"] = bot
     run["boot_scan"] = boot_scan
     run["goal"] = {"line": args.goal, "origin": "operator",
