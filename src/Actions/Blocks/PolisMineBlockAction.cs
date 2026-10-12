@@ -379,12 +379,40 @@ class PolisMineBlockAction : EntityActionBase
         }
         else
         {
-            // 1.22: GetDrops() is the virtual loot source (rock blocks
-            // override it with per-type drops; the plain Drops field is
-            // empty for them).
-            foreach (var s in block.GetDrops(world, pos, null, 1.0f) ?? Array.Empty<ItemStack>())
+            // Two loot sources in 1.22, and which one is live depends on
+            // the block family:
+            //  - the plain Drops field is the source of truth for clutter
+            //    piles (looseores: nuggets), clay deposits, etc. The
+            //    virtual GetDrops() returns nothing for them.
+            //  - rock blocks (copper ore, flint ore, ...) override
+            //    GetDrops() with per-type drops; their plain Drops field
+            //    is empty.
+            // So: plain Drops first (tool-conditional entries filtered
+            // against the held tool, mirroring the grass-cut path above),
+            // fall back to GetDrops() when plain is empty.
+            var heldTool = held?.Collectible?.Tool;
+            foreach (var entry in block.Drops ?? Array.Empty<BlockDropItemStack>())
             {
-                if (s != null) drops.Add(s);
+                bool toolOk = !entry.Tool.HasValue
+                    || (heldTool.HasValue && entry.Tool == heldTool);
+                if (!toolOk) continue;
+                var stack = entry.GetNextItemStack(1.0f);
+                if (stack != null && stack.Collectible is IResolvableCollectible resolvable)
+                {
+                    var ds = new DummySlot(stack);
+                    resolvable.Resolve(ds, world, true);
+                    stack = ds.Itemstack;
+                }
+                if (stack != null) drops.Add(stack);
+            }
+            if (drops.Count == 0)
+            {
+                // rocks etc.: the virtual loot source (null player = no
+                // tool-conditional drops).
+                foreach (var s in block.GetDrops(world, pos, null, 1.0f) ?? Array.Empty<ItemStack>())
+                {
+                    if (s != null) drops.Add(s);
+                }
             }
         }
         world.BlockAccessor.SetBlock(targetId, pos);
