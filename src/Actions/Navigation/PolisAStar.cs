@@ -121,7 +121,23 @@ public class PolisAStar
             }
         }
 
-        debugLog?.Invoke($"[PolisAStar] no path found after {searchDepth} iterations");
+        // 2026-10-12 (basin debug): where did the frontier die? Log the
+        // visited count and the ten visited nodes closest to the
+        // target - the dead edge of the reachable region.
+        if (debugLog != null)
+        {
+            var closest = visitedNodes
+                .OrderBy(n => Math.Abs(n.BlockPos.X - end.X) + Math.Abs(n.BlockPos.Z - end.Z)
+                              + Math.Abs(n.BlockPos.Y - end.Y))
+                .Take(10);
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"[PolisAStar] no path after {searchDepth} iters; visited={visitedNodes.Count}; closest:");
+            foreach (var n in closest)
+            {
+                sb.Append($" ({n.BlockPos.X},{n.BlockPos.Y},{n.BlockPos.Z})");
+            }
+            debugLog?.Invoke(sb.ToString());
+        }
         return null;
     }
 
