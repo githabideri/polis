@@ -73,7 +73,18 @@ public class PolisAStar
         {
             var currentNode = reachableNodes.Min;
 
-            if (currentNode.BlockPos.Equals(end))
+            // 2026-10-12 noon: the end match used to require the EXACT
+            // block position. TryFindGround slides a node down onto the
+            // real stand level (feet on top of solid), so a target
+            // requested 1+ blocks above the ground (a grass cell, the
+            // 90-block basin get of 2026-10-12: target y111, ground
+            // stand y110) could never match - the search exhausted
+            // 27000 iterations standing next to it. Same column, feet
+            // level within 1: the stand level of a column is unique,
+            // so the tolerance cannot stop early on the wrong level.
+            if (currentNode.BlockPos.Equals(end)
+                || (currentNode.BlockPos.X == end.X && currentNode.BlockPos.Z == end.Z
+                    && Math.Abs(currentNode.BlockPos.Y - end.Y) <= 1))
             {
                 debugLog?.Invoke($"[PolisAStar] path found in {i} iterations, {visitedNodes.Count} nodes visited");
                 return currentNode.RetracePath();
@@ -508,6 +519,31 @@ public class PolisAStar
 
         return result;
     }
+
+    /// <summary>
+    /// 2026-10-12 noon: resolve a target cell to a standable feet
+    /// level, mirroring GetStartPos for the destination. Scans down
+    /// from target.Y + 2 to the first solid-top block; the feet rest
+    /// on top of it. If the target cell itself is solid (a pile, a
+    /// boulder) the feet go on top of it. Without this, a target
+    /// whose y is 1+ above the ground stand level is unreachable
+    /// (see the FindPath end match above).
+    /// </summary>
+    public BlockPos GetTargetPos(BlockPos target)
+    {
+        for (int y = target.Y + 2; y >= 0; y--)
+        {
+            var b = blockAccessor.GetBlock(new BlockPos(target.X, y, target.Z));
+            if (CanStep(b)) return new BlockPos(target.X, y + 1, target.Z);
+            if (!IsBlockTraversable(b, new BlockPos(target.X, y, target.Z)))
+            {
+                // Solid (non-traversable) block: feet on top of it.
+                return new BlockPos(target.X, y + 1, target.Z);
+            }
+        }
+        return target;
+    }
+
 
     /// <summary>
     /// F3 (2026-10-10): profile the straight line from `from` to `to`

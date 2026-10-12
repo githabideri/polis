@@ -254,7 +254,10 @@ class PolisGotoAction : EntityActionBase
     bool TryPolisAStarPath(Vec3d target, EnumAICreatureType ct)
     {
         var startPos = polisAStar.GetStartPos(vas.Entity.ServerPos.XYZ);
-        var endPos = target.AsBlockPos;
+        // 2026-10-12 noon: resolve the requested cell to a standable
+        // feet level before searching (a target 1+ above the ground
+        // stand level was unmatchable - see PolisAStar FindPath).
+        var endPos = polisAStar.GetTargetPos(target.AsBlockPos);
 
         debugLog?.Invoke($"[goto] PolisAStar finding path from {startPos} to {endPos}");
 
