@@ -148,13 +148,22 @@ on the model-mux box.
    drop, no give issued). The carrier (the Oikistes body) holds knife,
    firestarter, axe, firewood x2, 8 fruit-cranberry, linensack. All
    provisioned looseflints are spent - further flint is ore-gated behind
-   the pickaxe, i.e. behind copper. **Next frontier (G14): the 1.22
-   metallurgy bootstrap** - no furnace exists in 1.22; the path is
-   native-copper ore (`ore-nativecopper-claystone`, 45 blocks near camp)
-   → anvil + chisel (`anvil-smith` harness command; the 1.22 tooling
-   station) → copper ingot → copper pickaxe → flint ore. Open questions
-   to answer in the ildasm dumps: what the native-copper ore block drops
-   when mined, and how the first anvil + chisel bootstrap. (2026-10-11
+   the pickaxe, i.e. behind copper. **G14 (1.22 metallurgy bootstrap):
+   the asset/ILDASM archaeology is DONE** (`temp/g14-copper-bootstrap.md`,
+   2026-10-12 night) - no furnace in 1.22, no stone pickaxe, no
+   smeltable ore item, dead alloy path, no `looseores` itemtype. The real
+   first-metal chain: **world clutter `pile-tools*` can drop a hammer**
+   (hammer variants start at copper - the only no-deadlock entry) -> grid
+   (tool-hammer tag + ore item) -> nugget -> crucible smelt (nuggets carry
+   smelting props; ore items don't) -> ingot -> anvil (cast via clay mold,
+   iron+ only for smithed anvils) -> chisel/hammerhead/pickaxehead ->
+   copper pickaxe -> flint ore. Residual empirics: does a pile-tools
+   clutter exist within reach (73 clutter blocks in r64, types unreadable
+   via /polis/targets - need chunk-blob read or live breaking), is ore
+   hand-breakable, and what looseores actually drop in 1.22. Note: the
+   mission mine job NO LONGER auto-gives an iron pickaxe (5afaa72 -
+   integrity); and 1.22 block-interact (right-click) is IPlayer-only,
+   so bodies cannot right-click-pickup looseores without a harness command. (2026-10-11
    night: the brain A/B leg 2 is CLOSED - with five platform walls
    fixed (query cap, final-step tools, forage compile, goto arrival +
    retry, keep-list ids) both models do perception -> dispatch -> honest
