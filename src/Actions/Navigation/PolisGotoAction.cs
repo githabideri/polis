@@ -268,7 +268,14 @@ class PolisGotoAction : EntityActionBase
         // searches ~11000 (open-terrain A* with the admissible
         // heuristic clears that in well under a second).
         int manhattan = Math.Abs(startPos.X - endPos.X) + Math.Abs(startPos.Z - endPos.Z);
-        int adaptiveBudget = Math.Min(100000, Math.Max(5000, manhattan * 120));
+        // 2026-10-12 noon calibration (live): a 40-block get over the
+        // new basin bridge was found at ~7500 iterations; the 90-block
+        // get failed at 10800 (manhattan*120). Dense-terrain A* here
+        // runs ~150-300 iterations per route block, so *300 gives a
+        // 90-block get 27000 (2.5x headroom) while a short hop stays
+        // at the 5000 floor. Cap 100000: even a fully exhausted run
+        // is well under a second of server time.
+        int adaptiveBudget = Math.Min(100000, Math.Max(5000, manhattan * 300));
         debugLog?.Invoke($"[goto] search budget {adaptiveBudget} (manhattan {manhattan})");
 
         currentPath = polisAStar.FindPath(startPos, endPos, adaptiveBudget);
