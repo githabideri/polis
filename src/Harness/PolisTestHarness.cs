@@ -878,7 +878,7 @@ public class PolisTestHarness : IDisposable
                 // unfiltered plain scan would return tens of thousands of
                 // blocks and drown the agent's context.
                 bool includePlain = bool.TryParse(request.QueryString["includePlain"], out var includePlainParsed) && includePlainParsed;
-                if (includePlain && codeFilters.Count == 0 && string.IsNullOrWhiteSpace(query))
+                if (includePlain && codeFilters.Length == 0 && string.IsNullOrWhiteSpace(query))
                     includePlain = false;
                 bool requireEntityClass = bool.TryParse(request.QueryString["requireEntityClass"], out var requireClass) && requireClass;
                 long? botId = long.TryParse(request.QueryString["botId"], out var parsedBotId) ? parsedBotId : (long?)null;
