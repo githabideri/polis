@@ -2888,7 +2888,8 @@ public partial class PolisSystem : ModSystem
         Action<string> debugLog,
         out Vec3d movePos,
         out TextCommandResult error,
-        EntityAgent losEntity = null
+        EntityAgent losEntity = null,
+        bool skipLos = false
     )
     {
         movePos = null;
@@ -2928,19 +2929,27 @@ public partial class PolisSystem : ModSystem
             return false;
         }
 
-        if (!HasLineOfSightToBlock(viewer, selection, out var hitSel))
+        BlockSelection hitSel = null;
+        if (!skipLos)
         {
-            if (hitSel?.Position != null)
+            if (!HasLineOfSightToBlock(viewer, selection, out hitSel))
             {
-                debugLog?.Invoke($"[validate] failed: LOS blocked by {hitSel.Position}");
+                if (hitSel?.Position != null)
+                {
+                    debugLog?.Invoke($"[validate] failed: LOS blocked by {hitSel.Position}");
+                }
+                else
+                {
+                    debugLog?.Invoke("[validate] failed: no line of sight");
+                }
+                error = TextCommandResult.Error("No line of sight to target.");
+                return false;
             }
-            else
-            {
-                debugLog?.Invoke("[validate] failed: no line of sight");
-            }
-            error = TextCommandResult.Error("No line of sight to target.");
-            return false;
         }
+        // --skiplos: the engine's selection raytrace cannot hit thin/zero-collision
+        // boxes (e.g. looseores piles: selectionbox y2=0.125, collisionbox null).
+        // The claims check above still applies; the break itself uses the engine's
+        // drop logic, so this is a reachability bypass, not a loot bypass.
 
         if (hitSel != null)
         {

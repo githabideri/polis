@@ -276,6 +276,8 @@ public partial class PolisSystem
                     return ExecuteItemsCommand(args, context);
                 case "be":
                     return ExecuteBeProbeCommand(args, context);
+                case "blockdata":
+                    return ExecuteBlockDataCommand(args, context);
                 case "kiln":
                     return ExecuteKilnCommand(args, context);
                 case "giveplayer":
@@ -2752,6 +2754,96 @@ public partial class PolisSystem
     // method name: call it (no-arg methods only) and report the result.
     // The inspection surface for entities the harness cannot name - e.g. the
     // pit kiln BE that the game attaches when a pit is armed.
+    /// <summary>
+    /// blockdata &lt;x&gt; &lt;y&gt; &lt;z&gt; - read a live block's per-instance state
+    /// WITHOUT touching it: the block code, the block entity's serialized
+    /// attributes (this is where clutter stores its `type`), and a dry run
+    /// of the engine's own break-drop logic (the BE shape behavior's
+    /// GetDrops when the block entity owns one, else Block.GetDrops).
+    /// Read-only: nothing is broken, given, or changed.
+    /// </summary>
+    PolisTestHarness.CommandResult ExecuteBlockDataCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 3)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: blockdata <x> <y> <z>" };
+        }
+        if (!double.TryParse(args[0], out var x) || !double.TryParse(args[1], out var y) || !double.TryParse(args[2], out var z))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+        if (!TryGetContextPlayer(context, out var player, out var ctxError))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = ctxError };
+        }
+
+        var pos = new Vec3d(x, y, z).AsBlockPos;
+        var block = sapi.World.BlockAccessor.GetBlock(pos);
+        if (block == null || block.Id == 0)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "No block at target position" };
+        }
+
+        var drops = new List<Dictionary<string, object>>();
+
+        void AddDrops(IEnumerable<ItemStack> stacks)
+        {
+            if (stacks == null) return;
+            foreach (var s in stacks)
+            {
+                if (s == null || s.IsEmpty) continue;
+                var d = new Dictionary<string, object>
+                {
+                    ["code"] = s.Collectible != null ? s.Collectible.Code.Path : "?",
+                    ["qty"] = s.GetQuantity()
+                };
+                try { d["attributes"] = s.Attributes != null ? s.Attributes.ToJson() : null; } catch { }
+                drops.Add(d);
+            }
+        }
+
+        string beType = null;
+        string beData = null;
+        var be = sapi.World.BlockAccessor.GetBlockEntity(pos);
+        if (be != null)
+        {
+            beType = be.GetType().Name;
+            try
+            {
+                var tree = new TreeAttribute();
+                be.ToTreeAttributes(tree);
+                beData = tree.ToJson();
+            }
+            catch (Exception ex)
+            {
+                beData = "serialize failed: " + ex.Message;
+            }
+
+            EnumHandling handling = EnumHandling.Continue;
+            float dropChance = 1.0f;
+            var shape = be.GetBehavior<BEBehaviorShapeFromAttributes>();
+            if (shape != null)
+            {
+                AddDrops(shape.GetDrops(sapi.World, pos, player, ref dropChance, ref handling));
+            }
+            else
+            {
+                AddDrops(block.GetDrops(sapi.World, pos, player, 1.0f));
+            }
+        }
+        else
+        {
+            AddDrops(block.GetDrops(sapi.World, pos, player, 1.0f));
+        }
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"blockdata {pos}: {block.Code.Path} (be: {beType ?? "none"}, {drops.Count} drop(s))",
+            Data = new { code = block.Code.Path, beType, beData, drops }
+        };
+    }
+
     PolisTestHarness.CommandResult ExecuteBeProbeCommand(string[] args, PolisTestHarness.CommandContext context)
     {
         // be --type <name>: dump a loaded type's surface (ctors, fields, props,
@@ -3294,7 +3386,13 @@ public partial class PolisSystem
 
     PolisTestHarness.CommandResult ExecuteBreakCommand(string[] args, PolisTestHarness.CommandContext context)
     {
-        // Usage: break <x> <y> <z> [dropMult]
+        // Usage: break <x> <y> <z> [dropMult] [--skiplos]
+        // --skiplos: bypasses the harness line-of-sight gate only (claims still
+        // enforced). Needed for blocks the engine's selection raytrace cannot
+        // hit (thin/zero-collision boxes, e.g. looseores piles). The break and
+        // its drops are still the engine's, so nothing is given for free.
+        bool skipLos = args.Contains("--skiplos");
+        args = args.Where(a => a != "--skiplos").ToArray();
         if (args.Length < 3)
         {
             return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: break <x> <y> <z> [dropMult]" };
@@ -3355,9 +3453,9 @@ public partial class PolisSystem
             debugEnabled ? msg => sapi.Logger.Debug($"[polis] {msg}") : null,
             out var movePos,
             out var validationError,
-            bot.Entity))
+            bot.Entity, skipLos))
         {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = validationError.StatusMessage };
+            return new PolisTestHarness.CommandResult { Ok = false, Message: skipLos ? validationError.StatusMessage + " (line-of-sight check was skipped)" : validationError.StatusMessage };
         }
 
         void OnGotoResult(bool ok, string msg)

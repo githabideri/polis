@@ -23,16 +23,17 @@ mold → anvil → chisel + hammer + pickaxehead → grid: pickaxe → mine flin
 ore (world 6 has 100 flint-claystone) → iron etc. The **only** missing
 link is the *first* hammer: a world clutter drop.
 
-## Empirical state (unresolved, needs a live test)
+## Empirical state (1 resolved 2026-10-12; 2-3 open)
 
 1. **`looseores-nativecopper-*`** (1 in world, at 512122,112,511981):
-   `RightClickPickup { dropsPickupMode: true }` — but (a) 1.22 moved block
-   interact to **IPlayer-only** `OnBlockInteractStart` (bodies can't
-   right-click blocks), and (b) **no `looseores` itemtype exists**, so
-   `OnPickBlock` (the drop source) resolves to nothing. My `activate`
-   (bot, adjacent, LOS ok) did nothing: block stayed, no item anywhere.
-   Likely a 1.22 dead-end or engine quirk — needs one careful test with a
-   *player* right-click (noVNC) to settle whether anything drops.
+   **RESOLVED 2026-10-12** - right-click pickup is a dead end (no
+   `looseores` itemtype in 1.22; the pickup branch is client-gated), but
+   *breaking* the pile (resistance 0.15, hand) drops **1-3
+   `nugget-nativecopper`** per the `dropsByType` `*` pattern. The only
+   harness obstacle is the line-of-sight gate on the 0.125-tall selection
+   box - `break <x> <y> <z> --skiplos` added this session (claims still
+   enforced; the drops are the engine logic). Live break test pending the
+   deploy.
 2. **Ore hand-minability**: ore buried under 5-17 blocks of claystone/rock;
    the mission `mine` job will not auto-give tools anymore (integrity fix
    5afaa72 this session — the old code silently handed an IRON pickaxe,
@@ -49,14 +50,70 @@ link is the *first* hammer: a world clutter drop.
   (an agent-doable search + break loop) OR operator-disclosed seeding of a
   `hammer-copper` item (if the world proves barren — disclosed, like ripen).
 - Harness gap found: **bodies cannot perform `OnBlockInteractStart`** in
-  1.22 (IPlayer-only). Any block interaction (right-click containers,
-  loose-ore pickup, GUI-less block use) needs either a harness command that
-  emulates it server-side or a player context. The `activate` command
-  claims to work with a bot but the engine swallows it silently for
-  IPlayer-gated behaviors. This is the same wall as the berry forage fix —
-  watch for it in every new "interact" flow.
+  1.22 (IPlayer-only). ~~RESOLVED 2026-10-12 — see the section below: the
+  chain is public API and server-callable (our `activate` already ran it;
+  last night's no-op was a non-empty active hotbar slot plus the missing
+  itemtype). The pickup branch is client-gated, so bots never pick up via
+  right-click; the practical gaps are the harness LOS gate on thin boxes
+  (`--skiplos`) and reading per-chunk attributes (`blockdata`).~~
 - The anvil work-item temperature gate (`>20°C`) means the `anvil-smith`
   command needs the anvil to hold **molten** metal first (a crucible pour
   onto the anvil) — the current harness command takes `<anvilPos> <recipe>`
   and assumes the work item is already hot; the full loop (pour then
   smith) is not yet a single command.
+
+## 2026-10-12 — right-click wall resolved; looseores re-graded
+
+The "IPlayer-only wall" from last night was a **dispatch problem, not a
+behavior rejection** — and the looseores dead-end is wrong on the break
+path:
+
+- **The interaction chain is fully server-callable.** `Block.OnBlockInteractStart
+  (IWorldAccessor, IPlayer, BlockSelection)` and the `OnBlockInteractStep/Stop/Cancel`
+  phases are public API; the wiki (Modding:Right_click_events, verified
+  1.19.8) documents the Start→Step→Cancel→Stop phase chain. Our `activate`
+  command already calls `block.OnBlockInteractStart(world, player, sel)`
+  (`PolisActivateBlockAction` line 111) — with the **context player**, so a
+  godmode player's right-click genuinely runs engine-side.
+- **The right-click *pickup* branch is client-gated.** In
+  `BlockBehaviorRightClickPickup.OnBlockInteractStart` (vssurv ildasm
+  51251): the give/pickup flow (`TryGiveItemstack` / `SpawnItemEntity`) is
+  behind a `world.Side == AppSide.Client` check. In a headless-bot setup
+  the bot has no client, so a server-side call with the bot as byPlayer
+  never picks up. A godmode player (real client, Xvnc display) *can*
+  complete it — but only with an **empty active hotbar slot** (a non-empty
+  slot that doesn't match the pickup stack rejects the whole interact;
+  last night's silent no-op was exactly this, plus the missing itemtype —
+  see below).
+- **There is no `looseores` itemtype in 1.22** (checked `itemtypes/`;
+  `BlockLooseOres` has no `OnPickBlock` override either), so right-click
+  pickup resolves to a null stack even for a player. Right-clicking a
+  loose-ore pile is a **dead end** in this build.
+- **Breaking is the real path.** `blocktypes/stone/looseores.json`
+  `dropsByType`: the `*` pattern drops **1–3 `nugget-{ore}`** (avg 2)
+  directly; nativesilver/nativegold drop 1 nugget; quartz drops ore +
+  0.2 quartz. The block has `resistance: 0.15` — hand-breakable.
+  So a loose nativecopper pile yields ~2 copper nuggets per break — no
+  hammer needed for the nuggets.
+- **Smelting math:** `nugget.json` `combustiblePropsByType` gives
+  `smeltedRatio: 20, smeltedStack: ingot-copper` — 20 nuggets per ingot.
+  One pile is ~5–15% of an ingot; the bulk flow is still
+  **hammer → grid → nuggets from the 60 ore blocks**.
+- **Harness LOS wall (thin boxes).** The engine's `RayTraceForSelection`
+  cannot hit the pile's selection box (0.125 tall, `collisionbox: null`),
+  so the harness line-of-sight gate rejects adjacent bots (reproduced
+  live: bot standing in the adjacent cell, break → "No line of sight").
+  New: `break ... --skiplos` bypasses the harness gate only (claims still
+  enforced; the break and its drops are the engine's).
+- **Clutter `type` is per-chunk data** (block code is just `game:clutter`;
+  no variant, no itemtype). It lives in a block entity
+  (`entityBehaviors: [ShapeFromAttributes]` — `BEBehaviorShapeFromAttributes`
+  in the Lib). New harness command **`blockdata <x> <y> <z>`**: returns
+  the block code, the BE's serialized tree attributes (the `type` string
+  should be in there), and a **dry run of the engine's break drops** (the
+  BE shape behavior's `GetDrops`, else `Block.GetDrops`). Read-only.
+- Deep-cave clutter cluster found at absolute (512145–147, y75–77,
+  511970–73) — ~45 blocks from camp, 35+ blocks below surface: an old
+  mine site, the most likely place for `pile-tools*`. First `blockdata`
+  probe there is the next live step.
+
