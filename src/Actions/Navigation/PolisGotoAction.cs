@@ -258,7 +258,20 @@ class PolisGotoAction : EntityActionBase
 
         debugLog?.Invoke($"[goto] PolisAStar finding path from {startPos} to {endPos}");
 
-        currentPath = polisAStar.FindPath(startPos, endPos);
+        // 2026-10-12: distance-adaptive budget. The flat 5000-iteration
+        // default covers a ~50-block radius; long gets (the 85-block
+        // basin bridge, the 110-block lake detour) always died on the
+        // cap and the per-action retry gate turned out to be session-
+        // sticky (Start() not always re-run on action reuse), so the
+        // retry never fired. Budget = max(5000, manhattan*120), capped
+        // at 100000: a short hop still searches 5000, an 85-block get
+        // searches ~11000 (open-terrain A* with the admissible
+        // heuristic clears that in well under a second).
+        int manhattan = Math.Abs(startPos.X - endPos.X) + Math.Abs(startPos.Z - endPos.Z);
+        int adaptiveBudget = Math.Min(100000, Math.Max(5000, manhattan * 120));
+        debugLog?.Invoke($"[goto] search budget {adaptiveBudget} (manhattan {manhattan})");
+
+        currentPath = polisAStar.FindPath(startPos, endPos, adaptiveBudget);
 
         // F4 (2026-10-10): first no-path at the 5000-iteration budget:
         // one retry with a 4x budget (20000) before falling through to
