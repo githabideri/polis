@@ -278,6 +278,8 @@ public partial class PolisSystem
                     return ExecuteBeProbeCommand(args, context);
                 case "blockdata":
                     return ExecuteBlockDataCommand(args, context);
+                case "mapdec":
+                    return ExecuteMapDecCommand(args, context);
                 case "kiln":
                     return ExecuteKilnCommand(args, context);
                 case "giveplayer":
@@ -2762,6 +2764,37 @@ public partial class PolisSystem
     /// block-level break-drop logic.
     /// Read-only: nothing is broken, given, or changed.
     /// </summary>
+    // Decode a 64-bit world chunk index (the `position` used by the
+    // chunk/mapchunk tables in the .vcdbs) into map-chunk and map-region
+    // coordinates via the game's own world manager. Read-only.
+    PolisTestHarness.CommandResult ExecuteMapDecCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 1)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "usage: mapdec <index2d> [more...]" };
+        if (sapi?.WorldManager == null)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "no world manager" };
+        var parts = new List<string>();
+        foreach (var a in args)
+        {
+            if (!long.TryParse(a, out var pos))
+            {
+                parts.Add(a + ": bad number");
+                continue;
+            }
+            try
+            {
+                var mc = sapi.WorldManager.MapChunkPosFromChunkIndex2D(pos);
+                var mr = sapi.WorldManager.MapRegionPosFromIndex2D(pos);
+                parts.Add(a + ": chunk(" + mc.X + "," + mc.Y + ") region(" + mr.X + "," + mr.Y + "," + mr.Z + ")");
+            }
+            catch (Exception e)
+            {
+                parts.Add(a + ": " + e.GetType().Name + " " + e.Message);
+            }
+        }
+        return new PolisTestHarness.CommandResult { Ok = true, Message = string.Join(" | ", parts) };
+    }
+
     PolisTestHarness.CommandResult ExecuteBlockDataCommand(string[] args, PolisTestHarness.CommandContext context)
     {
         if (args.Length < 3)
