@@ -2795,7 +2795,7 @@ public partial class PolisSystem
                 var d = new Dictionary<string, object>
                 {
                     ["code"] = s.Collectible.Code.Path,
-                    ["qty"] = s.Quantity
+                    ["qty"] = s.StackSize
                 };
                 try
                 {

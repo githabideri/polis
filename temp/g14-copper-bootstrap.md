@@ -108,10 +108,10 @@ path:
 - **Clutter `type` is per-chunk data** (block code is just `game:clutter`;
   no variant, no itemtype). It lives in a block entity
   (`entityBehaviors: [ShapeFromAttributes]` — `BEBehaviorShapeFromAttributes`
-  in the Lib). New harness command **`blockdata <x> <y> <z>`**: returns
-  the block code, the BE's serialized tree attributes (the `type` string
-  should be in there), and a **dry run of the engine's break drops** (the
-  BE shape behavior's `GetDrops`, else `Block.GetDrops`). Read-only.
+  in the Lib, which keeps `Type`/`Collected` as public fields). New
+  harness command **`blockdata <x> <y> <z>`**: returns the block code, the
+  clutter `type`/`collected` fields, and a dry run of the engine's
+  block-level break-drop logic (`Block.GetDrops`). Read-only.
 - Deep-cave clutter cluster found at absolute (512145–147, y75–77,
   511970–73) — ~45 blocks from camp, 35+ blocks below surface: an old
   mine site, the most likely place for `pile-tools*`. First `blockdata`
