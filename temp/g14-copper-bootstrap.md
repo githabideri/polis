@@ -23,7 +23,7 @@ mold → anvil → chisel + hammer + pickaxehead → grid: pickaxe → mine flin
 ore (world 6 has 100 flint-claystone) → iron etc. The **only** missing
 link is the *first* hammer: a world clutter drop.
 
-## Empirical state (1 resolved 2026-10-12; 2-3 open)
+## Empirical state (break path VERIFIED 2026-10-12; forage campaign open)
 
 1. **`looseores-nativecopper-*`** (1 in world, at 512122,112,511981):
    **RESOLVED 2026-10-12** - right-click pickup is a dead end (no
@@ -116,4 +116,60 @@ path:
   511970–73) — ~45 blocks from camp, 35+ blocks below surface: an old
   mine site, the most likely place for `pile-tools*`. First `blockdata`
   probe there is the next live step.
+
+## 2026-10-12 (session 006) — G14 empirical phase: the break path is PROVEN
+
+Live, with the campaign bot 156138, after the bdade6c deploy + full-stack
+restart:
+
+- **`blockdata` works on live per-chunk data** (first probe: mine-site
+  toolrack → `type: toolrack-empty, collected: False`).
+- **All 73 clutters in the r64 census are live-mapped** (mine complex +
+  its annexes: toolracks, tables, beds, shelves, barrels, fences, chains,
+  skeletons, rubble, pottery, weapons, cloth, bones). **No `pile-tools*`
+  and no `tool-*` live anywhere in r64 of camp or the mine.**
+- **World-DB archaeology (stale snapshot, still informative):** the
+  `chunk` table is VS 1.22's protobuf format; BE entries carry world
+  `posx/posy/posz` as plain int32s, and the `gamedata` registry gives
+  numeric block IDs (`looseores-nativecopper-claystone-free` = 8561).
+  Int32 scans found **5 `pile-tools` clutters and 38 nativecopper
+  looseores piles** in the snapshot — but every pile-tools position is
+  **rock live** (version-migration staleness; the live r64 rescans
+  confirm zero clutters in those zones). Treat the pile-tools source as
+  **dead in this world as it exists now**; the looseores count is the
+  usable signal.
+- **LOSEORES BREAK E2E (the core unknown) — VERIFIED:**
+  1. `break 512122 112 511981 --skiplos` (bot in the adjacent cell) →
+     pile block removed ("No block at target position" after).
+  2. Engine spawned **3 × `game:nugget-nativecopper` item entities**
+     (1 each) around the break site — the `dropsByType *` 1–3 range, as
+     the asset says.
+  3. `pickup` ×3 → all three collected, **stacked to 3 in the bot's
+     slot 0** (nuggets stack; inventory shows `qty: 3`).
+  The bot (Oikistes body) now carries 3 nuggets. No operator seeding
+  anywhere in this chain: the break, the drops, and the pickup are all
+  engine behavior; `--skiplos` only skipped the harness's own ray gate
+  (thin 0.125 selection box), which is the disclosed reachability bypass.
+- **Live looseores census (r64 from the mine-side approach point):**
+  4 nativecopper piles — (512122,112,511981) [now broken], (512063,110,
+  512074), (512064,110,512075), (512063,111,512076) [a 3-pile cluster,
+  ~60 blocks west of the broken one] — plus 4 quartz piles at
+  (512122–27, 116–117, 512018–39). 20 nuggets per ingot ⇒ an ingot needs
+  roughly 7–20 more pile breaks; at ~38 piles world-wide (DB estimate) the
+  total yield is ~3–6 ingots: enough for the anvil + hammer + spare
+  ingots if the campaign forages systematically.
+- **Navigation is the practical bottleneck, not the mechanics.** The
+  wet basin between the camp side and the ore/pile side (muddygravel
+  y106–109 under a ~2-block rim) repeatedly defeated the traverser
+  ("stuck after 3 repaths" / "all navigation modes timed out") on
+  long legs, but succeeded on short hops: (512083,113,512016) →
+  (512115,112,511985) ["one step short"] → (512120,113,511985) →
+  (512123,112,511985) [done]. The hillside traverser non-determinism
+  (G14 residual (a)) is now the campaign-critical defect: a multi-hop
+  planner (or a basin-rim-aware path) is needed before the forage
+  campaign can run unsupervised.
+- **Next:** forage the 3-pile cluster (≈6 nuggets more) and keep going
+  until the bot holds 20 nuggets; then the mapped crucible → ingot →
+  anvil → hammer chain runs on existing harness commands. The quartz
+  piles are a future glass/ampoule side-line, not part of G14.
 

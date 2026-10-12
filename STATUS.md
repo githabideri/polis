@@ -157,13 +157,20 @@ on the model-mux box.
    (tool-hammer tag + ore item) -> nugget -> crucible smelt (nuggets carry
    smelting props; ore items don't) -> ingot -> anvil (cast via clay mold,
    iron+ only for smithed anvils) -> chisel/hammerhead/pickaxehead ->
-   copper pickaxe -> flint ore. Residual empirics: does a pile-tools
-   clutter exist within reach (73 clutter blocks in r64, types unreadable
-   via /polis/targets - need chunk-blob read or live breaking), is ore
-   hand-breakable, and what looseores actually drop in 1.22. Note: the
-   mission mine job NO LONGER auto-gives an iron pickaxe (5afaa72 -
-   integrity); and 1.22 block-interact (right-click) is IPlayer-only,
-   so bodies cannot right-click-pickup looseores without a harness command. (2026-10-11
+   copper pickaxe -> flint ore. **G14 empirical phase closed (2026-10-12,
+   session 006):** `blockdata` (BE type + drop dry-run) and `break
+   --skiplos` (thin-box LOS bypass) are live; the 73-clutter r64 census is
+   fully type-mapped and contains **no pile-tools in the live world** (the
+   DB snapshot's five are gone after the version migration) - so the
+   clutter-hammer entry is dead here and **looseores breaking is THE
+   bootstrap**: live-verified end-to-end with the campaign bot (pile
+   break -> 3 x `nugget-nativecopper` entities -> pickup -> 3 stacked in
+   the bot's slot 0); right-click was resolved as dead (client-gated
+   pickup branch + no looseores itemtype). ~38 nativecopper piles in the
+   world (4 live in r64 of the mine side; one broken, a 3-pile cluster
+   unbroken). 20 nuggets/ingot: the open work is a **pile-forage campaign**
+   (bot to ~20 nuggets) blocked practically by the wet-basin traverser
+   wall (short hops work, long legs time out). (2026-10-11
    night: the brain A/B leg 2 is CLOSED - with five platform walls
    fixed (query cap, final-step tools, forage compile, goto arrival +
    retry, keep-list ids) both models do perception -> dispatch -> honest
