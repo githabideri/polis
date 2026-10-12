@@ -278,7 +278,13 @@ class PolisGotoAction : EntityActionBase
         // 90-block get 27000 (2.5x headroom) while a short hop stays
         // at the 5000 floor. Cap 100000: even a fully exhausted run
         // is well under a second of server time.
-        int adaptiveBudget = Math.Min(100000, Math.Max(5000, manhattan * 300));
+        // 2026-10-12 (line diagnostics): the direct line to the ore
+        // peninsula runs along a 3-block rock ridge; the only route is
+        // a ramp up, a descent, a 25-cell bridge crossing and stairs -
+        // ~2x the manhattan distance. 300x died at 27000 on the 90
+        // manhattan get. 600x: a 90-get searches 54000 (exhausted
+        // takes ~1-2 s of server time, well within the repath ladder).
+        int adaptiveBudget = Math.Min(100000, Math.Max(5000, manhattan * 600));
         debugLog?.Invoke($"[goto] search budget {adaptiveBudget} (manhattan {manhattan})");
 
         currentPath = polisAStar.FindPath(startPos, endPos, adaptiveBudget);
