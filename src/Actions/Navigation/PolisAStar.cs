@@ -190,7 +190,7 @@ public class PolisAStar
         var blockAbove = blockAccessor.GetBlock(node.BlockPos.UpCopy());
 
         // Check if we can stand in this position (2 block tall space)
-        if (!IsBlockTraversable(blockAtNode) || !IsBlockTraversable(blockAbove))
+        if (!IsBlockTraversable(blockAtNode, node.BlockPos) || !IsBlockTraversable(blockAbove, node.BlockPos.UpCopy()))
         {
             // Try stepping up
             return TryStepUp(node, target);
@@ -212,7 +212,7 @@ public class PolisAStar
             var atNode = blockAccessor.GetBlock(node.BlockPos);
             var above = blockAccessor.GetBlock(node.BlockPos.UpCopy());
 
-            if (CanStep(below) && IsBlockTraversable(atNode) && IsBlockTraversable(above))
+            if (CanStep(below) && IsBlockTraversable(atNode, node.BlockPos) && IsBlockTraversable(above, node.BlockPos.UpCopy()))
             {
                 node.Init(target, NeedsInteraction(atNode));
                 return true;
@@ -237,7 +237,7 @@ public class PolisAStar
                 return true;
             }
 
-            if (!IsBlockTraversable(below))
+            if (!IsBlockTraversable(below, node.BlockPos.DownCopy()))
             {
                 return false;
             }
@@ -297,27 +297,41 @@ public class PolisAStar
     }
 
     /// <summary>
-    /// Check if a block can be walked through.
+    /// Check if a block can be walked through (no position: the water
+    /// depth test below needs one - conservative here, water blocked).
     /// </summary>
     bool IsBlockTraversable(Block block)
+    {
+        return IsBlockTraversable(block, null);
+    }
+
+    /// <summary>
+    /// Check if a block can be walked through. `pos` enables the
+    /// single-cell water test (shallow wading) when available.
+    /// </summary>
+    bool IsBlockTraversable(Block block, BlockPos pos)
     {
         if (block == null) return false;
 
         var path = block.Code?.Path;
         if (path == null) return false;
 
-        // Water is NOT passable (2026-10-12, wet-basin wall): liquids carry
+        // Water (2026-10-12, wet-basin wall): liquids carry
         // `collisionbox: null` in the 1.22 assets, so the no-collision
-        // branch below would rate every water cell traversable, and the
-        // search happily routed straight across ponds and lakes - a
-        // phantom route, because the bot cannot swim. The 006 campaign
-        // measured exactly this: long goto legs over the basin's 2-4
-        // block rim timed out (search through the water, bot wedged at
-        // the edge) while short hops that stayed on dry land succeeded.
-        // Water now blocks the search, forcing the route around the rim
-        // (where a 1-block crossing gap exists). Small surface puddles
-        // (liquid level 1) stay passable - they are walkable in-game.
-        if (IsWater(block) && !IsSmallPuddle(block)) return false;
+        // branch below would rate every water cell traversable and the
+        // search routed straight across ponds - a phantom route, the
+        // bot cannot swim. Multi-cell water columns (the bot's head
+        // would be underwater) stay BLOCKED. A SINGLE-cell water column
+        // (air/plant above, solid floor below) is 1-deep wading: a
+        // humanoid's head stays clear and it walks, so the search may
+        // use it. The basin around the mine complex is exactly this
+        // mosaic: 1-deep channels the bot can wade, 2-deep pools it
+        // cannot - the measured "traverser wall" was the search taking
+        // a route through the deep cells.
+        if (IsWater(block))
+        {
+            return pos != null && IsShallowWater(block, pos);
+        }
 
         // Explicit blocking codes (fences) - always block
         if (BlockingCodes.Exists(code => path.Contains(code)))
@@ -360,12 +374,16 @@ public class PolisAStar
     }
 
     /// <summary>
-    /// A single-layer surface puddle (liquid height 1) is walkable in
-    /// game and stays passable in the search.
+    /// Single-cell water column: air/plant above and a non-water floor
+    // below - the bot wades it with its head clear. Multi-cell columns
+    // (water above or below) submerge the head: impassable.
     /// </summary>
-    bool IsSmallPuddle(Block block)
+    bool IsShallowWater(Block block, BlockPos pos)
     {
-        return block.Code?.Path?.Contains("puddle") == true;
+        var above = blockAccessor.GetBlock(pos.UpCopy());
+        if (above == null || IsWater(above)) return false;
+        var below = blockAccessor.GetBlock(pos.DownCopy());
+        return below != null && !IsWater(below);
     }
 
     /// <summary>
@@ -428,7 +446,7 @@ public class PolisAStar
         var result = startPos.AsBlockPos;
         var startBlock = blockAccessor.GetBlock(result);
 
-        if (IsBlockTraversable(startBlock))
+        if (IsBlockTraversable(startBlock, result))
         {
             return result;
         }
@@ -436,8 +454,8 @@ public class PolisAStar
         // Sunk one block: the cell above the feet is the valid stand
         // position (air/plant), with air/plant above that too.
         var above = result.UpCopy();
-        if (IsBlockTraversable(blockAccessor.GetBlock(above))
-            && IsBlockTraversable(blockAccessor.GetBlock(above.UpCopy())))
+        if (IsBlockTraversable(blockAccessor.GetBlock(above), above)
+            && IsBlockTraversable(blockAccessor.GetBlock(above.UpCopy()), above.UpCopy()))
         {
             return above;
         }
@@ -454,7 +472,7 @@ public class PolisAStar
         foreach (var (dx, dy, dz) in offsets)
         {
             var adjacent = result.AddCopy(dx, dy, dz);
-            if (IsBlockTraversable(blockAccessor.GetBlock(adjacent)))
+            if (IsBlockTraversable(blockAccessor.GetBlock(adjacent), adjacent))
             {
                 return adjacent;
             }
