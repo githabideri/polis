@@ -306,6 +306,19 @@ public class PolisAStar
         var path = block.Code?.Path;
         if (path == null) return false;
 
+        // Water is NOT passable (2026-10-12, wet-basin wall): liquids carry
+        // `collisionbox: null` in the 1.22 assets, so the no-collision
+        // branch below would rate every water cell traversable, and the
+        // search happily routed straight across ponds and lakes - a
+        // phantom route, because the bot cannot swim. The 006 campaign
+        // measured exactly this: long goto legs over the basin's 2-4
+        // block rim timed out (search through the water, bot wedged at
+        // the edge) while short hops that stayed on dry land succeeded.
+        // Water now blocks the search, forcing the route around the rim
+        // (where a 1-block crossing gap exists). Small surface puddles
+        // (liquid level 1) stay passable - they are walkable in-game.
+        if (IsWater(block) && !IsSmallPuddle(block)) return false;
+
         // Explicit blocking codes (fences) - always block
         if (BlockingCodes.Exists(code => path.Contains(code)))
         {
@@ -333,11 +346,40 @@ public class PolisAStar
     }
 
     /// <summary>
+    /// Water block? The 1.22 asset carries `liquidCode: "water"` which
+    /// ends up on the Block instance (Block.LiquidCode) for
+    /// water/rapidwater/saltwater/boilingwater/puddle-* and the
+    /// water-n-*/water-still-* variants, or the code path starts with
+    /// "water-".
+    /// </summary>
+    bool IsWater(Block block)
+    {
+        var path = block.Code?.Path;
+        if (path != null && path.StartsWith("water")) return true;
+        return !string.IsNullOrEmpty(block.LiquidCode);
+    }
+
+    /// <summary>
+    /// A single-layer surface puddle (liquid height 1) is walkable in
+    /// game and stays passable in the search.
+    /// </summary>
+    bool IsSmallPuddle(Block block)
+    {
+        return block.Code?.Path?.Contains("puddle") == true;
+    }
+
+    /// <summary>
     /// Check if a block can be stepped on (stood upon).
     /// </summary>
     bool CanStep(Block block)
     {
         if (block == null) return false;
+
+        // Water is never a stand surface (2026-10-12): without this, a
+        // fall probe could land the path on the water surface (liquid
+        // `sidesolid: false` already rejects most, this is belt and
+        // braces for the small-puddle pass).
+        if (IsWater(block)) return false;
 
         // Solid top = steppable
         if (block.SideSolid[BlockFacing.UP.Index])
