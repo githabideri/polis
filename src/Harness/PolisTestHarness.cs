@@ -869,6 +869,17 @@ public class PolisTestHarness : IDisposable
                 var mode = (request.QueryString["mode"] ?? "blocks").ToLowerInvariant();
                 var query = request.QueryString["q"];
                 var codeFilters = ParseFilterTokens(request.QueryString["codeContains"]);
+                // 2026-10-11 (G14 copper): plain MATERIAL blocks (ores, rock,
+                // soil, clay) carry no behaviors, no entity class, no
+                // interact - the reasons gate below skipped them, so no
+                // buried resource was ever queryable and every ore-gated
+                // campaign goal was unreachable by the agent. includePlain
+                // lifts the gate, but ONLY when a filter is given - an
+                // unfiltered plain scan would return tens of thousands of
+                // blocks and drown the agent's context.
+                bool includePlain = bool.TryParse(request.QueryString["includePlain"], out var includePlainParsed) && includePlainParsed;
+                if (includePlain && codeFilters.Count == 0 && string.IsNullOrWhiteSpace(query))
+                    includePlain = false;
                 bool requireEntityClass = bool.TryParse(request.QueryString["requireEntityClass"], out var requireClass) && requireClass;
                 long? botId = long.TryParse(request.QueryString["botId"], out var parsedBotId) ? parsedBotId : (long?)null;
                 bool includeDead = bool.TryParse(request.QueryString["includeDead"], out var incDead) && incDead;
@@ -991,11 +1002,11 @@ public class PolisTestHarness : IDisposable
                                             if (block.BlockBehaviors != null && block.BlockBehaviors.Length > 0) reasons.Add("BlockBehaviors");
                                             if (block.PlacedPriorityInteract) reasons.Add("PlacedPriorityInteract");
 
-                                            if (reasons.Count == 0) continue;
+                                            if (reasons.Count == 0 && !includePlain) continue;
 
                                             var blockCenter = new Vec3d(pos.X + 0.5, pos.Y + 0.5, pos.Z + 0.5);
                                             var dist = blockCenter.DistanceTo(center);
-                                            if (zoneBounds == null != null && dist > radius) continue;
+                                            if (zoneBounds == null && dist > radius) continue;
 
                                             var behaviors = block.BlockBehaviors?
                                                 .Select(b => b?.GetType().Name)

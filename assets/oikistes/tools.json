@@ -144,7 +144,7 @@
   "type": "function",
   "function": {
    "name": "query",
-   "description": "What is in a NAMED ZONE or around a point: a compact digest (counts plus a capped code/position list). target: a zone name, or two coordinates 'x z' (an optional third number is the radius; the coordinate form walks your body there first). mode: blocks | entities | all (default all). code: substring filter - the radius scan is centred on your body and DOES see underground, so 'code: ore-flint' finds buried veins that a scan cannot.",
+   "description": "What is in a NAMED ZONE or around a point: a compact digest (counts plus a capped code/position list). target: a zone name, or two coordinates 'x z' (an optional third number is the radius; the coordinate form walks your body there first). mode: blocks | entities | all (default all). code: substring filter - with a code filter it also sees PLAIN material blocks (ores, rock, clay - anything buried, which a scan cannot reach), so 'code: ore' finds veins underground; without a code filter it only lists interactive/plant blocks.",
    "parameters": {
     "type": "object",
     "properties": {

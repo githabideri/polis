@@ -949,6 +949,11 @@ class Oikistes:
                   "limit": str(int(a.get("limit") or 20))}
         if a.get("code"):
             params["codeContains"] = str(a["code"])
+            # 2026-10-11 (G14): a code-filtered query also wants the
+            # PLAIN material blocks (ores, rock, clay) that carry no
+            # behaviors - without this flag no buried resource was
+            # ever findable and ore-gated goals were unreachable.
+            params["includePlain"] = "true"
         polys = self.polis
         if len(parts) >= 2 and \
                 all(p.lstrip("-").isdigit() for p in parts[:2]):
