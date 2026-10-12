@@ -837,8 +837,19 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
             tool_note = "tohand %s ok=%s; " % (job.tool, bool(eq.get("Ok")))
         elif job.type == "mine" and not has_tool and \
                 classify(rec.code)[1] not in HAND_MINABLE:
-            tr = pol.cmd("give", ["pickaxe-iron", "1"], bot)
-            tool_note = "gave pickaxe-iron ok=%s; " % bool(tr.get("Ok"))
+            # 2026-10-11 (integrity): the old code gave the bot an
+            # IRON pickaxe here - a late-game item that silently
+            # bypasses the entire copper bootstrap (G14) and any
+            # survival-gate the campaign is testing. The campaign
+            # carrier only carries what it earned. Fail the job with
+            # the honest gap instead; the operator can still hand a
+            # tool in (disclosed) if a non-campaign run needs it.
+            return (False,
+                    "%s %s -> needs a pickaxe in hand; none in cargo "
+                    "(the honest gap: make the copper chain first - "
+                    "anvil -> hammerhead/chisel/pickaxehead). No tool "
+                    "was given." % (job.type, rec.code), measured, {},
+                    {"block_gone": None, "measured": measured})
         detail = "%s %s -> %s" % (job.type, rec.code, tool_note)
         # leaves/log clusters break with the CHOP command (2026-10-11):
         # the mine command is for hard blocks; the leaf family is how
