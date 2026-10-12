@@ -154,7 +154,15 @@ on the model-mux box.
    → anvil + chisel (`anvil-smith` harness command; the 1.22 tooling
    station) → copper ingot → copper pickaxe → flint ore. Open questions
    to answer in the ildasm dumps: what the native-copper ore block drops
-   when mined, and how the first anvil + chisel bootstrap.
+   when mined, and how the first anvil + chisel bootstrap. (2026-10-11
+   night: the brain A/B leg 2 is CLOSED - with five platform walls
+   fixed (query cap, final-step tools, forage compile, goto arrival +
+   retry, keep-list ids) both models do perception -> dispatch -> honest
+   report; 35B 1/1 clean, 27B 1/3 (terrain ate two, a memory no-op ate
+   the third). 35B stays default; the 27B is a usable fallback.
+   Residual platform work: the hillside traverser's non-deterministic
+   3-repath budget, and a carry-back step so foraged fruit reaches the
+   larder instead of lying at the bush.)
 1. **Survival pilot prep (current driver).** Design settled in
    `docs/design/food-hunger-skills-policies.md` (2026-10-04; ground truth
    from decompiling the 1.22.7 assemblies): hunger is a player-entity
