@@ -59,6 +59,7 @@ class PolisGotoAction : EntityActionBase
     bool repathPending;
     float repathTimer;
     bool bigBudgetTried;
+    bool hugeBudgetTried;
     bool approached;
     float approachTimer;
 
@@ -124,6 +125,7 @@ class PolisGotoAction : EntityActionBase
         repathPending = false;
         repathTimer = 0f;
         bigBudgetTried = false;
+        hugeBudgetTried = false;
         approached = false;
         approachTimer = 0f;
         bestDist = double.MaxValue;
@@ -267,6 +269,19 @@ class PolisGotoAction : EntityActionBase
             bigBudgetTried = true;
             debugLog?.Invoke("[goto] PolisAStar no path at 5000 - one 4x retry (20000)");
             currentPath = polisAStar.FindPath(startPos, endPos, 20000);
+        }
+
+        // 2026-10-12 (wet-basin lake): the only route to the ore
+        // peninsula is a ~110-block detour around the south rim of
+        // the basin; 20000 iterations cover a ~50-block radius, so
+        // maze-like long walkarounds still died on the search cap.
+        // One final 5x retry: 100000 iterations takes ~1-2 s even
+        // when it exhausts.
+        if ((currentPath == null || currentPath.Count < 2) && !hugeBudgetTried)
+        {
+            hugeBudgetTried = true;
+            debugLog?.Invoke("[goto] PolisAStar no path at 20000 - final 5x retry (100000)");
+            currentPath = polisAStar.FindPath(startPos, endPos, 100000);
         }
 
         if (currentPath == null || currentPath.Count < 2)
