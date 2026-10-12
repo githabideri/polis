@@ -291,9 +291,37 @@ public class PolisAStar
         };
         foreach (var d in dirs)
         {
-            if (ColumnSurfaceY(d.X, d.Z, own + 2) < own + 2) return false;
+            if (!NeighborIsWall2(d.X, d.Z, own)) return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// F9 fix, 2026-10-12 (the basin bridge): does the (x, z) column
+    /// stand 2+ blocks above `own` (a step the bot cannot climb)?
+    /// Dedicated scan, 24 levels deep (deeper than the deepest known
+    /// basin; the lake floor sits 3-4 below the rim). If no solid top
+    /// is found in the window the column is a PIT (low), not a wall.
+    /// The old version shared ColumnSurfaceY's 8-level window and its
+    /// "no solid found = reference level" fallback, which read a deep
+    /// pit (the lake) as a HIGH wall: every cell of a one-block bridge
+    /// over the lake had all four neighbours reading as walls and the
+    /// whole bridge was rejected as a pocket - the 10800-iteration
+    /// no-path of 2026-10-12 noon.
+    /// </summary>
+    bool NeighborIsWall2(int x, int z, int own)
+    {
+        for (int down = 0; down <= 24; down++)
+        {
+            int y = own + 2 - down;
+            if (y < 0) return false;
+            if (CanStep(blockAccessor.GetBlock(new BlockPos(x, y, z))))
+            {
+                // The neighbour's surface feet level is y + 1.
+                return (y + 1) >= own + 2;
+            }
+        }
+        return false; // no solid in the window: a pit, not a wall
     }
 
     /// <summary>
