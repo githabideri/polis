@@ -310,6 +310,13 @@ class PolisGotoAction : EntityActionBase
         if (currentPath == null || currentPath.Count < 2)
         {
             debugLog?.Invoke("[goto] PolisAStar no path found");
+            // 2026-10-12 (basin debug): one-shot line diagnostics -
+            // which cell on the direct line rejects, and why.
+            if (debugLog != null)
+            {
+                try { polisAStar.Diagnostics("goto-nopath", startPos, endPos); }
+                catch (Exception ex) { debugLog?.Invoke($"[goto] diagnostics failed: {ex.Message}"); }
+            }
             return false;
         }
 

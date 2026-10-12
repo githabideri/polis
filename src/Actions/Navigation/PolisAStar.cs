@@ -609,6 +609,46 @@ public class PolisAStar
     }
 
     /// <summary>
+    /// 2026-10-12 (basin debug): on a no-path, dump the state of every
+    /// cell on the Bresenham line start->end: the block at the feet
+    /// level, at the stand level, traversability of both, and the
+    /// pocket verdict. This is the one-shot answer to "which cell
+    /// rejected the corridor, and why" that the iteration counter
+    /// alone never gives.
+    /// </summary>
+    public void Diagnostics(string tag, BlockPos start, BlockPos end)
+    {
+        if (debugLog == null) return;
+        int dx = end.X - start.X, dz = end.Z - start.Z;
+        int n = Math.Max(Math.Abs(dx), Math.Abs(dz));
+        if (n == 0) { debugLog?.Invoke($"[PolisAStar] {tag} diagnostics: same column"); return; }
+        for (int i = 0; i <= n; i++)
+        {
+            int x = start.X + (int)Math.Round((double)dx * i / n);
+            int z = start.Z + (int)Math.Round((double)dz * i / n);
+            // find the stand level: topmost step block scanning down from start.Y+2
+            int feet = start.Y;
+            for (int y = start.Y + 2; y >= 0; y--)
+            {
+                var b = blockAccessor.GetBlock(new BlockPos(x, y, z));
+                if (CanStep(b) || !IsBlockTraversable(b, new BlockPos(x, y, z))) { feet = y + 1; break; }
+            }
+            var fp = new BlockPos(x, feet, z);
+            var foot = blockAccessor.GetBlock(fp);
+            var above = blockAccessor.GetBlock(fp.UpCopy());
+            var probe = new PolisPathNode(fp, end, false);
+            string footCode = foot.Id == 0 ? "air" : foot.ToString();
+            string aboveCode = above.Id == 0 ? "air" : above.ToString();
+            bool footTrav = IsBlockTraversable(foot, fp);
+            bool aboveTrav = IsBlockTraversable(above, fp.UpCopy());
+            bool pocket = IsPocket(probe);
+            bool trav = IsTraversable(probe, end);
+            string flag = (trav || (fp.Equals(end))) ? "" : " <<< REJECTED";
+            debugLog?.Invoke($"[PolisAStar] {tag} line[{i}] ({x},{feet},{z}) foot={footCode} footTrav={footTrav} above={aboveCode} aboveTrav={aboveTrav} pocket={pocket} -> {(trav ? "ok" : "rejected")}{flag}");
+        }
+    }
+
+    /// <summary>
     /// Convert path nodes to waypoints for traversal.
     /// </summary>
     public static List<Vec3d> ToWaypoints(List<PolisPathNode> path)
