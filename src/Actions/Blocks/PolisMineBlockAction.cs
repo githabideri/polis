@@ -371,8 +371,11 @@ class PolisMineBlockAction : EntityActionBase
             }
             // 1.22: GetDrops() is the virtual loot source (the block's
             // own per-type drops; the plain Drops field is empty for
-            // them). Null player = no tool-conditional drops.
-            foreach (var s in block.GetDrops(world, pos, null, 1.0f) ?? Array.Empty<ItemStack>())
+            // them). Pass the context player: several behavior-level
+            // drop gates (looseores' dropsPickupMode) require a non-null
+            // IPlayer and return nothing for null (blockdata proves the
+            // same call with a player yields the loot).
+            foreach (var s in block.GetDrops(world, pos, player, 1.0f) ?? Array.Empty<ItemStack>())
             {
                 if (s != null) drops.Add(s);
             }
@@ -407,9 +410,9 @@ class PolisMineBlockAction : EntityActionBase
             }
             if (drops.Count == 0)
             {
-                // rocks etc.: the virtual loot source (null player = no
-                // tool-conditional drops).
-                foreach (var s in block.GetDrops(world, pos, null, 1.0f) ?? Array.Empty<ItemStack>())
+                // rocks etc.: the virtual loot source (same
+                // non-null-player requirement as the reed path above).
+                foreach (var s in block.GetDrops(world, pos, player, 1.0f) ?? Array.Empty<ItemStack>())
                 {
                     if (s != null) drops.Add(s);
                 }
