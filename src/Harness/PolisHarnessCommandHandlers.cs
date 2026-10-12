@@ -280,6 +280,8 @@ public partial class PolisSystem
                     return ExecuteBlockDataCommand(args, context);
                 case "mapdec":
                     return ExecuteMapDecCommand(args, context);
+                case "bkey":
+                    return ExecuteBlockKeyCommand(args, context);
                 case "kiln":
                     return ExecuteKilnCommand(args, context);
                 case "giveplayer":
@@ -2764,6 +2766,37 @@ public partial class PolisSystem
     /// block-level break-drop logic.
     /// Read-only: nothing is broken, given, or changed.
     /// </summary>
+    // Emit the game's own 64-bit chunk key for a block position under
+    // several plausible chunk-size interpretations, so the DB `chunk`
+    // table's position encoding can be matched empirically. Read-only.
+    PolisTestHarness.CommandResult ExecuteBlockKeyCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 3)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "usage: bkey <x> <y> <z>" };
+        int x = int.Parse(args[0]);
+        int y = int.Parse(args[1]);
+        int z = int.Parse(args[2]);
+        if (sapi?.WorldManager == null)
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "no world manager" };
+        try
+        {
+            var k8168 = sapi.WorldManager.ChunkIndex3D(x >> 3, y >> 4, z >> 3);
+            var k888 = sapi.WorldManager.ChunkIndex3D(x >> 3, y >> 3, z >> 3);
+            var k161616 = sapi.WorldManager.ChunkIndex3D(x >> 4, y >> 4, z >> 4);
+            var k16816 = sapi.WorldManager.ChunkIndex3D(x >> 4, y >> 3, z >> 4);
+            var k168 = sapi.WorldManager.ChunkIndex3D(x >> 4, y >> 4, z >> 4);
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = "bkey(" + x + "," + y + "," + z + "): c8/16/8=" + k8168 + " c8/8/8=" + k888 + " c16/16/16=" + k161616 + " c16/8/16=" + k16816
+            };
+        }
+        catch (Exception e)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = e.GetType().Name + " " + e.Message };
+        }
+    }
+
     // Decode a 64-bit world chunk index (the `position` used by the
     // chunk/mapchunk tables in the .vcdbs) into map-chunk and map-region
     // coordinates via the game's own world manager. Read-only.
