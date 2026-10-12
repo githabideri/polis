@@ -2756,10 +2756,10 @@ public partial class PolisSystem
     // pit kiln BE that the game attaches when a pit is armed.
     /// <summary>
     /// blockdata &lt;x&gt; &lt;y&gt; &lt;z&gt; - read a live block's per-instance state
-    /// WITHOUT touching it: the block code, the block entity's serialized
-    /// attributes (this is where clutter stores its `type`), and a dry run
-    /// of the engine's own break-drop logic (the BE shape behavior's
-    /// GetDrops when the block entity owns one, else Block.GetDrops).
+    /// WITHOUT touching it: the block code, the clutter `type` and
+    /// `collected` flag (per-chunk data lives on the block entity's
+    /// shape-from-attributes behavior), and a dry run of the engine's
+    /// block-level break-drop logic.
     /// Read-only: nothing is broken, given, or changed.
     /// </summary>
     PolisTestHarness.CommandResult ExecuteBlockDataCommand(string[] args, PolisTestHarness.CommandContext context)
@@ -2791,56 +2791,50 @@ public partial class PolisSystem
             if (stacks == null) return;
             foreach (var s in stacks)
             {
-                if (s == null || s.IsEmpty) continue;
+                if (s == null || s.Collectible == null) continue;
                 var d = new Dictionary<string, object>
                 {
-                    ["code"] = s.Collectible != null ? s.Collectible.Code.Path : "?",
-                    ["qty"] = s.GetQuantity()
+                    ["code"] = s.Collectible.Code.Path,
+                    ["qty"] = s.Quantity
                 };
-                try { d["attributes"] = s.Attributes != null ? s.Attributes.ToJson() : null; } catch { }
+                try
+                {
+                    if (s.Attributes != null && s.Attributes.HasAttribute("collected"))
+                    {
+                        d["collected"] = true;
+                    }
+                }
+                catch { }
                 drops.Add(d);
             }
         }
 
         string beType = null;
-        string beData = null;
+        string clutterType = null;
+        bool? collected = null;
         var be = sapi.World.BlockAccessor.GetBlockEntity(pos);
         if (be != null)
         {
             beType = be.GetType().Name;
-            try
-            {
-                var tree = new TreeAttribute();
-                be.ToTreeAttributes(tree);
-                beData = tree.ToJson();
-            }
-            catch (Exception ex)
-            {
-                beData = "serialize failed: " + ex.Message;
-            }
-
-            EnumHandling handling = EnumHandling.Continue;
-            float dropChance = 1.0f;
             var shape = be.GetBehavior<BEBehaviorShapeFromAttributes>();
             if (shape != null)
             {
-                AddDrops(shape.GetDrops(sapi.World, pos, player, ref dropChance, ref handling));
-            }
-            else
-            {
-                AddDrops(block.GetDrops(sapi.World, pos, player, 1.0f));
+                // The per-chunk `type` (pile-tools1, rubble, anvil-broken, …)
+                // and the `collected` flag live on the BE behavior as fields.
+                clutterType = shape.Type;
+                collected = shape.Collected;
             }
         }
-        else
-        {
-            AddDrops(block.GetDrops(sapi.World, pos, player, 1.0f));
-        }
+
+        // The engine's own break-drop logic (block level; it consults the
+        // block's behaviors and the BE data itself).
+        AddDrops(block.GetDrops(sapi.World, pos, player, 1.0f));
 
         return new PolisTestHarness.CommandResult
         {
             Ok = true,
-            Message = $"blockdata {pos}: {block.Code.Path} (be: {beType ?? "none"}, {drops.Count} drop(s))",
-            Data = new { code = block.Code.Path, beType, beData, drops }
+            Message = $"blockdata {pos}: {block.Code.Path}" + (clutterType != null ? $" (type: {clutterType}, collected: {collected})" : string.Empty) + $" ({drops.Count} drop(s))",
+            Data = new { code = block.Code.Path, beType, clutterType, collected, drops }
         };
     }
 
