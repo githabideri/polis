@@ -3455,7 +3455,7 @@ public partial class PolisSystem
             out var validationError,
             bot.Entity, skipLos))
         {
-            return new PolisTestHarness.CommandResult { Ok = false, Message: skipLos ? validationError.StatusMessage + " (line-of-sight check was skipped)" : validationError.StatusMessage };
+            return new PolisTestHarness.CommandResult { Ok = false, Message = skipLos ? validationError.StatusMessage + " (line-of-sight check was skipped)" : validationError.StatusMessage };
         }
 
         void OnGotoResult(bool ok, string msg)
