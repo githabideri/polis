@@ -17,7 +17,7 @@ before end of 2026.
 | Core loop (load → spawn → goto → verify) | **live verified** | the fire-and-verify discipline holds; short and long (100-block) gotos arrive; smoke mission PASS |
 | Possession (player mounts a bot) | **live verified** | mount-based; the NaN seat crash is closed (the guard also zeroes NaN *motion* — see gotchas) |
 | Oikistes agent (swappable brains)  **`pots` tool live 2026-10-10**: the brain dispatches the whole chain (chat message -> the pots tool with the three site cells -> background mission -> verdict reported back; first run after the tree fix: complete in 157 s). GOTCHA: the oikistes service runs from /opt/polis and the mission subprocess inherits THAT tree - after any r2/ or scripts/ change, sync them to /opt/polis (the build tree is /root/polis; they diverged silently and the brain's first pots dispatch died with no run JSON)| **live verified** | 2026-10-10 robustness pass: the body is an IDENTITY (persists across missions; one auto-respawn per boot, then it stays dead until the operator rebinds via `POST /oikistes/bot`; it never adopts another bot) and the `crew` tool is the only sanctioned way to size the worker roster (hard cap 8) — the old null-after-mission body contract is what grew an 18-bot swarm in one evening. The boot world scan now re-scans until the block count stabilizes (a fixed 2 s sleep scanned before the server had loaded the box's chunks and counted 4 of 103 soil on a plateau holding 1600+ — the same zero-based-terrain class as the world-pillar false alarm). Missions are HYGIENIC (2026-10-10, a0c7b3d): the boot sweep no longer kills the body or the operator's crew (it takes the pre-mission roster as its keep list) and the worker the mission spawns is despawned when the run ends — the world returns to exactly the pre-mission roster after every mission (the worker's unspent surplus dies with it; the next run re-mines if it needs more) |
-| Block / inventory / workstation actions | **live verified** | mine, harvest, pickup, place, equip, the workstation set (grind, press, clayform, knap, seal, forge, anvil); placement is verified by oracle, never by the `ok` flag |
+| Block / inventory / workstation actions | **live verified** | mine, harvest, pickup, place, equip, the workstation set (grind, press, clayform, knap, seal, forge, anvil); placement is verified by oracle, never by the `ok` flag. 2026-10-13 (1.22 crucible family): the `crucible-*` commands carry `force` flags (cook-clock fill / re-heat — every transformation still the engine's), plus `mold-cool` / `mold-reset` / `mold-info` for the state-aware molds (`mold-info` calls the engine's own `GetDrops` as a read-only drop oracle); see the 2026-10-13 copper-chain report |
 | Temporal-stability control (1.22 "sanity") | **live verified** | the `sanity` harness command: per-player meter query (watched attribute `temporalStability`, the blue gear), set + pin (re-asserted every second, godmode-style), and `storms` / `rifts` world-config switches (persisted AND live-cleared + broadcast). Needed to settle the world under daylock: a frozen clock keeps an active temporal storm open forever and spawned rifts never expire (2026-10-07: the meter sat at 0 and the screen carried the glitch overlay; settled with `sanity storms off; sanity rifts off; sanity 1`) |
 | Jev decision loop (v5) | **measured** | three-tier cascade: Laya 421M noul pre-veto → Decider-2B readout → 27B doubt-arbiter; reflex model as of the FT-2 round: `qwen35-decider-2b-ft2`; reports in `docs/reports/` |
 | R2 job system | **live verified** (M1 + M2 + J1) | goal grammar, 9-job catalog (knap added 2026-10-10 with its measured oracle - the flint knife/axe the bot now carries at base), deterministic compiler, 27B planner (precision 1.000 / coverage ~0.5, 5-way failure attribution). Live: mine 11.4 s, two-job external supply 8.5 s, endogenous harvest→sow 9.6 s, full P1 flint-tools chain (give×3 scaffolding → 2× knap on the consumed surface → knife + axe) 54 s. The engine's knapping facts measured along the way: the surface block is CONSUMED on completion (one surface per chip), the completion marker is the block going to air (the `LastAction` recorded at start is already `Ok:true` - it must never be the wait condition), and the output goes straight into the bot inventory (`CompleteKnapToBot`). Open: the surface item has no recipe (creative/decorative) - its endogenous source for the no-give P1 run is still to be settled). **J2 clayforming - DONE (2026-10-10):** the `clayform <x> <y> <z> <recipe> [speed]` harness command works end to end (recipe table live-probed: 40+ X-<color>-raw recipes; 1.22 clay items: clay-red / clay-blue only): it places its own game:clayform table via direct SetBlock (the placement check treats soil tufts as blocking - clear the target cell to air first, the only wrinkle on the flat plateau), drives the voxel sculpting (388 voxels ~5 s at speed 8; the bot needs clay in inventory), and on completion the table converts to a groundstorage holding the shaped raw item (4x crucible-red-raw collected live). **J3 pit-kiln firing - DONE (2026-10-10):** the 1.22 pit-kiln pipeline works end-to-end via the `kiln` harness (create/feed/ignite/ff/state driving the game's own BlockEntityPitKiln): floor converted to the game:pitkiln block, 11 build stages fed (5x dry grass, 2x sticks, 4x fuel), 20h burn, fast-forward, OnFired smelted crucible-red-raw -> **crucible-earthyorange-fired** (1.22 renamed red). The whole sequence must run in one live session (the pitkiln block is non-persistent - see open issues); the fired output lands in a persistent storage block in the hole and survives restarts. **J4 cooking - done 2026-10-10 (direct path)**: the 1.22 firepit cooks the INPUT slot (slot 1) via the item's own `DoSmelt` (raw meat -> cooked meat in ~36 s live; the pot is NOT required for single-ingredient food - it only matters for multi-ingredient meals in the cooking slots; a fired pot in the firepit is a no-op for meat). The earlier failed 16-min test had the meat in the wrong slot. Fuel = slot 0 (charcoal 1 per piece cooked), output = slot 2. **J5 eat - done 2026-10-10**: the shared `eat` command (PolisEatService, same core as forage) ate the firepit's cooked meat; two code-resolution bugs fixed on the way: the policy gate saw the unprefixed code ("redmeat-cooked" never matched the "game:redmeat-cooked" allow rule) and IsItem/ConsumeOne compared exact codes - both now resolve through AssetLocation, and the eat command re-counts after its auto-give  **Chain `pots` - LIVE-VALIDATED 2026-10-10 (ladder P6, 8 jobs, ~98 s, outcome-gated)**: the whole ladder is one R2 campaign (give clay + meat + charcoal -> clayform table (raw item) -> pit-kiln fire (fired item) -> firepit fuel + ENDGENOUS re-arm (firestarter arm -> engine OnBurnTick auto-ignite, the only live path - a fresh pit does not ignite on its own) -> bot puts the meat into the input slot via its own firepit-put -> engine cooks (DoSmelt) -> bot eats to 1500 sat), jobs `clayform`/`kiln_fire`/`firepit_fuel`/`cook`/`eat` in r2/jobs.py + `_pots_stage` in r2-live-mission.py, template `pots` in r2/chains.py. The clayform stage is IDEMPOTENT (2026-10-10: the old unconditional `setblock air` destroyed the game:clayform table whenever the bot was in range, so the chain only passed on slow-goto runs; the form cell must be the table block - its BlockEntityClayForm is what turns the shaped output into the colored variant). Engine facts baked in: the campaign bot must WALK to each workstation (4.5 m reach; the engine's long goto declares failure while still walking - the executor polls actual distance and re-issues), `kiln create` only preserves a fireable item that is in the hole storage or passed as `[itemCode qty]` (no other input path exists), firepit cook = the item's own DoSmelt on the INPUT slot (slot 1), fuel slot 0 (charcoal 1 per piece), output slot 2. **Chain `forage-eat` - LIVE-VALIDATED 2026-10-10 (ladder P3, ~12 s)**: `ripen <cell>` (new job type - the growth-clock test lever: natural ripening takes in-game months, the command force-sets the bush BE to Ripe and reports the previous state) -> `forage` (approach to the standable ring + `pick`, measured drop `game:fruit-whitecurrant` x5 in one round) -> `eat` (consumption measured, 2 units). 1.22 bush facts: the family root is `fruitingbush` (NOT `fruit` - the validator matches family roots/tokens, so `plant` must be `fruitingbush-*`); ripeness is a BE growth state (Ripening/Mature/Ripe) the pick handler enforces, not visible in the block code; picked bushes regrow (Mature again within a minute at 60x time); the /polis/targets scan can disagree with a direct block scan (a vanished `-free` bush) - the preflight live-block check catches stale `at` cells cheaply. The `_delta_gain` claim match is prefix-tolerant (`game:` stripped) after a forage that gathered 5 berries reported 0 because the ledger claim is bare|
@@ -51,6 +51,17 @@ on the model-mux box.
   `kiln create -> crucible -> feed -> ignite -> ff` sequence in ONE live session; only the
   fired output (persistent storage block in the hole) survives.
 
+- **1.22 mold/BE persistence quirks (2026-10-13, documented + harness repair live):**
+  `setblock` onto a cell whose block entity was broken (not chunk-reloaded)
+  re-uses the stale BE — ghost state that refuses pours and can never
+  yield (`mold-reset` zeroes it; generalizes beyond molds). `BreakBlock(pos,
+  player, mult)` — what the `break` command calls — routes drops to the
+  **player's** inventory, not the ground (headless: lost); bot loot for
+  state-aware blocks goes through the mine action, which also had to be
+  fixed to prefer the virtual `GetDrops` over the plain `Drops` field for
+  molds. The poured metal's natural `cooldownSpeed` cooling never advanced
+  in the daylocked headless world (`mold-cool` covers it; presumably
+  normal in a ticking world). Details: the 2026-10-13 copper-chain report.
 - **1.22.7 firepit cook/fuel quirk (open, 2026-10-10; upstream report candidate, pair with the pit-kiln one):** two raw meats + two charcoal in a firepit produced only **one** cooked output in seven consecutive chain runs (earlier same-day runs on an older build cooked 2/2, so it is timing-dependent, not build-dependent): the burn dies mid-cook and the engine **drops the still-raw second meat** (not in any inventory, slot, or on the ground). The mod only writes items to slots and polls the output - it never touches the fire's fuel or smelt timers. Blocks the P6 ladder's strict `outcome: complete` gate (eat fails 1/2); the four pots-chain stage mechanics (clayform, pit-kiln fire, firepit fuel, cook, eat) are each live-validated individually on 2026-10-10. Workaround if the chain needs 2/2: one meat per fuel load (or refuel mid-cook). Evidence: the day's P6 run JSONs on the game container.
 
 - **5x5 ring dead-end (13.13):** single-bot face-placement cannot complete
@@ -132,53 +143,41 @@ on the model-mux box.
   broadcast + pinned meter); the in-game `/worldconfig` changes the config
   but not the live system state. Public reference: the wiki pages
   "Temporal stability" and "Temporal rift".
+- **World persistence is per-world and per-roster (2026-10-13, operational
+  lesson):** `polis-survival-6` was lost to chunk-layer corruption (degraded
+  live chunks, deterministic across restarts; the map layer was intact;
+  the pre-incident state was unrecoverable because that world was never in
+  the backup roster). The successor world is in the roster. Bots are
+  per-world (re-spawn + Oikistes rebind after a world switch) and bot
+  inventories do not survive a game restart — world-side storage is the
+  durable campaign bank.
 
 ## Next (in binding order)
 
-0. **Survival campaign state (2026-10-11, world polis-survival-6, day-locked).**
-   Milestones verified through R2: **M1 flint x10** (search→extract, ~3 min),
-   **M2 knife** (knap + craft, 12 s), **M3 firestarter** (knife-harvested
-   drygrass + sticks, 21 s), **M4 axe** (knap + craft, 54 s), **M5 campfire**
-   (firepit fuel + endogenous firestarter re-arm + engine auto-ignition,
-   53 s), **M6 food** (8 wild-cranberry berries foraged from two
-   `fruitingbush-wild-cranberry` bushes ~55 blocks NE; the `ripen` test
-   lever was used on both bushes - disclosed environment intervention,
-   because the day-locked clock never advances the in-game growth months;
-   a bonus `linensack` drop arrived with the picks - an honest world
-   drop, no give issued). The carrier (the Oikistes body) holds knife,
-   firestarter, axe, firewood x2, 8 fruit-cranberry, linensack. All
-   provisioned looseflints are spent - further flint is ore-gated behind
-   the pickaxe, i.e. behind copper. **G14 (1.22 metallurgy bootstrap):
-   the asset/ILDASM archaeology is DONE** (`temp/g14-copper-bootstrap.md`,
-   2026-10-12 night) - no furnace in 1.22, no stone pickaxe, no
-   smeltable ore item, dead alloy path, no `looseores` itemtype. The real
-   first-metal chain: **world clutter `pile-tools*` can drop a hammer**
-   (hammer variants start at copper - the only no-deadlock entry) -> grid
-   (tool-hammer tag + ore item) -> nugget -> crucible smelt (nuggets carry
-   smelting props; ore items don't) -> ingot -> anvil (cast via clay mold,
-   iron+ only for smithed anvils) -> chisel/hammerhead/pickaxehead ->
-   copper pickaxe -> flint ore. **G14 empirical phase closed (2026-10-12,
-   session 006):** `blockdata` (BE type + drop dry-run) and `break
-   --skiplos` (thin-box LOS bypass) are live; the 73-clutter r64 census is
-   fully type-mapped and contains **no pile-tools in the live world** (the
-   DB snapshot's five are gone after the version migration) - so the
-   clutter-hammer entry is dead here and **looseores breaking is THE
-   bootstrap**: live-verified end-to-end with the campaign bot (pile
-   break -> 3 x `nugget-nativecopper` entities -> pickup -> 3 stacked in
-   the bot's slot 0); right-click was resolved as dead (client-gated
-   pickup branch + no looseores itemtype). ~38 nativecopper piles in the
-   world (4 live in r64 of the mine side; one broken, a 3-pile cluster
-   unbroken). 20 nuggets/ingot: the open work is a **pile-forage campaign**
-   (bot to ~20 nuggets) blocked practically by the wet-basin traverser
-   wall (short hops work, long legs time out). (2026-10-11
-   night: the brain A/B leg 2 is CLOSED - with five platform walls
-   fixed (query cap, final-step tools, forage compile, goto arrival +
-   retry, keep-list ids) both models do perception -> dispatch -> honest
-   report; 35B 1/1 clean, 27B 1/3 (terrain ate two, a memory no-op ate
-   the third). 35B stays default; the 27B is a usable fallback.
-   Residual platform work: the hillside traverser's non-deterministic
-   3-repath budget, and a carry-back step so foraged fruit reaches the
-   larder instead of lying at the bush.)
+0. **Survival campaign state (2026-10-13, world polis-survival-7, day-locked).**
+   World 6 was lost to unrecoverable chunk corruption (it was never in
+   the backup roster); the campaign re-seeded into world 7 the same
+   afternoon. Work site at the old camp (the firepit box, ±2), bot #650
+   the carrier, Oikistes bound to it.
+   **G14 (1.22 metallurgy bootstrap) is COMPLETE end-to-end:** charcoal
+   (buried plus-pit → the 1.22 layered `charcoalpile` block) + 20
+   `nugget-nativecopper` (looseores pile breaks, 1-3/pile) → crucible
+   (pit kiln) → firepit smelt (the engine's own `DoSmelt`) → pour
+   (`ReceiveLiquidMetal`) into a fired ingot mold → **1× `game:ingot-copper`
+   + the reusable mold**, banked in a world `game:groundstorage` at the
+   work site (bot inventories wipe on restart; the storage is the
+   campaign bank). Full analysis, the new `mold-cool` / `mold-reset` /
+   `mold-info` harness surface, and the two natural-path failures in a
+   daylocked headless world (mold cooling never advances; break loot
+   routes to the player): `docs/reports/2026-10-13-g14-copper-chain-verified.md`.
+   **Next is G15, the anvil:** clayform anvil mold → fire (same kiln) →
+   pour (the crucible path is now reusable end-to-end) → cast
+   `anvil-copper` → smith the chisel (1 ingot — in the bank). The copper
+   pickaxe (3×4 = 12 ingots) is a pile-foraging campaign; the wet-basin
+   traverser wall (2026-10-12) is the practical bottleneck, not
+   mechanics. G14-b: one natural (no-`force`) smelt + natural mold
+   cooling on an unscheduled clock, to retire the bypasses from the
+   default path.
 1. **Survival pilot prep (current driver).** Design settled in
    `docs/design/food-hunger-skills-policies.md` (2026-10-04; ground truth
    from decompiling the 1.22.7 assemblies): hunger is a player-entity
@@ -201,10 +200,10 @@ on the model-mux box.
    dead. Player runs in parallel in the normal player playstyle
    (godmode for now); player-as-stone deity mode is an optional world
    setting (concept under discussion — design doc to follow).
-3. **Copper via the crucible** (clay-formed vessel in the firepit,
-   charcoal; *not* the bloomery — that is iron/steel) — the first
-   endogenous smelting milestone. Same "pot on fire" pattern as the
-   food cooking pot: one capability family covers both.
+3. **Copper via the crucible — DONE 2026-10-13** (item 0; the anvil is its
+   successor, also item 0). The pot-on-fire pattern held exactly as
+   designed: the crucible's own cooking slots carry the ingredients,
+   the firepit is the heat model.
 4. **The 13.13 ring decision** (standing-range-2 / scaffold / 3x3 cap) —
    unblocks bigger single-bot buildings.
 5. **Cross-mission memory** — persistent world model + episodic record +
