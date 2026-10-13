@@ -284,6 +284,8 @@ public partial class PolisSystem
                     return ExecuteBlockKeyCommand(args, context);
                 case "kiln":
                     return ExecuteKilnCommand(args, context);
+                case "charcoalpit":
+                    return ExecuteCharcoalPitCommand(args, context);
                 case "giveplayer":
                     return ExecuteGivePlayerCommand(args, context);
                 case "useitem":
@@ -430,6 +432,12 @@ public partial class PolisSystem
                     return ExecuteCrucibleTakeCommand(args, context);
                 case "crucible-pour":
                     return ExecuteCruciblePourCommand(args, context);
+                case "mold-cool":
+                    return ExecuteMoldCoolCommand(args, context);
+                case "mold-reset":
+                    return ExecuteMoldResetCommand(args, context);
+                case "mold-info":
+                    return ExecuteMoldInfoCommand(args, context);
                 case "zone-show":
                     return ExecuteZoneShowCommand(args, context);
                 case "viewpoint-define":
@@ -444,7 +452,7 @@ public partial class PolisSystem
                     return ExecuteViewpointScreenshotCommand(args, context);
                 default:
                     result.Ok = false;
-                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, firestarter, interact, inventory, spawncell, items, be, kiln, giveplayer, useitem, teststate, bots, takefrom, putinto, mine, chop, break, harvest, pick, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, container-set, container-take, zone-define, zone-remove, zone-list, zone-check, zone-rename, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot, vitals, crucible-fire, crucible-insert, crucible-fuel, crucible-take, crucible-pour";
+                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, firestarter, interact, inventory, spawncell, items, be, kiln, charcoalpit, giveplayer, useitem, teststate, bots, takefrom, putinto, mine, chop, break, harvest, pick, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, container-set, container-take, zone-define, zone-remove, zone-list, zone-check, zone-rename, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot, vitals, crucible-fire, crucible-insert, crucible-fuel, crucible-take, crucible-pour, mold-cool";
                     break;
             }
         }
@@ -2589,6 +2597,173 @@ public partial class PolisSystem
         }
 
         return new PolisTestHarness.CommandResult { Ok = false, Message = "unknown kiln2 subcommand: " + sub };
+    }
+
+    // charcoalpit ---------------------------------------------------------
+    // Charcoal production under the campaign daylock. The BE is fully
+    // calendar-driven (1.22.7 BlockEntityCharcoalPit.OnServerTick, 3s tick):
+    //   IgniteNow()            -> Lit, startingAfterTotalHours = now + 0.5h
+    //   warmup gate            -> Warmup, then Sealed + finishedAfter = now + 18h
+    //   sealed + finished<=now -> ConvertPit(): each firewood-pile block in
+    //                             the buried volume becomes charcoalpile-N
+    //                             (N = round(firewood/4 * 0.75+/-0.25), 0..8)
+    // Under a frozen Calendar.TotalHours both gates never arrive, and any
+    // air cell adjacent to the walked volume re-arms it Unsealed. So:
+    //   create  setblock game:charcoalpit + BE.Init(player) (the vanilla
+    //           firepit-construct-4 path distilled)
+    //   ignite  BE.IgniteNow() (what the firestarter long-press triggers)
+    //   ff      reflection-sets state=Sealed, startingAfterTotalHours=now,
+    //           finishedAfterTotalHours=now; the next 3s server tick runs
+    //           ConvertPit(). Sub-arg: warmup|burn|both (default both).
+    //   state   dump Lit / state / both timestamps / Calendar.TotalHours.
+    // The fuel itself is placed with the stock commands: the volume cells
+    // must be GROUNDSTORAGE blocks holding the firewood item in slot 0
+    // (BlockFirepit.IsFirewoodPile checks the BE type + slot item only, not
+    // the block code), set solid-buried (no air neighbours).
+    PolisTestHarness.CommandResult ExecuteCharcoalPitCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        if (args.Length < 4)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: charcoalpit <create|ignite|ff|state> <x> <y> <z> [warmup|burn]" };
+        }
+        var sub = args[0];
+        if (!double.TryParse(args[1], out var fx) || !double.TryParse(args[2], out var fy) || !double.TryParse(args[3], out var fz))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+        var pos = new Vec3d(fx, fy, fz).AsBlockPos;
+        var beType = EnsureCharcoalPitBeType();
+        if (beType == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "BlockEntityCharcoalPit type not loaded" };
+        }
+
+        if (sub == "create")
+        {
+            var pitBlock = sapi.World.GetBlock(new AssetLocation("game:charcoalpit"));
+            if (pitBlock == null)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "game:charcoalpit block not found in this world" };
+            }
+            sapi.World.BlockAccessor.SetBlock(pitBlock.Id, pos);
+            var newBe = sapi.World.BlockAccessor.GetBlockEntity(pos);
+            if (newBe == null || !beType.IsAssignableFrom(newBe.GetType()))
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = "charcoalpit block set, but no BlockEntityCharcoalPit was created" };
+            }
+            if (TryGetContextPlayer(context, out var player, out _))
+            {
+                try { beType.GetMethod("Init")?.Invoke(newBe, new[] { (object)player }); } catch { }
+            }
+            return new PolisTestHarness.CommandResult { Ok = true, Message = "charcoalpit created at " + pos, Data = CharcoalPitState(newBe) };
+        }
+
+        var be = sapi.World.BlockAccessor.GetBlockEntity(pos);
+        if (be == null || !beType.IsAssignableFrom(be.GetType()))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "no BlockEntityCharcoalPit at " + pos + " (run create first)" };
+        }
+
+        if (sub == "ignite")
+        {
+            var litProp = be.GetType().GetProperty("Lit");
+            if (litProp != null && (bool)litProp.GetValue(be))
+            {
+                return new PolisTestHarness.CommandResult { Ok = true, Message = "already lit at " + pos, Data = CharcoalPitState(be) };
+            }
+            var m = beType.GetMethod("IgniteNow");
+            if (m == null) return new PolisTestHarness.CommandResult { Ok = false, Message = "no IgniteNow() on the BE" };
+            m.Invoke(be, null);
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = "charcoalpit ignited at " + pos + " (warmup 0.5h is calendar-gated; run ff to bypass under daylock)",
+                Data = CharcoalPitState(be)
+            };
+        }
+
+        if (sub == "ff")
+        {
+            string stage = args.Length > 4 ? args[4] : "both";
+            double now = sapi.World.Calendar.TotalHours;
+            var fStart = FindFieldDeep(beType, "startingAfterTotalHours");
+            var fDone = FindFieldDeep(beType, "finishedAfterTotalHours");
+            var fState = FindFieldDeep(beType, "state");
+            if (fDone == null) return new PolisTestHarness.CommandResult { Ok = false, Message = "finishedAfterTotalHours field not found" };
+            string msg = "";
+            if (stage == "warmup" || stage == "both")
+            {
+                if (fStart == null) return new PolisTestHarness.CommandResult { Ok = false, Message = "startingAfterTotalHours field not found" };
+                fStart.SetValue(be, now);
+                if (stage == "both" && fState != null) fState.SetValue(be, 1); // Sealed - skip the warmup branch entirely
+                msg = stage == "warmup" ? "warmup gate bypassed" : "state forced Sealed, warmup gate bypassed, ";
+            }
+            if (stage == "burn" || stage == "both")
+            {
+                fDone.SetValue(be, now);
+                msg += "finishedAfterTotalHours set to now";
+            }
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = msg + " at " + pos + " (ConvertPit within the next ~3s tick; if it re-arms Unsealed the volume has an air hole)",
+                Data = CharcoalPitState(be)
+            };
+        }
+
+        if (sub == "state")
+        {
+            return new PolisTestHarness.CommandResult { Ok = true, Message = "charcoalpit at " + pos, Data = CharcoalPitState(be) };
+        }
+
+        return new PolisTestHarness.CommandResult { Ok = false, Message = "unknown charcoalpit subcommand: " + sub };
+    }
+
+    System.Type CharcoalPitBeType = null;
+
+    System.Type EnsureCharcoalPitBeType()
+    {
+        if (CharcoalPitBeType != null) return CharcoalPitBeType;
+        foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+        {
+            try
+            {
+                CharcoalPitBeType = a.GetType("Vintagestory.GameContent.BlockEntityCharcoalPit", false);
+                if (CharcoalPitBeType != null) break;
+            }
+            catch { }
+        }
+        return CharcoalPitBeType;
+    }
+
+    object CharcoalPitState(object be)
+    {
+        var d = new System.Collections.Generic.Dictionary<string, object>();
+        try
+        {
+            var lit = be.GetType().GetProperty("Lit");
+            d["lit"] = lit?.GetValue(be)?.ToString() ?? "?";
+        }
+        catch { d["lit"] = "?"; }
+        int stateInt = -1;
+        var fState = FindFieldDeep(be.GetType(), "state");
+        if (fState != null) { stateInt = Convert.ToInt32(fState.GetValue(be)); d["state"] = stateInt switch { 0 => "Warmup", 1 => "Sealed", 2 => "Unsealed", _ => stateInt.ToString() }; }
+        double start = 0, done = 0, now = 0;
+        var f1 = FindFieldDeep(be.GetType(), "startingAfterTotalHours");
+        var f2 = FindFieldDeep(be.GetType(), "finishedAfterTotalHours");
+        try
+        {
+            if (f1 != null) start = Convert.ToDouble(f1.GetValue(be));
+            if (f2 != null) done = Convert.ToDouble(f2.GetValue(be));
+            now = sapi.World.Calendar.TotalHours;
+        }
+        catch { }
+        d["startingAfterTotalHours"] = start;
+        d["finishedAfterTotalHours"] = done;
+        d["calendarTotalHours"] = now;
+        d["warmupRemainingMin"] = Math.Round((start - now) * 60.0, 1);
+        d["burnRemainingMin"] = Math.Round((done - now) * 60.0, 1);
+        return d;
     }
 
     System.Type KilnBeType = null;
@@ -7808,10 +7983,11 @@ public partial class PolisSystem
         for (int i = 0; i < cargo.Count; i++)
         {
             var it = cargo[i]?.Itemstack;
-            if (it != null && it.Collectible is Block b && b.Code.Equals(block.Code))
-            {
-                return cargo[i];
-            }
+            if (it == null || it.Collectible == null) continue;
+            // 1.22: block items may be plain items (no Block collectible),
+            // so fall back to a lenient code-string comparison.
+            if (it.Collectible is Block b && b.Code.Equals(block.Code)) return cargo[i];
+            if (CodeMatchesLenient(it.Collectible.Code.ToString(), block.Code.ToString())) return cargo[i];
         }
         return null;
     }
@@ -7993,6 +8169,23 @@ public partial class PolisSystem
             color = args[0];
             offset = 1;
         }
+        // 2026-10-13: optional trailing "force" flag - drive a deterministic
+        // smelt by filling the cook clock and calling the BE's own
+        // smeltItems() directly. Bypasses the firepit's flaky fire/temperature
+        // model (per-item burns die, re-ignite BE-swap drops the armed flag,
+        // temp never sustains at the copper melting point) and uses the game's
+        // own DoSmelt to produce the smelted crucible. Works even on a cold
+        // firepit as long as the crucible is in the input slot and the
+        // metal is in the cooking slots.
+        bool force = false;
+        foreach (var a in args)
+        {
+            if (string.Equals(a, "force", StringComparison.OrdinalIgnoreCase))
+            {
+                force = true;
+                break;
+            }
+        }
         string[] coordArgs = args.Length > offset ? args.Skip(offset).ToArray() : Array.Empty<string>();
 
         if (!TryGetHarnessBot(context, out var bot, out var err))
@@ -8074,25 +8267,113 @@ public partial class PolisSystem
             }
         }
 
-        // Arm ignition the way the GUI does; the firepit's own OnBurnTick
-        // gate (canSmeltInput) decides when the burn actually starts.
-        firepit.canIgniteFuel = true;
-        firepit.MarkDirty(true, owner);
+        // 2026-10-13 (1.22): the auto-ignite gate (canIgniteFuel && canSmelt,
+        // plus the 2h extinguish timer after a dead fire) flaps
+        // unreliably after the first burn. The BE's own ignition is ungated,
+        // so call it directly when we have fuel (same spirit as the
+        // kiln/charcoalpit ff bypasses). Crucial detail: igniteWithFuel()
+        // itself calls setBlockState("lit") = ExchangeBlock, which REPLACES
+        // the block entity - so the arming flag (canIgniteFuel, required for
+        // the per-item re-ignite loop that keeps the fire sustained) must be
+        // set on the NEW entity, after the swap. Set it pre-swap and it is
+        // discarded with the old BE, and the fire dies after one short
+        // per-item burn (observed 2026-10-13: fire relit by repeated calls
+        // but never self-sustained, temp plateaued below the 1083C copper
+        // melting point, cook clock never ran).
+        if (!firepit.IsBurning)
+        {
+            var fuel = firepit.fuelStack ?? (firepit.fuelSlot != null && !firepit.fuelSlot.Empty ? firepit.fuelSlot.Itemstack : null);
+            if (fuel != null && fuel.StackSize > 0)
+            {
+                firepit.igniteWithFuel(fuel);
+            }
+        }
+        var armed = world.BlockAccessor.GetBlockEntity(pos) as BlockEntityFirepit;
+        if (armed != null && armed != firepit)
+        {
+            armed.canIgniteFuel = true;
+            armed.MarkDirty(true, null);
+        }
+        else
+        {
+            firepit.canIgniteFuel = true;
+            firepit.MarkDirty(true, owner);
+        }
+
+        string smeltNote = null;
+        if (force)
+        {
+            var target = armed ?? firepit;
+            if (target.inputStack != null && (target.outputStack == null || target.outputSlot.Empty))
+            {
+                target.inputStackCookingTime = target.maxCookingTime() + 0.5f;
+                target.smeltItems();
+                target.MarkDirty(true, null);
+                smeltNote = "forced smelt completed (cook clock filled + smeltItems)";
+            }
+            else
+            {
+                smeltNote = "force requested but no crucible in input (or output already filled) - nothing smelted";
+            }
+        }
 
         bot.RecordActionResult("crucible-fire", true, $"firepit {pos}: input={inputState}", sapi.World.ElapsedMilliseconds);
 
         string fuelState = firepit.IsBurning ? "burning"
             : (fueled ? "loaded + armed"
                       : "none - run crucible-fuel or drop charcoal in");
+
+        // 2026-10-13 (1.22 smelt debugging): the canSmeltInput() gate is a
+        // compound of OnSmeltAttempt + the item's own CanSmelt (which reads
+        // the slot provider's cooking slots) + the item's combustible
+        // properties. Probe each piece individually - the inventory field is
+        // internal, so reflect it.
+        object[] smeltDebug = null;
+        try
+        {
+            var invField = typeof(BlockEntityFirepit).GetField("inventory",
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic);
+            var inv = invField?.GetValue(firepit) as ISlotProvider;
+            var invSmelting = invField?.GetValue(firepit) as InventorySmelting;
+            var inStack = firepit.inputStack;
+            if (inStack != null && inv != null)
+            {
+                var cps = inStack.Collectible.GetCombustibleProperties(world, inStack, null);
+                smeltDebug = new object[]
+                {
+                    new
+                    {
+                        inputCode = inStack.Collectible.Code.ToString(),
+                        canSmeltInput = firepit.canSmeltInput(),
+                        onSmeltAttempt = inStack.Collectible.OnSmeltAttempt(invSmelting),
+                        canSmeltDirect = inStack.Collectible.CanSmelt(world, inv, firepit.inputSlot.Itemstack, firepit.outputSlot.Itemstack),
+                        inputIsCombustible = cps != null,
+                        requiresContainer = cps?.RequiresContainer,
+                        providerSlotsLen = inv.Slots?.Length,
+                        providerSlots = inv.Slots?.Select(s => s?.Itemstack?.Collectible?.Code?.ToString()).ToList(),
+                        haveCookingContainer = invSmelting?.HaveCookingContainer,
+                        cookingSlotsLen = invSmelting?.CookingSlots?.Length
+                    }
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            smeltDebug = new object[] { "debug probe failed: " + (ex.InnerException?.Message ?? ex.Message) };
+        }
+
         return new PolisTestHarness.CommandResult
         {
             Ok = true,
-            Message = $"firepit at {pos}: crucible in input ({inputState}), fuel {fuelState}",
+            Message = $"firepit at {pos}: crucible in input ({inputState}), fuel {fuelState}" + (smeltNote != null ? $" - {smeltNote}" : ""),
             Data = new
             {
                 pos = new { x = pos.X, y = pos.Y, z = pos.Z },
                 color,
                 input = inputState,
+                smeltNote,
                 fuel = firepit.fuelStack?.Collectible?.Code?.ToString(),
                 burning = firepit.IsBurning,
                 canIgniteFuel = firepit.canIgniteFuel,
@@ -8100,6 +8381,7 @@ public partial class PolisSystem
                 hasCookingContainer = firepit.otherCookingSlots != null && firepit.otherCookingSlots.Length > 0,
                 temperature = firepit.furnaceTemperature,
                 maxTemperature = firepit.maxTemperature,
+                smeltDebug,
                 bot = bot.Entity.EntityId
             }
         };
@@ -8417,6 +8699,15 @@ public partial class PolisSystem
         {
             units = Math.Max(0, Math.Min(999, parsedUnits));
         }
+        // 2026-10-13: optional trailing "force" - the engine's pour gate
+        // refuses solidified metal (crucible < 0.9x melting point). A
+        // force-smelted (never actually burned) crucible is cold, so without
+        // this a harness smelt could never be poured. Force re-heats the
+        // crucible + metal to the melting point (the in-game equivalent is
+        // re-heating over a hot fire) and skips the solidified gate; every
+        // other engine step (CanReceive, ReceiveLiquidMetal, mold fill,
+        // ingot production) runs unchanged.
+        bool forcePour = args.Any(a => string.Equals(a, "force", StringComparison.OrdinalIgnoreCase));
 
         if (!TryGetHarnessBot(context, out var bot, out var err))
         {
@@ -8461,11 +8752,19 @@ public partial class PolisSystem
         float meltingPoint = content.Collectible.GetMeltingPoint(world, null, new DummySlot(content));
         if (crucibleTemp < 0.9f * meltingPoint)
         {
-            return new PolisTestHarness.CommandResult
+            if (!forcePour)
             {
-                Ok = false,
-                Message = $"the metal has solidified (crucible {crucibleTemp:F0}C < 0.9x melting point {0.9f * meltingPoint:F0}C); heat it again (forge-heat)"
-            };
+                return new PolisTestHarness.CommandResult
+                {
+                    Ok = false,
+                    Message = $"the metal has solidified (crucible {crucibleTemp:F0}C < 0.9x melting point {0.9f * meltingPoint:F0}C); heat it again (forge-heat)"
+                };
+            }
+            // Re-heat to the melting point: the pour runs on the engine's own
+            // ReceiveLiquidMetal from here on.
+            crucibleStack.Collectible.SetTemperature(world, crucibleStack, meltingPoint, true);
+            content.Collectible.SetTemperature(world, content, meltingPoint, true);
+            crucibleTemp = meltingPoint;
         }
 
         // Engine pour gate: the mold must be able to receive this metal.
@@ -8515,11 +8814,20 @@ public partial class PolisSystem
         int toPour = units > 0 ? Math.Min(units, unitsAvail) : unitsAvail;
         int transferred = toPour;
         sink.ReceiveLiquidMetal(content, ref transferred, crucibleTemp);
+        // Engine semantics (decompiled 2026-10-13, BlockEntityIngotMold /
+        // BlockEntityToolMold ReceiveLiquidMetal): `amount` is IN OUT - the
+        // engine subtracts what it accepted, so after the call `transferred`
+        // holds the UN-ACCEPTED REMAINDER. accepted = toPour - transferred.
+        // (First incident 2026-10-13: a fully accepted 10-unit pour came back
+        // as remainder 0 and was misreported as "fill guard"; the opposite
+        // "fix" that treated transferred as accepted was also wrong -
+        // accepted is the delta, not the final value.)
+        int accepted = toPour - transferred;
 
         // Mirror the engine's OnHeldInteractStep bookkeeping: the crucible
-        // loses what arrived in the mold, and at zero units it reverts to
-        // its emptiedBlockCode (the fired crucible block).
-        int left = Math.Max(0, unitsAvail - (toPour - transferred));
+        // loses exactly what actually arrived in the mold, and at zero units
+        // it reverts to its emptiedBlockCode (the fired crucible block).
+        int left = Math.Max(0, unitsAvail - accepted);
         crucibleStack.Attributes.SetInt("units", left);
         if (left <= 0 && world is IServerWorldAccessor)
         {
@@ -8564,19 +8872,245 @@ public partial class PolisSystem
 
         return new PolisTestHarness.CommandResult
         {
-            Ok = transferred > 0,
-            Message = transferred > 0
-                ? $"poured {transferred} of {unitsAvail} units of {content.Collectible.Code} into the mold at {pos} ({left} left in the crucible)"
+            Ok = accepted > 0,
+            Message = accepted > 0
+                ? $"poured {accepted} of {toPour} units of {content.Collectible.Code} into the mold at {pos} ({left} left in the crucible)"
                 : $"the mold at {pos} accepted nothing (fill guard)",
             Data = new
             {
                 pos = new { x, y, z },
                 metal = content.Collectible.Code.ToString(),
-                poured = transferred,
+                poured = accepted,
                 unitsInCrucible = left,
                 crucibleTemperature = crucibleTemp,
                 mold = moldData,
                 bot = bot.Entity.EntityId
+            }
+        };
+    }
+
+    // 2026-10-13 (G14): cool the metal contents of a poured mold. The engine's
+    // natural cooldown (contents temperature attribute with cooldownSpeed=300)
+    // never decays for mold BE contents in this headless world (observed:
+    // contents held 1084C for 10+ min after pouring) - so the IsHardened gate
+    // (temp < 0.3 * meltingPoint) never flips and a broken mold yields no
+    // ingot (GetStateAwareContentsSided requires isHardened). Setting the
+    // same temperature the engine's cooldown would reach is the deterministic
+    // equivalent of leaving the mold to cool; everything after that (the
+    // hardened gate, the GetDrops ingot yield: 1 on a plain break,
+    // fillLevel/5 via the shattered/chisel path) is the engine's own.
+    PolisTestHarness.CommandResult ExecuteMoldCoolCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: mold-cool <x y z>
+        if (args.Length < 3 ||
+            !int.TryParse(args[0], out int x) ||
+            !int.TryParse(args[1], out int y) ||
+            !int.TryParse(args[2], out int z))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: mold-cool <x y z>" };
+        }
+
+        var world = sapi.World;
+        var pos = new BlockPos(x, y, z);
+        var be = world.BlockAccessor.GetBlockEntity(pos);
+
+        int cooled = 0;
+        var ingotMold = be as BlockEntityIngotMold;
+        if (ingotMold != null)
+        {
+            foreach (var c in new[] { ingotMold.ContentsLeft, ingotMold.ContentsRight })
+            {
+                if (c == null) continue;
+                c.Collectible.SetTemperature(world, c, 20f, true);
+                var t = c.Attributes["temperature"];
+                if (t is ITreeAttribute ta) ta.RemoveAttribute("cooldownSpeed");
+                cooled++;
+            }
+            // The hardened/liquid gates read the BE's own temperature backing
+            // fields (read-only properties) - set them via reflection.
+            SetBackingFloats(ingotMold, 20f);
+            ingotMold.MarkDirty(true, null);
+        }
+        else
+        {
+            var tool = be as BlockEntityToolMold;
+            if (tool != null && tool.MetalContent != null)
+            {
+                tool.MetalContent.Collectible.SetTemperature(world, tool.MetalContent, 20f, true);
+                var t = tool.MetalContent.Attributes["temperature"];
+                if (t is ITreeAttribute ta) ta.RemoveAttribute("cooldownSpeed");
+                SetBackingFloats(tool, 20f);
+                tool.MarkDirty(true, null);
+                cooled++;
+            }
+        }
+
+        if (!(be is BlockEntityIngotMold) && !(be is BlockEntityToolMold))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"no mold at {pos} (block entity: {be?.GetType().Name ?? "none"})" };
+        }
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"mold at {pos} cooled to ambient (BE temperature fields + {cooled} content stack(s)) - the hardened gate now passes; break it to take the ingot(s)"
+        };
+    }
+
+    // Sets every float field whose name mentions "emp" (temperature / ...
+    // temperatureLeft / temperatureRight backing fields) to the given value.
+    static void SetBackingFloats(object be, float value)
+    {
+        foreach (var f in be.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (f.FieldType == typeof(float) && f.Name.IndexOf("emp", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                f.SetValue(be, value);
+            }
+        }
+    }
+
+    // 2026-10-13 (G14): reset a mold BE to a clean empty state. The VS engine
+    // keeps a broken block's BE attached to its cell until a chunk reload, and
+    // `setblock` onto that cell re-uses the stale BE - a ghost with leftover
+    // fill levels (ints survive; the contents itemstack often does not) that
+    // then refuses new pours ("full or shattered") and can never yield an
+    // ingot (null contents). Zeroing the sided state is the engine's own
+    // fresh-mold state (cf. FromTreeAttributes defaults).
+    PolisTestHarness.CommandResult ExecuteMoldResetCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: mold-reset <x y z>
+        if (args.Length < 3 ||
+            !int.TryParse(args[0], out int x) ||
+            !int.TryParse(args[1], out int y) ||
+            !int.TryParse(args[2], out int z))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: mold-reset <x y z>" };
+        }
+
+        var world = sapi.World;
+        var pos = new BlockPos(x, y, z);
+        var be = world.BlockAccessor.GetBlockEntity(pos);
+
+        var ingotMold = be as BlockEntityIngotMold;
+        if (ingotMold != null)
+        {
+            int oldFill = ingotMold.FillLevelLeft + ingotMold.FillLevelRight;
+            ingotMold.FillLevelLeft = 0;
+            ingotMold.FillLevelRight = 0;
+            ingotMold.ContentsLeft = null;
+            ingotMold.ContentsRight = null;
+            ingotMold.ShatteredLeft = false;
+            ingotMold.ShatteredRight = false;
+            ingotMold.IsRightSideSelected = false;
+            SetBackingFloats(ingotMold, 20f);
+            if (ingotMold.MoldLeft == null)
+            {
+                ingotMold.MoldLeft = new ItemStack(world.BlockAccessor.GetBlock(pos), 1);
+                ingotMold.MoldLeft.ResolveBlockOrItem(world);
+            }
+            if (ingotMold.QuantityMolds > 1 && ingotMold.MoldRight == null)
+            {
+                ingotMold.MoldRight = new ItemStack(world.BlockAccessor.GetBlock(pos), 1);
+                ingotMold.MoldRight.ResolveBlockOrItem(world);
+            }
+            ingotMold.UpdateIngotRenderer();
+            ingotMold.MarkDirty(true, null);
+            return new PolisTestHarness.CommandResult { Ok = true, Message = $"mold at {pos} reset to clean empty state (cleared {oldFill} ghost fill units)" };
+        }
+
+        var tool = be as BlockEntityToolMold;
+        if (tool != null)
+        {
+            tool.MetalContent = null;
+            SetBackingFloats(tool, 20f);
+            tool.MarkDirty(true, null);
+            return new PolisTestHarness.CommandResult { Ok = true, Message = $"tool mold at {pos} reset to clean empty state" };
+        }
+
+        return new PolisTestHarness.CommandResult { Ok = false, Message = $"no mold at {pos} (block entity: {be?.GetType().Name ?? "none"})" };
+    }
+
+    // 2026-10-13 (G14): full state dump of a mold BE - the observability
+    // tool for the Left/Right/Selected sided bookkeeping (the drop logic
+    // reads Left/Right, pours fill the selected side; a BE that carries
+    // fill on a side whose contents itemstack failed to resolve is a
+    // ghost state that yields nothing and refuses pours).
+    PolisTestHarness.CommandResult ExecuteMoldInfoCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: mold-info <x y z>
+        if (args.Length < 3 ||
+            !int.TryParse(args[0], out int x) ||
+            !int.TryParse(args[1], out int y) ||
+            !int.TryParse(args[2], out int z))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: mold-info <x y z>" };
+        }
+
+        var world = sapi.World;
+        var pos = new BlockPos(x, y, z);
+        var be = world.BlockAccessor.GetBlockEntity(pos);
+        var ingotMold = be as BlockEntityIngotMold;
+        if (ingotMold == null)
+        {
+            var tool = be as BlockEntityToolMold;
+            if (tool == null)
+            {
+                return new PolisTestHarness.CommandResult { Ok = false, Message = $"no mold at {pos} (block entity: {be?.GetType().Name ?? "none"})" };
+            }
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = $"toolmold at {pos}",
+                Data = new
+                {
+                    type = "toolmold",
+                    content = tool.MetalContent?.Collectible?.Code?.ToString(),
+                    temperature = tool.Temperature,
+                    isHardened = tool.MetalContent == null ? (bool?)null : tool.Temperature < 0.3f * tool.MetalContent.Collectible.GetMeltingPoint(world, null, new DummySlot(tool.MetalContent))
+                }
+            };
+        }
+
+        // The engine's own drop functions, called directly (2026-10-13 G14:
+        // a hardened full mold broken via BreakBlock produced no item
+        // entities - this probe distinguishes "GetDrops returns nothing"
+        // from "drops are computed but never spawned").
+        var stateAwareMolds = ingotMold.GetStateAwareMolds();
+        var stateAwareMoldedStacks = ingotMold.GetStateAwareMoldedStacks();
+        var block = world.BlockAccessor.GetBlock(pos);
+        ItemStack[] blockDrops = null;
+        try
+        {
+            blockDrops = block.GetDrops(world, pos, null);
+        }
+        catch { }
+
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"ingotmold at {pos}",
+            Data = new
+            {
+                type = "ingotmold",
+                quantityMolds = ingotMold.QuantityMolds,
+                rightSideSelected = ingotMold.IsRightSideSelected,
+                fillLeft = ingotMold.FillLevelLeft,
+                fillRight = ingotMold.FillLevelRight,
+                requiredUnits = ingotMold.RequiredUnits,
+                contentLeft = ingotMold.ContentsLeft?.Collectible?.Code?.ToString(),
+                contentRight = ingotMold.ContentsRight?.Collectible?.Code?.ToString(),
+                tempLeft = ingotMold.TemperatureLeft,
+                tempRight = ingotMold.TemperatureRight,
+                shatteredLeft = ingotMold.ShatteredLeft,
+                shatteredRight = ingotMold.ShatteredRight,
+                isHardenedLeft = ingotMold.ContentsLeft == null ? (bool?)null : ingotMold.IsHardenedLeft,
+                isHardenedRight = ingotMold.ContentsRight == null ? (bool?)null : ingotMold.IsHardenedRight,
+                moldLeft = ingotMold.MoldLeft?.Collectible?.Code?.ToString(),
+                moldRight = ingotMold.MoldRight?.Collectible?.Code?.ToString(),
+                stateAwareMolds = stateAwareMolds?.Select(s => $"{s.StackSize}x{s.Collectible?.Code}").ToArray(),
+                stateAwareMoldedStacks = stateAwareMoldedStacks?.Select(s => $"{s.StackSize}x{s.Collectible?.Code}").ToArray(),
+                blockGetDrops = blockDrops?.Select(s => $"{s.StackSize}x{s.Collectible?.Code}").ToArray()
             }
         };
     }
