@@ -380,6 +380,21 @@ class PolisMineBlockAction : EntityActionBase
                 if (s != null) drops.Add(s);
             }
         }
+        else if (world.BlockAccessor.GetBlockEntity(pos) is BlockEntityIngotMold ||
+            world.BlockAccessor.GetBlockEntity(pos) is BlockEntityToolMold)
+        {
+            // State-aware mold blocks (2026-10-13, G14): the plain Drops
+            // field is the definition-level mold item and would shadow the
+            // virtual GetDrops - which is the one that carries the poured
+            // and hardened metal (the ingot; a plain break of a full
+            // hardened mold yields 1x the metal item + the mold). The reeds
+            // path above establishes the pattern: use the virtual source
+            // with the context player.
+            foreach (var s in block.GetDrops(world, pos, player, 1.0f) ?? Array.Empty<ItemStack>())
+            {
+                if (s != null) drops.Add(s);
+            }
+        }
         else
         {
             // Two loot sources in 1.22, and which one is live depends on
