@@ -23,7 +23,7 @@ EXACT_MAP = {
     "rock-granite": ("rock", "granite", {}),
     "rock-stone": ("rock", "stone", {}),
     "rock-limestone": ("rock", "limestone", {}),
-    "soil-medium-none": ("air", "air", {}),
+    "soil-medium-none": ("soil", "dirt", {}),
     "air": ("air", "air", {}),
     "dirt": ("soil", "dirt", {}),
     "soil-medium-normal": ("soil", "dirt", {}),
@@ -32,6 +32,11 @@ EXACT_MAP = {
     # full cube (class BlockSoil, cube shape). Mining one drops exactly one
     # `soil-{fertility}-none` item, which places the same block - the
     # honest dirt-hut material (builds/hut-dirt.json, 2026-10-05).
+    # 2026-11-03: `soil-medium-none` used to be mapped to air here (a
+    # 9-28 scan artifact) - but a PLACED medium-soil block reports exactly
+    # that code, and the air mapping made a filled build site look empty
+    # to the standability checks (a bogus goto target, 'one step short').
+    # It is a full cube like its siblings.
     "soil-verylow-none": ("soil", "dirt", {}),
     "soil-verylow-normal": ("soil", "dirt", {}),
     "soil-low-none": ("soil", "dirt", {}),
