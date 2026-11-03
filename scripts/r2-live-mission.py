@@ -2124,6 +2124,77 @@ def _campaign_jobs(args):
     return jobs, None
 
 
+def _mine_prep(jobs, wm, botpos, material, need, have, run):
+    """Deterministic mine-prep (extracted from the build-plan branch,
+    2026-11-03, where it lived inline): walk the WHOLE world model's
+    clusters of `material` (the planner index is a 64-nearest size
+    limit, not a scope) nearest-centroid first and append one mine job
+    per cluster until the shortfall (need-have, oversampled 1.35x -
+    some cluster cells are buried or already dug) is covered. Per-
+    cluster allocation is capped at 40 when the shortfall can be
+    spread (the 2026-10-07 over-mine lesson) and grows when there are
+    few clusters (one big plateau must be mineable). Appends to
+    `jobs`; returns None on success or a rejection reason string
+    (unknown is never yes)."""
+    if material not in HAND_MINABLE:
+        return ("%s: need %d have %d (not hand-minable - declare "
+                "'supply external' for harness supply, or --pregive a "
+                "pickaxe to the carrier)" % (material, need, have))
+    shortfall = max(1, int(round(need * 1.35)) - have)
+    cands = [r for r in wm.find_unclaimed(wm.find_resources(fresh=False))
+             if r.material == material]
+    cands.sort(key=lambda r: abs((r.centroid or [0, 0, 0])[0] - botpos[0])
+               + abs((r.centroid or [0, 0, 0])[2] - botpos[2]))
+    if not cands:
+        run["alloc_debug"] = {"material": material,
+                              "wm_resources": [
+                                  {"id": r.id, "material": r.material,
+                                   "code": r.code,
+                                   "cells": len(r.cells),
+                                   "mineable": (len(r.mineable_cells)
+                                                if r.mineable_cells
+                                                else None),
+                                   "observed": r.observed_quantity,
+                                   "centroid": r.centroid}
+                                  for r in wm.find_resources(fresh=False)]}
+        return ("resource_not_found: %s: no scanned %s cluster (declare "
+                "'supply external' for harness supply)"
+                % (material, material))
+    per_cluster_cap = max(40, shortfall // max(1, len(cands)))
+    for rec in cands:
+        if shortfall <= 0:
+            break
+        n_mine = (len(rec.mineable_cells) if rec.mineable_cells
+                  else len(rec.cells))
+        take = min(shortfall, n_mine, per_cluster_cap)
+        if take <= 0:
+            continue
+        jobs.append({"id": "j%d" % (len(jobs) + 1),
+                     "type": "mine",
+                     "source": rec.id, "material": material,
+                     "quantity": take,
+                     "origin": "deterministic",
+                     "depends_on": ([jobs[-1]["id"]]
+                                    if jobs else [])})
+        shortfall -= take
+    if shortfall > 0:
+        run["alloc_debug"] = {"material": material,
+                              "wm_resources": [
+                                  {"id": r.id, "material": r.material,
+                                   "code": r.code,
+                                   "cells": len(r.cells),
+                                   "mineable": (len(r.mineable_cells)
+                                                if r.mineable_cells
+                                                else None),
+                                   "observed": r.observed_quantity,
+                                   "centroid": r.centroid}
+                                  for r in wm.find_resources(fresh=False)]}
+        return ("resource_not_found: %s: scanned clusters cover %d of %d "
+                "(declare 'supply external' for harness supply)"
+                % (material, (need - have) - shortfall, need - have))
+    return None
+
+
 def _gather_cell(pol, bot, wm, job, run, measured):
     """A cell-targeted gather (2026-10-11): the operator names one
     fixed cell, same contract as _cell_break. Dispatch on the LIVE
@@ -3410,8 +3481,10 @@ def main():
     ap.add_argument("--uid", required=True)
     ap.add_argument("--no-planner", action="store_true",
                     help="deterministic plan for one-verb mine/harvest "
-                         "goals (13.6 step 2: prove executor+ledger+oracle "
-                         "without the LLM in the loop)")
+                         "goals and the two-job consumer goals "
+                         "(place/build: mine-prep + the consumer job) - "
+                         "prove executor+ledger+oracle without the LLM "
+                         "in the loop (13.6 step 2)")
     ap.add_argument("--llm", default="")
     ap.add_argument("--llm-model", default="")
     ap.add_argument("--goal", required=True)
@@ -3585,7 +3658,7 @@ def main():
                    and lookup_source(goal.object) is not None)
     if ((getattr(args, "no_planner", False)
          and goal.verb in ("mine", "harvest", "gather", "forage",
-                           "sow", "build", "build-plan", "make"))
+                           "sow", "build", "build-plan", "make", "place"))
             or src_map_hit):
         # the deterministic goal compiler (13.6 step 2, no LLM): a
         # one-verb acquisition goal has one obvious plan - the closest
@@ -3798,27 +3871,109 @@ def main():
                                       "'at <site>'"})
                 return finish(args.out, run, t0)
             have = inv.get(goal.object, 0)
-            if have < n and getattr(goal, "supply", None) != "external":
-                run.update({"outcome": "rejected",
-                            "reason": "resource_not_found: %s: have %d, "
-                                      "need %d (declare 'supply external' "
-                                      "for harness supply)"
-                            % (goal.object, have, n)})
-                return finish(args.out, run, t0)
             bp4 = st["Bot"]["Pos"]
-            raw = json.dumps({"id": "j1", "type": "build",
-                              "quantity": n, "target": goal.at,
-                              "material": goal.object,
-                              "origin": "deterministic"})
+            jobs = []
+            if have < n and getattr(goal, "supply", None) != "external":
+                # mine-prep (2026-11-03, the two-job goal): a short
+                # inventory is not a rejection when the missing blocks
+                # are hand-minable in the scanned world - mine, then
+                # build. Same allocator as build-plan (oversample,
+                # per-cluster cap, nearest first); the surplus stays in
+                # the cargo (the ring uses exactly n).
+                err = _mine_prep(jobs, wm, bp4, goal.object, n, have, run)
+                if err is not None:
+                    run.update({"outcome": "rejected", "reason": err})
+                    return finish(args.out, run, t0)
+            jobs.append({"id": "j%d" % (len(jobs) + 1), "type": "build",
+                         "quantity": n, "target": goal.at,
+                         "material": goal.object,
+                         "origin": "deterministic",
+                         "depends_on": ([jobs[-1]["id"]]
+                                         if jobs else [])})
+            raw = json.dumps(jobs)
             prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
                                                  center=(bp4[0], 0,
                                                          bp4[2]))
             run["planner"] = {"mode": "deterministic",
                               "chosen": {"site": goal.at, "blocks": n,
                                          "supply": "inventory"
-                                         if have >= n else "external"},
+                                         if have >= n else ("external"
+                                                            if getattr(
+                                                                goal,
+                                                                "supply",
+                                                                None)
+                                                                ==
+                                                                "external"
+                                                            else "mine-prep"),
+                                         "mine_prep": [
+                                             {"job": j["id"],
+                                              "material": j["material"],
+                                              "source": j["source"],
+                                              "quantity": j["quantity"]}
+                                             for j in jobs
+                                             if j["type"] == "mine"]},
                               "candidates": sorted(index)}
-            jobs, failure = validate_plan(raw, index, inv, goal=goal)
+            jobs_v, failure = validate_plan(raw, index, inv, goal=goal)
+            jobs = jobs_v
+            run["plan"] = {"raw": raw, "latency_ms": 0,
+                           "jobs": [j.to_dict() for j in jobs] if jobs else None,
+                           "failure": failure.to_dict() if failure else None}
+        elif goal.verb == "place":
+            # the two-job endogenous goal (2026-11-03, work item 2):
+            # 'place <material> at <site> [xN]' without a supply
+            # declaration. The material comes from the world: the
+            # compiler mines it (nearest hand-minable cluster, same
+            # allocator as build-plan) and then places it. With the
+            # inventory sufficient the plan degenerates to ONE place
+            # job (the prompt rule 9 the 27B was taught is the model's
+            # mirror of this same decision); with 'supply external'
+            # the pre-give (2b) is already in the inventory and the
+            # plan is likewise a single place job.
+            n = goal.n or 1
+            if not getattr(goal, "at", None):
+                run.update({"outcome": "rejected",
+                            "reason": "deterministic: place goal needs "
+                                      "'at <site>'"})
+                return finish(args.out, run, t0)
+            have = inv.get(goal.object, 0)
+            bp6 = st["Bot"]["Pos"]
+            jobs = []
+            if have < n and getattr(goal, "supply", None) != "external":
+                err = _mine_prep(jobs, wm, bp6, goal.object, n, have, run)
+                if err is not None:
+                    run.update({"outcome": "rejected", "reason": err})
+                    return finish(args.out, run, t0)
+            jobs.append({"id": "j%d" % (len(jobs) + 1), "type": "place",
+                         "quantity": n, "target": goal.at,
+                         "material": goal.object,
+                         "origin": "deterministic",
+                         "depends_on": ([jobs[-1]["id"]]
+                                         if jobs else [])})
+            raw = json.dumps(jobs)
+            prompt, index = build_planner_prompt(wm, goal, inv, fixtures,
+                                                 center=(bp6[0], 0,
+                                                         bp6[2]))
+            run["planner"] = {"mode": "deterministic",
+                              "chosen": {"site": goal.at, "blocks": n,
+                                         "supply": "inventory"
+                                         if have >= n else ("external"
+                                                            if getattr(
+                                                                goal,
+                                                                "supply",
+                                                                None)
+                                                                ==
+                                                                "external"
+                                                            else "mine-prep"),
+                                         "mine_prep": [
+                                             {"job": j["id"],
+                                              "material": j["material"],
+                                              "source": j["source"],
+                                              "quantity": j["quantity"]}
+                                             for j in jobs
+                                             if j["type"] == "mine"]},
+                              "candidates": sorted(index)}
+            jobs_v, failure = validate_plan(raw, index, inv, goal=goal)
+            jobs = jobs_v
             run["plan"] = {"raw": raw, "latency_ms": 0,
                            "jobs": [j.to_dict() for j in jobs] if jobs else None,
                            "failure": failure.to_dict() if failure else None}
