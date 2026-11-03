@@ -2189,12 +2189,26 @@ def _mine_prep(jobs, wm, botpos, material, need, have, run):
                 "'supply external' for harness supply, or --pregive a "
                 "pickaxe to the carrier)" % (material, need, have))
     shortfall = max(1, int(round(need * 1.35)) - have)
-    cands = [r for r in wm.find_unclaimed(wm.find_resources(fresh=False))
-             if r.material == material]
+    allres = wm.find_unclaimed(wm.find_resources(fresh=False))
+    mat_all = [r for r in allres if r.material == material]
+    # 2026-11-03 terrace filter: the traverser climbs one block at a
+    # time (a two-block step-up is the documented 'one step short'
+    # dead-end - the 2026-11-03 pickup probe and the first mine->
+    # place run both hit it). A mine cluster on another terrace
+    # strands the worker: the mine succeeds, the return goto to the
+    # site cannot climb back, the consumer job dies. Only clusters
+    # with at least one cell within +/-1 of the worker's standing
+    # layer are candidates.
+    spawn_y = int(botpos[1])
+    cands = [r for r in mat_all
+             if any(abs(c[1] - spawn_y) <= 1 for c in r.cells)]
     cands.sort(key=lambda r: abs((r.centroid or [0, 0, 0])[0] - botpos[0])
                + abs((r.centroid or [0, 0, 0])[2] - botpos[2]))
     if not cands:
         run["alloc_debug"] = {"material": material,
+                              "spawn_layer": spawn_y,
+                              "clusters_on_terrace": len(cands),
+                              "clusters_anywhere": len(mat_all),
                               "wm_resources": [
                                   {"id": r.id, "material": r.material,
                                    "code": r.code,
@@ -2204,10 +2218,12 @@ def _mine_prep(jobs, wm, botpos, material, need, have, run):
                                                 else None),
                                    "observed": r.observed_quantity,
                                    "centroid": r.centroid}
-                                  for r in wm.find_resources(fresh=False)]}
-        return ("resource_not_found: %s: no scanned %s cluster (declare "
-                "'supply external' for harness supply)"
-                % (material, material))
+                                  for r in allres]}
+        return ("resource_not_found: %s: no scanned %s cluster ON THE "
+                "WORKER'S TERRACE (clusters elsewhere: %d; the "
+                "traverser climbs one block at a time - declare '"
+                "supply external' for harness supply, or move the "
+                "worker)" % (material, material, len(mat_all)))
     per_cluster_cap = max(40, shortfall // max(1, len(cands)))
     for rec in cands:
         if shortfall <= 0:
