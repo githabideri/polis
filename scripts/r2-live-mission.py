@@ -1788,9 +1788,22 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
             if reached:
                 break
         if not reached:
+            # 2026-11-03: the failure message is a diagnosis - the
+            # last goto attempt's LastAction (the traverser's own
+            # words, e.g. 'one step short') and the worker's final
+            # position are the data the next leg needs.
+            stf = pol.state(bot) or {}
+            laf = stf.get("LastAction") or {}
+            posf = (stf.get("Bot") or {}).get("Pos")
             return (False, "place %s: no standable neighbour of %s "
-                    "reachable" % (item, cell), measured, {},
-                    {"site_filled": None})
+                    "reachable (last goto: %s; worker at %s)" % (
+                        item, cell, laf.get("Msg"),
+                        [round(v, 1) for v in posf] if posf else None),
+                    measured, {},
+                    {"site_filled": None,
+                     "last_action": {k: laf.get(k) for k in
+                                     ("Name", "Ok", "Msg")},
+                     "pos": posf})
         res = v5.execute(pol, bot, "place_block", cell, base, "build",
                          buildblock=item)
         time.sleep(2)
@@ -2191,23 +2204,42 @@ def _mine_prep(jobs, wm, botpos, material, need, have, run):
     shortfall = max(1, int(round(need * 1.35)) - have)
     allres = wm.find_unclaimed(wm.find_resources(fresh=False))
     mat_all = [r for r in allres if r.material == material]
-    # 2026-11-03 terrace filter: the traverser climbs one block at a
-    # time (a two-block step-up is the documented 'one step short'
-    # dead-end - the 2026-11-03 pickup probe and the first mine->
-    # place run both hit it). A mine cluster on another terrace
-    # strands the worker: the mine succeeds, the return goto to the
-    # site cannot climb back, the consumer job dies. Only clusters
-    # with at least one cell within +/-1 of the worker's standing
-    # layer are candidates.
-    spawn_y = int(botpos[1])
-    cands = [r for r in mat_all
-             if any(abs(c[1] - spawn_y) <= 1 for c in r.cells)]
+    # 2026-11-03 approachability, in two tiers. The traverser climbs
+    # one block at a time (a two-block step-up is the documented 'one
+    # step short' dead-end - the 2026-11-03 pickup probe and the first
+    # mine->place runs both hit it), so a cluster is useful only if
+    # the worker can stand NEXT TO one of its mineable cells and get
+    # back. Tier 1 (strict): a mineable cell one block under the
+    # worker's own standing layer with a standable neighbour at that
+    # same layer (air over solid) - the mine and the whole return
+    # leg stay on the spawn terrace. Tier 2 (degrade): any cell
+    # within +/-1 of the standing layer. Neither tier admits a
+    # cluster whose approach lands over a hole rim.
+    sc = getattr(wm, "_solid_cells", set())
+    spawn_y = int(botpos[1])  # the worker's standing layer
+
+    def _approachable(rec, strict):
+        for c in (rec.mineable_cells or []):
+            y2 = c[1] + 1  # standing layer above the mineable cell
+            if abs(y2 - spawn_y) > 1:
+                continue  # a two-block climb either way is a dead-end
+            if strict and y2 != spawn_y:
+                continue
+            for nx, nz in ((c[0] - 1, c[2]), (c[0] + 1, c[2]),
+                           (c[0], c[2] - 1), (c[0], c[2] + 1)):
+                if (nx, y2, nz) not in sc and (nx, y2 - 1, nz) in sc:
+                    return True
+        return False
+
+    cands = [r for r in mat_all if _approachable(r, True)]
+    if not cands:
+        cands = [r for r in mat_all if _approachable(r, False)]
     cands.sort(key=lambda r: abs((r.centroid or [0, 0, 0])[0] - botpos[0])
                + abs((r.centroid or [0, 0, 0])[2] - botpos[2]))
     if not cands:
         run["alloc_debug"] = {"material": material,
                               "spawn_layer": spawn_y,
-                              "clusters_on_terrace": len(cands),
+                              "clusters_approachable": 0,
                               "clusters_anywhere": len(mat_all),
                               "wm_resources": [
                                   {"id": r.id, "material": r.material,
@@ -2219,11 +2251,13 @@ def _mine_prep(jobs, wm, botpos, material, need, have, run):
                                    "observed": r.observed_quantity,
                                    "centroid": r.centroid}
                                   for r in allres]}
-        return ("resource_not_found: %s: no scanned %s cluster ON THE "
-                "WORKER'S TERRACE (clusters elsewhere: %d; the "
-                "traverser climbs one block at a time - declare '"
-                "supply external' for harness supply, or move the "
-                "worker)" % (material, material, len(mat_all)))
+        return ("resource_not_found: %s: no scanned %s cluster is "
+                "APPROACHABLE from the worker's standing layer ("
+                "clusters elsewhere: %d; the traverser climbs one "
+                "block at a time and a hole-rim approach strands it - "
+                "declare 'supply external' for harness supply, or "
+                "move the worker closer)" % (material, material,
+                                             len(mat_all)))
     per_cluster_cap = max(40, shortfall // max(1, len(cands)))
     for rec in cands:
         if shortfall <= 0:
