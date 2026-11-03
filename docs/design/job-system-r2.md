@@ -1476,3 +1476,64 @@ player, a per-world persistence ring, `GET /polis/vitals`, the
 `vitals` CLI command, per-world config) feeds the webui's `state.
 vitals` — the stats foundation the survival run's hunger/health
 evidence needs. See `docs/design/food-hunger-skills-policies.md`.
+
+## 15. Two-job endogenous goal: mine→place, live on both arms (2026-11-03)
+
+The `place` verb became a two-job endogenous goal: with the inventory
+lacking the material, the plan is `[mine <cluster>, place <site>]` -
+the material comes out of the world, not from the harness. Milestone
+1 of §9 ("mine … and build …" → planner emits [mine, place]) is met
+for the place family on **both planner arms**, live, in ~31-35 s each:
+
+| Arm | Plan | Result |
+|-----|------|--------|
+| deterministic compiler | mine res (nearest approachable cluster, 1-block oversample) → place site | GOAL COMPLETE 31 s: block gone, measured drop `soil-medium-none` x1, site filled, wm condition true |
+| 27B planner | the model itself emits `[mine res-*, place site-A, depends_on j1]` | GOAL COMPLETE 35.5 s, planner latency ~2 s; identical oracles |
+
+**What it took (four distinct gaps, each measured live):**
+
+1. **The compiler** gained the `place` branch on top of the
+   build-plan `_mine_prep` allocator (extracted as a shared helper:
+   walk the world-model clusters, nearest first, per-cluster cap, 1.35x
+   oversample). The `build` branch now mine-preps too instead of
+   rejecting a short inventory.
+2. **Terrain truth:** a place site needs a *standable* ring neighbour
+   (the executor stands on a neighbour) - `register_site` now checks
+   it; and mine-prep needs an *approachable* cluster: a mineable cell
+   with a standable neighbour **at the worker's own standing level**
+   (the engine traverser climbs at most one block at a time, so a
+   cluster that only touches the worker from a level apart fails
+   "one step short" - the ±1-terrace filter was not enough for
+   mixed-terrace clusters; the same-level standability check is).
+3. **Item-code identity (1.22 fact):** a PLACED soil block reports the
+   item code of what was placed (`game:soil-medium-none`), and the
+   `place` command matches the bot's inventory by EXACT code
+   (namespace-agnostic). The static map's `soil-low-none` never
+   matches a mined `soil-medium-none`; cargo resolution now walks an
+   explicit item-family table (material → placeable item codes).
+   Related: `EXACT_MAP` mapped `soil-medium-none` to *air* (a 9-28
+   scan artifact) while every sibling fertility variant is soil - a
+   filled site then looked empty to the standability checks and the
+   filled cell was offered as a goto target. It is a full cube and is
+   now mapped like its siblings.
+4. **The 27B arm** needed the pattern taught: its first live place
+   goal rejected twice (the prompt taught supply only from inventory
+   or external give_tool, and told the model a place job "consumes
+   exactly" the drops= code). Rule 6 is now an explicit SUPPLY
+   DECISION (inventory → external → mine-prep → reject) with a
+   worked example of the two-job answer; rule 4 says jobs name the
+   MATERIAL and the validator resolves the family (`sources.py`
+   already accepted `soil-*` drops under "dirt"). The first correct
+   plan then died in the parser - the model emitted the two job
+   objects **without the array wrapper** - and `validate_plan`
+   gained a deterministic bare-sequence repair (raw_decode loop;
+   only all-object sequences are accepted). After that, the model's
+   own plan passed validation (ledger: the dirt claim against the
+   measured `soil-medium-none` drop) and executed to completion.
+
+**Terrain caveat (documented, not fixed):** the world's spawn area is
+a two-block hole rim; the traverser's one-step limit makes that area
+hostile to mine-prep, so the live runs used operator-declared sites on
+the verified-flat terrace next to it. The auto site picker now
+requires a standable ring neighbour, which fixes the picker; a
+spawning-on-the-rim problem would be a new-world problem.
