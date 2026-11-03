@@ -89,6 +89,16 @@ GIVE_ITEM = {
     "axe": "axe-felling-copper",
 }
 
+#: material -> the placeable item-code FAMILY (2026-11-03): 1.22 soil
+#: comes in fertility variants (digging soil-medium drops soil-medium-
+#: none, the static map says soil-low-none). classify() cannot resolve
+#: this - EXACT_MAP maps the *-none item codes to AIR as block codes -
+#: so the place branch matches the cargo against this family instead.
+ITEM_FAMILIES = {
+    "dirt": ("soil-verylow-none", "soil-low-none", "soil-medium-none",
+             "soil-high-none"),
+}
+
 #: material name -> the BLOCK code a place/build of it leaves in the
 #: world (the oracle's count predicate). granite's placeable block is
 #: rock-granite (the 2026-09-28 probe: the item is stone-granite, the
@@ -1751,8 +1761,9 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
             if it.get("Code"):
                 cargo.append(it["Code"])
         if item not in cargo:
+            fam = ITEM_FAMILIES.get(job.material, ())
             for code in sorted(set(cargo)):
-                if classify(code)[1] == job.material:
+                if code.split(":", 1)[-1] in fam:
                     item = code
                     break
         # 2026-10-07: the engine's place reach is 4.5 blocks (a
