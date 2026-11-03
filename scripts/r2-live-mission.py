@@ -2695,11 +2695,22 @@ def _pickup_loose(pol, bot, wm, job, run, measured, entity):
     multiply; the targets query is live)."""
     import math as _m
     eid, code, cell = entity
-    pre = inventory_of(pol.state(bot))
-    bp = tuple(pol.state(bot)["Bot"]["Pos"])
+    st = pol.state(bot)
+    pre = inventory_of(st)
+    bp = tuple(st["Bot"]["Pos"])
+    before_la = st.get("LastAction") or {}
     d = _m.hypot(cell[0] - bp[0], cell[2] - bp[2])
     v5.goto_wait(pol, bot, cell, timeout=max(30, int(2.5 * d) + 10))
     r = pol.cmd("pickup", [str(eid)], bot, timeout=60)
+    # The pickup action is self-approaching (2026-11-03): if the item
+    # was out of range when it started, it walks to the item first and
+    # completes asynchronously - wait for the fresh completion before
+    # measuring the inventory delta (measuring immediately would see
+    # 0 gained and the run would retry the walk forever).
+    if not r.get("Ok") and "synchronously" in (r.get("Message") or ""):
+        la = v5.wait_action(pol, bot, "pickup", before_la, timeout=90)
+        if la is not None:
+            r = {"Ok": la.get("Ok"), "Message": la.get("Msg") or ""}
     post = inventory_of(pol.state(bot))
     m = _delta_dict(pre, post)
     gained = _delta_gain(pre, post, job)

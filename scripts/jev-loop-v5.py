@@ -515,6 +515,30 @@ def goto_wait(pol, bot, cell, timeout=45):
         time.sleep(0.5)
     return {"ok": False, "msg": "goto timeout"}
 
+def action_completed(pol, bot, name, before):
+    """One poll: does the bot's LastAction carry a `name` record that is
+    NEWER than `before` (a different name, or a changed msg/ok for the
+    same name)? The harness has no timestamp on LastAction, so "newer"
+    is defined against the record captured before the command was
+    issued. Returns the fresh record or None. (2026-11-03: self-
+    approaching actions complete asynchronously - the pickup walks to
+    a far item first - so callers must wait for a fresh record.)"""
+    la = pol.state(bot).get("LastAction") or {}
+    if la.get("Name") != name:
+        return None
+    if before.get("Name") == name and la.get("Msg") == before.get("Msg") and la.get("Ok") == before.get("Ok"):
+        return None  # stale record from before the command
+    return la
+
+def wait_action(pol, bot, name, before, timeout=90):
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        la = action_completed(pol, bot, name, before)
+        if la is not None:
+            return la
+        time.sleep(1)
+    return None
+
 def execute(pol, bot, action, target, base, mission, autocollect=True,
             marker="rock-granite", crop="crop-carrot-7",
             buildblock="rock-granite"):
@@ -589,14 +613,14 @@ def execute(pol, bot, action, target, base, mission, autocollect=True,
             time.sleep(1)
         return {"ok": False, "msg": "pickaxe not carried after 8 gives"}
     if action == "pickup_item":
-        # nearest ground item (harness: goto+pickup sequence); success = the
+        # nearest ground item (harness pickup action); success = the
         # pickup action reports, or the ground-item list shrinks.
-        # Approach step: item entities drop where the source block was, so
-        # after a ranged harvest/mine they can sit just beyond the 3.0
-        # pickup range (observed live 2026-09-26: rye seeds 3.26 out). Go to
-        # the item's cell first, then pick up (same pattern as the mine
-        # approach step); durable fix = the mod's pickup action self-
-        # approaching (PolisPickupItemAction currently Fails on dist>range).
+        # The action is self-approaching (2026-11-03): out of range at
+        # start, it walks to the item (nested goto, bounded), re-
+        # resolves the rolled item and picks - the loop no longer hard-
+        # fails on distance. The goto below stays as the mission-level
+        # walk for far items (chunk loading, one bounded A*); the
+        # action's approach is the durable rescue for short falls.
         st0 = pol.state(bot)
         n0 = len(st0.get("Items") or [])
         items = st0.get("Items") or []
@@ -604,17 +628,20 @@ def execute(pol, bot, action, target, base, mission, autocollect=True,
             ip = items[0].get("Pos") or []
             if len(ip) == 3:
                 goto_wait(pol, bot, (int(ip[0]), int(ip[1]), int(ip[2])), timeout=20)
+        before_la = st0.get("LastAction") or {}
         r = pol.cmd("pickup", [], bot)
-        if not r.get("Ok") and "No item entity found" not in (r.get("Message") or ""):
+        if not r.get("Ok") \
+                and "synchronously" not in (r.get("Message") or "") \
+                and "No item entity found" not in (r.get("Message") or ""):
             return {"ok": False, "msg": r.get("Message") or r.get("error") or "pickup refused"}
         t0 = time.time()
-        while time.time() - t0 < 30:
+        while time.time() - t0 < 90:  # extended for the self-approach walk
             st = pol.state(bot)
-            la = st.get("LastAction") or {}
-            if la.get("Name") == "pickup" and la.get("Ok") is not None:
-                return {"ok": bool(la.get("Ok")), "msg": la.get("Msg") or ""}
             if len(st.get("Items") or []) < n0:
                 return {"ok": True, "msg": "ground item removed"}
+            la = action_completed(pol, bot, "pickup", before_la)
+            if la is not None:
+                return {"ok": bool(la.get("Ok")), "msg": la.get("Msg") or ""}
             time.sleep(1)
         return {"ok": False, "msg": "pickup timeout"}
     if action == "place_block":
