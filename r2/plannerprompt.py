@@ -60,27 +60,34 @@ RULES
    picked. A forage without 'at' takes the nearest matching instance.
    "build X xN at S" places N blocks of material X as a ring platform
    around site S - a SINGLE composite build job (one job, N blocks).
-   The material comes from the INVENTORY, an earlier give_tool job
-   (external supply), or - when the inventory lacks X and a candidate
-   block resource of X is listed - MINE PREP: one mine job on that
-   resource (source res-*, material X) before the build job (see the
-   place rule below). Building a NAMED structure (workbench, shelter
-   frame, furnace) is NOT a build goal - crafting has no vocabulary
-   yet; reject such goals plainly.
+   Building a NAMED structure (workbench, shelter frame, furnace) is
+   NOT a build goal - crafting has no vocabulary yet; reject such
+   goals plainly.
    "place X [xN] at S" puts N (default 1) block(s) of material X into
-   site S. Supply, in order of preference: (a) the INVENTORY already
-   holds X -> a SINGLE place job (no mining, no top-up); (b) the goal
-   declares external supply -> a give_tool job, then the place job;
-   (c) the inventory lacks X and a candidate block resource of X is
-   listed -> MINE PREP: one mine job on that resource (source res-*,
-   material X) with the place job after it (depends_on the mine). The
-   mine job names the material X, never the drop-code variant. An
-   X with no inventory, no candidate block resource, and no external
-   declaration is rejected (rule 8/9).
-6. External supply: if a place goal needs a material that no world
-   producer yields and the inventory lacks it, a give_tool job is a
-   LEGAL plan (harness supply); use it, or reject if you judge the goal
-   should not use external supply.
+   site S - one place job (or the mine-prep form below). For where
+   X comes from, follow the SUPPLY DECISION (rule 6) exactly.
+6. SUPPLY DECISION - for a place/build goal needing material X,
+   choose the FIRST matching case and plan it:
+   (a) the INVENTORY lists X -> a SINGLE place/build job (no mining,
+       no top-up); quantity is checked by the validator, not you;
+   (b) the goal line says 'supply external' -> a give_tool job for X,
+       then the place/build job (depends_on the give);
+   (c) a candidate resource with block=X is listed (e.g. block=dirt)
+       -> MINE PREP: one mine job with fields source=that res-* id,
+       material=X, quantity=N (a job object, per rule 3) with the
+       place/build job after it (depends_on the mine). X comes out of
+       the world - this is the endogenous plan, and it is the answer
+       when (a) and (b) do not apply and (c) has a candidate; do NOT
+       reject it. Worked example of (c): goal 'place dirt at site-A
+       x1', inventory without dirt, candidates contain
+       'res-219  block=dirt  code=dirt' -> the answer is exactly
+       [{{"id":"j1","type":"mine","source":"res-219","material":"dirt","quantity":1}},
+        {{"id":"j2","type":"place","target":"site-A","material":"dirt","quantity":1,"depends_on":["j1"]}}];
+   (d) none of the above -> the single-word JSON reject of rule 8,
+       e.g. reason 'no dirt in inventory, candidates, or declared
+       external'.
+   A place goal whose site condition reads now=False cannot be placed
+   there yet: reject it (the fixture is not satisfied).
 7. Keep the plan minimal. Order producers before consumers.
 8. If the goal cannot be met from the candidates, answer exactly
    {{"reject":"<one-line reason>"}}.
@@ -103,7 +110,10 @@ FIXTURES (id, kind, requirement, current condition)
 INVENTORY (material code: quantity)
 {inventory}
 
-ANSWER (one JSON value only, no prose):
+ANSWER (one JSON value only, no prose): a JSON ARRAY of the job
+objects, wrapped in square brackets [ ... ], or a single reject
+object (the "reject" object of rule 8). Never emit bare objects
+without the array.
 """
 
 

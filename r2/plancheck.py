@@ -341,11 +341,43 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
     #    a BARE object for single-job plans; a job-shaped dict is
     #    normalized to a one-element list - documented, not invented)
     if isinstance(plan_raw, (str, bytes)):
+        text = (plan_raw if isinstance(plan_raw, str) else
+                plan_raw.decode("utf-8", "replace")).strip()
         try:
-            plan_raw = json.loads(plan_raw)
+            plan_raw = json.loads(text)
         except (ValueError, TypeError) as e:
-            return None, Failure(
-                "planner_invalid_json", "unparseable: %s" % e)
+            # repair (2026-11-03): the 27B also emits a sequence of
+            # job objects with NO array wrapper ('{"id":"j1",...},
+            # {"id":"j2",...}'). Extract the top-level values
+            # deterministically and accept only if they are all
+            # objects (a reject object, or job-shaped objects);
+            # anything else fails with planner_invalid_json as before.
+            vals = []
+            dec = json.JSONDecoder()
+            i = 0
+            ok = True
+            while i < len(text):
+                while i < len(text) and text[i] in " \t\r\n":
+                    i += 1
+                if i >= len(text):
+                    break
+                try:
+                    v, i = dec.raw_decode(text, i)
+                except ValueError:
+                    ok = False
+                    break
+                vals.append(v)
+            if not ok or not vals or not all(
+                    isinstance(v, dict) for v in vals):
+                return None, Failure(
+                    "planner_invalid_json", "unparseable: %s" % e)
+            if any("reject" in v for v in vals):
+                plan_raw = vals[0]
+            elif any("type" in v for v in vals):
+                plan_raw = vals
+            else:
+                return None, Failure("planner_invalid_json",
+                                     "objects without job shape")
     if isinstance(plan_raw, dict) and "reject" in plan_raw:
         return None, Failure(
             "unsupported_goal",
