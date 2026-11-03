@@ -302,17 +302,43 @@ def register_site(wm, pol, bot, goal, fixtures, operator_site=None):
                 blocks = pol.cell_blocks(bot, tuple(cell), pad=0)
                 empty = not any(b.get("pos") == cell for b in blocks)
             else:
+                def _filled(c):
+                    bs = pol.cell_blocks(bot, tuple(c), pad=0) or []
+                    return any(b.get("pos") == list(c) for b in bs)
+
                 cell, empty = None, False
-                for dx in range(2, 6):
-                    cand = (bx + dx, by, bz)
-                    blocks = pol.cell_blocks(bot, cand, pad=0)
-                    filled = any(b.get("pos") == [cand[0], cand[1],
-                                                  cand[2]] for b in blocks)
-                    if not filled:
-                        cell, empty = list(cand), True
+                for dx in range(2, 8):
+                    for dz in (0, -1, 1, -2, 2):
+                        cand = [bx + dx, by, bz + dz]
+                        if _filled(cand):
+                            continue
+                        # 2026-11-03: an EMPTY cell is not a placeable
+                        # site. The place executor stands on a
+                        # NEIGHBOUR, so the site needs at least one
+                        # standable ring neighbour (air over solid at
+                        # the same layer). The old first-empty-cell
+                        # pick landed on the rim of a two-block hole
+                        # (all four neighbours air at both layers) and
+                        # the place died 'no standable neighbour
+                        # reachable'.
+                        standable = False
+                        for nx, nz in ((cand[0] - 1, cand[2]),
+                                       (cand[0] + 1, cand[2]),
+                                       (cand[0], cand[2] - 1),
+                                       (cand[0], cand[2] + 1)):
+                            if _filled((nx, by, nz)):
+                                continue
+                            if _filled((nx, by - 1, nz)):
+                                standable = True
+                                break
+                        if standable:
+                            cell, empty = cand, True
+                            break
+                    if cell is not None:
                         break
-                if cell is None:  # everything filled - the site cannot
-                    cell = [bx + 2, by, bz]  # be a place target
+                if cell is None:  # no standable-rim site found - the
+                    cell = [bx + 2, by, bz]  # old behaviour, recorded
+                    empty = not _filled(cell)
             wm.register_fixture(goal.at, "build-site", cell, "empty")
             wm.observe_fixture(goal.at, empty, reason="fixture_setup")
     for fid, f in sorted(wm.fixtures.items()):
@@ -1706,7 +1732,29 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
             return (False, "site %s unknown" % job.target, measured, {},
                     {"site_filled": None})
         cell = fix.cell
+        # 2026-11-03: the static GIVE_ITEM map (dirt -> soil-low-none)
+        # is one variant of a family - the bot may hold a different
+        # fertility variant (digging soil-medium drops soil-medium-
+        # none). Resolve the placeable item from what the bot ACTUALLY
+        # carries when it classifies to the goal's material; the
+        # static map stays the fallback (an operator pre-give uses
+        # exactly the mapped code).
         item = GIVE_ITEM.get(job.material, job.material)
+        stp = pol.state(bot) or {}
+        btp = stp.get("Bot") or {}
+        cargo = []
+        for k in ("RightHand", "LeftHand"):
+            it = btp.get(k)
+            if it and it.get("Code"):
+                cargo.append(it["Code"])
+        for it in (btp.get("Backpack") or []):
+            if it.get("Code"):
+                cargo.append(it["Code"])
+        if item not in cargo:
+            for code in sorted(set(cargo)):
+                if classify(code)[1] == job.material:
+                    item = code
+                    break
         # 2026-10-07: the engine's place reach is 4.5 blocks (a
         # door-craft run failed with "out of range: 7.06 > 4.50" when
         # the bot placed from where it had finished crafting). Walk
