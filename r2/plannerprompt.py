@@ -31,9 +31,12 @@ RULES
 4. Material flow: a place job needs its material in the INVENTORY or as
    the output of an earlier producing job (mine/harvest/give_tool).
    A mine/harvest job produces the resource's MEASURED DROPS material
-   (the drops= column) - a place job must consume exactly that code.
-   drops=? means UNMEASURED: the ledger does not enforce that code
-   (the measured drop after execution is authoritative).
+   (the drops= column). Jobs name the MATERIAL (e.g. "dirt"), not the
+   drop code: a 'dirt' claim accepts a 'soil-medium-none' drop, a
+   'flint' claim a 'ore-flint-andesite' vein - the validator resolves
+   the family, you do not. drops=? means UNMEASURED: the ledger does
+   not enforce a code claim (the measured drop after execution is
+   authoritative).
    Do NOT check quantities yourself: do no arithmetic - the
    deterministic validator after you checks all material balances.
    Propose the plan you believe is best; if you believe the goal cannot
@@ -57,10 +60,23 @@ RULES
    picked. A forage without 'at' takes the nearest matching instance.
    "build X xN at S" places N blocks of material X as a ring platform
    around site S - a SINGLE composite build job (one job, N blocks).
-   The material comes from the INVENTORY or an earlier give_tool job
-   (external supply). Building a NAMED structure (workbench, shelter
+   The material comes from the INVENTORY, an earlier give_tool job
+   (external supply), or - when the inventory lacks X and a candidate
+   block resource of X is listed - MINE PREP: one mine job on that
+   resource (source res-*, material X) before the build job (see the
+   place rule below). Building a NAMED structure (workbench, shelter
    frame, furnace) is NOT a build goal - crafting has no vocabulary
    yet; reject such goals plainly.
+   "place X [xN] at S" puts N (default 1) block(s) of material X into
+   site S. Supply, in order of preference: (a) the INVENTORY already
+   holds X -> a SINGLE place job (no mining, no top-up); (b) the goal
+   declares external supply -> a give_tool job, then the place job;
+   (c) the inventory lacks X and a candidate block resource of X is
+   listed -> MINE PREP: one mine job on that resource (source res-*,
+   material X) with the place job after it (depends_on the mine). The
+   mine job names the material X, never the drop-code variant. An
+   X with no inventory, no candidate block resource, and no external
+   declaration is rejected (rule 8/9).
 6. External supply: if a place goal needs a material that no world
    producer yields and the inventory lacks it, a give_tool job is a
    LEGAL plan (harness supply); use it, or reject if you judge the goal
