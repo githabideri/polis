@@ -1073,7 +1073,11 @@ gotos; the per-candidate log goes to the run JSON under
 
 Wired into the mine/harvest branches of the live orchestrator
 (pickup keeps v5's item-entity approach - it targets an entity, not a
-block cell). While there, two latent bugs died: the inventory-diff
+block cell). 2026-11-03: the pickup ACTION itself now owns a
+self-approach (nested goto helper, loop-level, bounded re-target) -
+the mission-level goto stays as the far-item walk, the action's
+approach is the durable rescue for short falls; see the commit and
+the 2026-11-03 report. While there, two latent bugs died: the inventory-diff
 `post[k]-pre[k]` KeyError (a drop that is a NEW code was never in
 `pre` - runs 15/17 crashed exactly here, and the crash itself had
 been proving the drop was measured), and the deterministic job now
