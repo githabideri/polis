@@ -2,6 +2,11 @@
 
 **Status: design — not yet deployed.** 2026-09-22.
 Sanitized: hardware referred to by role, not name.
+2026-11-06: the Mirage 21 MiB on-device vision model was evaluated against
+this design — negative (crop-present/gone answered "yes" in both states,
+facing always abstained, frame-change is better done by deterministic
+diff): [docs/reports/2026-11-06-mirage-vision-jev-fit.md](../reports/2026-11-06-mirage-vision-jev-fit.md).
+The Jev 421M plan is unchanged.
 
 ## 1. Why
 
