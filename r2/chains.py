@@ -121,6 +121,131 @@ def crucible_copper(color="fire", ore="ore-copper", fuel="charcoal",
     return jobs
 
 
+@chain("anvil-copper")
+def anvil_copper(color="fire", table_at=None, kiln_at=None,
+                mold_at=None, ore="ore-copper", fuel="charcoal",
+                pours=1, wait_s=120, insert_n=20, fuel_n=2,
+                anvil_at=None, smith=None, give=()):
+    """The G15 anvil cast chain (2026-11-17, world 7): clayform
+    anvilmold -> kiln fire -> place the fired mold -> N x (crucible
+    smelt + pour into the mold). The mold's fill is the engine's
+    `requiredUnits = 900` (blocktypes/clay/fired/toolmold.json,
+    measured on world 7): one crucible smelt pours 100 units, so
+    9 pours complete the fill, the mold breaks, and it drops the
+    `anvil-copper` block. The fill is WORLD-PERSISTENT (vcdbs) -
+    pours may be split across sessions; `mold-info` is the fill
+    oracle. With `anvil_at` the chain places the cast block
+    (a `pickup` of the drop is the operator's live step - the drop
+    lands at the mold) and, with `smith`, smiths the work item
+    (default: the chisel from the bank's ingot). The anvil's work
+    item must be >20C: the C# `anvil-heat` disclosed bypass stands
+    in for fire heating (the gate is checked, not bypassed; the
+    bypass is logged on the C# side).
+
+    Parameters (live-world facts, supplied at invocation - never
+    frozen here):
+
+    color:      "fire" | "blue" | "red" - the clay color variant
+                (raw `clay-<color>`, the clayform recipe
+                `clayforming/anvilmold` -> `toolmold-<color>-raw-\
+anvil`; the fired toolmold keeps the `fire` color name in its
+                variant group)
+    table_at:   [x, y, z] the clayform table cell (REQUIRED - the
+                raw mold is produced in its groundstorage)
+    kiln_at:    [x, y, z] the 1-deep pit-kiln hole's floor cell
+                (REQUIRED - the fire step; the fired block lands in
+                the storage at the hole floor)
+    mold_at:    [x, y, z] the cell the FIRED toolmold block is
+                placed at (REQUIRED - the pour target)
+    ore/fuel:   the crucible cycle inputs (G14 convention: ore
+                `ore-copper`, fuel `charcoal`)
+    pours:      1..9 - how many smelt+pour cycles this invocation
+                runs (9 completes the fill from an empty mold)
+    wait_s:     the engine smelt wait (G14 used 120)
+    insert_n / fuel_n: the slot counts (G14: 20 nuggets, 2 charcoal)
+    anvil_at:   [x, y, z] where the cast anvil block is placed
+                (operator-campaign only; implies the drop pickup
+                was done live)
+    smith:      (produced, workitem) - the trailing anvil_smith job
+                (e.g. ("chisel-copper", "ingot-copper"))
+    give:       [(item, qty), ...] external setup (a harness
+                privilege, labeled scaffolding in the evidence) -
+                e.g. the anvil block when the smithing branch is
+                exercised before the 9-pour fill, or the ingot
+                work item
+    """
+    if table_at is None or kiln_at is None or mold_at is None:
+        raise ValueError(
+            "anvil-copper: table_at, kiln_at and mold_at are "
+            "required (the mold cannot float)")
+    if color not in ("fire", "blue", "red"):
+        raise ValueError("anvil-copper: color must be 'fire', "
+                         "'blue' or 'red' (got %r)" % color)
+    if not 1 <= int(pours) <= 9:
+        raise ValueError("anvil-copper: pours must be 1..9 "
+                         "(9 completes the 900-unit fill)")
+    raw = "toolmold-%s-raw-anvil" % color
+    fired = "toolmold-%s-fired-anvil" % color
+    crucible = "crucible-%s-raw" % color
+    jobs = []
+    for i, (item, qty) in enumerate(give):
+        jobs.append({"id": "g%d" % i, "type": "give_tool",
+                     "material": item, "n": int(qty),
+                     "origin": "operator"})
+    n = len(jobs)
+
+    def nid():
+        nonlocal n
+        n += 1
+        return "a%d" % n
+
+    jobs.append({"id": nid(), "type": "clayform",
+                 "at": [int(v) for v in table_at],
+                 "material": raw,
+                 "expect": "clay-%s" % color,
+                 "origin": "deterministic"})
+    jobs.append({"id": nid(), "type": "kiln_fire",
+                 "at": [int(v) for v in kiln_at],
+                 "material": fired,
+                 "recipes": [raw], "origin": "deterministic"})
+    jobs.append({"id": nid(), "type": "place",
+                 "at": [int(v) for v in mold_at],
+                 "material": fired, "origin": "deterministic"})
+    for i in range(int(pours)):
+        last = (i == int(pours) - 1) and int(pours) == 9
+        jobs.append({"id": nid(), "type": "crucible_fire",
+                     "material": crucible,
+                     "origin": "deterministic"})
+        jobs.append({"id": nid(), "type": "crucible_insert",
+                     "material": ore, "n": int(insert_n),
+                     "origin": "deterministic"})
+        jobs.append({"id": nid(), "type": "crucible_fuel",
+                     "material": fuel, "n": int(fuel_n),
+                     "origin": "deterministic"})
+        jobs.append({"id": nid(), "type": "wait",
+                     "n": int(wait_s), "origin": "deterministic"})
+        jobs.append({"id": nid(), "type": "crucible_take",
+                     "material": "copper-melt", "n": 1,
+                     "origin": "deterministic"})
+        jobs.append({"id": nid(), "type": "crucible_pour",
+                     "material": "copper-melt",
+                     "at": [int(v) for v in mold_at],
+                     "expect": ("anvil-copper" if last
+                                else "mold-fill-%d" % (i + 1)),
+                     "origin": "deterministic"})
+    if anvil_at:
+        jobs.append({"id": nid(), "type": "place",
+                     "at": [int(v) for v in anvil_at],
+                     "material": "anvil-copper",
+                     "origin": "deterministic"})
+        if smith:
+            jobs.append({"id": nid(), "type": "anvil_smith",
+                         "at": [int(v) for v in anvil_at],
+                         "material": smith[0], "expect": smith[1],
+                         "origin": "deterministic"})
+    return jobs
+
+
 def render(name, params=None):
     """Render a registered chain to its --jobs list. params is the
     JSON object the operator passes via --chain-params; unknown

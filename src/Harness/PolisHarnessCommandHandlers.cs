@@ -354,8 +354,14 @@ public partial class PolisSystem
                     return ExecuteForgeHeatCommand(args, context);
                 case "anvil-smith":
                     return ExecuteAnvilSmithCommand(args, context);
+                case "anvil-put":
+                    return ExecuteAnvilPutCommand(args, context);
+                case "anvil-heat":
+                    return ExecuteAnvilHeatCommand(args, context);
                 case "anvil-state":
                     return ExecuteAnvilStateCommand(args, context);
+                case "save":
+                    return ExecuteSaveCommand(args, context);
                 case "loot":
                     return ExecuteLootCommand(args, context);
                 case "possess":
@@ -452,7 +458,7 @@ public partial class PolisSystem
                     return ExecuteViewpointScreenshotCommand(args, context);
                 default:
                     result.Ok = false;
-                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, firestarter, interact, inventory, spawncell, items, be, kiln, charcoalpit, giveplayer, useitem, teststate, bots, takefrom, putinto, mine, chop, break, harvest, pick, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, container-set, container-take, zone-define, zone-remove, zone-list, zone-check, zone-rename, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot, vitals, crucible-fire, crucible-insert, crucible-fuel, crucible-take, crucible-pour, mold-cool";
+                    result.Message = "Unknown command: " + cmd + ". Available: spawn, select, selectlook, autonomy, despawn, stop, give, drop, pickup, goto, gotolook, look, activate, ignite, firestarter, interact, inventory, spawncell, items, be, kiln, charcoalpit, giveplayer, useitem, teststate, bots, takefrom, putinto, mine, chop, break, harvest, pick, harvestcrop, grind, press, butcher, clayform, knap, seal, possess, unpossess, setcontrols, spawnentity, killentity, respawn, godmode, gamemode, animate, teleport, place, setblock, equip, scan, verify, ripen, container-register, container-list, container-remove, container-contents, container-set, container-take, zone-define, zone-remove, zone-list, zone-check, zone-rename, zone-show, viewpoint-define, viewpoint-list, viewpoint-remove, observer-screenshot, viewpoint-screenshot, vitals, crucible-fire, crucible-insert, crucible-fuel, crucible-take, crucible-pour, mold-cool, anvil-smith, anvil-put, anvil-heat, anvil-state, save";
                     break;
             }
         }
@@ -5809,47 +5815,96 @@ public partial class PolisSystem
             return new PolisTestHarness.CommandResult { Ok = false, Message = $"Work item too cold: {temp:F0}°C (needs >20°C)" };
         }
 
-        // Find the recipe by output code
-        var recipes = sapi.GetSmithingRecipes();
+        // Find the recipe by output code. Two engine forms exist
+        // (measured on the 1.22.7 native build, 2026-11-17): per-metal
+        // item codes ("chisel-copper" as an item code) and a single
+        // item code with a metal variantgroup ("chisel" +
+        // variant metal=copper - the chisel, axehead and friends are
+        // the latter; their smithing recipe output templates
+        // "chisel-{metal}" resolve to the single code + variant).
+        // The matcher accepts both: the requested code is split on
+        // its last dash into base code + metal, and a recipe matches
+        // when its resolved output is either the full requested code
+        // or the base code with the requested metal variant.
+        // Candidates are restricted to the engine's own match list
+        // for the current work item (GetMatchingRecipes filters on
+        // the base material), so a copper work item can never
+        // produce an iron output.
+        var allRecipes = sapi.GetSmithingRecipes();
+        var workableItf = anvilEntity.WorkItemStack.Collectible
+            .GetCollectibleInterface<IAnvilWorkable>();
+        var validForWorkItem = workableItf != null
+            ? workableItf.GetMatchingRecipes(anvilEntity.WorkItemStack)
+            : allRecipes;
+
+        var lastDash = recipeCode.LastIndexOf('-');
+        var baseCode = lastDash > 0 ? recipeCode.Substring(0, lastDash) : recipeCode;
+        var reqMetal = lastDash > 0 ? recipeCode.Substring(lastDash + 1) : null;
+
+        string MetalOf(ItemStack oi)
+        {
+            if (oi == null || oi.Collectible == null) return null;
+            var v = oi.Collectible.Variant;
+            if (v != null && v.ContainsKey("metal")) return v["metal"];
+            return null;
+        }
+
+        bool OutputMatches(SmithingRecipe r)
+        {
+            var oi = r.Output?.ResolvedItemstack;
+            if (oi == null || oi.Collectible == null) return false;
+            var path = oi.Collectible.Code.Path
+                ?? oi.Collectible.Code.ToString();
+            if (path == recipeCode) return true;
+            if (path == baseCode && reqMetal != null)
+            {
+                return MetalOf(oi) == reqMetal;
+            }
+            return false;
+        }
+
         SmithingRecipe targetRecipe = null;
 
-        // First check if anvil already has a selected recipe that matches
+        // First check if the anvil already has a selected recipe that
+        // matches the request
         if (anvilEntity.SelectedRecipeId >= 0)
         {
-            foreach (var recipe in recipes)
+            foreach (var recipe in allRecipes)
             {
-                if (recipe.RecipeId == anvilEntity.SelectedRecipeId)
+                if (recipe.RecipeId == anvilEntity.SelectedRecipeId
+                        && OutputMatches(recipe))
                 {
-                    // Verify the output matches what was requested
-                    if (recipe.Output?.ResolvedItemstack?.Collectible?.Code?.Path?.Contains(recipeCode) == true)
-                    {
-                        targetRecipe = recipe;
-                        break;
-                    }
+                    targetRecipe = recipe;
+                    break;
                 }
             }
         }
 
-        // Fall back to searching all recipes by output code
+        // Fall back to searching the work-item-valid recipes
         if (targetRecipe == null)
         {
-            foreach (var recipe in recipes)
+            foreach (var recipe in validForWorkItem)
             {
-                if (recipe.Output?.ResolvedItemstack?.Collectible?.Code?.Path?.Contains(recipeCode) == true)
+                if (OutputMatches(recipe))
                 {
-                    // Check if this recipe is valid for the current work item
-                    if (recipe.Ingredient.SatisfiesAsIngredient(anvilEntity.WorkItemStack))
-                    {
-                        targetRecipe = recipe;
-                        break;
-                    }
+                    targetRecipe = recipe;
+                    break;
                 }
             }
         }
 
         if (targetRecipe == null)
         {
-            return new PolisTestHarness.CommandResult { Ok = false, Message = $"No matching smithing recipe found for '{recipeCode}'" };
+            var validNames = string.Join(", ",
+                (from r in validForWorkItem
+                 let oi = r.Output?.ResolvedItemstack
+                 where oi != null && oi.Collectible != null
+                 select (oi.Collectible.Code.Path ?? "?") + "(" +
+                         (MetalOf(oi) ?? "-")
+                         + ")").Distinct().Take(12));
+            return new PolisTestHarness.CommandResult { Ok = false,
+                Message = $"No matching smithing recipe found for '{recipeCode}' "
+                          + $"(work-item-valid outputs: {validNames})" };
         }
 
         void OnGotoResult(bool ok, string msg)
@@ -5879,10 +5934,16 @@ public partial class PolisSystem
             OnGotoResult
         );
 
+        // The smithed output lands in the smithing "player's"
+        // inventory (BEAnvil.CheckIfFinished's TryGiveItemstack).
+        // The bot's own agent is a server player: passing it routes
+        // the finished item into the bot's cargo, where the campaign
+        // oracle (inventory delta) can measure it. (2026-11-17, G15.)
+        var smithPlayer = bot.Entity as IServerPlayer ?? ownerPlayer;
         var action = new PolisAnvilSmithAction(
             pos,
             targetRecipe.RecipeId,
-            ownerPlayer,
+            smithPlayer,
             voxelsPerTick: voxelsPerTick,
             maxRange: PolisConstants.DefaultActionRange,
             debugLog: debugEnabled ? msg => sapi.Logger.Debug($"[polis] {msg}") : null,
@@ -5956,7 +6017,8 @@ public partial class PolisSystem
             ["metalVoxels"] = metalVoxels,
             ["slagVoxels"] = slagVoxels,
             ["emptyVoxels"] = emptyVoxels,
-            ["canWork"] = anvilEntity.CanWorkCurrent
+            ["canWork"] = anvilEntity.CanWorkCurrent,
+            ["isHot"] = anvilEntity.WorkItemStack != null && anvilEntity.WorkItemStack.Collectible.GetTemperature(sapi.World, anvilEntity.WorkItemStack) > 20
         };
 
         return new PolisTestHarness.CommandResult
@@ -5965,6 +6027,392 @@ public partial class PolisSystem
             Message = "Anvil state retrieved",
             Data = stateData
         };
+    }
+
+    // ------------------------------------------------------------------
+    // anvil-put / anvil-heat (2026-11-17, G15): the anvil work-item
+    // steps that a headless session cannot operate the vanilla way.
+    //
+    // Vanilla is interactive: the player holds a HOT ingot (recently
+    // from a lit fire/forge - the temperature decays, the move must be
+    // quick) and uses the anvil; the engine's UseOnCoreBlock places it
+    // via IAnvilWorkable.TryPlaceOn. In the harness there is no
+    // operator to do the hold-and-use, and the daylocked world has no
+    // working fire-heat loop. So:
+    //
+    //   anvil-put <x> <y> <z> <item>
+    //     take ONE <item> from the bot's cargo and place it on the
+    //     anvil through the engine's own TryPlaceOn / recipe-
+    //     selection path (the same code a player use-action runs,
+    //     minus the hand). Engine-rejected placements are returned
+    //     to the cargo. While a work item is on the anvil further
+    //     puts are refused (the engine's occupancy rule).
+    //
+    //   anvil-heat <x> <y> <z> [temp]
+    //     set the work item's temperature attribute (default 800,
+    //     the copper forge-heat class). DISCLOSED BYPASS, same family
+    //     as crucible-fire force and mold-cool force: the engine's
+    //     >20C workable gate stays intact (it is checked, not bypassed
+    //     - anvil-smith still refuses a cold work item); only the
+    //     temperature source is replaced (fire heating -> attribute).
+    //     Logged on every call.
+    // ------------------------------------------------------------------
+    PolisTestHarness.CommandResult ExecuteAnvilPutCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: anvil-put <x> <y> <z> <item> [temp]
+        if (args.Length < 4)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: anvil-put <x> <y> <z> <item> [temp]" };
+        }
+
+        if (!TryGetHarnessBot(context, out var bot, out var err))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = err };
+        }
+
+        if (!double.TryParse(args[0], out var x) || !double.TryParse(args[1], out var y) || !double.TryParse(args[2], out var z))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+
+        string itemCode = args[3];
+        var pos = new Vec3d(x, y, z).AsBlockPos;
+
+        var block = sapi.World.BlockAccessor.GetBlock(pos);
+        if (block == null || !(block is BlockAnvil))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"Block at {pos} is not an anvil (found: {block?.Code})" };
+        }
+
+        var anvilEntity = sapi.World.BlockAccessor.GetBlockEntity(pos) as BlockEntityAnvil;
+        if (anvilEntity == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "No anvil block entity found" };
+        }
+
+        if (anvilEntity.WorkItemStack != null)
+        {
+            // 2026-11-17: merging an ingot into an EXISTING workitem -
+            // the engine's own player action (ItemIngot.TryPlaceOn ->
+            // AddVoxelsFromIngot on the anvil's voxel grid). Disclosed
+            // like anvil-heat: the ingot is pre-heated so the engine's
+            // CanWork gate (workable temperature) passes; every engine
+            // step (metal-match check, voxel placement, workitem
+            // identity) runs unchanged.
+            var res = sapi.World.GetItem(new AssetLocation(itemCode));
+            if (res is ItemIngot)
+            {
+                var agentM = bot.Entity as EntityAgent;
+                var cargoM = agentM != null ? PolisInventoryHelpers.BotCargo(agentM) : null;
+                ItemStack ing = null;
+                for (int i = 0; cargoM != null && i < cargoM.Count; i++)
+                {
+                    var st = cargoM[i]?.Itemstack;
+                    if (st == null || st.Collectible == null) continue;
+                    var c = st.Collectible.Code;
+                    if (c.ToString() == itemCode || (c.Path != null && c.Path == itemCode))
+                    {
+                        ing = cargoM[i].TakeOut(1);
+                        cargoM[i].MarkDirty();
+                        break;
+                    }
+                }
+                if (ing == null)
+                {
+                    return new PolisTestHarness.CommandResult { Ok = false,
+                        Message = $"No {itemCode} in bot cargo" };
+                }
+                float heatTemp = args.Length > 4 && float.TryParse(args[4], out var hp) ? hp : 800f;
+                ing.Collectible.SetTemperature(sapi.World, ing, heatTemp, true);
+                var placed = ((ItemIngot)res).TryPlaceOn(ing, anvilEntity);
+                if (placed == null)
+                {
+                    PolisInventoryHelpers.TryInsertIntoBotInventory(agentM, ing, out _, out _, null);
+                    return new PolisTestHarness.CommandResult { Ok = false,
+                        Message = $"Engine rejected the merge (same metal required; pre-heat {heatTemp:F0}C)" };
+                }
+                // The engine's own flow assigns the fresh workitem to the
+                // BE's private field (WorkItemStack is read-only from
+                // here); the voxels already live in the BE grid, and the
+                // existing workitem is the same item - only its
+                // temperature is stale, which anvil-heat refreshes.
+                anvilEntity.MarkDirty(true);
+                sapi.Logger.Debug($"[polis] anvil-put MERGE (disclosed fire-heat stand-in, pre-heat {heatTemp:F0}C): {itemCode} merged into the workitem at {pos} via the engine's TryPlaceOn/AddVoxelsFromIngot");
+                return new PolisTestHarness.CommandResult { Ok = true,
+                    Message = $"merged {itemCode} into the workitem at {pos} (engine AddVoxelsFromIngot; pre-heat {heatTemp:F0}C disclosed)" };
+            }
+            return new PolisTestHarness.CommandResult { Ok = false,
+                Message = $"Anvil already holds {anvilEntity.WorkItemStack.Collectible.Code} (merge path is ingot-only)" };
+        }
+
+        var agent = bot.Entity as EntityAgent;
+        if (agent == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Harness bot is not an agent" };
+        }
+
+        // One work item per placement (the engine's occupancy rule is
+        // the single-work-item one).
+        ItemStack stack = null;
+        var cargo = PolisInventoryHelpers.BotCargo(agent);
+        for (int i = 0; cargo != null && i < cargo.Count; i++)
+        {
+            var slot = cargo[i];
+            var st = slot?.Itemstack;
+            if (st == null || st.Collectible == null) continue;
+            var c = st.Collectible.Code;
+            if (c.ToString() == itemCode || (c.Path != null && c.Path == itemCode))
+            {
+                stack = slot.TakeOut(1);
+                slot.MarkDirty();
+                break;
+            }
+        }
+        if (stack == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false,
+                Message = $"No {itemCode} in bot cargo" };
+        }
+
+        var workable = stack.Collectible.GetCollectibleInterface<IAnvilWorkable>();
+        if (workable == null)
+        {
+            PolisInventoryHelpers.TryInsertIntoBotInventory(agent, stack, out _, out _, null);
+            return new PolisTestHarness.CommandResult { Ok = false,
+                Message = $"{itemCode} is not anvil-workable" };
+        }
+
+        // (The tier check the engine's use-path does - same-tier for
+        // the G15 copper anvil / copper ingot; a tier crossing would
+        // be rejected by the engine's placement itself.)
+        // Disclosed fire-heat stand-in (same family as anvil-heat and
+        // crucible-fire force): the engine's placement gate (the
+        // item's CanWork) requires the work item to already be at a
+        // workable temperature (half the melting point - the game's
+        // "heat it in the fire" step, measured in the decompiled
+        // ItemIngot.CanWork). Under daylock there is no fire, so a
+        // cold item is heated here and the call is logged with
+        // before/after values. The gate itself is preserved: it
+        // passes on temperature, it is not bypassed.
+        float stackTemp = stack.Collectible.GetTemperature(sapi.World, stack);
+        float target = args.Length > 4 && float.TryParse(args[4], out var heatTarget)
+            ? heatTarget : 800f;
+        if (stackTemp < target)
+        {
+            stack.Collectible.SetTemperature(sapi.World, stack, target, true);
+            sapi.World.Logger.Audit("[polis] anvil-put: DISCLOSED pre-heat "
+                + itemCode + " " + stackTemp + "C -> "
+                + stack.Collectible.GetTemperature(sapi.World, stack)
+                + "C (fire-heat stand-in; workable gate preserved)");
+        }
+
+        var newWork = workable.TryPlaceOn(stack, anvilEntity);
+        if (newWork == null)
+        {
+            PolisInventoryHelpers.TryInsertIntoBotInventory(agent, stack, out _, out _, null);
+            return new PolisTestHarness.CommandResult { Ok = false,
+                Message = "Engine rejected the placement (TryPlaceOn null)" };
+        }
+        // (the field is private; the engine's own TryPut assigns it -
+        // same write, via the mod's reflection helper)
+        SetPrivate(anvilEntity, "workItemStack", newWork);
+
+        if (anvilEntity.SelectedRecipeId < 0)
+        {
+            var matching = workable.GetMatchingRecipes(stack);
+            if (matching.Count == 1)
+            {
+                anvilEntity.SelectedRecipeId = matching[0].RecipeId;
+            }
+        }
+
+        anvilEntity.MarkDirty();
+        float temp = newWork.Collectible.GetTemperature(sapi.World, newWork);
+        sapi.World.Logger.Audit("[polis] anvil-put: bot placed 1x{0} on anvil at {1} (temp {2:F0})", newWork.Collectible.Code, pos, temp);
+        bot.RecordActionResult("anvil-put", true,
+            $"placed {newWork.Collectible.Code} on anvil at {pos} (temp {temp:F0}C)",
+            sapi.World.ElapsedMilliseconds);
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"Placed {newWork.Collectible.Code} on anvil at ({pos.X}, {pos.Y}, {pos.Z})",
+            Data = new Dictionary<string, object>
+            {
+                ["workItemCode"] = newWork.Collectible.Code.ToString(),
+                ["temperature"] = temp,
+                ["isHot"] = temp > 20,
+                ["selectedRecipeName"] = anvilEntity.SelectedRecipe?.Output?.ResolvedItemstack?.Collectible?.Code?.ToString()
+            }
+        };
+    }
+
+    PolisTestHarness.CommandResult ExecuteAnvilHeatCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        // Usage: anvil-heat <x> <y> <z> [temp]
+        if (args.Length < 3)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Usage: anvil-heat <x> <y> <z> [temp]" };
+        }
+
+        if (!double.TryParse(args[0], out var x) || !double.TryParse(args[1], out var y) || !double.TryParse(args[2], out var z))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "Invalid coordinates" };
+        }
+
+        var pos = new Vec3d(x, y, z).AsBlockPos;
+
+        var block = sapi.World.BlockAccessor.GetBlock(pos);
+        if (block == null || !(block is BlockAnvil))
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = $"Block at {pos} is not an anvil (found: {block?.Code})" };
+        }
+
+        var anvilEntity = sapi.World.BlockAccessor.GetBlockEntity(pos) as BlockEntityAnvil;
+        if (anvilEntity == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false, Message = "No anvil block entity found" };
+        }
+
+        var stack = anvilEntity.WorkItemStack;
+        if (stack == null || stack.Collectible == null)
+        {
+            return new PolisTestHarness.CommandResult { Ok = false,
+                Message = "Anvil has no work item (anvil-put first)" };
+        }
+
+        float temp = 800f;
+        if (args.Length > 3 && float.TryParse(args[3], out var t))
+        {
+            temp = t;
+        }
+
+        float before = stack.Collectible.GetTemperature(sapi.World, stack);
+        stack.Collectible.SetTemperature(sapi.World, stack, temp, true);
+        float after = stack.Collectible.GetTemperature(sapi.World, stack);
+        anvilEntity.MarkDirty();
+
+        sapi.World.Logger.Audit("[polis] anvil-heat (DISCLOSED BYPASS): work item {0} at {1} {2:F0} -> {3:F0}",
+            stack.Collectible.Code, pos, before, after);
+        return new PolisTestHarness.CommandResult
+        {
+            Ok = true,
+            Message = $"Work item {stack.Collectible.Code} at ({pos.X}, {pos.Y}, {pos.Z}) {before:F0} -> {after:F0}C (bypass: fire-heat stand-in)",
+            Data = new Dictionary<string, object>
+            {
+                ["workItemCode"] = stack.Collectible.Code.ToString(),
+                ["before"] = before,
+                ["after"] = after,
+                ["isHot"] = after > 20
+            }
+        };
+    }
+
+    // save (2026-11-17, G15): the campaign-persistence lever. The
+    // headless 1.22.7 native build autosaves on a 5-minute cycle, but
+    // the SIGTERM shutdown path (systemd stop) has been observed to
+    // kill the process without a final save (2026-11-17: a placed
+    // anvil was lost on a restart, while the 5-minute autosave line
+    // fired normally in between) - so after meaningful world
+    // mutations a campaign must request an explicit save before any
+    // restart. The concrete save class differs between builds (the
+    // classic WorldSaveGame.SaveAllDataToDiskAsync versus this
+    // native build's SaveGame with SaveGameData / TriggerSave), so
+    // the command probes candidate method names and calls the first
+    // that exists. Completion is the "World saved!" journal line,
+    // not this return.
+    PolisTestHarness.CommandResult ExecuteSaveCommand(string[] args, PolisTestHarness.CommandContext context)
+    {
+        var sg = (object)sapi.WorldManager.SaveGame;
+        string gfsErr = null;
+        try
+        {
+            var gfs = sg.GetType().GetMethod("GetSaveGameForSaving");
+            if (gfs != null)
+            {
+                var argCands = new[]
+                {
+                    new[] { sapi.WorldManager.SaveGame },
+                    new[] { sapi.WorldManager.SaveGame },
+                    null
+                };
+                foreach (var a in argCands)
+                {
+                    try
+                    {
+                        var inner = gfs.Invoke(sg, a);
+                        if (inner != null) { sg = inner; break; }
+                    }
+                    catch (Exception ge) { gfsErr = ge.InnerException?.Message ?? ge.Message; }
+                }
+            }
+        }
+        catch (Exception ge) { gfsErr = ge.InnerException?.Message ?? ge.Message; }
+        try
+        {
+            var candidates = new[]
+            {
+                "SaveAllDataToDiskAsync", "SaveGameData",
+                "TriggerSave", "SaveToDisk", "SaveAsync"
+            };
+            string used = null;
+            var tried = new List<string>();
+            foreach (var n in candidates)
+            {
+                var mi = sg.GetType().GetMethod(n);
+                if (mi == null) continue;
+                if (mi.GetParameters().Length != 0) { tried.Add(n + "(params)"); continue; }
+                mi.Invoke(sg, (object[])null);
+                used = n;
+                break;
+            }
+            if (used == null)
+            {
+                var methods = string.Join(", ",
+                    (from m in sg.GetType().GetMethods()
+                     where m.Name.Contains("Save") || m.Name.Contains("Trigger")
+                     select m.Name + "(" + string.Join(",", m.GetParameters().Select(p => p.ParameterType.Name)) + ")").Distinct().Take(15));
+                var outer = sapi.WorldManager.SaveGame.GetType();
+                var ometh = string.Join(", ",
+                    (from m in outer.GetMethods()
+                     where m.Name.Contains("Save")
+                     select m.Name + "(" + string.Join(",", m.GetParameters().Select(p => p.ParameterType.Name)) + ")").Distinct().Take(15));
+                var ofields = string.Join(", ",
+                    (from f in outer.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                     select f.FieldType.Name + ":" + f.Name).Take(20));
+                var wm = sapi.WorldManager.GetType();
+                var wmmeth = string.Join(", ",
+                    (from m in wm.GetMethods()
+                     where m.Name.Contains("Save")
+                     select m.Name + "(" + string.Join(",", m.GetParameters().Select(p => p.ParameterType.Name)) + ")").Distinct().Take(15));
+                return new PolisTestHarness.CommandResult
+                {
+                    Ok = false,
+                    Message = "save: no zero-arg save method; outer=" + outer.Name
+                              + "[" + ometh + " fields: " + ofields + "] worldManager=" + wm.Name
+                              + "[" + wmmeth + "] inner=" + sg.GetType().Name
+                              + "[" + methods + "] skipped: "
+                              + string.Join(", ", tried)
+                };
+            }
+            sapi.World.Logger.Audit("[polis] save: explicit world save via "
+                                    + used);
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = true,
+                Message = "World save requested via " + used
+                          + " (completion = the 'World saved!' journal line)"
+            };
+        }
+        catch (Exception e)
+        {
+            return new PolisTestHarness.CommandResult
+            {
+                Ok = false,
+                Message = "save failed: " + e.Message
+                          + (gfsErr != null ? " (gfs: " + gfsErr + ")" : "")
+                          + " | inner type: " + sg.GetType().Name
+            };
+        }
     }
 
     PolisTestHarness.CommandResult ExecuteLootCommand(string[] args, PolisTestHarness.CommandContext context)
@@ -8231,6 +8679,26 @@ public partial class PolisSystem
         else
         {
             var crucibleSlot = FindBlockInCargoDirect(agent, crucibleBlock);
+            if (crucibleSlot == null)
+            {
+                // 2026-11-17: the clayform table emits a plain-item crucible
+                // (code crucible-{color}-raw, no Block collectible), which the
+                // block-code match above cannot see. Code-string fallback.
+                var cargo = PolisInventoryHelpers.BotCargo(agent);
+                for (int i = 0; cargo != null && i < cargo.Count; i++)
+                {
+                    var it = cargo[i]?.Itemstack;
+                    if (it == null || it.Collectible == null) continue;
+                    var ic = it.Collectible.Code?.ToString();
+                    if (ic == null) continue;
+                    if (CodeMatchesLenient(ic, $"crucible-{color}-raw") ||
+                        CodeMatchesLenient(ic, $"crucible-{color}-fired"))
+                    {
+                        crucibleSlot = cargo[i];
+                        break;
+                    }
+                }
+            }
             if (crucibleSlot == null)
             {
                 return new PolisTestHarness.CommandResult { Ok = false, Message = $"bot carries no crucible-{color} (fired or raw); craft one first" };

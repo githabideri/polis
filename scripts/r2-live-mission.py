@@ -201,12 +201,28 @@ def boot(pol, radius=14, keep=None, attach=None):
     time.sleep(2)
     if attach is not None:
         bot = attach
+        r = None
     else:
         r = v5.http_json(pol.base + "/polis/command",
                          {"cmd": "spawn", "args": [],
                           "context": {"playerUid": pol.uid}})
         bot = (r.get("Data") or {}).get("id")
+        if bot is None:
+            raise RuntimeError(
+                "boot: spawn returned no bot id (ok=%s msg=%r)" %
+                (r.get("Ok"), (r.get("Message") or "")[:160]))
     st = pol.state(bot)
+    if "Bot" not in st:
+        # 2026-11-17: the bare KeyError hid the cause twice in one
+        # session (the state endpoint answered without the Bot key
+        # for a fresh bot id). Surface the spawn verdict and the
+        # keys the state endpoint did return.
+        raise RuntimeError(
+            "boot: state has no Bot key (bot=%r spawn_ok=%s "
+            "spawn_msg=%r state_keys=%r)" %
+            (bot, (r.get("Ok") if not attach else None),
+             (r.get("Message") or "")[:120] if not attach else "",
+             list(st.keys())))
     pos = st["Bot"]["Pos"]
     wm = WorldModel()
     wm.new_tick(reason="planner_scan")
@@ -2095,6 +2111,9 @@ def execute_job(pol, bot, base, job, wm, run, botref=None):
     if job.type in ("crucible_fire", "crucible_insert", "crucible_fuel",
                     "crucible_take", "crucible_pour"):
         return _crucible(pol, bot, job, measured)
+    # anvil-smith (2026-11-17, G15): the anvil work-item cycle
+    if job.type == "anvil_smith":
+        return _anvil_smith(pol, bot, job, measured)
     # pots chain (2026-10-10, J2-J5): clayform / kiln_fire /
     # firepit_fuel / cook / eat - one harness-primitive-driven stage
     # each (firepit_fuel added 2026-10-10 deploy: the endogenous
@@ -2962,6 +2981,12 @@ def _crucible(pol, bot, job, measured):
         args = [color]
         if job.at:
             args += ["at", str(job.at[0]), str(job.at[1]), str(job.at[2])]
+        # 2026-11-17: the firepit fire/temperature model does not sustain
+        # under daylock (per-item burns die, re-ignite drops the armed
+        # flag - the 2026-10-13 finding that added the force flag).
+        # Force uses the engine's own DoSmelt; the crucible still has to
+        # be in the input slot and the metal in the cook slots.
+        args.append("force")
     elif which in ("insert", "fuel"):
         args = [job.material or ""]
         if job.quantity:
@@ -2997,6 +3022,155 @@ def _crucible(pol, bot, job, measured):
          "last_action": {k: la.get(k) for k in ("Name", "Ok", "Msg")},
          "data": data}, \
         {"measured": measured, "data": data}
+
+
+def _anvil_smith(pol, bot, job, measured):
+    """anvil_smith (2026-11-17, G15): the anvil work-item cycle.
+    Lane A's C# commands drive the engine's voxel smithing
+    (PolisAnvilSmithAction); the handler sequences the whole cycle:
+      1. walk to an ADJACENT cell (the action enforces a 4.5 m reach;
+         same walk-reissue pattern as the pots stages)
+      2. anvil-put <cell> <workitem> - the work item (the `expect`
+         ingot) leaves the cargo through the engine's own TryPlaceOn
+         path; the handler pre-checks the cargo (no silent fails)
+      3. anvil-heat <cell> - DISCLOSED fire-heat stand-in (the engine
+         >20C workable gate is preserved: anvil-smith still refuses
+         a cold work item; the temperature source is the only thing
+         replaced). Logged on the C# side on every call.
+      4. anvil-smith <cell> <material> - the engine's smithing;
+         the action rewrites voxels toward the recipe while the
+         work item stays >20C and stops BY DESIGN when it cools
+         (the player's "reheat over the fire" moment, 2026-11-17
+         measured: 42 -> 13 voxels then cool-stop). The handler runs
+         the re-heat loop: up to 6 cycles of (anvil-heat 800C,
+         disclosed fire-heat stand-in, logged on the C# side) +
+         anvil-smith, polling anvil-state each cycle. The finished
+         item is routed into the bot's cargo (the action's
+         CheckIfFinished takes the bot's agent, 2026-11-17 change)
+         or, if the cargo is full, drops at the anvil
+      5. completion: the work item clears the anvil (the engine's
+         CheckIfFinished fires when the voxels match the recipe)
+    Oracles: the measured cargo delta (the produced item appears;
+    the work item leaves) and the anvil-state before/after.
+    """
+    def _cell(c):
+        return [str(v) for v in (c or [])]
+
+    def _st():
+        return (pol.cmd("anvil-state", _cell(cell), bot,
+                        timeout=30).get("Data") or {})
+
+    def _get(inv, c):
+        return (inv.get("game:" + c, 0) + inv.get(c, 0))
+
+    cell = [int(v) for v in (job.at or [])]
+    recipe = job.material or ""
+    workitem = job.expect or ""
+    if len(cell) != 3:
+        return (False, "anvil_smith: no at cell", measured,
+                {"cmd": "anvil-smith", "ok": False,
+                 "reason": "no at"}, {})
+    pre = inventory_of(pol.state(bot))
+    if _get(pre, workitem) <= 0:
+        return (False, "anvil_smith: no %s in cargo" % workitem,
+                measured, {"cmd": "anvil-smith", "ok": False,
+                           "reason": "no work item"}, {})
+    # the 4.5 m reach walk (the pots-stage pattern)
+    tx, ty, tz = int(cell[0]) + 1, int(cell[1]), int(cell[2])
+    t0 = time.time()
+    last_issue = 0.0
+    while time.time() - t0 < 180:
+        if time.time() - last_issue > 20:
+            try:
+                pol.cmd("goto", [str(tx), str(ty), str(tz),
+                                 "true", "0.02", "true"], bot,
+                        timeout=15)
+            except Exception:
+                pass
+            last_issue = time.time()
+        try:
+            pos = pol.state(bot).get("Bot", {}).get("Pos") or []
+        except Exception:
+            pos = []
+        if len(pos) >= 3:
+            d = ((float(pos[0]) - tx) ** 2 +
+                 (float(pos[2]) - tz) ** 2) ** 0.5
+            if d <= 4:
+                break
+        time.sleep(3)
+
+    st0 = _st()
+    bits = ["state0: work=%s temp=%s canWork=%s" %
+            (st0.get("workItemCode"), st0.get("temperature"),
+             st0.get("canWork"))]
+    cmd_ok = True
+    if st0.get("hasWorkItem"):
+        cmd_ok = False
+        bits.append("anvil already holds a work item: %s" %
+                    st0.get("workItemCode"))
+    if cmd_ok:
+        r = pol.cmd("anvil-put", _cell(cell) + [workitem], bot,
+                    timeout=60)
+        cmd_ok = r.get("Ok") is True
+        bits.append("put: %s" % (r.get("Message") or ""))
+    if cmd_ok:
+        rh = pol.cmd("anvil-heat", _cell(cell), bot, timeout=60)
+        cmd_ok = rh.get("Ok") is True
+        bits.append("heat: %s" % (rh.get("Message") or ""))
+    if cmd_ok:
+        # the smith-with-reheat loop (2026-11-17 measured): the C#
+        # action removes voxels toward the recipe while the work
+        # item stays above 20C and then stops (by design) when it
+        # cools - the player's reheat-over-the-fire moment. Each
+        # re-heat is a DISCLOSED fire-heat stand-in (logged on the
+        # C# side with before/after). Budget: 6 cycles x 120 s.
+        st = _st()
+        for cycle in range(6):
+            rs = pol.cmd("anvil-smith", _cell(cell) + [recipe, "20"],
+                         bot, timeout=180)
+            bits.append("smith%d: %s"
+                        % (cycle, (rs.get("Message") or "")))
+            st = _st()
+            t0 = time.time()
+            last_vox = st.get("metalVoxels")
+            while (st.get("hasWorkItem") is True
+                   and time.time() - t0 < 120):
+                time.sleep(5)
+                st = _st()
+                vox = st.get("metalVoxels")
+                temp = st.get("temperature") or 0
+                if (vox is not None and last_vox is not None
+                        and vox == last_vox and temp < 50):
+                    break  # cooled with no progress -> re-heat
+                if vox != last_vox:
+                    last_vox = vox
+            if st.get("hasWorkItem") is not True:
+                break  # the work item cleared: finished
+            rh = pol.cmd("anvil-heat", _cell(cell) + ["800"], bot,
+                         timeout=60)
+            bits.append("reheat%d: %s"
+                        % (cycle, (rh.get("Message") or "")))
+    st = _st()
+    post = inventory_of(pol.state(bot))
+    for k in set(pre) | set(post):
+        d = post.get(k, 0) - pre.get(k, 0)
+        if d:
+            measured[k] = measured.get(k, 0) + d
+    produced = max(0, _get(post, recipe) - _get(pre, recipe))
+    consumed = max(0, _get(pre, workitem) - _get(post, workitem))
+    ok = (cmd_ok and st.get("hasWorkItem") is not True
+          and produced > 0)
+    detail = ("anvil-smith %s -> %s; produced=%d %s consumed=%d %s"
+              % (" ".join(_cell(cell)),
+                 " | ".join(bits), produced, recipe, consumed,
+                 workitem))
+    return (ok, detail, measured,
+            {"cmd": "anvil-smith", "at": list(cell),
+             "recipe": recipe, "workitem": workitem,
+             "state0": st0, "state_end": st,
+             "ok": ok},
+            {"produced": produced, "consumed": consumed,
+             "measured": measured})
 
 
 def _pots_stage(pol, bot, job, measured):
@@ -3475,7 +3649,12 @@ def run_campaign(args, run, t0):
     # despawn[135438]+spawn[135729] logged at 20:10:39-41). The
     # planner path's liveness pre-check gets the same treatment here:
     # a dead attach id is a world fact, not a silent respawn.
-    attach = getattr(args, "bot", None)
+    # 2026-11-17: --bot defaults to 0 ("unspecified"); a bare
+    # `getattr` passed 0 through as an attach id, and boot then
+    # polled the state endpoint for botId=0 - the harness's STALE
+    # selection after a world restart - and KeyError'd on the
+    # missing Bot key. 0 means spawn fresh.
+    attach = getattr(args, "bot", 0) or None
     if attach:
         st0 = pol.state(attach)
         if not (st0.get("Bot") or {}).get("Pos"):

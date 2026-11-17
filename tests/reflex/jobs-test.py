@@ -52,7 +52,8 @@ check("unsupported_goal layer=goal", f.layer == "goal")
 check("catalog covers the v5 families + 12.1 + 13.7 sow + 09-28 build "
       "+ 13.11 plan + 10-04 craft + 10-06 chop + 10-07 forage & crucible "
       "+ 10-10 ladder (knap, clayform, kiln_fire, firepit_fuel, cook, eat) "
-      "+ 10-11 gather & search (search->extract chain)",
+      "+ 10-11 gather & search (search->extract chain) "
+      "+ 11-17 anvil_smith (G15 anvil work-item cycle)",
       set(JOB_CATALOG) == {"mine", "harvest", "gather", "place", "goto",
                            "give_tool", "pickup", "travel", "wait",
                            "sow", "build", "build_plan", "craft",
@@ -61,15 +62,16 @@ check("catalog covers the v5 families + 12.1 + 13.7 sow + 09-28 build "
                            "crucible_fuel", "crucible_take",
                            "crucible_pour",
                            "clayform", "kiln_fire", "firepit_fuel",
-                           "cook", "eat", "search"})
+                           "cook", "eat", "search", "anvil_smith"})
 from r2.jobs import PLANNER_JOB_TYPES
 check("goal-scoped jobs stay out of the planner vocabulary "
-      "(build_plan, chop, forage, gather, search, crucible*, ladder stages)",
+      "(build_plan, chop, forage, gather, search, crucible*, ladder "
+      "stages, anvil_smith)",
       all(t not in PLANNER_JOB_TYPES for t in
           ("build_plan", "chop", "forage", "gather", "search",
            "crucible_fire", "crucible_insert", "crucible_fuel",
            "crucible_take", "crucible_pour", "clayform", "kiln_fire",
-           "firepit_fuel", "cook", "eat")) and
+           "firepit_fuel", "cook", "eat", "anvil_smith")) and
       "build" in PLANNER_JOB_TYPES and len(PLANNER_JOB_TYPES) == 13)
 # 2026-10-11: the goal verb is case-insensitive - "Gather flint x10"
 # must not silently change the routing (a capitalized verb used to

@@ -274,6 +274,27 @@ JOB_CATALOG = {
     # oracle is the reported before/after saturation + units eaten.
     "eat":       {"produces": False, "consumes": True,
                  "source": "world",  "needs": ("material",)},
+    # anvil_smith (2026-11-17, G15): smith a work item on an anvil -
+    # the C# anvil-smith action (PolisAnvilSmithAction) runs the
+    # engine's voxel smithing. The job's executor drives the whole
+    # work-item cycle through the harness: anvil-put (take `expect`
+    # from the cargo, the engine's own TryPlaceOn path), anvil-heat
+    # (DISCLOSED fire-heat stand-in; the engine's >20C workable gate
+    # is checked, not bypassed), anvil-smith (the output code =
+    # `material`); completion is the anvil's WorkItemStack clearing,
+    # and the finished item lands in the bot's cargo (the action's
+    # CheckIfFinished is routed to the bot's own agent). `at` = the
+    # anvil block cell, `material` = the produced item code (e.g.
+    # chisel-copper), `expect` = the ingot consumed from cargo (the
+    # work item, e.g. ingot-copper). Ledger convention exactly like
+    # the pots stages: `material` is what the job PRODUCES (the
+    # claim the ledger budgets); the consumed work item rides `expect`
+    # and is gated by the executor's cargo precondition, not the
+    # ledger. GOAL-SCOPED exactly like the crucible family: campaign
+    # chains only, never the 27B vocabulary.
+    "anvil_smith": {"produces": True, "consumes": False,
+                   "source": "world",  "needs": ("at", "material",
+                                                 "expect")},
     "give_tool": {"produces": True,  "consumes": False,
                   "source": "external", "needs": ("material",)},
     "pickup":    {"produces": False, "consumes": False,
@@ -295,7 +316,7 @@ PLANNER_JOB_TYPES = tuple(
     if k not in ("build_plan", "chop", "forage", "gather", "search",
                  "crucible_fire", "crucible_insert", "crucible_fuel",
                  "crucible_take", "crucible_pour", "clayform", "kiln_fire",
-                 "firepit_fuel", "cook", "eat"))
+                 "firepit_fuel", "cook", "eat", "anvil_smith"))
 
 #: provenance of a job's origin (13.1, frozen): the queue runs a mix of
 #: jobs made by different principals; the run JSON is the transparency

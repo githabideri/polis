@@ -440,7 +440,7 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
         # are campaign-scoped on the same precedent.
         if j.type in ("forage", "crucible_fire", "crucible_insert",
                       "crucible_fuel", "crucible_take", "crucible_pour",
-                      "knap", "firepit_fuel") and not campaign:
+                      "knap", "firepit_fuel", "anvil_smith") and not campaign:
             return None, Failure(
                 "planner_invalid_json",
                 "%s is outside the planner vocabulary "
@@ -675,7 +675,8 @@ def validate_plan(plan_raw, index, inventory, goal=None, recipes=None,
                         or (campaign and (
                             (j.at and j.type in ("mine", "chop", "gather"))
                             or j.type in ("forage", "crucible_take",
-                                          "clayform", "kiln_fire", "cook"))):
+                                          "clayform", "kiln_fire", "cook",
+                                          "anvil_smith"))):
                     # a search-derived gather (2026-10-11) has no res-*
                     # reference by construction - the target resolves at
                     # run time against what the search job registered -
